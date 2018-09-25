@@ -368,7 +368,10 @@ extension SecureIdDocumentFormDocumentState {
                     }
                 }
                 if details.countryCode.isEmpty {
-                    details.countryCode = data.issuingCountry ?? ""
+                    details.countryCode = data.nationality ?? ""
+                }
+                if details.residenceCountryCode.isEmpty {
+                    details.residenceCountryCode = data.issuingCountry ?? ""
                 }
                 state.details = details
             }

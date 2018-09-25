@@ -61,7 +61,7 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
                 return .openUrl(url: url)
             }))
 
-            options.append(OpenInOption(application: .other(title: "Chrome", identifier: 535886823, scheme: "chrome"), action: {
+            options.append(OpenInOption(application: .other(title: "Chrome", identifier: 535886823, scheme: "googlechrome"), action: {
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
                     components.scheme = components.scheme == "https" ? "googlechromes" : "googlechrome"
                     if let url = components.string {

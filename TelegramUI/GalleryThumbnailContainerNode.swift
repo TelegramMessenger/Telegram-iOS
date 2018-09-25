@@ -10,7 +10,6 @@ private let maxWidth: CGFloat = 75.0
 protocol GalleryThumbnailItem {
     func isEqual(to: GalleryThumbnailItem) -> Bool
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) { get }
-    var index: Int? { get }
 }
 
 private final class GalleryThumbnailItemNode: ASDisplayNode {
@@ -73,14 +72,13 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.scrollNode)
     }
     
-    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer)
-    {
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         let location = recognizer.location(in: recognizer.view)
         for i in 0 ..< self.itemNodes.count {
             let view = self.itemNodes[i]
             if view.frame.contains(location) {
-                self.updateCentralIndexAndProgress(centralIndex: i, progress: 0.0)
-                self.itemChanged?(self.items[i].index!)
+                self.updateCentralIndexAndProgress(centralIndex: i, progress: 0.0, transition: .animated(duration: 0.4, curve: .spring))
+                self.itemChanged?(i)
                 break
             }
         }
@@ -128,10 +126,10 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func updateCentralIndexAndProgress(centralIndex: Int, progress: CGFloat) {
+    func updateCentralIndexAndProgress(centralIndex: Int, progress: CGFloat, transition: ContainedViewLayoutTransition = .immediate) {
         self.centralIndexAndProgress = (centralIndex, progress)
         if let size = self.currentLayout {
-            self.updateLayout(size: size, transition: .immediate)
+            self.updateLayout(size: size, transition: transition)
         }
     }
     
@@ -166,7 +164,9 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if updated || !self.isPanning {
-            self.scrollNode.view.contentOffset = contentOffsetToCenterItem(index: centralIndex, progress: progress, contentInset: contentInset)
+            transition.animateView {
+                self.scrollNode.view.contentOffset = self.contentOffsetToCenterItem(index: centralIndex, progress: progress, contentInset: contentInset)
+            }
         }
         
         let progress = progress ?? 0.0
@@ -186,9 +186,14 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             let itemSpacing = itemProgress * centralSpacing + (1.0 - itemProgress) * spacing
             let itemWidth = self.itemNodes[i].updateLayout(height: itemBaseSize.height, progress: itemProgress, transition: transition)
-            if i == centralIndex {
-                xOffset = -itemWidth / 2.0
+           
+            if itemWidth > itemBaseSize.width {
+                xOffset -= (itemWidth - itemBaseSize.width) / 2.0
+                if itemSpacing > spacing && i > 0 {
+                    xOffset -= (itemSpacing - spacing) / 2.0
+                }
             }
+            
             let itemX: CGFloat
             if i == 0 {
                 itemX = 0.0
@@ -254,7 +259,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
             
             if let (currentCentralIndex, _) = self.centralIndexAndProgress, currentCentralIndex != index {
                 self.centralIndexAndProgress = (index, nil)
-                self.itemChanged?(self.items[index].index!)
+                self.itemChanged?(index)
             }
         }
     }
@@ -272,9 +277,9 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.isPanning = false
                 self.updateLayout(size: currentLayout, transition: transition)
             }
-            transition.animateView {
-                self.scrollNode.view.contentOffset = contentOffset
-            }
+//            transition.animateView {
+//                self.scrollNode.view.contentOffset = contentOffset
+//            }
         }
     }
     
