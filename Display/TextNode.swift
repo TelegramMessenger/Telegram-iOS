@@ -1,5 +1,6 @@
 import Foundation
 import AsyncDisplayKit
+import CoreText
 
 private let defaultFont = UIFont.systemFont(ofSize: 15.0)
 
@@ -7,17 +8,20 @@ private final class TextNodeLine {
     let line: CTLine
     let frame: CGRect
     let range: NSRange
+    let isRTL: Bool
     
-    init(line: CTLine, frame: CGRect, range: NSRange) {
+    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool) {
         self.line = line
         self.frame = frame
         self.range = range
+        self.isRTL = isRTL
     }
 }
 
 public enum TextNodeCutoutPosition {
     case TopLeft
     case TopRight
+    case BottomRight
 }
 
 public struct TextNodeCutout: Equatable {
@@ -67,6 +71,7 @@ public final class TextNodeLayout: NSObject {
     public let size: CGSize
     fileprivate let firstLineOffset: CGFloat
     fileprivate let lines: [TextNodeLine]
+    public let hasRTL: Bool
     
     fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, firstLineOffset: CGFloat, lines: [TextNodeLine], backgroundColor: UIColor?) {
         self.attributedString = attributedString
@@ -81,6 +86,13 @@ public final class TextNodeLayout: NSObject {
         self.firstLineOffset = firstLineOffset
         self.lines = lines
         self.backgroundColor = backgroundColor
+        var hasRTL = false
+        for line in lines {
+            if line.isRTL {
+                hasRTL = true
+            }
+        }
+        self.hasRTL = hasRTL
     }
     
     public var numberOfLines: Int {
@@ -101,10 +113,14 @@ public final class TextNodeLayout: NSObject {
             for line in self.lines {
                 var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
                 switch self.alignment {
-                case .center:
-                    lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
-                default:
-                    break
+                    case .center:
+                        lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
+                    case .natural:
+                        if line.isRTL {
+                            lineFrame.origin.x = floor(self.size.width - lineFrame.size.width)
+                        }
+                    default:
+                        break
                 }
                 if lineFrame.contains(transformedPoint) {
                     var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
@@ -126,10 +142,14 @@ public final class TextNodeLayout: NSObject {
             for line in self.lines {
                 var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
                 switch self.alignment {
-                case .center:
-                    lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
-                default:
-                    break
+                    case .center:
+                        lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
+                    case .natural:
+                        if line.isRTL {
+                            lineFrame.origin.x = floor(self.size.width - lineFrame.size.width)
+                        }
+                    default:
+                        break
                 }
                 if lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.size.height).insetBy(dx: -3.0, dy: -3.0).contains(transformedPoint) {
                     var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
@@ -358,7 +378,16 @@ public class TextNode: ASDisplayNode {
                     layoutSize.height += fontLineHeight + fontLineSpacing
                     layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length)))
+                    var isRTL = false
+                    let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
+                    if glyphRuns.count != 0 {
+                        let run = glyphRuns[0] as! CTRun
+                        if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
+                            isRTL = true
+                        }
+                    }
+                    
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL))
                     
                     break
                 } else {
@@ -378,7 +407,16 @@ public class TextNode: ASDisplayNode {
                         layoutSize.height += fontLineHeight
                         layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length)))
+                        var isRTL = false
+                        let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
+                        if glyphRuns.count != 0 {
+                            let run = glyphRuns[0] as! CTRun
+                            if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
+                                isRTL = true
+                            }
+                        }
+                        
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing
@@ -439,6 +477,8 @@ public class TextNode: ASDisplayNode {
                 let lineOffset: CGFloat
                 if alignment == .center {
                     lineOffset = floor((bounds.size.width - line.frame.size.width) / 2.0)
+                } else if alignment == .natural, line.isRTL {
+                    lineOffset = floor(bounds.size.width - line.frame.size.width)
                 } else {
                     lineOffset = 0.0
                 }
