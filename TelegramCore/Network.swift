@@ -490,6 +490,11 @@ private extension NetworkContextProxyId {
     }
 }
 
+public enum NetworkRequestResult<T> {
+    case result(T)
+    case acknowledged
+}
+
 public final class Network: NSObject, MTRequestMessageServiceDelegate {
     private let queue: Queue
     public let datacenterId: Int
@@ -695,7 +700,68 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
+    public func requestWithAcknowledgement<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<NetworkRequestResult<T>, MTRpcError> {
+        let requestService = self.requestService
+        return Signal { subscriber in
+            let request = MTRequest()
+            
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), responseParser: { response in
+                if let result = data.2.parse(Buffer(data: response)) {
+                    return BoxedMessage(result)
+                }
+                return nil
+            })
+            
+            request.dependsOnPasswordEntry = false
+            
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+                    return false
+                }
+                return true
+            }
+            
+            request.acknowledgementReceived = {
+                subscriber.putNext(.acknowledged)
+            }
+            
+            request.completed = { (boxedResponse, timestamp, error) -> () in
+                if let error = error {
+                    subscriber.putError(error)
+                } else {
+                    if let result = (boxedResponse as! BoxedMessage).body as? T {
+                        subscriber.putNext(.result(result))
+                        subscriber.putCompletion()
+                    }
+                    else {
+                        subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
+                    }
+                }
+            }
+            
+            if let tag = tag {
+                request.shouldDependOnRequest = { other in
+                    if let other = other, let metadata = other.metadata as? WrappedRequestMetadata, let otherTag = metadata.tag {
+                        return tag.shouldDependOn(other: otherTag)
+                    }
+                    return false
+                }
+            }
+            
+            let internalId: Any! = request.internalId
+            
+            requestService.add(request)
+            
+            return ActionDisposable { [weak requestService] in
+                requestService?.removeRequest(byInternalId: internalId)
+            }
+        }
+    }
+        
+     public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()

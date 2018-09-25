@@ -285,7 +285,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             if transformedMedia {
                 infoFlags.insert(.transformedMedia)
             }
-            attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId, flags: infoFlags))
+            attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId, flags: infoFlags, acknowledged: false))
             globallyUniqueIds.append(randomId)
             
             switch message {
