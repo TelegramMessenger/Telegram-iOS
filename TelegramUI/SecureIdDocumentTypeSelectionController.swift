@@ -34,30 +34,30 @@ private func stringForDocumentType(_ type: SecureIdRequestedAddressDocument, str
 
 func documentSelectionItemsForField(field: SecureIdParsedRequestedFormField, strings: PresentationStrings) -> [(String, SecureIdDocumentFormRequestedData)] {
     switch field {
-        case let .identity(personalDetails, document, selfie, translation):
+        case let .identity(personalDetails, document):
             var result: [(String, SecureIdDocumentFormRequestedData)] = []
             if let document = document {
                 switch document {
                     case let .just(type):
-                        result.append((stringForDocumentType(type, strings: strings), .identity(details: personalDetails, document: type, selfie: selfie, translations: translation)))
+                        result.append((stringForDocumentType(type.document, strings: strings), .identity(details: personalDetails, document: type.document, selfie: type.selfie, translations: type.translation)))
                     case let .oneOf(types):
-                        for type in types.sorted(by: { $0.rawValue < $1.rawValue }) {
-                            result.append((stringForDocumentType(type, strings: strings), .identity(details: personalDetails, document: type, selfie: selfie, translations: translation)))
+                        for type in types.sorted(by: { $0.document.rawValue < $1.document.rawValue }) {
+                            result.append((stringForDocumentType(type.document, strings: strings), .identity(details: personalDetails, document: type.document, selfie: type.selfie, translations: type.translation)))
                         }
                 }
             } else if let personalDetails = personalDetails {
                 result.append((strings.Passport_Identity_TypePersonalDetails, .identity(details: personalDetails, document: nil, selfie: false, translations: false)))
             }
             return result
-        case let .address(addressDetails, document, translations):
+        case let .address(addressDetails, document):
             var result: [(String, SecureIdDocumentFormRequestedData)] = []
             if let document = document {
                 switch document {
                     case let .just(type):
-                        result.append((stringForDocumentType(type, strings: strings), .address(details: addressDetails, document: type, translations: translations)))
+                        result.append((stringForDocumentType(type.document, strings: strings), .address(details: addressDetails, document: type.document, translations: type.translation)))
                     case let .oneOf(types):
-                        for type in types.sorted(by: { $0.rawValue < $1.rawValue }) {
-                            result.append((stringForDocumentType(type, strings: strings), .address(details: addressDetails, document: type, translations: translations)))
+                        for type in types.sorted(by: { $0.document.rawValue < $1.document.rawValue }) {
+                            result.append((stringForDocumentType(type.document, strings: strings), .address(details: addressDetails, document: type.document, translations: type.translation)))
                         }
                 }
             } else if addressDetails {

@@ -442,21 +442,21 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         }
         
         switch field {
-            case let .identity(personalDetails, document, selfie, translations):
+            case let .identity(personalDetails, document):
                 if let document = document {
-                    var hasValueType: SecureIdRequestedIdentityDocument?
+                    var hasValueType: (document: SecureIdRequestedIdentityDocument, selfie: Bool, translation: Bool)?
                     switch document {
                         case let .just(type):
-                            if let value = findValue(formData.values, key: type.valueKey)?.1 {
+                            if let value = findValue(formData.values, key: type.document.valueKey)?.1 {
                                 switch value.value {
                                     case .passport:
-                                        hasValueType = .passport
+                                        hasValueType = (.passport, type.selfie, type.translation)
                                     case .idCard:
-                                        hasValueType = .idCard
+                                        hasValueType = (.idCard, type.selfie, type.translation)
                                     case .driversLicense:
-                                        hasValueType = .driversLicense
+                                        hasValueType = (.driversLicense, type.selfie, type.translation)
                                     case .internalPassport:
-                                        hasValueType = .internalPassport
+                                        hasValueType = (.internalPassport, type.selfie, type.translation)
                                     default:
                                         break
                                 }
@@ -464,15 +464,15 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         case let .oneOf(types):
                             var chosenByError = false
                             outer: for type in types {
-                                if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                    let hasErrors = hasErrors(value, type.valueKey)
+                                if let value = findValue(formData.values, key: type.document.valueKey)?.1 {
+                                    let hasErrors = hasErrors(value, type.document.valueKey)
                                    
                                     let data = extractSecureIdValueAdditionalData(value.value)
                                     var dataFilled = true
-                                    if selfie && !data.selfie {
+                                    if type.selfie && !data.selfie {
                                         dataFilled = false
                                     }
-                                    if translations && !data.translation {
+                                    if type.translation && !data.translation {
                                         dataFilled = false
                                     }
                                     
@@ -480,13 +480,13 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                         chosenByError = hasErrors
                                         switch value.value {
                                             case .passport:
-                                                hasValueType = .passport
+                                                hasValueType = (.passport, type.selfie, type.translation)
                                             case .idCard:
-                                                hasValueType = .idCard
+                                                hasValueType = (.idCard, type.selfie, type.translation)
                                             case .driversLicense:
-                                                hasValueType = .driversLicense
+                                                hasValueType = (.driversLicense, type.selfie, type.translation)
                                             case .internalPassport:
-                                                hasValueType = .internalPassport
+                                                hasValueType = (.internalPassport, type.selfie, type.translation)
                                             default:
                                                 break
                                         }
@@ -494,8 +494,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 }
                             }
                     }
-                    if let hasValueType = hasValueType {
-                        self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: hasValueType, selfie: selfie, translations: translations), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                    if let (hasValueType, selfie, translation) = hasValueType {
+                        self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: hasValueType, selfie: selfie, translations: translation), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                             var keys: [SecureIdValueKey] = []
                             if personalDetails != nil {
                                 keys.append(.personalDetails)
@@ -506,28 +506,28 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         return
                     }
                 } else if personalDetails != nil {
-                    self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: nil, selfie: selfie, translations: translations), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                    self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: nil, selfie: false, translations: false), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                         updatedValues([.personalDetails], values)
                     }), nil)
                     return
                 }
-            case let .address(addressDetails, document, translation):
+            case let .address(addressDetails, document):
                 if let document = document {
-                    var hasValueType: SecureIdRequestedAddressDocument?
+                    var hasValueType: (document: SecureIdRequestedAddressDocument, translation: Bool)?
                     switch document {
                         case let .just(type):
-                            if let value = findValue(formData.values, key: type.valueKey)?.1 {
+                            if let value = findValue(formData.values, key: type.document.valueKey)?.1 {
                                 switch value.value {
                                     case .utilityBill:
-                                        hasValueType = .utilityBill
+                                        hasValueType = (.utilityBill, type.translation)
                                     case .bankStatement:
-                                        hasValueType = .bankStatement
+                                        hasValueType = (.bankStatement, type.translation)
                                     case .rentalAgreement:
-                                        hasValueType = .rentalAgreement
+                                        hasValueType = (.rentalAgreement, type.translation)
                                     case .passportRegistration:
-                                        hasValueType = .passportRegistration
+                                        hasValueType = (.passportRegistration, type.translation)
                                     case .temporaryRegistration:
-                                        hasValueType = .temporaryRegistration
+                                        hasValueType = (.temporaryRegistration, type.translation)
                                     default:
                                         break
                                 }
@@ -535,12 +535,12 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         case let .oneOf(types):
                             var chosenByError = false
                             outer: for type in types {
-                                if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                    let hasErrors = hasErrors(value, type.valueKey)
+                                if let value = findValue(formData.values, key: type.document.valueKey)?.1 {
+                                    let hasErrors = hasErrors(value, type.document.valueKey)
                                     
                                     let data = extractSecureIdValueAdditionalData(value.value)
                                     var dataFilled = true
-                                    if translation && !data.translation {
+                                    if type.translation && !data.translation {
                                         dataFilled = false
                                     }
                                     
@@ -548,19 +548,19 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                         chosenByError = hasErrors
                                         switch value.value {
                                             case .utilityBill:
-                                                hasValueType = .utilityBill
+                                                hasValueType = (.utilityBill, type.translation)
                                                 break outer
                                             case .bankStatement:
-                                                hasValueType = .bankStatement
+                                                hasValueType = (.bankStatement, type.translation)
                                                 break outer
                                             case .rentalAgreement:
-                                                hasValueType = .rentalAgreement
+                                                hasValueType = (.rentalAgreement, type.translation)
                                                 break outer
                                             case .passportRegistration:
-                                                hasValueType = .passportRegistration
+                                                hasValueType = (.passportRegistration, type.translation)
                                                 break outer
                                             case .temporaryRegistration:
-                                                hasValueType = .temporaryRegistration
+                                                hasValueType = (.temporaryRegistration, type.translation)
                                                 break outer
                                             default:
                                                 break
@@ -569,7 +569,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 }
                         }
                     }
-                    if let hasValueType = hasValueType {
+                    if let (hasValueType, translation) = hasValueType {
                         self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .address(details: addressDetails, document: hasValueType, translations: translation), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                             var keys: [SecureIdValueKey] = []
                             if addressDetails {
