@@ -19,28 +19,50 @@ func extractVimeoVideoIdAndTimestamp(url: String) -> (String, Int)? {
     var timestamp = 0
     
     if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-//        if let queryItems = components.queryItems {
-//            for queryItem in queryItems {
-//                if let value = queryItem.value {
-//                    if queryItem.name == "v" {
-//                        videoId = value
-//                    } else if queryItem.name == "t" || queryItem.name == "time_continue" {
-//                        if value.contains("s") {
-//
-//                        } else {
-//                            timestamp = Int(value)
-//                        }
-//                    }
-//                }
-//            }
-//        }
+        if let queryItems = components.queryItems {
+            for queryItem in queryItems {
+                if let value = queryItem.value {
+                    if queryItem.name == "t" {
+                        if value.contains("s") {
+                            var range = value.startIndex..<value.endIndex
+                            if let hoursRange = value.range(of: "h", options: .caseInsensitive, range: range, locale: nil) {
+                                let subvalue = String(value[range.lowerBound ..< hoursRange.lowerBound])
+                                if let hours = Int(subvalue) {
+                                    timestamp = timestamp + hours * 3600
+                                }
+                                range = hoursRange.upperBound..<value.endIndex
+                            }
+                            
+                            if let minutesRange = value.range(of: "m", options: .caseInsensitive, range: range, locale: nil) {
+                                let subvalue = String(value[range.lowerBound ..< minutesRange.lowerBound])
+                                if let minutes = Int(subvalue) {
+                                    timestamp = timestamp + minutes * 60
+                                }
+                                range = minutesRange.upperBound..<value.endIndex
+                            }
+                            
+                            if let secondsRange = value.range(of: "s", options: .caseInsensitive, range: range, locale: nil) {
+                                let subvalue = String(value[range.lowerBound ..< secondsRange.lowerBound])
+                                if let seconds = Int(subvalue) {
+                                    timestamp = timestamp + seconds
+                                }
+                            }
+                        } else {
+                            if let seconds = Int(value) {
+                                timestamp = seconds
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         if videoId == nil {
             let pathComponents = components.path.components(separatedBy: "/")
             var nextComponentIsVideoId = false
             
             for component in pathComponents {
-                if CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: component)) || nextComponentIsVideoId {
+                if !component.isEmpty && (CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: component)) || nextComponentIsVideoId) {
                     videoId = component
                     break
                 } else if component == "video" {
@@ -73,7 +95,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
     init(videoId: String, timestamp: Int = 0) {
         self.videoId = videoId
         self.timestamp = timestamp
-        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true))
+        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true))
     }
     
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
@@ -156,7 +178,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
                 var position: Double?
                 var duration: Double?
                 var download: Float?
-                var failed: Bool?
+                //var failed: Bool?
                 
                 if let queryItems = components.queryItems {
                     for queryItem in queryItems {

@@ -214,6 +214,12 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             
             self.updateItemNodes(transition: .immediate)
         }
+        else if let focusOnItem = transaction.focusOnItem {
+            self.ignoreCentralItemIndexUpdate = true
+            self.centralItemIndex = focusOnItem
+            self.ignoreCentralItemIndexUpdate = false
+            self.updateItemNodes(transition: .immediate, forceOffsetReset: true)
+        }
     }
     
     private func makeNodeForItem(at index: Int) -> GalleryItemNode {
@@ -255,12 +261,17 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         self.itemNodes.remove(at: internalIndex)
     }
     
-    private func updateItemNodes(transition: ContainedViewLayoutTransition) {
+    private func updateItemNodes(transition: ContainedViewLayoutTransition, forceOffsetReset: Bool = false) {
         if self.items.isEmpty || self.containerLayout == nil {
             return
         }
         
-        var resetOffsetToCentralItem = false
+        var resetOffsetToCentralItem = forceOffsetReset
+        if let centralItemIndex = self.centralItemIndex, self.visibleItemNode(at: centralItemIndex) == nil, !self.itemNodes.isEmpty {
+            repeat {
+                self.removeVisibleItemNode(internalIndex: self.itemNodes.count - 1)
+            } while self.itemNodes.count > 0
+        }
         if self.itemNodes.isEmpty {
             let node = self.makeNodeForItem(at: self.centralItemIndex ?? 0)
             node.frame = CGRect(origin: CGPoint(), size: scrollView.bounds.size)
@@ -272,7 +283,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             resetOffsetToCentralItem = true
         }
         
-        var notifyCentralItemUpdated = false
+        var notifyCentralItemUpdated = forceOffsetReset
         
         if let centralItemIndex = self.centralItemIndex, let centralItemNode = self.visibleItemNode(at: centralItemIndex) {
             if centralItemIndex != 0 {
