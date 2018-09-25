@@ -268,6 +268,7 @@ NSString *const TGPassportEmptyCharacter = @"<";
     dispatch_once(&onceToken, ^
     {
         dateFormatter = [[NSDateFormatter alloc] init];
+        dateFormatter.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
         dateFormatter.dateFormat = @"YYMMdd";
         dateFormatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
     });

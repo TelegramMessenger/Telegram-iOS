@@ -16,5 +16,6 @@
 @property (nonatomic, readonly) NSString *street;
 
 + (TGLocationReverseGeocodeResult *)reverseGeocodeResultWithDictionary:(NSDictionary *)dictionary;
++ (TGLocationReverseGeocodeResult *)reverseGeocodeResultWithPlacemark:(CLPlacemark *)placemark;
 
 @end

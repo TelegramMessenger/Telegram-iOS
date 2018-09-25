@@ -44,6 +44,20 @@
     return result;
 }
 
++ (TGLocationReverseGeocodeResult *)reverseGeocodeResultWithPlacemark:(CLPlacemark *)placemark
+{
+    TGLocationReverseGeocodeResult *result = [[TGLocationReverseGeocodeResult alloc] init];
+    result->_country = placemark.country;
+    result->_countryAbbr = placemark.ISOcountryCode;
+    result->_city = placemark.locality;
+    result->_district = placemark.subLocality;
+    result->_street = placemark.thoroughfare;
+    if (placemark.name.length > 0 && result->_street.length == 0) {
+        result->_street = placemark.name;
+    }
+    return result;
+}
+
 - (NSString *)displayAddress
 {
     if (self.street.length > 0)
