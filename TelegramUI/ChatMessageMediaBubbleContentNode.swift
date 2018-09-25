@@ -129,7 +129,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             } else {
                                 if item.message.flags.contains(.Failed) {
                                     statusType = .ImageOutgoing(.Failed)
-                                } else if item.message.flags.isSending {
+                                } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                                     statusType = .ImageOutgoing(.Sending)
                                 } else {
                                     statusType = .ImageOutgoing(.Sent(read: item.read))

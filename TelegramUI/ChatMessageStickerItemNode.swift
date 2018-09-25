@@ -201,7 +201,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             } else {
                 if item.message.flags.contains(.Failed) {
                     statusType = .FreeOutgoing(.Failed)
-                } else if item.message.flags.isSending {
+                } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                     statusType = .FreeOutgoing(.Sending)
                 } else {
                     statusType = .FreeOutgoing(.Sent(read: item.read))

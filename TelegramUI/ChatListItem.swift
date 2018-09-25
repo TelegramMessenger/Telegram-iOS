@@ -572,7 +572,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             if let message = message, message.author?.id == account.peerId && !hasDraft {
-                if message.flags.isSending {
+                if message.flags.isSending && !message.isSentOrAcknowledged {
                     statusImage = PresentationResourcesChatList.pendingImage(item.presentationData.theme)
                 } else {
                     if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(MessageIndex(message)) {

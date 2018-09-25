@@ -615,6 +615,7 @@ public final class ManagedAudioSession {
     }
     
     private func setupOutputMode(_ outputMode: AudioSessionOutputMode, type: ManagedAudioSessionType) throws {
+        print("ManagedAudioSession setup \(outputMode) for \(type)")
         var resetToBuiltin = false
         switch outputMode {
             case .system:
@@ -625,6 +626,16 @@ public final class ManagedAudioSession {
                         resetToBuiltin = true
                     case .speaker:
                         try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                        if type == .voiceCall {
+                            if let routes = AVAudioSession.sharedInstance().availableInputs {
+                                for route in routes {
+                                    if route.portType == AVAudioSessionPortBuiltInMic {
+                                        let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                        break
+                                    }
+                                }
+                            }
+                        }
                     case .headphones:
                         break
                     case let .port(port):

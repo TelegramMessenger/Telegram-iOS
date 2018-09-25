@@ -697,7 +697,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     } else {
                         if message.flags.contains(.Failed) {
                             statusType = .ImageOutgoing(.Failed)
-                        } else if message.flags.isSending {
+                        } else if message.flags.isSending && !message.isSentOrAcknowledged {
                             statusType = .ImageOutgoing(.Sending)
                         } else {
                             statusType = .ImageOutgoing(.Sent(read: item.read))

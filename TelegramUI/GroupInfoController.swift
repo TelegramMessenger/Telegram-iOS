@@ -745,8 +745,13 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     }
     
     if let editingState = state.editingState {
-        if let group = view.peers[view.peerId] as? TelegramGroup, case .creator = group.role {
-            entries.append(.adminManagement(presentationData.theme, presentationData.strings.GroupInfo_ChatAdmins))
+        if let group = view.peers[view.peerId] as? TelegramGroup {
+            if case .creator = group.role {
+                entries.append(.adminManagement(presentationData.theme, presentationData.strings.GroupInfo_ChatAdmins))
+            }
+            
+            entries.append(GroupInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsText))
+            entries.append(GroupInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: peerNotificationSettings.messageSound, default: globalNotificationSettings.effective.groupChats.sound)))
         } else if let cachedChannelData = view.cachedData as? CachedChannelData {
             if isCreator {
                 entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))

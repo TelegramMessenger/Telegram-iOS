@@ -400,7 +400,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         } else {
                             if message.flags.contains(.Failed) {
                                 statusType = .BubbleOutgoing(.Failed)
-                            } else if message.flags.isSending {
+                            } else if message.flags.isSending && !message.isSentOrAcknowledged {
                                 statusType = .BubbleOutgoing(.Sending)
                             } else {
                                 statusType = .BubbleOutgoing(.Sent(read: messageRead))
@@ -482,7 +482,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     } else {
                                         statusType = .BubbleOutgoing(.Failed)
                                     }
-                                } else if message.flags.isSending {
+                                } else if message.flags.isSending && !message.isSentOrAcknowledged {
                                     if imageMode {
                                         statusType = .ImageOutgoing(.Sending)
                                     } else {

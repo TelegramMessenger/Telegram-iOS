@@ -11,8 +11,8 @@ private final class ChannelMembersControllerArguments {
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removePeer: (PeerId) -> Void
     let openPeer: (Peer) -> Void
-    let inviteViaLink:()->Void
-    init(account: Account, addMember: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void, inviteViaLink:@escaping()->Void) {
+    let inviteViaLink: ()->Void
+    init(account: Account, addMember: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void, inviteViaLink: @escaping()->Void) {
         self.account = account
         self.addMember = addMember
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -243,7 +243,6 @@ private func ChannelMembersControllerEntries(account: Account, presentationData:
     var entries: [ChannelMembersEntry] = []
     
     if let participants = participants {
-        
         var canAddMember: Bool = false
         if let peer = view.peers[view.peerId] as? TelegramChannel {
             canAddMember = peer.hasAdminRights(.canInviteUsers)
@@ -251,7 +250,9 @@ private func ChannelMembersControllerEntries(account: Account, presentationData:
         
         if canAddMember {
             entries.append(.addMember(presentationData.theme, presentationData.strings.Channel_Members_AddMembers))
-            entries.append(.inviteLink(presentationData.theme, presentationData.strings.Channel_Members_InviteLink))
+            if let peer = view.peers[view.peerId] as? TelegramChannel, peer.addressName == nil {
+                entries.append(.inviteLink(presentationData.theme, presentationData.strings.Channel_Members_InviteLink))
+            }
             entries.append(.addMemberInfo(presentationData.theme, presentationData.strings.Channel_Members_AddMembersHelp))
         }
 

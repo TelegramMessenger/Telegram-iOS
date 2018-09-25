@@ -24,6 +24,26 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
         controller = TGCameraController()
     }
     
+    if #available(iOSApplicationExtension 10.0, *) {
+    } else {
+        controller.customPresentOverlayController = { [weak legacyController] overlayController in
+            guard let legacyController = legacyController, let overlayController = overlayController else {
+                return
+            }
+            
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let overlayLegacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
+            overlayLegacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
+            overlayLegacyController.statusBar.statusBarStyle = .Hide
+            overlayLegacyController.bind(controller: overlayController)
+            overlayController.customDismissSelf = { [weak overlayLegacyController] in
+                overlayLegacyController?.dismiss()
+            }
+            
+            legacyController.present(overlayLegacyController, in: .window(.root))
+        }
+    }
+    
     controller.isImportant = true
     controller.shouldStoreCapturedAssets = saveCapturedPhotos && !isSecretChat
     controller.allowCaptions = true
