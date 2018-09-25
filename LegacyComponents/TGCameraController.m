@@ -1395,18 +1395,19 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
         return nil;
     };
+    
+    void (^dismissGalleryImpl)() = nil;
 
     galleryController.completedTransitionOut = ^
     {
         [snapshotView removeFromSuperview];
-
+        
         TGModernGalleryController *strongGalleryController = weakGalleryController;
-        if (strongGalleryController != nil && strongGalleryController.overlayWindow == nil)
-        {
-            TGNavigationController *navigationController = (TGNavigationController *)strongGalleryController.navigationController;
-            TGOverlayControllerWindow *window = (TGOverlayControllerWindow *)navigationController.view.window;
-            if ([window isKindOfClass:[TGOverlayControllerWindow class]])
-                [window dismiss];
+        if (strongGalleryController == nil) {
+            return;
+        }
+        if (strongGalleryController.customDismissSelf) {
+            strongGalleryController.customDismissSelf();
         }
     };
 
@@ -1421,10 +1422,33 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         [contentController addChildViewController:navigationController];
         [contentController.view addSubview:navigationController.view];
     }
-
-    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:self contentController:contentController];
-    controllerWindow.hidden = false;
-    controllerWindow.windowLevel = self.view.window.windowLevel + 0.0001f;
+    
+    if (_customPresentOverlayController) {
+        _customPresentOverlayController(contentController);
+        dismissGalleryImpl = ^{
+            TGModernGalleryController *strongGalleryController = weakGalleryController;
+            if (strongGalleryController == nil) {
+                return;
+            }
+            if (strongGalleryController.customDismissSelf) {
+                strongGalleryController.customDismissSelf();
+            }
+        };
+    } else {
+        dismissGalleryImpl = ^{
+            TGModernGalleryController *strongGalleryController = weakGalleryController;
+            if (strongGalleryController != nil && strongGalleryController.overlayWindow == nil)
+            {
+                TGNavigationController *navigationController = (TGNavigationController *)strongGalleryController.navigationController;
+                TGOverlayControllerWindow *window = (TGOverlayControllerWindow *)navigationController.view.window;
+                if ([window isKindOfClass:[TGOverlayControllerWindow class]])
+                    [window dismiss];
+            }
+        };
+        TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:self contentController:contentController];
+        controllerWindow.hidden = false;
+        controllerWindow.windowLevel = self.view.window.windowLevel + 0.0001f;
+    }
     galleryController.view.clipsToBounds = true;
 }
 
@@ -1842,18 +1866,26 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     self.view.hidden = true;
     
     [resultController.view.layer animatePositionFrom:resultController.view.layer.position to:CGPointMake(resultController.view.layer.position.x, resultController.view.layer.position.y + resultController.view.bounds.size.height) duration:0.3 timingFunction:kCAMediaTimingFunctionSpring removeOnCompletion:false completion:^(__unused bool finished) {
-        [resultController dismiss];
+        if (resultController.customDismissSelf) {
+            resultController.customDismissSelf();
+        } else {
+            [resultController dismiss];
+        }
         [self dismiss];
     }];
     
     return;
     
-    [UIView animateWithDuration:0.3f delay:0.0f options:(7 << 16) animations:^
+    [UIView animateWithDuration:0.3 delay:0.0f options:(7 << 16) animations:^
     {
         resultController.view.frame = CGRectOffset(resultController.view.frame, 0, resultController.view.frame.size.height);
     } completion:^(__unused BOOL finished)
     {
-        [resultController dismiss];
+        if (resultController.customDismissSelf) {
+            resultController.customDismissSelf();
+        } else {
+            [resultController dismiss];
+        }
         [self dismiss];
     }];
 }
