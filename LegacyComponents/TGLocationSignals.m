@@ -132,21 +132,27 @@ NSString *const TGLocationGoogleGeocodeLocale = @"en";
 
 + (SSignal *)reverseGeocodeCoordinate:(CLLocationCoordinate2D)coordinate
 {
-    NSURL *url = [NSURL URLWithString:[[NSString alloc] initWithFormat:@"https://maps.googleapis.com/maps/api/geocode/json?latlng=%f,%f&sensor=true&language=%@", coordinate.latitude, coordinate.longitude, TGLocationGoogleGeocodeLocale]];
-    
-    return [[[LegacyComponentsGlobals provider] jsonForHttpLocation:url.absoluteString] map:^id(id json)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
-        if (![json respondsToSelector:@selector(objectForKey:)])
-            return nil;
+        CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+        [geocoder reverseGeocodeLocation:[[CLLocation alloc] initWithLatitude:coordinate.latitude longitude:coordinate.longitude] completionHandler:^(NSArray *placemarks, NSError *error)
+        {
+            if (error != nil)
+            {
+                [subscriber putError:error];
+                return;
+            }
+            else
+            {
+                [subscriber putNext:[TGLocationReverseGeocodeResult reverseGeocodeResultWithPlacemark:placemarks.firstObject]];
+                [subscriber putCompletion];
+            }
+        }];
         
-        NSArray *results = json[@"results"];
-        if (![results respondsToSelector:@selector(objectAtIndex:)])
-            return nil;
-        
-        if (![results.firstObject isKindOfClass:[NSDictionary class]])
-            return nil;
-        
-        return [TGLocationReverseGeocodeResult reverseGeocodeResultWithDictionary:results.firstObject];
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [geocoder cancelGeocode];
+        }];
     }];
 }
 

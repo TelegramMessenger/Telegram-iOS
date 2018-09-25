@@ -149,6 +149,11 @@
             simpleButtonInsetHorizontal = 26.0f;
             simpleButtonInsetVertical = 21.0f;
         }
+        else if ((int)screenSize.height == 896)
+        {
+            simpleButtonInsetHorizontal = 54.0f;
+            simpleButtonInsetVertical = 67.0f;
+        }
         else if ((int)screenSize.height == 812)
         {
             simpleButtonInsetHorizontal = 54.0f;
@@ -528,12 +533,21 @@
         pinOffset = 89.0f;
         infoOffset = 7.0f;
     }
+    else if ((int)screenSize.height == 896)
+    {
+        keyboardOffset = 330.0f;
+        titleOffset = 116.0f;
+        pinOffset = 79.0f + TGScreenPixel;
+        infoOffset = 6.0f - TGScreenPixel;
+        topOffset = 44.0f;
+        bottomOffset = 34.0f;
+    }
     else if ((int)screenSize.height == 812)
     {
         keyboardOffset = 300.0f;
         titleOffset = 116.0f;
-        pinOffset = 79.0f + TGRetinaPixel;
-        infoOffset = 6.0f - TGRetinaPixel;
+        pinOffset = 79.0f + TGScreenPixel;
+        infoOffset = 6.0f - TGScreenPixel;
         topOffset = 44.0f;
         bottomOffset = 34.0f;
     }
@@ -541,20 +555,20 @@
     {
         keyboardOffset = 246.0f;
         titleOffset = 112.0f;
-        pinOffset = 79.0f + TGRetinaPixel;
-        infoOffset = 6.0f - TGRetinaPixel;
+        pinOffset = 79.0f + TGScreenPixel;
+        infoOffset = 6.0f - TGScreenPixel;
     }
     else if ((int)screenSize.height == 667)
     {
         keyboardOffset = 206.0f;
         titleOffset = 112.0f;
-        pinOffset = 79.0f + TGRetinaPixel;
-        infoOffset = 6.0f - TGRetinaPixel;
+        pinOffset = 79.0f + TGScreenPixel;
+        infoOffset = 6.0f - TGScreenPixel;
     }
     else if ((int)screenSize.height == 568)
     {
         keyboardOffset = 163.0f;
-        titleOffset = 98.0f - TGRetinaPixel;
+        titleOffset = 98.0f - TGScreenPixel;
         pinOffset = 72.0f;
         infoOffset = 0.0f;
     }
