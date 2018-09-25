@@ -6,12 +6,12 @@ public enum SecureIdValueKey: Int32 {
     case internalPassport
     case driversLicense
     case idCard
-    case passportRegistration
-    case temporaryRegistration
     case address
     case utilityBill
     case bankStatement
     case rentalAgreement
+    case passportRegistration
+    case temporaryRegistration
     case phone
     case email
 }

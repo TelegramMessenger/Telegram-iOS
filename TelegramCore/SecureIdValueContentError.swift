@@ -76,7 +76,7 @@ func parseSecureIdValueContentErrors(dataHash: Data?, fileHashes: Set<Data>, sel
                     switch type {
                         case .secureValueTypePersonalDetails:
                             if let parsedField = SecureIdValueContentErrorPersonalDetailsField(rawValue: field) {
-                            result[.field(.personalDetails(parsedField))] = text
+                                result[.field(.personalDetails(parsedField))] = text
                             }
                         case .secureValueTypePassport:
                             if let parsedField = SecureIdValueContentErrorPassportField(rawValue: field) {
