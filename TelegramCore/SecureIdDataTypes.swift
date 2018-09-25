@@ -10,6 +10,10 @@ public struct SecureIdPersonName: Equatable {
         self.lastName = lastName
         self.middleName = middleName
     }
+    
+    public func isComplete() -> Bool {
+        return !self.firstName.isEmpty && !self.lastName.isEmpty
+    }
 }
 
 public struct SecureIdDate: Equatable {

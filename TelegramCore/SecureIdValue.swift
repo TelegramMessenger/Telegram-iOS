@@ -136,7 +136,7 @@ public func extractSecureIdValueAdditionalData(_ value: SecureIdValue) -> Secure
     var data = SecureIdValueAdditionalData()
     switch value {
         case let .personalDetails(value):
-            data.nativeNames = value.nativeName != nil
+            data.nativeNames = value.nativeName?.isComplete() ?? false
         case let .passport(value):
             data.selfie = value.selfieDocument != nil
             data.translation = !value.translations.isEmpty
