@@ -29,7 +29,7 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
     let view = ChildWindowHostView()
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     
-    let hostView = WindowHostView(view: view, isRotating: {
+    let hostView = WindowHostView(containerView: view, eventView: view, isRotating: {
         return false
     }, updateSupportedInterfaceOrientations: { orientations in
     }, updateDeferScreenEdgeGestures: { edges in

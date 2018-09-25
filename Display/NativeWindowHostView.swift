@@ -225,7 +225,7 @@ public func nativeWindowHostView() -> (UIWindow, WindowHostView) {
     rootViewController.view.frame = CGRect(origin: CGPoint(), size: window.bounds.size)
     rootViewController.viewDidAppear(false)
     
-    let hostView = WindowHostView(view: window, isRotating: {
+    let hostView = WindowHostView(containerView: window, eventView: window, isRotating: {
         return window.isRotating()
     }, updateSupportedInterfaceOrientations: { orientations in
         rootViewController.orientations = orientations
