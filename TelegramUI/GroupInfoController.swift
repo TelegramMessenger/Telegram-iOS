@@ -1932,7 +1932,7 @@ func handlePeerInfoAboutTextAction(account: Account, peerId: PeerId, navigateDis
     case .longTap:
         switch itemLink {
         case let .url(url):
-            let canOpenIn = !availableOpenInOptions(applicationContext: account.telegramApplicationContext, item: .url(url: url)).isEmpty
+            let canOpenIn = availableOpenInOptions(applicationContext: account.telegramApplicationContext, item: .url(url: url)).count > 1
             let openText = canOpenIn ? presentationData.strings.Conversation_FileOpenIn : presentationData.strings.Conversation_LinkDialogOpen
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [

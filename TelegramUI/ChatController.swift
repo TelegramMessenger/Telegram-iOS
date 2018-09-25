@@ -738,7 +738,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     case let .url(url):
                         var cleanUrl = url
                         var canAddToReadingList = true
-                        let canOpenIn = !availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).isEmpty
+                        let canOpenIn = availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).count > 1
                         let mailtoString = "mailto:"
                         let telString = "tel:"
                         var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen

@@ -193,9 +193,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
         }
         
         self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: timestamp, baseRate: 1.0, seekId: self.status.seekId + 1, status: self.status.status)
-        if let updateStatus = self.updateStatus {
-            updateStatus(self.status)
-        }
+        self.updateStatus?(self.status)
         
         self.ignorePosition = 2
     }

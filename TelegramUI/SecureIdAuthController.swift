@@ -568,7 +568,7 @@ final class SecureIdAuthController: ViewController {
         switch self.state {
             case let .form(form):
                 if case let .form(reqForm) = self.mode, let encryptedFormData = form.encryptedFormData, let formData = form.formData {
-                    let values = parseRequestedFormFields(formData.requestedFields, values: formData.values).map({ $0.1 }).flatMap({ $0 })
+                    let values = parseRequestedFormFields(formData.requestedFields, values: formData.values, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry).map({ $0.1 }).flatMap({ $0 })
                     
                     let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: values, requestedFields: formData.requestedFields)
                     |> deliverOnMainQueue).start(completed: { [weak self] in

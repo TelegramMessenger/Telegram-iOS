@@ -77,14 +77,9 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     
         self.imageNode = TransformImageNode()
         
-        let embedImpl: WebEmbedImplementation
-        if let embedUrl = webpageContent.embedUrl {
-            embedImpl = webEmbedImplementation(embedUrl: embedUrl, url: webpageContent.url)
-            self.playerNode = WebEmbedPlayerNode(impl: embedImpl, intrinsicDimensions: self.intrinsicDimensions)
-        } else {
-            embedImpl = GenericEmbedImplementation(url: webpageContent.url)
-            self.playerNode = WebEmbedPlayerNode(impl: embedImpl, intrinsicDimensions: self.intrinsicDimensions)
-        }
+        let embedType = webEmbedType(content: webpageContent)
+        let embedImpl = webEmbedImplementation(for: embedType)
+        self.playerNode = WebEmbedPlayerNode(impl: embedImpl, intrinsicDimensions: self.intrinsicDimensions)
         
         super.init()
         

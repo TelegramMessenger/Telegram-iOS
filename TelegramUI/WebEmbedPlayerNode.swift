@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import SwiftSignalKit
 import WebKit
+import TelegramCore
 
 protocol WebEmbedImplementation {
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void)
@@ -15,14 +16,31 @@ protocol WebEmbedImplementation {
     func callback(url: URL)
 }
 
-func webEmbedImplementation(embedUrl: String, url: String) -> WebEmbedImplementation {
-    if let (videoId, timestamp) = extractYoutubeVideoIdAndTimestamp(url: url) {
-        return YoutubeEmbedImplementation(videoId: videoId, timestamp: timestamp)
-    } else if let (videoId, timestamp) = extractVimeoVideoIdAndTimestamp(url: url) {
-        return VimeoEmbedImplementation(videoId: videoId, timestamp: timestamp)
+enum WebEmbedType {
+    case youtube(videoId: String, timestamp: Int)
+    case vimeo(videoId: String, timestamp: Int)
+    case iframe(url: String)
+}
+
+func webEmbedType(content: TelegramMediaWebpageLoadedContent) -> WebEmbedType {
+    if let (videoId, timestamp) = extractYoutubeVideoIdAndTimestamp(url: content.url) {
+        return .youtube(videoId: videoId, timestamp: timestamp)
+    } else if let (videoId, timestamp) = extractVimeoVideoIdAndTimestamp(url: content.url) {
+        return .vimeo(videoId: videoId, timestamp: timestamp)
+    } else {
+        return .iframe(url: content.embedUrl ?? content.url)
     }
-    
-    return GenericEmbedImplementation(url: url)
+}
+
+func webEmbedImplementation(for type: WebEmbedType) -> WebEmbedImplementation {
+    switch type {
+        case let .youtube(videoId, timestamp):
+            return YoutubeEmbedImplementation(videoId: videoId, timestamp: timestamp)
+        case let .vimeo(videoId, timestamp):
+            return VimeoEmbedImplementation(videoId: videoId, timestamp: timestamp)
+        case let .iframe(url):
+            return GenericEmbedImplementation(url: url)
+    }
 }
 
 final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
@@ -84,17 +102,11 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         self.view.addSubview(self.webView)
         
         self.impl.setup(self.webView, userContentController: userContentController, evaluateJavaScript: { [weak self] js in
-            if let strongSelf = self {
-                strongSelf.evaluateJavaScript(js: js)
-            }
+            self?.evaluateJavaScript(js: js)
         }, updateStatus: { [weak self] status in
-            if let strongSelf = self {
-                strongSelf.statusValue.set(status)
-            }
+            self?.statusValue.set(status)
         }, onPlaybackStarted: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.readyValue.set(true)
-            }
+            self?.readyValue.set(true)
         })
     }
     

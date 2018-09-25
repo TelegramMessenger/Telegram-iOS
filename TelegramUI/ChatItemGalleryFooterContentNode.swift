@@ -511,19 +511,41 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                                 break
                         }
                     }
-                                        
+                    
                     if messages.count == 1 {
                         var subject: ShareControllerSubject = ShareControllerSubject.messages(messages)
                         for m in messages[0].media {
                             if let image = m as? TelegramMediaImage {
                                 subject = .image(image.representations)
                             } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                                if let file = content.file {
-                                    subject = .media(.webPage(webPage: WebpageReference(webpage), media: file))
-                                    preferredAction = .saveToCameraRoll
-                                } else if let image = content.image {
-                                    subject = .media(.webPage(webPage: WebpageReference(webpage), media: image))
-                                    preferredAction = .saveToCameraRoll
+                                if content.embedType == "iframe" {
+                                    let item = OpenInItem.url(url: content.url)
+                                    if availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: item).count > 1 {
+                                        preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Conversation_FileOpenIn, action: { [weak self] in
+                                            if let strongSelf = self {
+                                                let openInController = OpenInActionSheetController(postbox: strongSelf.account.postbox, applicationContext: strongSelf.account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: item, additionalAction: nil, openUrl: { [weak self] url in
+                                                    if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
+                                                        openExternalUrl(account: strongSelf.account, url: url, presentationData: presentationData, applicationContext: applicationContext, navigationController: nil, dismissInput: {})
+                                                    }
+                                                })
+                                                strongSelf.controllerInteraction?.presentController(openInController, nil)
+                                            }
+                                        }))
+                                    } else {
+                                        preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Web_OpenExternal, action: { [weak self] in
+                                            if let strongSelf = self {
+                                                openExternalUrl(account: strongSelf.account, url: content.url, presentationData: presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: nil, dismissInput: {})
+                                            }
+                                        }))
+                                    }
+                                } else {
+                                    if let file = content.file {
+                                        subject = .media(.webPage(webPage: WebpageReference(webpage), media: file))
+                                        preferredAction = .saveToCameraRoll
+                                    } else if let image = content.image {
+                                        subject = .media(.webPage(webPage: WebpageReference(webpage), media: image))
+                                        preferredAction = .saveToCameraRoll
+                                    }
                                 }
                             } else if let file = m as? TelegramMediaFile {
                                 subject = .media(.message(message: MessageReference(messages[0]), media: file))

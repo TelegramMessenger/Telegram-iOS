@@ -51,11 +51,11 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.acceptNode.pressed = { [weak self] in
-            guard let strongSelf = self, let state = strongSelf.state, case let .form(form) = state, let formData = form.formData else {
+            guard let strongSelf = self, let state = strongSelf.state, case let .form(form) = state, let encryptedFormData = form.encryptedFormData, let formData = form.formData else {
                 return
             }
             
-            for (field, _, filled) in parseRequestedFormFields(formData.requestedFields, values: formData.values) {
+            for (field, _, filled) in parseRequestedFormFields(formData.requestedFields, values: formData.values, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry) {
                 if !filled {
                     if let contentNode = strongSelf.contentNode as? SecureIdAuthFormContentNode {
                         if let rect = contentNode.frameForField(field) {
@@ -291,7 +291,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                     current.updateValues(formData.values)
                                     contentNode = current
                                 } else {
-                                    let current = SecureIdAuthFormContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, peer: encryptedFormData.servicePeer, privacyPolicyUrl: encryptedFormData.form.termsUrl, form: formData, openField: { [weak self] field in
+                                    let current = SecureIdAuthFormContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, peer: encryptedFormData.servicePeer, privacyPolicyUrl: encryptedFormData.form.termsUrl, form: formData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, openField: { [weak self] field in
                                         if let strongSelf = self {
                                             switch field {
                                                 case .identity, .address:
@@ -438,15 +438,6 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             }
         }
         
-        let hasErrors: (SecureIdValueWithContext, SecureIdValueKey) -> Bool = { value, key in
-            for error in value.errors {
-                if case let .value(valueKey) = error.key, valueKey != key {
-                    return value.errors.count > 1
-                }
-            }
-            return !value.errors.isEmpty
-        }
-        
         switch field {
             case let .identity(personalDetails, document, selfie, translations):
                 if let document = document {
@@ -468,11 +459,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 }
                             }
                         case let .oneOf(types):
-                            var chosenByError = false
-                            outer: for type in types {
+                            inner: for type in types.sorted(by: { $0.valueKey.rawValue < $1.valueKey.rawValue }) {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                    let hasErrors = hasErrors(value, type.valueKey)
-                                   
                                     let data = extractSecureIdValueAdditionalData(value.value)
                                     var dataFilled = true
                                     if selfie && !data.selfie {
@@ -481,9 +469,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                     if translations && !data.translation {
                                         dataFilled = false
                                     }
-                                    
-                                    if hasValueType == nil || ((hasErrors || dataFilled) && !chosenByError) {
-                                        chosenByError = hasErrors
+                                    if hasValueType == nil || dataFilled {
                                         switch value.value {
                                             case .passport:
                                                 hasValueType = .passport
@@ -495,6 +481,10 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                                 hasValueType = .internalPassport
                                             default:
                                                 break
+                                        }
+                                        
+                                        if dataFilled {
+                                            break inner
                                         }
                                     }
                                 }
@@ -539,41 +529,36 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 }
                             }
                         case let .oneOf(types):
-                            var chosenByError = false
-                            outer: for type in types {
+                            inner: for type in types.sorted(by: { $0.valueKey.rawValue < $1.valueKey.rawValue }) {
                                 if let value = findValue(formData.values, key: type.valueKey)?.1 {
-                                    let hasErrors = hasErrors(value, type.valueKey)
-                                    
                                     let data = extractSecureIdValueAdditionalData(value.value)
                                     var dataFilled = true
                                     if translation && !data.translation {
                                         dataFilled = false
                                     }
                                     
-                                    if hasValueType == nil  || ((hasErrors || dataFilled) && !chosenByError) {
-                                        chosenByError = hasErrors
+                                    if hasValueType == nil || dataFilled {
                                         switch value.value {
                                             case .utilityBill:
                                                 hasValueType = .utilityBill
-                                                break outer
                                             case .bankStatement:
                                                 hasValueType = .bankStatement
-                                                break outer
                                             case .rentalAgreement:
                                                 hasValueType = .rentalAgreement
-                                                break outer
                                             case .passportRegistration:
                                                 hasValueType = .passportRegistration
-                                                break outer
                                             case .temporaryRegistration:
                                                 hasValueType = .temporaryRegistration
-                                                break outer
                                             default:
                                                 break
                                         }
+                                        
+                                        if dataFilled {
+                                            break inner
+                                        }
                                     }
                                 }
-                        }
+                            }
                     }
                     if let hasValueType = hasValueType {
                         self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .address(details: addressDetails, document: hasValueType, translations: translation), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
