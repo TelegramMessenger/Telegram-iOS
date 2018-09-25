@@ -855,20 +855,23 @@ public final class PendingMessageManager {
                 
                 let dependencyTag = PendingMessageRequestDependencyTag(messageId: messageId)
                 
-                let sendMessageRequest: Signal<Api.Updates, MTRpcError>
+                let sendMessageRequest: Signal<NetworkRequestResult<Api.Updates>, MTRpcError>
                 switch content.content {
                     case .text:
-                        sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities), tag: dependencyTag)
+                        sendMessageRequest = network.requestWithAcknowledgement(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities), tag: dependencyTag)
                     case let .media(inputMedia, text):
                         sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities), tag: dependencyTag)
+                        |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
                             sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: 0, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
+                            |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
                         }
                     case let .chatContextResult(chatContextResult):
                         sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id))
+                        |> map(NetworkRequestResult.result)
                     case .secretMedia:
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -877,13 +880,20 @@ public final class PendingMessageManager {
                 return sendMessageRequest
                 |> deliverOn(queue)
                 |> mapToSignal { result -> Signal<Void, MTRpcError> in
-                    if let strongSelf = self {
-                        return strongSelf.applySentMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)
-                        |> mapError { _ -> MTRpcError in
-                            return MTRpcError(errorCode: 400, errorDescription: "internal")
-                        }
-                    } else {
+                    guard let strongSelf = self else {
                         return .never()
+                    }
+                    switch result {
+                        case .acknowledged:
+                            return strongSelf.applyAcknowledgedMessage(postbox: postbox, message: message)
+                            |> mapError { _ -> MTRpcError in
+                                return MTRpcError(errorCode: 400, errorDescription: "internal")
+                            }
+                        case let .result(result):
+                            return strongSelf.applySentMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)
+                            |> mapError { _ -> MTRpcError in
+                                return MTRpcError(errorCode: 400, errorDescription: "internal")
+                            }
                     }
                 }
                 |> `catch` { error -> Signal<Void, NoError> in
@@ -923,6 +933,32 @@ public final class PendingMessageManager {
                 }
             }
         } |> switchToLatest
+    }
+    
+    private func applyAcknowledgedMessage(postbox: Postbox, message: Message) -> Signal<Void, NoError> {
+        return postbox.transaction { transaction -> Void in
+            transaction.updateMessage(message.id, update: { currentMessage in
+                var attributes = message.attributes
+                var found = false
+                for i in 0 ..< attributes.count {
+                    if let attribute = attributes[i] as? OutgoingMessageInfoAttribute {
+                        attributes[i] = attribute.withUpdatedAcknowledged(true)
+                        found = true
+                        break
+                    }
+                }
+                
+                if !found {
+                    return .skip
+                }
+                
+                var storeForwardInfo: StoreMessageForwardInfo?
+                if let forwardInfo = currentMessage.forwardInfo {
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                }
+                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+            })
+        }
     }
     
     private func applySentMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {

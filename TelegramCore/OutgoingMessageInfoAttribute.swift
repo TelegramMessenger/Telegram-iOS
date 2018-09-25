@@ -22,23 +22,50 @@ public struct OutgoingMessageInfoFlags: OptionSet {
 public class OutgoingMessageInfoAttribute: MessageAttribute {
     public let uniqueId: Int64
     public let flags: OutgoingMessageInfoFlags
+    public let acknowledged: Bool
     
-    init(uniqueId: Int64, flags: OutgoingMessageInfoFlags) {
+    init(uniqueId: Int64, flags: OutgoingMessageInfoFlags, acknowledged: Bool) {
         self.uniqueId = uniqueId
         self.flags = flags
+        self.acknowledged = acknowledged
     }
     
     required public init(decoder: PostboxDecoder) {
         self.uniqueId = decoder.decodeInt64ForKey("u", orElse: 0)
         self.flags = OutgoingMessageInfoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.acknowledged = decoder.decodeInt32ForKey("ack", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.uniqueId, forKey: "u")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
+        encoder.encodeInt32(self.acknowledged ? 1 : 0, forKey: "ack")
     }
     
     public func withUpdatedFlags(_ flags: OutgoingMessageInfoFlags) -> OutgoingMessageInfoAttribute {
-        return OutgoingMessageInfoAttribute(uniqueId: self.uniqueId, flags: flags)
+        return OutgoingMessageInfoAttribute(uniqueId: self.uniqueId, flags: flags, acknowledged: self.acknowledged)
+    }
+    
+    public func withUpdatedAcknowledged(_ acknowledged: Bool) -> OutgoingMessageInfoAttribute {
+        return OutgoingMessageInfoAttribute(uniqueId: self.uniqueId, flags: self.flags, acknowledged: acknowledged)
+    }
+}
+
+public extension Message {
+    public var isSentOrAcknowledged: Bool {
+        if self.flags.contains(.Failed) {
+            return false
+        } else if self.flags.isSending {
+            for attribute in self.attributes {
+                if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                    if attribute.acknowledged {
+                        return true
+                    }
+                }
+            }
+            return false
+        } else {
+            return true
+        }
     }
 }
