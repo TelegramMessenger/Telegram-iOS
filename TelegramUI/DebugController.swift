@@ -158,7 +158,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     }).start()
                 })
             case let .redactSensitiveData(theme, value):
-                return ItemListSwitchItem(theme: theme, title: "Redact Sensitive Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                return ItemListSwitchItem(theme: theme, title: "Remove Sensitive Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
                     let _ = updateLoggingSettings(postbox: arguments.account.postbox, {
                         $0.withUpdatedRedactSensitiveData(value)
                     }).start()
