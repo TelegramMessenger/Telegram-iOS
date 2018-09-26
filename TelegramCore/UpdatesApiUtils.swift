@@ -250,8 +250,8 @@ extension Api.Update {
                 return apiMessagePeerIds(message)
             case let .updateEditMessage(message, _, _):
                 return apiMessagePeerIds(message)
-            //case let .updateReadChannelInbox(channelId, _):
-            //    return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
+            case let .updateReadChannelInbox(channelId, _):
+                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateUserName(userId, _, _, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)]
             case let .updateUserPhone(userId, _):
