@@ -885,6 +885,16 @@ public class Account {
     
     public let notificationToken = Promise<Data>()
     public let voipToken = Promise<Data>()
+    
+    private var notificationTokensVersionValue = 0 {
+        didSet {
+            self.notificationTokensVersionPromise.set(self.notificationTokensVersionValue)
+        }
+    }
+    func updateNotificationTokensVersion() {
+        self.notificationTokensVersionValue += 1
+    }
+    private let notificationTokensVersionPromise = ValuePromise<Int>(0)
     private let notificationTokenDisposable = MetaDisposable()
     private let voipTokenDisposable = MetaDisposable()
     
@@ -1017,58 +1027,58 @@ public class Account {
         
         self.networkTypeValue.set(currentNetworkType())
         
-        let appliedNotificationToken = self.notificationToken.get()
-            |> distinctUntilChanged
-            |> mapToSignal { token -> Signal<Void, NoError> in
-                var tokenString = ""
-                token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                    for i in 0 ..< token.count {
-                        let byte = bytes.advanced(by: i).pointee
-                        tokenString = tokenString.appendingFormat("%02x", Int32(byte))
+        let appliedNotificationToken = combineLatest(self.notificationToken.get(), self.notificationTokensVersionPromise.get())
+        |> distinctUntilChanged(isEqual: { $0 == $1 })
+        |> mapToSignal { token, _ -> Signal<Void, NoError> in
+            var tokenString = ""
+            token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                for i in 0 ..< token.count {
+                    let byte = bytes.advanced(by: i).pointee
+                    tokenString = tokenString.appendingFormat("%02x", Int32(byte))
+                }
+            }
+            
+            var appSandbox: Api.Bool = .boolFalse
+            #if DEBUG
+                appSandbox = .boolTrue
+            #endif
+            
+            return masterNotificationsKey(account: self, ignoreDisabled: false)
+                |> mapToSignal { secret -> Signal<Void, NoError> in
+                    return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
+                        |> retryRequest
+                        |> mapToSignal { _ -> Signal<Void, NoError> in
+                            return .complete()
                     }
-                }
-                
-                var appSandbox: Api.Bool = .boolFalse
-                #if DEBUG
-                    appSandbox = .boolTrue
-                #endif
-                
-                return masterNotificationsKey(account: self, ignoreDisabled: false)
-                    |> mapToSignal { secret -> Signal<Void, NoError> in
-                        return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
-                            |> retryRequest
-                            |> mapToSignal { _ -> Signal<Void, NoError> in
-                                return .complete()
-                        }
-                }
+            }
         }
         self.notificationTokenDisposable.set(appliedNotificationToken.start())
         
-        let appliedVoipToken = self.voipToken.get()
-            |> distinctUntilChanged
-            |> mapToSignal { token -> Signal<Void, NoError> in
-                var tokenString = ""
-                token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                    for i in 0 ..< token.count {
-                        let byte = bytes.advanced(by: i).pointee
-                        tokenString = tokenString.appendingFormat("%02x", Int32(byte))
-                    }
-                }
-                
-                var appSandbox: Api.Bool = .boolFalse
-                #if DEBUG
-                    appSandbox = .boolTrue
-                #endif
-                
-                return masterNotificationsKey(account: self, ignoreDisabled: false)
-                    |> mapToSignal { secret -> Signal<Void, NoError> in
-                        return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
-                    |> retryRequest
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
+        let appliedVoipToken = combineLatest(self.voipToken.get(), self.notificationTokensVersionPromise.get())
+        |> distinctUntilChanged(isEqual: { $0 == $1 })
+        |> mapToSignal { token, _ -> Signal<Void, NoError> in
+            var tokenString = ""
+            token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                for i in 0 ..< token.count {
+                    let byte = bytes.advanced(by: i).pointee
+                    tokenString = tokenString.appendingFormat("%02x", Int32(byte))
                 }
             }
+            
+            var appSandbox: Api.Bool = .boolFalse
+            #if DEBUG
+                appSandbox = .boolTrue
+            #endif
+            
+            return masterNotificationsKey(account: self, ignoreDisabled: false)
+                |> mapToSignal { secret -> Signal<Void, NoError> in
+                    return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
+                |> retryRequest
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+            }
+        }
         self.voipTokenDisposable.set(appliedVoipToken.start())
         
         let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()

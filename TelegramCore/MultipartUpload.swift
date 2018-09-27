@@ -261,24 +261,26 @@ private final class MultipartUploadManager {
                         case let .data(data):
                             fileData = data
                     }
-                    let partData = self.state.transformHeader(data: fileData!.subdata(in: partOffset ..< (partOffset + partSize)))
-                    var currentBigTotalParts: Int? = nil
-                    if self.bigParts {
-                        let totalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
-                        currentBigTotalParts = totalParts
-                    }
-                    self.headerPartState = .uploading
-                    let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts, bigPart: self.bigParts))
-                    |> deliverOn(self.queue)
-                    self.uploadingParts[0] = (partSize, part.start(error: { [weak self] _ in
-                        self?.completed(nil)
-                    }, completed: { [weak self] in
-                        if let strongSelf = self {
-                            let _ = strongSelf.uploadingParts.removeValue(forKey: 0)
-                            strongSelf.headerPartState = .ready
-                            strongSelf.checkState()
+                    if let fileData = fileData {
+                        let partData = self.state.transformHeader(data: fileData.subdata(in: partOffset ..< (partOffset + partSize)))
+                        var currentBigTotalParts: Int? = nil
+                        if self.bigParts {
+                            let totalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
+                            currentBigTotalParts = totalParts
                         }
-                    }))
+                        self.headerPartState = .uploading
+                        let part = self.uploadPart(UploadPart(fileId: self.fileId, index: partIndex, data: partData, bigTotalParts: currentBigTotalParts, bigPart: self.bigParts))
+                        |> deliverOn(self.queue)
+                        self.uploadingParts[0] = (partSize, part.start(error: { [weak self] _ in
+                            self?.completed(nil)
+                        }, completed: { [weak self] in
+                            if let strongSelf = self {
+                                let _ = strongSelf.uploadingParts.removeValue(forKey: 0)
+                                strongSelf.headerPartState = .ready
+                                strongSelf.checkState()
+                            }
+                        }))
+                    }
                 case .uploading:
                     break
             }
