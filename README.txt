@@ -18,3 +18,17 @@ RUN TESTS
 1. meson configure -Dtest=true
 2. ninja
 3. invoke testsuites as ./build/test/animationTestSuite and ./build/test/vectorTestSuite
+
+BUILD WITH CMAKE
+================
+liblottie-player can also be built using the cmake build system.
+
+1. install cmake.  (Follow instructions at https://cmake.org/download/)
+2. create a new build/ directory
+3. invoke cmake from inside build/ as cmake -DLIB_INSTALL_DIR=lib ..
+4. invoke make
+5. invoke sudo make install to install, if desired.
+
+To install to a different prefix, specify it when running cmake, e.g.:
+ cmake -DCMAKE_INSTALL_PREFIX:PATH=~/Build -DLIB_INSTALL_DIR=~/Build/lib ..
+
