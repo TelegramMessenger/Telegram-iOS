@@ -110,7 +110,10 @@ public final class TextNodeLayout: NSObject {
     public func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedStringKey: Any])? {
         if let attributedString = self.attributedString {
             let transformedPoint = CGPoint(x: point.x - self.insets.left, y: point.y - self.insets.top)
+            var lineIndex = -1
+            let lineCount = self.lines.count
             for line in self.lines {
+                lineIndex += 1
                 var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
                 switch self.alignment {
                     case .center:
@@ -118,6 +121,9 @@ public final class TextNodeLayout: NSObject {
                     case .natural:
                         if line.isRTL {
                             lineFrame.origin.x = floor(self.size.width - lineFrame.size.width)
+                            if lineIndex == lineCount - 1, let cutout = self.cutout, case .BottomRight = cutout.position {
+                                lineFrame.origin.x -= cutout.size.width
+                            }
                         }
                     default:
                         break
@@ -139,7 +145,9 @@ public final class TextNodeLayout: NSObject {
                     break
                 }
             }
+            lineIndex = -1
             for line in self.lines {
+                lineIndex += 1
                 var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
                 switch self.alignment {
                     case .center:
@@ -147,6 +155,9 @@ public final class TextNodeLayout: NSObject {
                     case .natural:
                         if line.isRTL {
                             lineFrame.origin.x = floor(self.size.width - lineFrame.size.width)
+                            if lineIndex == lineCount - 1, let cutout = self.cutout, case .BottomRight = cutout.position {
+                                lineFrame.origin.x -= cutout.size.width
+                            }
                         }
                     default:
                         break
@@ -197,7 +208,10 @@ public final class TextNodeLayout: NSObject {
             let _ = attributedString.attribute(NSAttributedStringKey(rawValue: name), at: index, effectiveRange: &range)
             if range.length != 0 {
                 var rects: [(CGRect, CGRect)] = []
+                var lineIndex = -1
+                let lineCount = self.lines.count
                 for line in self.lines {
+                    lineIndex += 1
                     let lineRange = NSIntersectionRange(range, line.range)
                     if lineRange.length != 0 {
                         var leftOffset: CGFloat = 0.0
@@ -208,7 +222,10 @@ public final class TextNodeLayout: NSObject {
                         if lineRange.location + lineRange.length != line.range.length {
                             rightOffset = ceil(CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, nil))
                         }
-                        let lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                        var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                        if lineIndex == lineCount - 1, let cutout = self.cutout, case .BottomRight = cutout.position {
+                            lineFrame.origin.x -= cutout.size.width
+                        }
                         rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height))))
                     }
                 }
@@ -263,12 +280,6 @@ public class TextNode: ASDisplayNode {
     private class func calculateLayout(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets) -> TextNodeLayout {
         if let attributedString = attributedString {
             let stringLength = attributedString.length
-            
-            #if DEBUG
-            if attributedString.string == "مثلاً مثلاً مثلاً" {
-                assert(true)
-            }
-            #endif
             
             let font: CTFont
             if stringLength != 0 {
@@ -472,13 +483,17 @@ public class TextNode: ASDisplayNode {
             let alignment = layout.alignment
             let offset = CGPoint(x: layout.insets.left, y: layout.insets.top)
             
+            let lineCount = layout.lines.count
             for i in 0 ..< layout.lines.count {
                 let line = layout.lines[i]
-                let lineOffset: CGFloat
+                var lineOffset: CGFloat
                 if alignment == .center {
                     lineOffset = floor((bounds.size.width - line.frame.size.width) / 2.0)
                 } else if alignment == .natural, line.isRTL {
                     lineOffset = floor(bounds.size.width - line.frame.size.width)
+                    if i == lineCount - 1, let cutout = layout.cutout, case .BottomRight = cutout.position {
+                        lineOffset -= cutout.size.width
+                    }
                 } else {
                     lineOffset = 0.0
                 }

@@ -951,7 +951,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         return false
     }
     
-    public final var window: WindowHost? {
+    public final var currentWindow: WindowHost? {
         if let window = self.view.window as? WindowHost {
             return window
         } else if let superwindow = self.view.window {
