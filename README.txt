@@ -12,3 +12,9 @@ BUILD EXAMPLES
 1. meson configure -Dexample=true
 2. ninja
 3. to run examples invoke ./build/example/demo, etc.
+
+RUN TESTS
+=========
+1. meson configure -Dtest=true
+2. ninja
+3. invoke testsuites as ./build/test/animationTestSuite and ./build/test/vectorTestSuite
