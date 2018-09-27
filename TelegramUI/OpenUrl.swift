@@ -339,11 +339,10 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                             let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
                             
                             if let navigationController = navigationController {
-                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                account.telegramApplicationContext.applicationBindings.dismissNativeController()
                                 
                                 navigationController.view.window?.endEditing(true)
-                                
-                                (navigationController as? TelegramRootController)?.window?.present(controller, on: .root)
+                                account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(controller, on: .root)
                             }
                         }
                         return

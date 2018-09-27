@@ -26,8 +26,11 @@ public final class TelegramApplicationBindings {
     public let pushIdleTimerExtension: () -> Disposable
     public let openSettings: () -> Void
     public let openAppStorePage: () -> Void
+    public let getWindowHost: () -> WindowHost?
+    public let presentNativeController: (UIViewController) -> Void
+    public let dismissNativeController: () -> Void
     
-    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void) {
+    public init(isMainApp: Bool, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void, getWindowHost: @escaping () -> WindowHost?, presentNativeController: @escaping (UIViewController) -> Void, dismissNativeController: @escaping () -> Void) {
         self.isMainApp = isMainApp
         self.openUrl = openUrl
         self.openUniversalUrl = openUniversalUrl
@@ -40,6 +43,9 @@ public final class TelegramApplicationBindings {
         self.pushIdleTimerExtension = pushIdleTimerExtension
         self.openSettings = openSettings
         self.openAppStorePage = openAppStorePage
+        self.presentNativeController = presentNativeController
+        self.dismissNativeController = dismissNativeController
+        self.getWindowHost = getWindowHost
     }
 }
 

@@ -166,7 +166,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: message.text, font: item.presentationData.messageFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
                 }
                 
-                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                var cutout: TextNodeCutout?
+                if let statusSize = statusSize {
+                    cutout = TextNodeCutout(position: .BottomRight, size: statusSize)
+                }
+                
+                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))
                 
                 var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
                 let textSize = textLayout.size

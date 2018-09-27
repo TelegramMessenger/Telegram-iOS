@@ -24,7 +24,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
         controller = TGCameraController()
     }
     
-    if #available(iOSApplicationExtension 10.0, *) {
+    if #available(iOSApplicationExtension 11.0, *) {
     } else {
         controller.customPresentOverlayController = { [weak legacyController] overlayController in
             guard let legacyController = legacyController, let overlayController = overlayController else {

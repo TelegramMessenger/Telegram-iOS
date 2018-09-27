@@ -22,12 +22,14 @@ final class InstantPageTextLine {
     let range: NSRange
     let frame: CGRect
     let strikethroughItems: [InstantPageTextStrikethroughItem]
+    let isRTL: Bool
     
-    init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem]) {
+    init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem], isRTL: Bool) {
         self.line = line
         self.range = range
         self.frame = frame
         self.strikethroughItems = strikethroughItems
+        self.isRTL = isRTL
     }
 }
 
@@ -36,7 +38,7 @@ final class InstantPageTextItem: InstantPageItem {
     let lines: [InstantPageTextLine]
     let rtlLineIndices: Set<Int>
     var frame: CGRect
-    var alignment: NSTextAlignment = .left
+    var alignment: NSTextAlignment = .natural
     let medias: [InstantPageMedia] = []
     let wantsNode: Bool = false
     
@@ -51,16 +53,8 @@ final class InstantPageTextItem: InstantPageItem {
         var index = 0
         var rtlLineIndices = Set<Int>()
         for line in lines {
-            let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
-            if glyphRuns.count != 0 {
-                inner: for i in 0 ..< glyphRuns.count {
-                    let runStatus = CTRunGetStatus(glyphRuns[i] as! CTRun)
-                    
-                    if runStatus.contains(.rightToLeft) {
-                        rtlLineIndices.insert(index)
-                        break inner
-                    }
-                }
+            if line.isRTL {
+                rtlLineIndices.insert(index)
             }
             index += 1
         }
@@ -368,46 +362,39 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         if lineCharacterCount > 0 {
             let line = CTTypesetterCreateLineWithOffset(typesetter, CFRangeMake(lastIndex, lineCharacterCount), 100.0)
             
-            if line != nil {
-                let trailingWhitespace = CGFloat(CTLineGetTrailingWhitespaceWidth(line))
-                let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil) + Double(currentLineInset))
-                
-                var strikethroughItems: [InstantPageTextStrikethroughItem] = []
-                
-                let lineRange = NSMakeRange(lastIndex, lineCharacterCount)
-                
-                string.enumerateAttribute(NSAttributedStringKey.strikethroughStyle, in: lineRange, options: [], using: { item, range, _ in
-                    if let item = item {
-                        let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
-                        let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
-                        
-                        strikethroughItems.append(InstantPageTextStrikethroughItem(frame: CGRect(x: currentLineOrigin.x + lowerX, y: currentLineOrigin.y, width: upperX - lowerX, height: fontLineHeight)))
-                    }
-                })
-                
-                /*__block NSMutableArray<TGInstantPageTextUrlItem *> *urlItems = nil;
-                [string enumerateAttribute:(NSString *)TGUrlAttribute inRange:NSMakeRange(lastIndex, lineCharacterCount) options:0 usingBlock:^(id item, NSRange range, __unused BOOL *stop) {
-                    if (item != nil) {
-                    if (urlItems == nil) {
-                    urlItems = [[NSMutableArray alloc] init];
-                    }
-                    CGFloat lowerX = CGFloor(CTLineGetOffsetForStringIndex(line, range.location, NULL));
-                    CGFloat upperX = CGCeil(CTLineGetOffsetForStringIndex(line, range.location + range.length, NULL));
-                    [urlItems addObject:[[TGInstantPageTextUrlItem alloc] initWithFrame:CGRectMake(currentLineOrigin.x + lowerX, currentLineOrigin.y, upperX - lowerX, fontLineHeight) item:item]];
-                    }
-                    }];*/
-                
-                let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: fontLineHeight), strikethroughItems: strikethroughItems)
-                
-                lines.append(textLine)
-                
-                currentLineOrigin.x = 0.0;
-                currentLineOrigin.y += fontLineHeight + fontLineSpacing
-                
-                lastIndex += lineCharacterCount
-            } else {
-                break;
+            let trailingWhitespace = CGFloat(CTLineGetTrailingWhitespaceWidth(line))
+            let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil) + Double(currentLineInset))
+            
+            var strikethroughItems: [InstantPageTextStrikethroughItem] = []
+            
+            let lineRange = NSMakeRange(lastIndex, lineCharacterCount)
+            
+            string.enumerateAttribute(NSAttributedStringKey.strikethroughStyle, in: lineRange, options: [], using: { item, range, _ in
+                if let item = item {
+                    let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
+                    let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
+                    
+                    strikethroughItems.append(InstantPageTextStrikethroughItem(frame: CGRect(x: currentLineOrigin.x + lowerX, y: currentLineOrigin.y, width: upperX - lowerX, height: fontLineHeight)))
+                }
+            })
+            
+            var isRTL = false
+            let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
+            if glyphRuns.count != 0 {
+                let run = glyphRuns[0] as! CTRun
+                if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
+                    isRTL = true
+                }
             }
+            
+            let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: fontLineHeight), strikethroughItems: strikethroughItems, isRTL: isRTL)
+            
+            lines.append(textLine)
+            
+            currentLineOrigin.x = 0.0;
+            currentLineOrigin.y += fontLineHeight + fontLineSpacing
+            
+            lastIndex += lineCharacterCount
         } else {
             break;
         }

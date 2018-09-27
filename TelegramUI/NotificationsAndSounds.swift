@@ -23,10 +23,11 @@ private final class NotificationsAndSoundsArguments {
     
     let updateDisplayNameOnLockscreen: (Bool) -> Void
     let updateTotalUnreadCountStyle: (Bool) -> Void
+    let updateTotalUnreadCountCategory: (Bool) -> Void
     
     let resetNotifications: () -> Void
     
-    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, soundSelectionDisposable: MetaDisposable, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void) {
+    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, soundSelectionDisposable: MetaDisposable, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void) {
         self.account = account
         self.presentController = presentController
         self.soundSelectionDisposable = soundSelectionDisposable
@@ -41,6 +42,7 @@ private final class NotificationsAndSoundsArguments {
         self.updateInAppPreviews = updateInAppPreviews
         self.updateDisplayNameOnLockscreen = updateDisplayNameOnLockscreen
         self.updateTotalUnreadCountStyle = updateTotalUnreadCountStyle
+        self.updateTotalUnreadCountCategory = updateTotalUnreadCountCategory
         self.resetNotifications = resetNotifications
     }
 }
@@ -50,7 +52,7 @@ private enum NotificationsAndSoundsSection: Int32 {
     case groups
     case inApp
     case displayNamesOnLockscreen
-    case unreadCountStyle
+    case badge
     case reset
 }
 
@@ -74,7 +76,11 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     
     case displayNamesOnLockscreen(PresentationTheme, String, Bool)
     case displayNamesOnLockscreenInfo(PresentationTheme, String)
+    
+    case badgeHeader(PresentationTheme, String)
     case unreadCountStyle(PresentationTheme, String, Bool)
+    case unreadCountCategory(PresentationTheme, String, Bool)
+    case unreadCountCategoryInfo(PresentationTheme, String)
     
     case reset(PresentationTheme, String)
     case resetNotice(PresentationTheme, String)
@@ -89,8 +95,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return NotificationsAndSoundsSection.inApp.rawValue
             case .displayNamesOnLockscreen, .displayNamesOnLockscreenInfo:
                 return NotificationsAndSoundsSection.displayNamesOnLockscreen.rawValue
-            case .unreadCountStyle:
-                return NotificationsAndSoundsSection.unreadCountStyle.rawValue
+            case .badgeHeader, .unreadCountStyle, .unreadCountCategory, .unreadCountCategoryInfo:
+                return NotificationsAndSoundsSection.badge.rawValue
             case .reset, .resetNotice:
                 return NotificationsAndSoundsSection.reset.rawValue
         }
@@ -130,12 +136,18 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return 14
             case .displayNamesOnLockscreenInfo:
                 return 15
-            case .unreadCountStyle:
+            case .badgeHeader:
                 return 16
-            case .reset:
+            case .unreadCountStyle:
                 return 17
-            case .resetNotice:
+            case .unreadCountCategory:
                 return 18
+            case .unreadCountCategoryInfo:
+                return 19
+            case .reset:
+                return 20
+            case .resetNotice:
+                return 21
         }
     }
     
@@ -237,8 +249,26 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .badgeHeader(lhsTheme, lhsText):
+                if case let .badgeHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .unreadCountStyle(lhsTheme, lhsText, lhsValue):
                 if case let .unreadCountStyle(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .unreadCountCategory(lhsTheme, lhsText, lhsValue):
+                if case let .unreadCountCategory(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .unreadCountCategoryInfo(lhsTheme, lhsText):
+                if case let .unreadCountCategoryInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -322,10 +352,18 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .displayNamesOnLockscreenInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .badgeHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .unreadCountStyle(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateTotalUnreadCountStyle(updatedValue)
                 })
+            case let .unreadCountCategory(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                    arguments.updateTotalUnreadCountCategory(updatedValue)
+                })
+            case let .unreadCountCategoryInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .reset(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetNotifications()
@@ -366,9 +404,11 @@ private func notificationsAndSoundsEntries(globalSettings: GlobalNotificationSet
     
     entries.append(.displayNamesOnLockscreen(presentationData.theme, presentationData.strings.Notifications_DisplayNamesOnLockScreen, inAppSettings.displayNameOnLockscreen))
     entries.append(.displayNamesOnLockscreenInfo(presentationData.theme, presentationData.strings.Notifications_DisplayNamesOnLockScreenInfo))
-    if !GlobalExperimentalSettings.isAppStoreBuild {
-        entries.append(.unreadCountStyle(presentationData.theme, "Include muted chats", inAppSettings.totalUnreadCountDisplayStyle == .raw))
-    }
+    
+    entries.append(.badgeHeader(presentationData.theme, presentationData.strings.Notifications_Badge))
+    entries.append(.unreadCountStyle(presentationData.theme, presentationData.strings.Notifications_Badge_IncludeMutedChats, inAppSettings.totalUnreadCountDisplayStyle == .raw))
+    entries.append(.unreadCountCategory(presentationData.theme, presentationData.strings.Notifications_Badge_CountUnreadMessages, inAppSettings.totalUnreadCountDisplayCategory == .messages))
+    entries.append(.unreadCountCategoryInfo(presentationData.theme, inAppSettings.totalUnreadCountDisplayCategory == .chats ? presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOff : presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOn))
     
     entries.append(.reset(presentationData.theme, presentationData.strings.Notifications_ResetAllNotifications))
     entries.append(.resetNotice(presentationData.theme, presentationData.strings.Notifications_ResetAllNotificationsHelp))
@@ -445,6 +485,12 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
         let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
             var settings = settings
             settings.totalUnreadCountDisplayStyle = value ? .raw : .filtered
+            return settings
+        }).start()
+    }, updateTotalUnreadCountCategory: { value in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+            var settings = settings
+            settings.totalUnreadCountDisplayCategory = value ? .messages : .chats
             return settings
         }).start()
     }, resetNotifications: {

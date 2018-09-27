@@ -248,7 +248,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.window?.present(standardTextAlertController(theme: alertTheme, title: strongSelf.strings.Login_TermsOfServiceDecline, text: strongSelf.strings.Login_TermsOfServiceSignupDecline, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {
+                                                strongSelf.currentWindow?.present(standardTextAlertController(theme: alertTheme, title: strongSelf.strings.Login_TermsOfServiceDecline, text: strongSelf.strings.Login_TermsOfServiceSignupDecline, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {
                                                     presentAlertAgainImpl?()
                                                 }), TextAlertAction(type: .genericAction, title: strongSelf.strings.Login_TermsOfServiceDecline, action: {
                                                     guard let strongSelf = self else {
@@ -271,7 +271,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                             controller?.dismissAnimated()
                                         }
                                         strongSelf.view.endEditing(true)
-                                        strongSelf.window?.present(controller, on: .root)
+                                        strongSelf.currentWindow?.present(controller, on: .root)
                                     }
                                     presentAlertAgainImpl = {
                                         presentAlertImpl()
