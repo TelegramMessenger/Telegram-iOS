@@ -284,6 +284,11 @@ public final class MediaBox {
         }
     }
     
+    public func resourcePath(_ resource: MediaResource) -> String {
+        let paths = self.storePathsForId(resource.id)
+        return paths.complete
+    }
+    
     public func completedResourcePath(_ resource: MediaResource, pathExtension: String? = nil) -> String? {
         let paths = self.storePathsForId(resource.id)
         if let _ = fileSize(paths.complete) {

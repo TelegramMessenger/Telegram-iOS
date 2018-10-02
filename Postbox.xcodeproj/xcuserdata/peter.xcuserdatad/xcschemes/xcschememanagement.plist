@@ -9,11 +9,6 @@
 			<key>orderHint</key>
 			<integer>1</integer>
 		</dict>
-		<key>PostboxMac.xcscheme</key>
-		<dict>
-			<key>orderHint</key>
-			<integer>5</integer>
-		</dict>
 		<key>PostboxTests.xcscheme</key>
 		<dict>
 			<key>orderHint</key>

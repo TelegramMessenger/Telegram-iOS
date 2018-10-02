@@ -157,5 +157,16 @@ public final class SqliteInterface {
         preparedStatement.reset()
         preparedStatement.destroy()
     }
-
+    
+    public func explain(_ query: String) -> String {
+        var result = ""
+        self.select("EXPLAIN QUERY PLAN \(query)", { cursor in
+            if !result.isEmpty {
+                result.append("\n")
+            }
+            result.append("\(cursor.getInt32(at: 0)) \(cursor.getInt32(at: 1)) \(cursor.getInt32(at: 2)) \(cursor.getString(at: 3))")
+            return true
+        })
+        return result
+    }
 }
