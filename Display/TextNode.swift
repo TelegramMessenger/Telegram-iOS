@@ -25,13 +25,41 @@ public enum TextNodeCutoutPosition {
 }
 
 public struct TextNodeCutout: Equatable {
-    public let position: TextNodeCutoutPosition
-    public let size: CGSize
+    public var topLeft: CGSize?
+    public var topRight: CGSize?
+    public var bottomRight: CGSize?
     
-    public init(position: TextNodeCutoutPosition, size: CGSize) {
-        self.position = position
-        self.size = size
+    public init(topLeft: CGSize? = nil, topRight: CGSize? = nil, bottomRight: CGSize? = nil) {
+        self.topLeft = topLeft
+        self.topRight = topRight
+        self.bottomRight = bottomRight
     }
+}
+
+private func displayLineFrame(frame: CGRect, isRTL: Bool, boundingRect: CGRect, cutout: TextNodeCutout?) -> CGRect {
+    if frame.width.isEqual(to: boundingRect.width) {
+        return frame
+    }
+    var lineFrame = frame
+    let intersectionFrame = lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.height)
+    if isRTL {
+        lineFrame.origin.x = max(0.0, floor(boundingRect.width - lineFrame.size.width))
+        if let topRight = cutout?.topRight {
+            let topRightRect = CGRect(origin: CGPoint(x: boundingRect.width - topRight.width, y: 0.0), size: topRight)
+            if intersectionFrame.intersects(topRightRect) {
+                lineFrame.origin.x -= topRight.width
+                return lineFrame
+            }
+        }
+        if let bottomRight = cutout?.bottomRight {
+            let bottomRightRect = CGRect(origin: CGPoint(x: boundingRect.width - bottomRight.width, y: boundingRect.height - bottomRight.height), size: bottomRight)
+            if intersectionFrame.intersects(bottomRightRect) {
+                lineFrame.origin.x -= bottomRight.width
+                return lineFrame
+            }
+        }
+    }
+    return lineFrame
 }
 
 public final class TextNodeLayoutArguments {
@@ -111,7 +139,6 @@ public final class TextNodeLayout: NSObject {
         if let attributedString = self.attributedString {
             let transformedPoint = CGPoint(x: point.x - self.insets.left, y: point.y - self.insets.top)
             var lineIndex = -1
-            let lineCount = self.lines.count
             for line in self.lines {
                 lineIndex += 1
                 var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
@@ -120,11 +147,9 @@ public final class TextNodeLayout: NSObject {
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
                         if line.isRTL {
-                            lineFrame.origin.x = floor(self.size.width - lineFrame.size.width)
-                            if lineIndex == lineCount - 1, let cutout = self.cutout, case .BottomRight = cutout.position {
-                                lineFrame.origin.x -= cutout.size.width
-                            }
+                            lineFrame.origin.x = self.size.width - lineFrame.size.width
                         }
+                        lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     default:
                         break
                 }
@@ -155,10 +180,8 @@ public final class TextNodeLayout: NSObject {
                     case .natural:
                         if line.isRTL {
                             lineFrame.origin.x = floor(self.size.width - lineFrame.size.width)
-                            if lineIndex == lineCount - 1, let cutout = self.cutout, case .BottomRight = cutout.position {
-                                lineFrame.origin.x -= cutout.size.width
-                            }
                         }
+                        lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     default:
                         break
                 }
@@ -208,10 +231,7 @@ public final class TextNodeLayout: NSObject {
             let _ = attributedString.attribute(NSAttributedStringKey(rawValue: name), at: index, effectiveRange: &range)
             if range.length != 0 {
                 var rects: [(CGRect, CGRect)] = []
-                var lineIndex = -1
-                let lineCount = self.lines.count
                 for line in self.lines {
-                    lineIndex += 1
                     let lineRange = NSIntersectionRange(range, line.range)
                     if lineRange.length != 0 {
                         var leftOffset: CGFloat = 0.0
@@ -220,12 +240,17 @@ public final class TextNodeLayout: NSObject {
                         }
                         var rightOffset: CGFloat = line.frame.width
                         if lineRange.location + lineRange.length != line.range.length {
-                            rightOffset = ceil(CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, nil))
+                            var secondaryOffset: CGFloat = 0.0
+                            let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                            rightOffset = ceil(rawOffset)
+                            if !rawOffset.isEqual(to: secondaryOffset) {
+                                rightOffset = ceil(secondaryOffset)
+                            }
                         }
                         var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
-                        if lineIndex == lineCount - 1, let cutout = self.cutout, case .BottomRight = cutout.position {
-                            lineFrame.origin.x -= cutout.size.width
-                        }
+                        
+                        lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                        
                         rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height))))
                     }
                 }
@@ -315,14 +340,26 @@ public class TextNode: ASDisplayNode {
             var cutoutMaxY: CGFloat = 0.0
             var cutoutWidth: CGFloat = 0.0
             var cutoutOffset: CGFloat = 0.0
-            if let cutout = cutout {
+            
+            var bottomCutoutEnabled = false
+            var bottomCutoutSize = CGSize()
+            
+            if let topLeft = cutout?.topLeft {
                 cutoutMinY = -fontLineSpacing
-                cutoutMaxY = cutout.size.height + fontLineSpacing
-                cutoutWidth = cutout.size.width
-                if case .TopLeft = cutout.position {
-                    cutoutOffset = cutoutWidth
-                }
+                cutoutMaxY = topLeft.height + fontLineSpacing
+                cutoutWidth = topLeft.width
+                cutoutOffset = cutoutWidth
                 cutoutEnabled = true
+            } else if let topRight = cutout?.topRight {
+                cutoutMinY = -fontLineSpacing
+                cutoutMaxY = topRight.height + fontLineSpacing
+                cutoutWidth = topRight.width
+                cutoutEnabled = true
+            }
+            
+            if let bottomRight = cutout?.bottomRight {
+                bottomCutoutSize = bottomRight
+                bottomCutoutEnabled = true
             }
             
             let firstLineOffset = floorToScreenPixels(fontDescent)
@@ -437,6 +474,10 @@ public class TextNode: ASDisplayNode {
                 }
             }
             
+            if !lines.isEmpty && bottomCutoutEnabled {
+                layoutSize.width = max(layoutSize.width, lines[lines.count - 1].frame.width + bottomCutoutSize.width)
+            }
+            
             return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), firstLineOffset: firstLineOffset, lines: lines, backgroundColor: backgroundColor)
         } else {
             return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), firstLineOffset: 0.0, lines: [], backgroundColor: backgroundColor)
@@ -483,21 +524,20 @@ public class TextNode: ASDisplayNode {
             let alignment = layout.alignment
             let offset = CGPoint(x: layout.insets.left, y: layout.insets.top)
             
-            let lineCount = layout.lines.count
             for i in 0 ..< layout.lines.count {
                 let line = layout.lines[i]
-                var lineOffset: CGFloat
+                
+                var lineFrame = line.frame
+                lineFrame.origin.y += offset.y
+                
                 if alignment == .center {
-                    lineOffset = floor((bounds.size.width - line.frame.size.width) / 2.0)
+                    lineFrame.origin.x = offset.x + floor((bounds.size.width - lineFrame.width) / 2.0)
                 } else if alignment == .natural, line.isRTL {
-                    lineOffset = floor(bounds.size.width - line.frame.size.width)
-                    if i == lineCount - 1, let cutout = layout.cutout, case .BottomRight = cutout.position {
-                        lineOffset -= cutout.size.width
-                    }
-                } else {
-                    lineOffset = 0.0
+                    lineFrame.origin.x = offset.x + floor(bounds.size.width - lineFrame.width)
+                    
+                    lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: bounds.size), cutout: layout.cutout)
                 }
-                context.textPosition = CGPoint(x: line.frame.origin.x + lineOffset + offset.x, y: line.frame.origin.y + offset.y)
+                context.textPosition = CGPoint(x: lineFrame.minX, y: lineFrame.minY)
                 CTLineDraw(line.line, context)
             }
             

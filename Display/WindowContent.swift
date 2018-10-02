@@ -554,6 +554,10 @@ public class Window1 {
     }
     
     public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let coveringView = self.coveringView, !coveringView.isHidden, coveringView.superview != nil, coveringView.frame.contains(point) {
+            return coveringView.hitTest(point, with: event)
+        }
+        
         for view in self.hostView.eventView.subviews.reversed() {
             if NSStringFromClass(type(of: view)) == "UITransitionView" {
                 if let result = view.hitTest(point, with: event) {

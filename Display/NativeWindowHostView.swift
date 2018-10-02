@@ -11,7 +11,20 @@ private let defaultOrientations: UIInterfaceOrientationMask = {
     }
 }()
 
-private class WindowRootViewController: UIViewController {
+private final class WindowRootViewControllerView: UIView {
+    override var frame: CGRect {
+        get {
+            return super.frame
+        } set(value) {
+            var value = value
+            value.size.height += value.minY
+            value.origin.y = 0.0
+            super.frame = value
+        }
+    }
+}
+
+private final class WindowRootViewController: UIViewController {
     var presentController: ((UIViewController, PresentationSurfaceLevel, Bool, (() -> Void)?) -> Void)?
     var transitionToSize: ((CGSize, Double) -> Void)?
     
@@ -62,6 +75,16 @@ private class WindowRootViewController: UIViewController {
         return orientations
     }
     
+    init() {
+        super.init(nibName: nil, bundle: nil)
+        
+        self.extendedLayoutIncludesOpaqueBars = true
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
         return self.gestureEdges
     }
@@ -78,7 +101,7 @@ private class WindowRootViewController: UIViewController {
     }
     
     override func loadView() {
-        self.view = UIView()
+        self.view = WindowRootViewControllerView()
         self.view.isOpaque = false
         self.view.backgroundColor = nil
     }
