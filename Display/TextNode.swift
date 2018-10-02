@@ -475,7 +475,14 @@ public class TextNode: ASDisplayNode {
             }
             
             if !lines.isEmpty && bottomCutoutEnabled {
-                layoutSize.width = max(layoutSize.width, lines[lines.count - 1].frame.width + bottomCutoutSize.width)
+                let proposedWidth = lines[lines.count - 1].frame.width + bottomCutoutSize.width
+                if proposedWidth > layoutSize.width {
+                    if proposedWidth < constrainedSize.width {
+                        layoutSize.width = proposedWidth
+                    } else {
+                        layoutSize.height += bottomCutoutSize.height
+                    }
+                }
             }
             
             return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), firstLineOffset: firstLineOffset, lines: lines, backgroundColor: backgroundColor)
