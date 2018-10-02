@@ -520,16 +520,16 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 var statusFrame: CGRect?
                 
                 if statusInText, let (statusSize, _) = statusSizeAndApply {
-                    var frame = CGRect(origin: CGPoint(), size: statusSize)
+                    var frame = CGRect(origin: CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY - statusSize.height), size: statusSize)
                     
-                    let trailingLineWidth = textLayout.trailingLineWidth
+                    /*let trailingLineWidth = textLayout.trailingLineWidth
                     if textLayout.size.width - trailingLineWidth >= statusSize.width {
                         frame.origin = CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY - statusSize.height)
                     } else if trailingLineWidth + statusSize.width < textConstrainedSize.width {
                         frame.origin = CGPoint(x: textFrame.minX + trailingLineWidth, y: textFrame.maxY - statusSize.height)
                     } else {
                         frame.origin = CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY)
-                    }
+                    }*/
                     
                     if let inlineImageSize = inlineImageSize {
                         if frame.origin.y < inlineImageSize.height + 4.0 {
