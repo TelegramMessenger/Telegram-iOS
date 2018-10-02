@@ -625,7 +625,6 @@ public final class ManagedAudioSession {
                     case .builtin:
                         resetToBuiltin = true
                     case .speaker:
-                        try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
                         if type == .voiceCall {
                             if let routes = AVAudioSession.sharedInstance().availableInputs {
                                 for route in routes {
@@ -636,6 +635,7 @@ public final class ManagedAudioSession {
                                 }
                             }
                         }
+                        try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
                     case .headphones:
                         break
                     case let .port(port):

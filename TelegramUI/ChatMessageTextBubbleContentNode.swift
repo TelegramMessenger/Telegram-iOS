@@ -168,7 +168,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var cutout: TextNodeCutout?
                 if let statusSize = statusSize {
-                    cutout = TextNodeCutout(position: .BottomRight, size: statusSize)
+                    cutout = TextNodeCutout(bottomRight: statusSize)
                 }
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))

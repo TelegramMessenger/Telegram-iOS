@@ -328,7 +328,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             var inlineImageDimensions: CGSize?
             var inlineImageSize: CGSize?
             var updateInlineImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            var textCutout: TextNodeCutout?
+            var textCutout = TextNodeCutout()
             var initialWidth: CGFloat = CGFloat.greatestFiniteMagnitude
             var refineContentImageLayout: ((CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> ChatMessageInteractiveMediaNode)))?
             var refineContentFileLayout: ((CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode)))?
@@ -435,7 +435,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 inlineImageSize = CGSize(width: 54.0, height: 54.0)
                 
                 if let inlineImageSize = inlineImageSize {
-                    textCutout = TextNodeCutout(position: .TopRight, size: CGSize(width: inlineImageSize.width + 10.0, height: inlineImageSize.height + 10.0))
+                    textCutout.topRight = CGSize(width: inlineImageSize.width + 10.0, height: inlineImageSize.height + 10.0)
                 }
             }
             
@@ -508,7 +508,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     updatedAdditionalImageBadge = currentAdditionalImageBadgeNode ?? ChatMessageInteractiveMediaBadge()
                 }
                 
-                let (textLayout, textApply) = textAsyncLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: textCutout, insets: UIEdgeInsets()))
+                var upatedTextCutout = textCutout
+                if statusInText, let (statusSize, _) = statusSizeAndApply {
+                    upatedTextCutout.bottomRight = statusSize
+                }
+                
+                let (textLayout, textApply) = textAsyncLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: upatedTextCutout, insets: UIEdgeInsets()))
                 
                 var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
                 
