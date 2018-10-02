@@ -267,6 +267,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
     declareEncodable(SynchronizeMarkAllUnseenPersonalMessagesOperation.self, f: { SynchronizeMarkAllUnseenPersonalMessagesOperation(decoder: $0) })
     declareEncodable(CachedRecentPeers.self, f: { CachedRecentPeers(decoder: $0) })
+    declareEncodable(AppChangelogState.self, f: { AppChangelogState(decoder: $0) })
     
     
     return
@@ -339,7 +340,7 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
+                                            return .authorized(Account(id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                                         }
                                     }
                                 case _:
@@ -857,6 +858,7 @@ public class Account {
     public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
+    let networkArguments: NetworkInitializationArguments
     public let peerId: PeerId
     
     public let auxiliaryMethods: AccountAuxiliaryMethods
@@ -928,12 +930,13 @@ public class Account {
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
-    public init(id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods) {
+    public init(id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods) {
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
         self.postbox = postbox
         self.network = network
+        self.networkArguments = networkArguments
         self.peerId = peerId
         
         self.auxiliaryMethods = auxiliaryMethods
@@ -1044,15 +1047,15 @@ public class Account {
             #endif
             
             return masterNotificationsKey(account: self, ignoreDisabled: false)
-                |> mapToSignal { secret -> Signal<Void, NoError> in
-                    return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
-                        |> retryRequest
-                        |> mapToSignal { _ -> Signal<Void, NoError> in
-                            return .complete()
-                    }
+            |> mapToSignal { secret -> Signal<Void, NoError> in
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
+                |> retryRequest
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
             }
         }
-        self.notificationTokenDisposable.set(appliedNotificationToken.start())
+        //self.notificationTokenDisposable.set(appliedNotificationToken.start())
         
         let appliedVoipToken = combineLatest(self.voipToken.get(), self.notificationTokensVersionPromise.get())
         |> distinctUntilChanged(isEqual: { $0 == $1 })
@@ -1071,8 +1074,8 @@ public class Account {
             #endif
             
             return masterNotificationsKey(account: self, ignoreDisabled: false)
-                |> mapToSignal { secret -> Signal<Void, NoError> in
-                    return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
+            |> mapToSignal { secret -> Signal<Void, NoError> in
+                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
                 |> retryRequest
                 |> mapToSignal { _ -> Signal<Void, NoError> in
                     return .complete()
@@ -1162,6 +1165,7 @@ public class Account {
         }))
         self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedTermsOfServiceUpdates(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedAppChangelog(postbox: self.postbox, network: self.network, stateManager: self.stateManager, appVersion: self.networkArguments.appVersion).start())
         self.managedOperationsDisposable.add(managedProxyInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())

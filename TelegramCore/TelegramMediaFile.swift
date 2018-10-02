@@ -269,7 +269,7 @@ public final class TelegramMediaFile: Media, Equatable {
     public init(decoder: PostboxDecoder) {
         self.fileId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.partialReference = decoder.decodeAnyObjectForKey("prf", decoder: { PartialMediaReference(decoder: $0) }) as? PartialMediaReference
-        self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
+        self.resource = decoder.decodeObjectForKey("r") as? TelegramMediaResource ?? EmptyMediaResource()
         self.previewRepresentations = decoder.decodeObjectArrayForKey("pr")
         self.mimeType = decoder.decodeStringForKey("mt", orElse: "")
         if let size = decoder.decodeOptionalInt32ForKey("s") {

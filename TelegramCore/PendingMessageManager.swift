@@ -153,6 +153,7 @@ public final class PendingMessageManager {
         self.queue.async {
             let addedMessageIds = messageIds.subtracting(self.pendingMessageIds)
             let removedMessageIds = self.pendingMessageIds.subtracting(messageIds)
+            let removedSecretMessageIds = Set(removedMessageIds.filter({ $0.peerId.namespace == Namespaces.Peer.SecretChat }))
             
             var updateUploadingPeerIds = Set<PeerId>()
             var updateUploadingGroupIds = Set<Int64>()
@@ -192,6 +193,32 @@ public final class PendingMessageManager {
             
             for groupId in updateUploadingGroupIds {
                 self.beginSendingGroupIfPossible(groupId: groupId)
+            }
+            
+            if !removedSecretMessageIds.isEmpty {
+                let _ = (self.postbox.transaction { transaction -> Set<PeerId> in
+                    var peerIdsWithDeliveredMessages = Set<PeerId>()
+                    for id in removedSecretMessageIds {
+                        if let message = transaction.getMessage(id) {
+                            if message.isSentOrAcknowledged {
+                                peerIdsWithDeliveredMessages.insert(id.peerId)
+                            }
+                        }
+                    }
+                    return peerIdsWithDeliveredMessages
+                }
+                |> deliverOn(self.queue)).start(next: { [weak self] peerIdsWithDeliveredMessages in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    for peerId in peerIdsWithDeliveredMessages {
+                        if let context = strongSelf.peerSummaryContexts[peerId] {
+                            for subscriber in context.messageDeliveredSubscribers.copyItems() {
+                                subscriber()
+                            }
+                        }
+                    }
+                })
             }
             
             self._hasPendingMessages.set(!self.pendingMessageIds.isEmpty)
@@ -962,7 +989,8 @@ public final class PendingMessageManager {
     }
     
     private func applySentMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
-        return applyUpdateMessage(postbox: postbox, stateManager: stateManager, message: message, result: result) |> afterDisposed { [weak self] in
+        return applyUpdateMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)
+        |> afterDisposed { [weak self] in
             if let strongSelf = self {
                 strongSelf.queue.async {
                     if let context = strongSelf.peerSummaryContexts[message.id.peerId] {

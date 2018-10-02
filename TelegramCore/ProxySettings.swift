@@ -169,9 +169,9 @@ extension ProxyServerSettings {
     var mtProxySettings: MTSocksProxySettings {
         switch self.connection {
             case let .socks5(username, password):
-                return MTSocksProxySettings(ip: self.host, port: UInt16(self.port), username: username, password: password, secret: nil)
+                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: username, password: password, secret: nil)
             case let .mtp(secret):
-                return MTSocksProxySettings(ip: self.host, port: UInt16(self.port), username: nil, password: nil, secret: secret)
+                return MTSocksProxySettings(ip: self.host, port: UInt16(clamping: self.port), username: nil, password: nil, secret: secret)
         }
     }
 }
