@@ -18,7 +18,7 @@ private func ==(lhs: [Media], rhs: [Media]) -> Bool {
     }
     
     for i in 0 ..< lhs.count {
-        if !lhs[i].isEqual(rhs[i]) {
+        if !lhs[i].isEqual(to: rhs[i]) {
             return false
         }
     }
@@ -144,8 +144,9 @@ class ReadStateTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        let _ = self.historyTable!.addMessages(messages: [StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations, processMessages: nil)
+        let _ = self.historyTable!.addMessages(messages: [StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations, processMessages: nil)
     }
     
     private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
@@ -159,8 +160,9 @@ class ReadStateTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func addHole(_ id: Int32) {
@@ -174,8 +176,9 @@ class ReadStateTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func removeMessages(_ ids: [Int32]) {
@@ -189,8 +192,9 @@ class ReadStateTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func expectApplyRead(_ messageId: Int32, _ expectInvalidate: Bool) {
@@ -222,77 +226,77 @@ class ReadStateTableTests: XCTestCase {
     func testResetState() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130, markedUnread: false)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
-        expectReadState(100, 120, 130)
+        expectReadState(100, 120, 130, false)
     }
     
     func testAddIncomingBeforeKnown() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130, markedUnread: false)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(99, 99, "", [], [.Incoming])
         
-        expectReadState(100, 120, 130)
+        expectReadState(100, 120, 130, false)
     }
     
     func testAddIncomingAfterKnown() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130, markedUnread: false)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(130, 130, "", [], [.Incoming])
         
-        expectReadState(100, 120, 131)
+        expectReadState(100, 120, 131, false)
     }
     
     func testApplyReadThenAddIncoming() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0, markedUnread: false)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.expectApplyRead(200, false)
         
         self.addMessage(130, 130, "", [], [.Incoming])
         
-        expectReadState(200, 100, 0)
+        expectReadState(200, 100, 0, false)
     }
     
     func testApplyAddIncomingThenRead() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0, markedUnread: false)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(130, 130, "", [], [.Incoming])
         
-        expectReadState(100, 100, 1)
+        expectReadState(100, 100, 1, false)
         
         self.expectApplyRead(200, false)
         
-        expectReadState(200, 100, 0)
+        expectReadState(200, 100, 0, false)
     }
     
     func testIgnoreOldRead() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0, markedUnread: false)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.expectApplyRead(90, false)
         
-        expectReadState(100, 100, 0)
+        expectReadState(100, 100, 0, false)
     }
     
     func testInvalidateReadHole() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: .idBased(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0, markedUnread: false)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(200, 200)
         self.addHole(1)
         
         self.expectApplyRead(200, true)
         
-        expectReadState(200, 100, 0)
+        expectReadState(200, 100, 0, false)
     }
 }

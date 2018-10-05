@@ -937,7 +937,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            //debugRestoreState(basePath: basePath, name: "previous1")
+            debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             loop: while true {
@@ -1054,6 +1054,14 @@ public final class Postbox {
     }()
     
     public let mediaBox: MediaBox
+    
+    private var nextUniqueId: UInt32 = 1
+    func takeNextUniqueId() -> UInt32 {
+        assert(self.queue.isCurrent())
+        let value = self.nextUniqueId
+        self.nextUniqueId += 1
+        return value
+    }
     
     let tables: [Table]
     
@@ -2524,7 +2532,11 @@ public final class Postbox {
                 case .totalUnreadState:
                     additionalDataEntries.append(.totalUnreadState(self.messageHistoryMetadataTable.getChatListTotalUnreadState()))
                 case let .peerNotificationSettings(peerId):
-                    additionalDataEntries.append(.peerNotificationSettings(self.peerNotificationSettingsTable.getEffective(peerId)))
+                    var notificationPeerId = peerId
+                    if let peer = self.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId {
+                        notificationPeerId = associatedPeerId
+                    }
+                    additionalDataEntries.append(.peerNotificationSettings(self.peerNotificationSettingsTable.getEffective(notificationPeerId)))
                 case let .cacheEntry(entryId):
                     additionalDataEntries.append(.cacheEntry(entryId, self.retrieveItemCacheEntry(id: entryId)))
                 case let .peerIsContact(peerId):

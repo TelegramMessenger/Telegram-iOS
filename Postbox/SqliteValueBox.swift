@@ -317,6 +317,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     private func checkTable(_ table: ValueBoxTable) {
+        assert(self.queue.isCurrent())
         if let currentTable = self.tables[table.id] {
             precondition(currentTable.keyType == table.keyType)
         } else {
@@ -338,6 +339,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     private func checkFullTextTable(_ table: ValueBoxFullTextTable) {
+        assert(self.queue.isCurrent())
         if let _ = self.fullTextTables[table.id] {
         } else {
             var resultCode = self.database.execute("CREATE VIRTUAL TABLE ft\(table.id) USING fts5(collectionId, itemId, contents, tags)")

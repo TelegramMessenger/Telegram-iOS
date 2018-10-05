@@ -18,7 +18,7 @@ private func ==(lhs: [Media], rhs: [Media]) -> Bool {
     }
     
     for i in 0 ..< lhs.count {
-        if !lhs[i].isEqual(rhs[i]) {
+        if !lhs[i].isEqual(to: rhs[i]) {
             return false
         }
     }

@@ -160,14 +160,17 @@ class ChatListTableTests: XCTestCase {
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
         let updatedChatListGroupInclusions: [PeerGroupId: GroupChatListInclusion] = [:]
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        let _ = self.historyTable!.addMessages(messages: [StoreMessage(id: MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingKey, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations, processMessages: nil)
+        let _ = self.historyTable!.addMessages(messages: [StoreMessage(id: MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingKey, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations, processMessages: nil)
         var operations: [WrappedPeerGroupId: [ChatListOperation]] = [:]
         self.chatListTable!.replay(historyOperationsByPeerId: operationsByPeerId, updatedPeerChatListEmbeddedStates: updatedPeerChatListEmbeddedStates, updatedChatListInclusions: [:], updatedChatListGroupInclusions: updatedChatListGroupInclusions, initialPeerGroupIdsBeforeUpdate: initialPeerGroupIdsBeforeUpdate, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
-        var updatedTotalUnreadCount: Int32?
-        self.chatListIndexTable?.commitWithTransactionUnreadCountDeltas([:], transactionParticipationInTotalUnreadCountUpdates: ([], []), getPeer: { _ in
+        var updatedTotalUnreadState: ChatListTotalUnreadState?
+        self.chatListIndexTable?.commitWithTransaction(alteredInitialPeerCombinedReadStates: [:], transactionParticipationInTotalUnreadCountUpdates: (added: Set(), removed: Set()), getCombinedPeerReadState: { peerId -> CombinedPeerReadState? in
+            self.readStateTable?.getCombinedState(peerId)
+        }, getPeer: { _ in
             return nil
-        }, updatedTotalUnreadCount: &updatedTotalUnreadCount)
+        }, updatedTotalUnreadState: &updatedTotalUnreadState)
         self.chatListIndexTable?.clearMemoryCache()
     }
     
@@ -185,10 +188,12 @@ class ChatListTableTests: XCTestCase {
         var operations: [WrappedPeerGroupId: [ChatListOperation]] = [:]
         
         self.chatListTable!.replay(historyOperationsByPeerId: [:], updatedPeerChatListEmbeddedStates: [:], updatedChatListInclusions: updatedChatListInclusions, updatedChatListGroupInclusions: updatedChatListGroupInclusions, initialPeerGroupIdsBeforeUpdate: initialPeerGroupIdsBeforeUpdate, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
-        var updatedTotalUnreadCount: Int32?
-        self.chatListIndexTable?.commitWithTransactionUnreadCountDeltas([:], transactionParticipationInTotalUnreadCountUpdates: ([], []), getPeer: { _ in
+        var updatedTotalUnreadState: ChatListTotalUnreadState?
+        self.chatListIndexTable?.commitWithTransaction(alteredInitialPeerCombinedReadStates: [:], transactionParticipationInTotalUnreadCountUpdates: (added: Set(), removed: Set()), getCombinedPeerReadState: { peerId -> CombinedPeerReadState? in
+            self.readStateTable?.getCombinedState(peerId)
+        }, getPeer: { _ in
             return nil
-        }, updatedTotalUnreadCount: &updatedTotalUnreadCount)
+        }, updatedTotalUnreadState: &updatedTotalUnreadState)
         self.chatListIndexTable?.clearMemoryCache()
     }
     
@@ -205,10 +210,12 @@ class ChatListTableTests: XCTestCase {
         var operations: [WrappedPeerGroupId: [ChatListOperation]] = [:]
         
         self.chatListTable!.replay(historyOperationsByPeerId: [:], updatedPeerChatListEmbeddedStates: [:], updatedChatListInclusions: [:], updatedChatListGroupInclusions: updatedChatListGroupInclusions, initialPeerGroupIdsBeforeUpdate: initialPeerGroupIdsBeforeUpdate, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
-        var updatedTotalUnreadCount: Int32?
-        self.chatListIndexTable?.commitWithTransactionUnreadCountDeltas([:], transactionParticipationInTotalUnreadCountUpdates: ([], []), getPeer: { _ in
+        var updatedTotalUnreadState: ChatListTotalUnreadState?
+        self.chatListIndexTable?.commitWithTransaction(alteredInitialPeerCombinedReadStates: [:], transactionParticipationInTotalUnreadCountUpdates: (added: Set(), removed: Set()), getCombinedPeerReadState: { peerId -> CombinedPeerReadState? in
+            self.readStateTable?.getCombinedState(peerId)
+        }, getPeer: { _ in
             return nil
-        }, updatedTotalUnreadCount: &updatedTotalUnreadCount)
+        }, updatedTotalUnreadState: &updatedTotalUnreadState)
         self.chatListIndexTable?.clearMemoryCache()
     }
     
@@ -226,8 +233,9 @@ class ChatListTableTests: XCTestCase {
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
         let updatedChatListGroupInclusions: [PeerGroupId: GroupChatListInclusion] = [:]
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.addHoles([MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.addHoles([MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
         var operations: [WrappedPeerGroupId: [ChatListOperation]] = [:]
         self.chatListTable!.replay(historyOperationsByPeerId: operationsByPeerId, updatedPeerChatListEmbeddedStates: updatedPeerChatListEmbeddedStates, updatedChatListInclusions: [:], updatedChatListGroupInclusions: updatedChatListGroupInclusions, initialPeerGroupIdsBeforeUpdate: initialPeerGroupIdsBeforeUpdate, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
     }
@@ -261,8 +269,9 @@ class ChatListTableTests: XCTestCase {
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
         let updatedChatListGroupInclusions: [PeerGroupId: GroupChatListInclusion] = [:]
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
         var operations: [WrappedPeerGroupId: [ChatListOperation]] = [:]
         self.chatListTable!.replay(historyOperationsByPeerId: operationsByPeerId, updatedPeerChatListEmbeddedStates: updatedPeerChatListEmbeddedStates, updatedChatListInclusions: [:], updatedChatListGroupInclusions: updatedChatListGroupInclusions, initialPeerGroupIdsBeforeUpdate: initialPeerGroupIdsBeforeUpdate, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
     }
@@ -281,8 +290,9 @@ class ChatListTableTests: XCTestCase {
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
         let updatedChatListGroupInclusions: [PeerGroupId: GroupChatListInclusion] = [:]
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.fillHole(MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id), fillType: fillType, tagMask: nil, messages: messages.map({ StoreMessage(id: MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: $0.0), globallyUniqueId: nil, groupingKey: $0.4, timestamp: $0.1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.fillHole(MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id), fillType: fillType, tagMask: nil, messages: messages.map({ StoreMessage(id: MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: $0.0), globallyUniqueId: nil, groupingKey: $0.4, timestamp: $0.1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
         var operations: [WrappedPeerGroupId: [ChatListOperation]] = [:]
         self.chatListTable!.replay(historyOperationsByPeerId: operationsByPeerId, updatedPeerChatListEmbeddedStates: updatedPeerChatListEmbeddedStates, updatedChatListInclusions: [:], updatedChatListGroupInclusions: updatedChatListGroupInclusions, initialPeerGroupIdsBeforeUpdate: initialPeerGroupIdsBeforeUpdate, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
     }

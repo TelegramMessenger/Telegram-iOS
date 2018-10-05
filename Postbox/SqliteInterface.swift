@@ -97,6 +97,12 @@ public final class SqliteStatementCursor {
     }
 }
 
+public enum SqliteInterfaceStatementKey {
+    case int32(Int32)
+    case int64(Int64)
+    case data(Data)
+}
+
 public final class SqliteInterface {
     private let database: Database
     
@@ -127,12 +133,52 @@ public final class SqliteInterface {
         }
     }
     
-    public func selectWithKey(_ query: String, index: Int, key: Data, _ f: (SqliteStatementCursor) -> Bool) {
+    public func withStatement(_ query: String, _ f: (([SqliteInterfaceStatementKey], (SqliteStatementCursor) -> Bool) -> Void) -> Void) {
         var statement: OpaquePointer? = nil
-        sqlite3_prepare_v2(database.handle, query, -1, &statement, nil)
+        if sqlite3_prepare_v2(database.handle, query, -1, &statement, nil) != SQLITE_OK {
+            return
+        }
         let preparedStatement = SqliteInterfaceStatement(statement: statement)
-        key.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-            preparedStatement.bind(index, data: bytes, length: key.count)
+        
+        f({ keys, iterate in
+            preparedStatement.reset()
+            var index = 1
+            for key in keys {
+                switch key {
+                    case let .data(data):
+                        let dataCount = data.count
+                        data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                            preparedStatement.bind(index, data: bytes, length: dataCount)
+                        }
+                    case let .int32(value):
+                        preparedStatement.bind(index, number: value)
+                    case let .int64(value):
+                        preparedStatement.bind(index, number: value)
+                }
+                index += 1
+            }
+            let cursor = SqliteStatementCursor(statement: preparedStatement)
+            while preparedStatement.step() {
+                if !iterate(cursor) {
+                    break
+                }
+            }
+        })
+        
+        preparedStatement.reset()
+        preparedStatement.destroy()
+    }
+    
+    public func selectWithKeys(_ query: String, keys: [(Int, Data)], _ f: (SqliteStatementCursor) -> Bool) {
+        var statement: OpaquePointer? = nil
+        if sqlite3_prepare_v2(database.handle, query, -1, &statement, nil) != SQLITE_OK {
+            return
+        }
+        let preparedStatement = SqliteInterfaceStatement(statement: statement)
+        for (index, key) in keys {
+            key.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                preparedStatement.bind(index, data: bytes, length: key.count)
+            }
         }
         let cursor = SqliteStatementCursor(statement: preparedStatement)
         while preparedStatement.step() {
@@ -146,7 +192,12 @@ public final class SqliteInterface {
     
     public func select(_ query: String, _ f: (SqliteStatementCursor) -> Bool) {
         var statement: OpaquePointer? = nil
-        sqlite3_prepare_v2(database.handle, query, -1, &statement, nil)
+        if sqlite3_prepare_v2(database.handle, query, -1, &statement, nil) != SQLITE_OK {
+            return
+        }
+        if statement == nil {
+            return
+        }
         let preparedStatement = SqliteInterfaceStatement(statement: statement)
         let cursor = SqliteStatementCursor(statement: preparedStatement)
         while preparedStatement.step() {

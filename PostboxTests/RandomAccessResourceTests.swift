@@ -12,7 +12,7 @@ func randomFilePath() -> String {
     return NSTemporaryDirectory() + "\(arc4random())\(arc4random())"
 }
 
-class RandomAccessResourceTests: XCTestCase {
+/*class RandomAccessResourceTests: XCTestCase {
     override func setUp() {
         super.setUp()
         
@@ -411,3 +411,4 @@ class RandomAccessResourceTests: XCTestCase {
         XCTAssert(memcmp(testData.bytes, sampleData.bytes, size) == 0)
     }
 }
+*/

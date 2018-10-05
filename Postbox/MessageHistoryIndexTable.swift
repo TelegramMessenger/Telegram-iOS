@@ -299,7 +299,7 @@ final class MessageHistoryIndexTable: Table {
                 switch upperItem {
                     case let .Hole(upperHole):
                         self.justRemove(upperHole.maxIndex, isMessage: false, operations: &operations)
-                        if upperHole.maxIndex.id.id > index.id.id + 1 {
+                        if upperHole.maxIndex.id.id >= index.id.id + 1 {
                             self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: upperHole.maxIndex, min: index.id.id + 1, tags: upperHole.tags), operations: &operations)
                         }
                         if upperHole.min <= index.id.id - 1 {

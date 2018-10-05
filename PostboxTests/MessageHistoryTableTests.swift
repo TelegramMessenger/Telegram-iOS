@@ -23,7 +23,7 @@ private func ==(lhs: [Media], rhs: [Media]) -> Bool {
     }
     
     for i in 0 ..< lhs.count {
-        if !lhs[i].isEqual(rhs[i]) {
+        if !lhs[i].isEqual(to: rhs[i]) {
             return false
         }
     }
@@ -68,6 +68,10 @@ private func ==(lhs: Entry, rhs: Entry) -> Bool {
 }
 
 private class TestEmbeddedMedia: Media, CustomStringConvertible {
+    func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
+    }
+    
     var id: MediaId? { return nil }
     var peerIds: [PeerId] = []
     let data: String
@@ -84,7 +88,7 @@ private class TestEmbeddedMedia: Media, CustomStringConvertible {
         encoder.encodeString(self.data, forKey: "s")
     }
     
-    func isEqual(_ other: Media) -> Bool {
+    func isEqual(to other: Media) -> Bool {
         if let other = other as? TestEmbeddedMedia {
             return self.data == other.data
         }
@@ -97,6 +101,10 @@ private class TestEmbeddedMedia: Media, CustomStringConvertible {
 }
 
 private class TestExternalMedia: Media {
+    func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
+    }
+    
     let id: MediaId?
     var peerIds: [PeerId] = []
     let data: String
@@ -117,7 +125,7 @@ private class TestExternalMedia: Media {
         encoder.encodeString(self.data, forKey: "s")
     }
     
-    func isEqual(_ other: Media) -> Bool {
+    func isEqual(to other: Media) -> Bool {
         if let other = other as? TestExternalMedia {
             return self.id == other.id && self.data == other.data
         }
@@ -190,7 +198,7 @@ private func ==(lhs: MediaEntry, rhs: MediaEntry) -> Bool {
         case let .Direct(lhsMedia, lhsReferenceCount):
             switch rhs {
                 case let .Direct(rhsMedia, rhsReferenceCount):
-                    return lhsMedia.isEqual(rhsMedia) && lhsReferenceCount == rhsReferenceCount
+                    return lhsMedia.isEqual(to: rhsMedia) && lhsReferenceCount == rhsReferenceCount
                 case .MessageReference:
                     return false
             }
@@ -346,8 +354,9 @@ class MessageHistoryTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        let _ = self.historyTable!.addMessages(messages: [StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], localTags: [], forwardInfo: StoreMessageForwardInfo(authorId: peerId, sourceId: peerId, sourceMessageId: MessageId(peerId: peerId, namespace: 0, id: 10), date: 10, authorSignature: "abc"), authorId: authorPeerId, text: text, attributes: [], media: media)], location: location, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations, processMessages: nil)
+        let _ = self.historyTable!.addMessages(messages: [StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], localTags: [], forwardInfo: StoreMessageForwardInfo(authorId: peerId, sourceId: peerId, sourceMessageId: MessageId(peerId: peerId, namespace: 0, id: 10), date: 10, authorSignature: "abc"), authorId: authorPeerId, text: text, attributes: [], media: media)], location: location, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations, processMessages: nil)
     }
 
     private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags, _ groupingKey: Int64?) {
@@ -361,8 +370,9 @@ class MessageHistoryTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func updateMessageTimestamp(_ previousId: Int32, _ timestamp: Int32) {
@@ -376,8 +386,9 @@ class MessageHistoryTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.updateMessageTimestamp(MessageId(peerId: peerId, namespace: namespace, id: previousId), timestamp: timestamp, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.updateMessageTimestamp(MessageId(peerId: peerId, namespace: namespace, id: previousId), timestamp: timestamp, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func addHole(_ id: Int32) {
@@ -391,8 +402,9 @@ class MessageHistoryTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func removeMessages(_ ids: [Int32]) {
@@ -406,8 +418,9 @@ class MessageHistoryTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func removeMessagesInRange(minId: Int32, maxId: Int32) {
@@ -421,8 +434,9 @@ class MessageHistoryTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.removeMessagesInRange(peerId: peerId, namespace: namespace, minId: minId, maxId: maxId, operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media], Int64?)], _ tagMask: MessageTags? = nil) {
@@ -436,8 +450,9 @@ class MessageHistoryTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, groupingKey: $0.4, timestamp: $0.1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, groupingKey: $0.4, timestamp: $0.1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func fillMultipleHoles(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media], Int64?)], _ tagMask: MessageTags? = nil, _ tags: MessageTags = []) {
@@ -451,8 +466,9 @@ class MessageHistoryTableTests: XCTestCase {
         var invalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation] = []
         var groupFeedOperations: [PeerGroupId: [GroupFeedIndexOperation]] = [:]
         var localTagsOperations: [IntermediateMessageHistoryLocalTagsOperation] = []
+        var updatedMedia: [MediaId : Media?] = [:]
         
-        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, groupingKey: $0.4, timestamp: $0.1, flags: [], tags: tags, globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
+        self.historyTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), globallyUniqueId: nil, groupingKey: $0.4, timestamp: $0.1, flags: [], tags: tags, globalTags: [], localTags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, updatedMedia: &updatedMedia, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations, globalTagsOperations: &globalTagsOperations, pendingActionsOperations: &pendingActionsOperations, updatedMessageActionsSummaries: &updatedMessageActionsSummaries, updatedMessageTagSummaries: &updatedMessageTagSummaries, invalidateMessageTagSummaries: &invalidateMessageTagSummaries, groupFeedOperations: &groupFeedOperations, localTagsOperations: &localTagsOperations)
     }
     
     private func replaceSummary(_ count: Int32, _ maxId: MessageId.Id) {
@@ -462,7 +478,7 @@ class MessageHistoryTableTests: XCTestCase {
     }
     
     private func getExistingMessageGroupInfo(_ id: Int32) -> MessageGroupInfo {
-        if let entry = self.indexTable!.get(MessageId(peerId: peerId, namespace: namespace, id: id)) {
+        if let entry = self.indexTable!.getMaybeUninitialized(MessageId(peerId: peerId, namespace: namespace, id: id)) {
             if let message = self.historyTable?.getMessage(entry.index) {
                 return message.groupInfo!
             }

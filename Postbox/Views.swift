@@ -27,6 +27,7 @@ public enum PostboxViewKey: Hashable {
     case additionalChatListItems
     case noticeEntry(NoticeEntryKey)
     case cachedItem(ItemCacheEntryId)
+    case orderedContacts
     
     public var hashValue: Int {
         switch self {
@@ -82,6 +83,8 @@ public enum PostboxViewKey: Hashable {
                 return key.hashValue
             case let .cachedItem(id):
                 return id.hashValue
+            case .orderedContacts:
+                return 12
         }
     }
     
@@ -243,6 +246,12 @@ public enum PostboxViewKey: Hashable {
                 } else {
                     return false
                 }
+            case .orderedContacts:
+                if case .orderedContacts = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -301,5 +310,7 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutableNoticeEntryView(postbox: postbox, key: key)
         case let .cachedItem(id):
             return MutableCachedItemView(postbox: postbox, id: id)
+        case .orderedContacts:
+            return MutableOrderedContactsView(postbox: postbox)
     }
 }

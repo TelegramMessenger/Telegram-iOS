@@ -8,7 +8,11 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
         self.peerIds = peerIds
         self.notificationSettings = [:]
         for peerId in peerIds {
-            if let settings = postbox.peerNotificationSettingsTable.getEffective(peerId) {
+            var notificationPeerId = peerId
+            if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId {
+                notificationPeerId = associatedPeerId
+            }
+            if let settings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId) {
                 self.notificationSettings[peerId] = settings
             }
         }
@@ -18,7 +22,11 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
         if !transaction.currentUpdatedPeerNotificationSettings.isEmpty {
             var updated = false
             for peerId in self.peerIds {
-                if let settings = transaction.currentUpdatedPeerNotificationSettings[peerId] {
+                var notificationPeerId = peerId
+                if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId {
+                    notificationPeerId = associatedPeerId
+                }
+                if let settings = transaction.currentUpdatedPeerNotificationSettings[notificationPeerId] {
                     self.notificationSettings[peerId] = settings
                     updated = true
                 }

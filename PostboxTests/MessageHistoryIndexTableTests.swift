@@ -627,4 +627,15 @@ class MessageHistoryIndexTableTests: XCTestCase {
         
         expect([.Hole(1, 7, 8), .Message(8, 8), .Message(10, 10), .Message(15, 15), .Message(20, 20), .Hole(21, Int32.max, Int32.max)])
     }
+    
+    func testHole1() {
+        addMessage(1000, 1000)
+        addMessage(1001, 1001)
+        addHole(Int32.max)
+        expect([.Message(1000, 1000), .Message(1001, 1001), .Hole(1002, Int32.max, Int32.max)])
+        addMessagesUpperBlock([(1005, 1005)])
+        expect([.Message(1000, 1000), .Message(1001, 1001), .Hole(1002, 1004, 1005), .Message(1005, 1005)])
+        addMessage(1003, 1003)
+        expect([.Message(1000, 1000), .Message(1001, 1001), .Hole(1002, 1002, 1003), .Message(1003, 1003), .Hole(1004, 1004, 1005), .Message(1005, 1005)])
+    }
 }

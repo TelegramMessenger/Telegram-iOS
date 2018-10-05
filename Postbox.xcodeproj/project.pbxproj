@@ -46,6 +46,8 @@
 		D021E0DC1DB5237C00C6B04F /* ItemCollectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DB1DB5237C00C6B04F /* ItemCollectionsView.swift */; };
 		D021FC262024B83700C34AB7 /* FileSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021FC252024B83700C34AB7 /* FileSize.swift */; };
 		D021FC272024B83700C34AB7 /* FileSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021FC252024B83700C34AB7 /* FileSize.swift */; };
+		D029AA522167BC22006D4947 /* OrderedContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D029AA512167BC22006D4947 /* OrderedContactsView.swift */; };
+		D029AA532167BC22006D4947 /* OrderedContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D029AA512167BC22006D4947 /* OrderedContactsView.swift */; };
 		D02EB8071D2B07F300D07ED3 /* OrderStatisticTreeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02EB8061D2B07F300D07ED3 /* OrderStatisticTreeTests.swift */; };
 		D03120F81DA53FF4006A2A60 /* PeerPresenceTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120F71DA53FF4006A2A60 /* PeerPresenceTable.swift */; };
 		D03120FA1DA540F0006A2A60 /* CachedPeerData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120F91DA540F0006A2A60 /* CachedPeerData.swift */; };
@@ -406,6 +408,7 @@
 		D021E0D71DB4FD1300C6B04F /* ItemCollectionItemTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCollectionItemTable.swift; sourceTree = "<group>"; };
 		D021E0DB1DB5237C00C6B04F /* ItemCollectionsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCollectionsView.swift; sourceTree = "<group>"; };
 		D021FC252024B83700C34AB7 /* FileSize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSize.swift; sourceTree = "<group>"; };
+		D029AA512167BC22006D4947 /* OrderedContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderedContactsView.swift; sourceTree = "<group>"; };
 		D02EB8061D2B07F300D07ED3 /* OrderStatisticTreeTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OrderStatisticTreeTests.swift; sourceTree = "<group>"; };
 		D03120F71DA53FF4006A2A60 /* PeerPresenceTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerPresenceTable.swift; sourceTree = "<group>"; };
 		D03120F91DA540F0006A2A60 /* CachedPeerData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedPeerData.swift; sourceTree = "<group>"; };
@@ -864,6 +867,7 @@
 				D048B4AE20A5EEAE00C79D31 /* AdditionalChatListItemsView.swift */,
 				D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */,
 				D037178A20D923CA004773C8 /* CachedItemView.swift */,
+				D029AA512167BC22006D4947 /* OrderedContactsView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1155,6 +1159,7 @@
 				D0B844071DAB91B5005F29E1 /* MediaResource.swift in Sources */,
 				D0F7B1D71E045C6A007EB8A5 /* MessageHistoryReadStateTable.swift in Sources */,
 				D0B418261D7DFE0C004562A4 /* MappedFile.swift in Sources */,
+				D029AA532167BC22006D4947 /* OrderedContactsView.swift in Sources */,
 				D0943AFC1FDAE074001522CC /* ChatListTopPeersView.swift in Sources */,
 				D048B4A920A5CBE400C79D31 /* AdditionalChatListItemsTable.swift in Sources */,
 				D073CE771DCBF3B4007511FD /* Media.swift in Sources */,
@@ -1330,6 +1335,7 @@
 				D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */,
 				D0A352F81F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift in Sources */,
 				D0F53BF31E794C6700117362 /* PeerChatStateView.swift in Sources */,
+				D029AA522167BC22006D4947 /* OrderedContactsView.swift in Sources */,
 				D021E0D81DB4FD1300C6B04F /* ItemCollectionItemTable.swift in Sources */,
 				D048B4A820A5CBE400C79D31 /* AdditionalChatListItemsTable.swift in Sources */,
 				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
