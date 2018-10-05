@@ -783,7 +783,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             }
-            self.account.telegramApplicationContext.mediaManager.setPlaylist(InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex), type: file.isVoice ? .voice : .music)
+            self.account.telegramApplicationContext.mediaManager?.setPlaylist(InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex), type: file.isVoice ? .voice : .music)
             return
         }
         

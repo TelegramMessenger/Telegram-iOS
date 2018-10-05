@@ -158,13 +158,16 @@ public final class SecretMediaPreviewController: ViewController {
             }
         }))
         
-        self.hiddenMediaManagerIndex = account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get() |> map { messageIdAndMedia in
-            if let (messageId, media) = messageIdAndMedia {
-                return .chat(messageId, media)
-            } else {
-                return nil
-            }
-        })
+        if let mediaManager = account.telegramApplicationContext.mediaManager {
+            self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get()
+            |> map { messageIdAndMedia in
+                if let (messageId, media) = messageIdAndMedia {
+                    return .chat(messageId, media)
+                } else {
+                    return nil
+                }
+            })
+        }
         
         self.screenCaptureEventsDisposable = (screenCaptureEvents()
         |> deliverOnMainQueue).start(next: { [weak self] _ in
@@ -181,8 +184,8 @@ public final class SecretMediaPreviewController: ViewController {
     deinit {
         self.disposable.dispose()
         self.markMessageAsConsumedDisposable.dispose()
-        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
-            self.account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
+        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex, let mediaManager = self.account.telegramApplicationContext.mediaManager {
+            mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
         self.screenCaptureEventsDisposable?.dispose()
     }

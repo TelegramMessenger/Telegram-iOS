@@ -75,7 +75,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         self.contentNode = ASDisplayNode()
         
-        self.controlsNode = OverlayPlayerControlsNode(postbox: account.postbox, theme: self.presentationData.theme, status: account.telegramApplicationContext.mediaManager.musicMediaPlayerState)
+        self.controlsNode = OverlayPlayerControlsNode(postbox: account.postbox, theme: self.presentationData.theme, status: account.telegramApplicationContext.mediaManager!.musicMediaPlayerState)
         
         self.historyBackgroundNode = ASDisplayNode()
         self.historyBackgroundNode.isLayerBacked = true
@@ -140,7 +140,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         self.controlsNode.control = { [weak self] action in
             if let strongSelf = self {
-                strongSelf.account.telegramApplicationContext.mediaManager.playlistControl(action, type: strongSelf.type)
+                strongSelf.account.telegramApplicationContext.mediaManager?.playlistControl(action, type: strongSelf.type)
             }
         }
         

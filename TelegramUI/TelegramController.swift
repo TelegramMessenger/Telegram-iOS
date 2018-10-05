@@ -78,9 +78,9 @@ public class TelegramController: ViewController {
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
-        if enableMediaAccessoryPanel {
-            self.mediaStatusDisposable = (account.telegramApplicationContext.mediaManager.globalMediaPlayerState
-                |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
+        if enableMediaAccessoryPanel, let mediaManager = account.telegramApplicationContext.mediaManager {
+            self.mediaStatusDisposable = (mediaManager.globalMediaPlayerState
+            |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
                 if let strongSelf = self, strongSelf.enableMediaAccessoryPanel {
                     if !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.0, playlistStateAndType?.0.item) ||
                         strongSelf.playlistStateAndType?.1 != playlistStateAndType?.0.order || strongSelf.playlistStateAndType?.2 != playlistStateAndType?.1 {
@@ -359,8 +359,12 @@ public class TelegramController: ViewController {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
-                mediaAccessoryPanel.containerNode.headerNode.playbackStatus = self.account.telegramApplicationContext.mediaManager.globalMediaPlayerState |> map { state in
-                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+               
+                if let mediaManager = self.account.telegramApplicationContext.mediaManager {
+                    mediaAccessoryPanel.containerNode.headerNode.playbackStatus = mediaManager.globalMediaPlayerState
+                    |> map { state in
+                        return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                    }
                 }
             } else {
                 if let (mediaAccessoryPanel, _) = self.mediaAccessoryPanel {
@@ -378,7 +382,7 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = type != .voice
                 mediaAccessoryPanel.close = { [weak self] in
                     if let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType {
-                        strongSelf.account.telegramApplicationContext.mediaManager.setPlaylist(nil, type: type)
+                        strongSelf.account.telegramApplicationContext.mediaManager?.setPlaylist(nil, type: type)
                     }
                 }
                 mediaAccessoryPanel.toggleRate = {
@@ -404,12 +408,12 @@ public class TelegramController: ViewController {
                             return
                         }
                         
-                        strongSelf.account.telegramApplicationContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
+                        strongSelf.account.telegramApplicationContext.mediaManager?.playlistControl(.setBaseRate(baseRate), type: type)
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in
                     if let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType {
-                        strongSelf.account.telegramApplicationContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
+                        strongSelf.account.telegramApplicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: type)
                     }
                 }
                 mediaAccessoryPanel.tapAction = { [weak self] in
@@ -436,8 +440,11 @@ public class TelegramController: ViewController {
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: .immediate)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
-                mediaAccessoryPanel.containerNode.headerNode.playbackStatus = self.account.telegramApplicationContext.mediaManager.globalMediaPlayerState |> map { state in
-                    return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                if let mediaManager = self.account.telegramApplicationContext.mediaManager {
+                    mediaAccessoryPanel.containerNode.headerNode.playbackStatus = mediaManager.globalMediaPlayerState
+                    |> map { state in
+                        return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                    }
                 }
                 mediaAccessoryPanel.animateIn(transition: transition)
             }

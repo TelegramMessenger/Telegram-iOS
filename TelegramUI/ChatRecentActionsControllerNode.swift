@@ -397,27 +397,30 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.historyDisposable = appliedTransition.start()
         
-        self.galleryHiddenMesageAndMediaDisposable.set(self.account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
-            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                var messageIdAndMedia: [MessageId: [Media]] = [:]
-                
-                for id in ids {
-                    if case let .chat(messageId, media) = id {
-                        messageIdAndMedia[messageId] = [media]
+       
+        if let mediaManager = self.account.telegramApplicationContext.mediaManager {
+            self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
+                if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                    var messageIdAndMedia: [MessageId: [Media]] = [:]
+                    
+                    for id in ids {
+                        if case let .chat(messageId, media) = id {
+                            messageIdAndMedia[messageId] = [media]
+                        }
                     }
-                }
-                
-                //if controllerInteraction.hiddenMedia != messageIdAndMedia {
-                controllerInteraction.hiddenMedia = messageIdAndMedia
-                
-                strongSelf.listNode.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? ChatMessageItemView {
-                        itemNode.updateHiddenMedia()
+                    
+                    //if controllerInteraction.hiddenMedia != messageIdAndMedia {
+                    controllerInteraction.hiddenMedia = messageIdAndMedia
+                    
+                    strongSelf.listNode.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView {
+                            itemNode.updateHiddenMedia()
+                        }
                     }
+                    //}
                 }
-                //}
-            }
-        }))
+            }))
+        }
     }
     
     deinit {

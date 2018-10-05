@@ -315,7 +315,8 @@ private let hasApplePaySupport: Bool = PKPaymentAuthorizationViewController.canM
 private var applePayProviders = Set<String>([
     "stripe",
     "sberbank",
-    "yandex"
+    "yandex",
+    "privatbank"
 ])
 
 private func availablePaymentMethods(current: BotCheckoutPaymentMethod?, supportsApplePay: Bool) -> [BotCheckoutPaymentMethod] {

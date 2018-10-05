@@ -462,30 +462,32 @@ public class PeerMediaCollectionController: TelegramController {
         self.displayNode = PeerMediaCollectionControllerNode(account: self.account, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, interfaceInteraction: self.interfaceInteraction!, navigationBar: self.navigationBar, requestDeactivateSearch: { [weak self] in
             self?.deactivateSearch()
         })
-        
-        self.galleryHiddenMesageAndMediaDisposable.set(self.account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
-            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                var messageIdAndMedia: [MessageId: [Media]] = [:]
-                
-                for id in ids {
-                    if case let .chat(messageId, media) = id {
-                        messageIdAndMedia[messageId] = [media]
+    
+        if let mediaManager = self.account.telegramApplicationContext.mediaManager {
+            self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
+                if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                    var messageIdAndMedia: [MessageId: [Media]] = [:]
+                    
+                    for id in ids {
+                        if case let .chat(messageId, media) = id {
+                            messageIdAndMedia[messageId] = [media]
+                        }
                     }
-                }
-                
-                //if controllerInteraction.hiddenMedia != messageIdAndMedia {
-                controllerInteraction.hiddenMedia = messageIdAndMedia
-                
-                strongSelf.mediaCollectionDisplayNode.historyNode.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? GridMessageItemNode {
-                        itemNode.updateHiddenMedia()
-                    } else if let itemNode = itemNode as? ListMessageNode {
-                        itemNode.updateHiddenMedia()
+                    
+                    //if controllerInteraction.hiddenMedia != messageIdAndMedia {
+                    controllerInteraction.hiddenMedia = messageIdAndMedia
+                    
+                    strongSelf.mediaCollectionDisplayNode.historyNode.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? GridMessageItemNode {
+                            itemNode.updateHiddenMedia()
+                        } else if let itemNode = itemNode as? ListMessageNode {
+                            itemNode.updateHiddenMedia()
+                        }
                     }
+                    //}
                 }
-                //}
-            }
-        }))
+            }))
+        }
         
         self.ready.set(combineLatest(self.mediaCollectionDisplayNode.historyNode.historyState.get(), self._peerReady.get()) |> map { $1 })
         

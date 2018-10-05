@@ -328,28 +328,30 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 videoNode?.removeFromSupernode()
                             })
                         }
-                        let videoNode = UniversalVideoNode(postbox: item.account.postbox, audioSession: item.account.telegramApplicationContext.mediaManager.audioSession, manager: item.account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleInstantVideoDecoration(diameter: displaySize.width + 2.0, backgroundImage: instantVideoBackgroundImage, tapped: {
-                            if let strongSelf = self {
-                                if let item = strongSelf.item {
-                                    if strongSelf.infoBackgroundNode.alpha.isZero {
-                                        item.account.telegramApplicationContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
-                                    } else {
-                                        //let _ = item.controllerInteraction.openMessage(item.message)
+                        if let mediaManager = item.account.telegramApplicationContext.mediaManager {
+                            let videoNode = UniversalVideoNode(postbox: item.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleInstantVideoDecoration(diameter: displaySize.width + 2.0, backgroundImage: instantVideoBackgroundImage, tapped: {
+                                if let strongSelf = self {
+                                    if let item = strongSelf.item {
+                                        if strongSelf.infoBackgroundNode.alpha.isZero {
+                                            item.account.telegramApplicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: .voice)
+                                        } else {
+                                            //let _ = item.controllerInteraction.openMessage(item.message)
+                                        }
                                     }
                                 }
-                            }
-                        }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: false, enableSound: false), priority: .embedded, autoplay: true)
-                        let previousVideoNode = strongSelf.videoNode
-                        strongSelf.videoNode = videoNode
-                        strongSelf.insertSubnode(videoNode, belowSubnode: previousVideoNode ?? strongSelf.dateAndStatusNode)
-                        videoNode.canAttachContent = strongSelf.shouldAcquireVideoContext
+                            }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: false, enableSound: false), priority: .embedded, autoplay: true)
+                            let previousVideoNode = strongSelf.videoNode
+                            strongSelf.videoNode = videoNode
+                            strongSelf.insertSubnode(videoNode, belowSubnode: previousVideoNode ?? strongSelf.dateAndStatusNode)
+                            videoNode.canAttachContent = strongSelf.shouldAcquireVideoContext
                         
-                        if isSecretMedia {
-                            let updatedSecretPlaceholderSignal = chatSecretMessageVideo(account: item.account, videoReference: .message(message: MessageReference(item.message), media: telegramFile))
-                            strongSelf.secretVideoPlaceholder.setSignal(updatedSecretPlaceholderSignal)
-                            if strongSelf.secretVideoPlaceholder.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.secretVideoPlaceholderBackground, belowSubnode: videoNode)
-                                strongSelf.insertSubnode(strongSelf.secretVideoPlaceholder, belowSubnode: videoNode)
+                            if isSecretMedia {
+                                let updatedSecretPlaceholderSignal = chatSecretMessageVideo(account: item.account, videoReference: .message(message: MessageReference(item.message), media: telegramFile))
+                                strongSelf.secretVideoPlaceholder.setSignal(updatedSecretPlaceholderSignal)
+                                if strongSelf.secretVideoPlaceholder.supernode == nil {
+                                    strongSelf.insertSubnode(strongSelf.secretVideoPlaceholderBackground, belowSubnode: videoNode)
+                                    strongSelf.insertSubnode(strongSelf.secretVideoPlaceholder, belowSubnode: videoNode)
+                                }
                             }
                         } else {
                             strongSelf.secretVideoPlaceholder.removeFromSupernode()
@@ -548,7 +550,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 return
                             }
                             
-                            if let item = self.item, let videoNode = self.videoNode, videoNode.frame.contains(location) {
+                            if let _ = self.item, let videoNode = self.videoNode, videoNode.frame.contains(location) {
                                 self.activateVideoPlayback()
                                 return
                             }
@@ -572,7 +574,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             return
         }
         if self.infoBackgroundNode.alpha.isZero {
-            item.account.telegramApplicationContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
+            item.account.telegramApplicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: .voice)
         } else {
             let _ = item.controllerInteraction.openMessage(item.message)
         }

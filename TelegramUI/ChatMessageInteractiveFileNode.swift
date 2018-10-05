@@ -101,7 +101,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                 case .playbackStatus:
                     if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext, let message = self.message, let type = peerMessageMediaPlayerType(message) {
-                        applicationContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
+                        applicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: type)
                     }
             }
         }
@@ -418,7 +418,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     waveformScrubbingNode.hitTestSlop = UIEdgeInsetsMake(-10.0, 0.0, -10.0, 0.0)
                                     waveformScrubbingNode.seek = { timestamp in
                                         if let strongSelf = self, let account = strongSelf.account, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
-                                            account.telegramApplicationContext.mediaManager.playlistControl(.seek(timestamp), type: type)
+                                            account.telegramApplicationContext.mediaManager?.playlistControl(.seek(timestamp), type: type)
                                         }
                                     }
                                     waveformScrubbingNode.status = strongSelf.playbackStatus.get()

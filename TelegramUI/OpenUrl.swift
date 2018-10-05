@@ -440,10 +440,10 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                                         navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                         navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
                                     }
-                                case .withBotStartPayload:
+                                case let .withBotStartPayload(payload):
                                     if let navigationController = navigationController {
                                         navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+                                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
                                     }
                             }
                         }, present: { c, a in

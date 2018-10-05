@@ -223,14 +223,14 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                 default:
                     convertedType = .play
             }
-            let disposable = legacyAccount.telegramApplicationContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
+            let disposable = legacyAccount.telegramApplicationContext.mediaManager?.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
             }, deactivate: {
                 interrupted?()
                 return .complete()
             })
             
             return SBlockDisposable(block: {
-                disposable.dispose()
+                disposable?.dispose()
             })
         }
         return nil

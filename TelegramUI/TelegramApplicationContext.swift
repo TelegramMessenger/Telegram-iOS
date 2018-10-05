@@ -55,7 +55,7 @@ public final class TelegramApplicationContext {
     let fetchManager: FetchManager
     public var callManager: PresentationCallManager?
     
-    public let mediaManager: MediaManager
+    public let mediaManager: MediaManager?
     
     let locationManager: DeviceLocationManager?
     public let liveLocationManager: LiveLocationManager?
@@ -106,7 +106,11 @@ public final class TelegramApplicationContext {
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
     
     public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, account: Account?, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, postbox: Postbox) {
-        self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
+        if account != nil {
+            self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
+        } else {
+            self.mediaManager = nil
+        }
         
         if applicationBindings.isMainApp {
             self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
@@ -218,7 +222,7 @@ public final class TelegramApplicationContext {
     }
     
     public func attachOverlayMediaController(_ controller: OverlayMediaController) {
-        self.mediaManager.overlayMediaManager.attachOverlayMediaController(controller)
+        self.mediaManager?.overlayMediaManager.attachOverlayMediaController(controller)
     }
     
     public func storeSecureIdPassword(password: String) {
