@@ -9,7 +9,7 @@ private final class NavigationButtonItemNode: ASTextNode {
     private func attributesForCurrentState() -> [NSAttributedStringKey : AnyObject] {
         return [
             NSAttributedStringKey.font: self.fontForCurrentState(),
-            NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : UIColor.gray
+            NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : self.disabledColor
         ]
     }
     
@@ -86,6 +86,14 @@ private final class NavigationButtonItemNode: ASTextNode {
     }
     
     public var color: UIColor = UIColor(rgb: 0x007ee5) {
+        didSet {
+            if let text = self._text {
+                self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+            }
+        }
+    }
+    
+    public var disabledColor: UIColor = UIColor(rgb: 0xd0d0d0) {
         didSet {
             if let text = self._text {
                 self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
@@ -224,6 +232,16 @@ final class NavigationButtonNode: ASDisplayNode {
             if !self.color.isEqual(oldValue) {
                 for node in self.nodes {
                     node.color = self.color
+                }
+            }
+        }
+    }
+    
+    public var disabledColor: UIColor = UIColor(rgb: 0xd0d0d0) {
+        didSet {
+            if !self.disabledColor.isEqual(oldValue) {
+                for node in self.nodes {
+                    node.disabledColor = self.disabledColor
                 }
             }
         }

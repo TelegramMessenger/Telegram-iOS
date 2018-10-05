@@ -9,7 +9,7 @@ public class NavigationBackButtonNode: ASControlNode {
     private func attributesForCurrentState() -> [NSAttributedStringKey : AnyObject] {
         return [
             NSAttributedStringKey.font: self.fontForCurrentState(),
-            NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : UIColor.gray
+            NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : self.disabledColor
         ]
     }
     
@@ -31,6 +31,12 @@ public class NavigationBackButtonNode: ASControlNode {
     }
     
     public var color: UIColor = UIColor(rgb: 0x007ee5) {
+        didSet {
+            self.label.attributedText = NSAttributedString(string: self._text, attributes: self.attributesForCurrentState())
+        }
+    }
+    
+    public var disabledColor: UIColor = UIColor(rgb: 0xd0d0d0) {
         didSet {
             self.label.attributedText = NSAttributedString(string: self._text, attributes: self.attributesForCurrentState())
         }

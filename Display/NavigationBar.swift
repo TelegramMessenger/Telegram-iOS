@@ -16,6 +16,7 @@ public final class NavigationBarTheme {
     }
     
     public let buttonColor: UIColor
+    public let disabledButtonColor: UIColor
     public let primaryTextColor: UIColor
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
@@ -23,8 +24,9 @@ public final class NavigationBarTheme {
     public let badgeStrokeColor: UIColor
     public let badgeTextColor: UIColor
     
-    public init(buttonColor: UIColor, primaryTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
+    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
         self.buttonColor = buttonColor
+        self.disabledButtonColor = disabledButtonColor
         self.primaryTextColor = primaryTextColor
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
@@ -34,7 +36,7 @@ public final class NavigationBarTheme {
     }
     
     public func withUpdatedSeparatorColor(_ color: UIColor) -> NavigationBarTheme {
-        return NavigationBarTheme(buttonColor: self.buttonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
+        return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
     }
 }
 
@@ -606,8 +608,11 @@ open class NavigationBar: ASDisplayNode {
         self.clippingNode.clipsToBounds = true
         
         self.backButtonNode.color = self.presentationData.theme.buttonColor
+        self.backButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
         self.leftButtonNode.color = self.presentationData.theme.buttonColor
+        self.leftButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
         self.rightButtonNode.color = self.presentationData.theme.buttonColor
+        self.rightButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
         self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
         if let title = self.title {
             self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
@@ -676,8 +681,11 @@ open class NavigationBar: ASDisplayNode {
             self.backgroundColor = self.presentationData.theme.backgroundColor
             
             self.backButtonNode.color = self.presentationData.theme.buttonColor
+            self.backButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
             self.leftButtonNode.color = self.presentationData.theme.buttonColor
+            self.leftButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
             self.rightButtonNode.color = self.presentationData.theme.buttonColor
+            self.rightButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
             self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
             if let title = self.title {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)

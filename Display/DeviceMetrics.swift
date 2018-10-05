@@ -104,7 +104,7 @@ enum DeviceMetrics {
                 case .iPhone4, .iPhone5:
                     return 37.0
                 case .iPhone6, .iPhoneX:
-                    return 42.0
+                    return 44.0
                 case .iPhone6Plus:
                     return 42.0
                 case .iPhoneXSMax:

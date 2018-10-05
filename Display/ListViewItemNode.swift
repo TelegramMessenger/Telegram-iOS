@@ -94,7 +94,7 @@ open class ListViewItemNode: ASDisplayNode {
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
     
-    final let wantsScrollDynamics: Bool
+    open private(set) var wantsScrollDynamics: Bool
     
     public final var wantsTrailingItemSpaceUpdates: Bool = false
     
@@ -178,14 +178,10 @@ open class ListViewItemNode: ASDisplayNode {
     }
     
     public init(layerBacked: Bool, dynamicBounce: Bool = true, rotated: Bool = false, seeThrough: Bool = false) {
-        if true {
-            if dynamicBounce {
-                self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
-            }
-            self.wantsScrollDynamics = dynamicBounce
-        } else {
-            self.wantsScrollDynamics = false
+        if dynamicBounce {
+            self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
         }
+        self.wantsScrollDynamics = dynamicBounce
         
         self.rotated = rotated
         
@@ -198,7 +194,7 @@ open class ListViewItemNode: ASDisplayNode {
             } else {
                 super.init()
         
-        self.setViewBlock({
+                self.setViewBlock({
                     return CASeeThroughTracingView()
                 })
             }
