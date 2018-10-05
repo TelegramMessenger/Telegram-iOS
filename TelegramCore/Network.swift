@@ -334,10 +334,12 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
 public struct NetworkInitializationArguments {
     public let apiId: Int32
     public let languagesCategory: String
+    public let appVersion: String
     
-    public init(apiId: Int32, languagesCategory: String) {
+    public init(apiId: Int32, languagesCategory: String, appVersion: String) {
         self.apiId = apiId
         self.languagesCategory = languagesCategory
+        self.appVersion = appVersion
     }
 }
 

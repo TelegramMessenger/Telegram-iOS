@@ -222,6 +222,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String, termsO
                                         case let .authorization(_, _, user):
                                             let user = TelegramUser(user: user)
                                             let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                                            initializedAppChangelogAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion)
                                             transaction.setState(state)
                                     }
                                     return .loggedIn
@@ -277,6 +278,7 @@ public func authorizeWithPassword(account: UnauthorizedAccount, password: String
                         /*transaction.updatePeersInternal([user], update: { current, peer -> Peer? in
                             return peer
                         })*/
+                        initializedAppChangelogAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion)
                         transaction.setState(state)
                     }
             }
@@ -346,6 +348,7 @@ public func performPasswordRecovery(account: UnauthorizedAccount, code: String) 
                     /*transaction.updatePeersInternal([user], update: { current, peer -> Peer? in
                      return peer
                      })*/
+                    initializedAppChangelogAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion)
                     transaction.setState(state)
             }
         } |> mapError { _ in return PasswordRecoveryError.expired }
@@ -429,6 +432,7 @@ public func signUpWithName(account: UnauthorizedAccount, firstName: String, last
                         let user = TelegramUser(user: user)
                         let appliedState = account.postbox.transaction { transaction -> Void in
                             let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
+                            initializedAppChangelogAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion)
                             transaction.setState(state)
                         }
                         |> introduceError(SignUpError.self)

@@ -1593,10 +1593,7 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
 
 private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
     if let inputChannel = apiInputChannel(peer) {
-        var limit: Int32 = 20
-        #if (arch(i386) || arch(x86_64)) && os(iOS)
-            limit = 3
-        #endif
+        let limit: Int32 = 20
         let pollPts: Int32
         if let channelState = state.chatStates[peer.id] as? ChannelState {
             pollPts = channelState.pts

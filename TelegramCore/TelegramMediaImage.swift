@@ -171,7 +171,7 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
     
     public init(decoder: PostboxDecoder) {
         self.dimensions = CGSize(width: CGFloat(decoder.decodeInt32ForKey("dx", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("dy", orElse: 0)))
-        self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
+        self.resource = decoder.decodeObjectForKey("r") as? TelegramMediaResource ?? EmptyMediaResource()
     }
     
     public func encode(_ encoder: PostboxEncoder) {
