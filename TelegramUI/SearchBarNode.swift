@@ -152,7 +152,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private let iconNode: ASImageNode
     private let textField: SearchBarTextField
     private let clearButton: HighlightableButtonNode
-    private let cancelButton: ASButtonNode
+    private let cancelButton: HighlightableButtonNode
     
     var placeholderString: NSAttributedString? {
         get {
@@ -262,7 +262,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
                 self.textField.keyboardAppearance = .dark
         }
         
-        self.cancelButton = ASButtonNode()
+        self.cancelButton = HighlightableButtonNode()
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.accent), for: [])
         self.cancelButton.displaysAsynchronously = false

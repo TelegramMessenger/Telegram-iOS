@@ -44,7 +44,7 @@ enum ChatListNodeViewScrollPosition {
     case index(index: ChatListIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
 }
 
-func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toView: ChatListNodeView, reason: ChatListNodeViewTransitionReason, account: Account, scrollPosition: ChatListNodeViewScrollPosition?) -> Signal<ChatListNodeViewTransition, NoError> {
+func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toView: ChatListNodeView, reason: ChatListNodeViewTransitionReason, disableAnimations: Bool, account: Account, scrollPosition: ChatListNodeViewScrollPosition?) -> Signal<ChatListNodeViewTransition, NoError> {
     return Signal { subscriber in
         let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
         
@@ -98,7 +98,9 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                     let _ = options.insert(.AnimateCrossfade)
                 } else {
                     let _ = options.insert(.AnimateAlpha)
-                    let _ = options.insert(.AnimateInsertion)
+                    if !disableAnimations {
+                        let _ = options.insert(.AnimateInsertion)
+                    }
                 }
             case .reload:
                 break

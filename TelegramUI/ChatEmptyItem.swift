@@ -8,13 +8,11 @@ import TelegramCore
 private let messageFont = Font.medium(14.0)
 
 final class ChatEmptyItem: ListViewItem {
-    fileprivate let theme: PresentationTheme
-    fileprivate let strings: PresentationStrings
+    fileprivate let presentationData: ChatPresentationData
     fileprivate let tagMask: MessageTags?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, tagMask: MessageTags?) {
-        self.theme = theme
-        self.strings = strings
+    init(presentationData: ChatPresentationData, tagMask: MessageTags?) {
+        self.presentationData = presentationData
         self.tagMask = tagMask
     }
     
@@ -71,6 +69,8 @@ final class ChatEmptyItemNode: ListViewItemNode {
     
     private var theme: PresentationTheme?
     
+    private var item: ChatEmptyItem?
+    
     init(rotated: Bool) {
         self.rotated = rotated
         self.offsetContainer = ASDisplayNode()
@@ -98,28 +98,30 @@ final class ChatEmptyItemNode: ListViewItemNode {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let currentTheme = self.theme
         return { [weak self] item, params in
+            self?.item = item
+            
             let width = params.width
             var updatedBackgroundImage: UIImage?
             
-            let iconImage: UIImage? = PresentationResourcesChat.chatEmptyItemIconImage(item.theme)
+            let iconImage: UIImage? = PresentationResourcesChat.chatEmptyItemIconImage(item.presentationData.theme.theme)
             
-            if currentTheme !== item.theme {
-                updatedBackgroundImage = PresentationResourcesChat.chatEmptyItemBackgroundImage(item.theme)
+            if currentTheme !== item.presentationData.theme {
+                updatedBackgroundImage = PresentationResourcesChat.chatEmptyItemBackgroundImage(item.presentationData.theme.theme)
             }
             
             let attributedText: NSAttributedString
             if let tagMask = item.tagMask {
                 let text: String
                 if tagMask == .photoOrVideo {
-                    text = item.strings.SharedMedia_EmptyText
+                    text = item.presentationData.strings.SharedMedia_EmptyText
                 } else if tagMask == .file {
-                    text = item.strings.SharedMedia_EmptyFilesText
+                    text = item.presentationData.strings.SharedMedia_EmptyFilesText
                 } else {
                     text = ""
                 }
-                attributedText = NSAttributedString(string: text, font: messageFont, textColor: item.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+                attributedText = NSAttributedString(string: text, font: messageFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
             } else {
-                attributedText = NSAttributedString(string: item.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: item.theme.chat.serviceMessage.serviceMessagePrimaryTextColor, paragraphAlignment: .center)
+                attributedText = NSAttributedString(string: item.presentationData.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: item.presentationData.theme.theme.chat.serviceMessage.serviceMessagePrimaryTextColor, paragraphAlignment: .center)
             }
                 
             let horizontalEdgeInset: CGFloat = 10.0
@@ -144,7 +146,7 @@ final class ChatEmptyItemNode: ListViewItemNode {
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: imageSize.height + imageSpacing + textLayout.size.height + verticalItemInset * 2.0 + verticalContentInset * 2.0 + 4.0), insets: UIEdgeInsets())
             return (itemLayout, { _ in
                 if let strongSelf = self {
-                    strongSelf.theme = item.theme
+                    strongSelf.theme = item.presentationData.theme.theme
                     
                     if let updatedBackgroundImage = updatedBackgroundImage {
                         strongSelf.backgroundNode.image = updatedBackgroundImage
@@ -180,5 +182,12 @@ final class ChatEmptyItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
+    }
+    
+    override public var wantsScrollDynamics: Bool {
+        if let disableAnimations = self.item?.presentationData.disableAnimations {
+            return !disableAnimations
+        }
+        return true
     }
 }

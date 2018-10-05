@@ -100,10 +100,12 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
             let lat = location.latitude
             let lon = location.longitude
         
-            if let venue = location.venue, let venueId = venue.id, let provider = venue.provider, provider == "foursquare" {
-                options.append(OpenInOption(application: .other(title: "Foursquare", identifier: 306934924, scheme: "foursquare"), action: {
-                    return .openUrl(url: "foursquare://venues/\(venueId)")
-                }))
+            if !withDirections {
+                if let venue = location.venue, let venueId = venue.id, let provider = venue.provider, provider == "foursquare" {
+                    options.append(OpenInOption(application: .other(title: "Foursquare", identifier: 306934924, scheme: "foursquare"), action: {
+                        return .openUrl(url: "foursquare://venues/\(venueId)")
+                    }))
+                }
             }
             
             options.append(OpenInOption(application: .maps, action: {
@@ -147,31 +149,33 @@ private func allOpenInOptions(applicationContext: TelegramApplicationContext, it
                 return .openUrl(url: "lyft://ridetype?id=lyft&destination[latitude]=\(lat)&destination[longitude]=\(lon)")
             }))
             
-            options.append(OpenInOption(application: .other(title: "Citymapper", identifier: 469463298, scheme: "citymapper"), action: {
-                let endName: String
-                let endAddress: String
-                if let title = location.venue?.title.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), title.count > 0 {
-                    endName = title
-                } else {
-                    endName = ""
-                }
-                if let address = location.venue?.address?.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), address.count > 0  {
-                    endAddress = address
-                } else {
-                    endAddress = ""
-                }
-                return .openUrl(url: "citymapper://directions?endcoord=\(lat),\(lon)&endname=\(endName)&endaddress=\(endAddress)")
-            }))
-        
             if withDirections {
+                options.append(OpenInOption(application: .other(title: "Citymapper", identifier: 469463298, scheme: "citymapper"), action: {
+                    let endName: String
+                    let endAddress: String
+                    if let title = location.venue?.title.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), title.count > 0 {
+                        endName = title
+                    } else {
+                        endName = ""
+                    }
+                    if let address = location.venue?.address?.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), address.count > 0  {
+                        endAddress = address
+                    } else {
+                        endAddress = ""
+                    }
+                    return .openUrl(url: "citymapper://directions?endcoord=\(lat),\(lon)&endname=\(endName)&endaddress=\(endAddress)")
+                }))
+            
                 options.append(OpenInOption(application: .other(title: "Yandex.Navi", identifier: 474500851, scheme: "yandexnavi"), action: {
                     return .openUrl(url: "yandexnavi://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
                 }))
             }
         
-            options.append(OpenInOption(application: .other(title: "HERE Maps", identifier: 955837609, scheme: "here-location"), action: {
-                return .openUrl(url: "here-location://\(lat),\(lon)")
-            }))
+            if !withDirections {
+                options.append(OpenInOption(application: .other(title: "HERE Maps", identifier: 955837609, scheme: "here-location"), action: {
+                    return .openUrl(url: "here-location://\(lat),\(lon)")
+                }))
+            }
             
             options.append(OpenInOption(application: .other(title: "Waze", identifier: 323229106, scheme: "waze"), action: {
                 let url = "waze://?ll=\(lat),\(lon)"

@@ -1040,7 +1040,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             } else {
                 minimalContentSize = layoutConstants.bubble.minimumSize
             }
-            let layoutBubbleSize = CGSize(width: max(contentSize.width, headerSize.width) + layoutConstants.bubble.contentInsets.left + layoutConstants.bubble.contentInsets.right, height: max(minimalContentSize.height, headerSize.height + contentSize.height + layoutConstants.bubble.contentInsets.top + layoutConstants.bubble.contentInsets.bottom))
+            let calculatedBubbleHeight = headerSize.height + contentSize.height + layoutConstants.bubble.contentInsets.top + layoutConstants.bubble.contentInsets.bottom
+            let layoutBubbleSize = CGSize(width: max(contentSize.width, headerSize.width) + layoutConstants.bubble.contentInsets.left + layoutConstants.bubble.contentInsets.right, height: max(minimalContentSize.height, calculatedBubbleHeight))
+            
+            var contentVerticalOffset: CGFloat = 0.0
+            if minimalContentSize.height > calculatedBubbleHeight + 2.0 {
+                contentVerticalOffset = floorToScreenPixels((minimalContentSize.height - calculatedBubbleHeight) / 2.0)
+            }
             
             let backgroundFrame: CGRect
             let contentOrigin: CGPoint
@@ -1048,12 +1054,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             switch alignment {
                 case .none:
                     backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset), y: 0.0), size: layoutBubbleSize)
-                    contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
+                    contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height + contentVerticalOffset)
                     contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
                 case .center:
                     let availableWidth = params.width - params.leftInset - params.rightInset
                     backgroundFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((availableWidth - layoutBubbleSize.width) / 2.0), y: 0.0), size: layoutBubbleSize)
-                    contentOrigin = CGPoint(x: backgroundFrame.minX + floor(layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left) / 2.0, y: backgroundFrame.minY + layoutConstants.bubble.contentInsets.top + headerSize.height)
+                    contentOrigin = CGPoint(x: backgroundFrame.minX + floor(layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left) / 2.0, y: backgroundFrame.minY + layoutConstants.bubble.contentInsets.top + headerSize.height + contentVerticalOffset)
                     contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
             }
 
@@ -1755,9 +1761,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         switch item.content {
             case let .message(message, _, _, _):
                 for media in message.media {
-                    if media is TelegramMediaAction {
-                        canHaveSelection = false
-                        break
+                    if let action = media as? TelegramMediaAction {
+                        if case .phoneCall = action.action { } else {
+                            canHaveSelection = false
+                            break
+                        }
                     }
                 }
             default:
@@ -1879,50 +1887,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         self.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, transition: .immediate)
                     }
                 }
-            }
-        }
-    }
-    
-    private func performMessageButtonAction(button: ReplyMarkupButton) {
-        if let item = self.item {
-            switch button.action {
-                case .text:
-                    item.controllerInteraction.sendMessage(button.title)
-                case let .url(url):
-                    item.controllerInteraction.openUrl(url, true, nil)
-                case .requestMap:
-                    item.controllerInteraction.shareCurrentLocation()
-                case .requestPhone:
-                    item.controllerInteraction.shareAccountContact()
-                case .openWebApp:
-                    item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true)
-                case let .callback(data):
-                    item.controllerInteraction.requestMessageActionCallback(item.message.id, data, false)
-                case let .switchInline(samePeer, query):
-                    var botPeer: Peer?
-                    
-                    var found = false
-                    for attribute in item.message.attributes {
-                        if let attribute = attribute as? InlineBotMessageAttribute {
-                            if let peerId = attribute.peerId {
-                                botPeer = item.message.peers[peerId]
-                                found = true
-                            }
-                        }
-                    }
-                    if !found {
-                        botPeer = item.message.author
-                    }
-                    
-                    var peerId: PeerId?
-                    if samePeer {
-                        peerId = item.message.id.peerId
-                    }
-                    if let botPeer = botPeer, let addressName = botPeer.addressName {
-                        item.controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)")
-                    }
-                case .payment:
-                    item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
             }
         }
     }

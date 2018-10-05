@@ -104,7 +104,12 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        let panelHeight: CGFloat = 45.0
+        let panelHeight: CGFloat
+        if case .regular = metrics.widthClass {
+            panelHeight = 49.0
+        } else {
+            panelHeight = 45.0
+        }
         
         transition.updateFrame(node: self.downButton, frame: CGRect(origin: CGPoint(x: leftInset + 12.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
         transition.updateFrame(node: self.upButton, frame: CGRect(origin: CGPoint(x: leftInset + 12.0 + 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
@@ -154,6 +159,6 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 45.0
+        return defaultHeight(metrics: metrics)
     }
 }

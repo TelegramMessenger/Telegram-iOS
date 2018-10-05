@@ -13,14 +13,12 @@ private let messageFixedFont: UIFont = UIFont(name: "Menlo-Regular", size: 16.0)
 final class ChatBotInfoItem: ListViewItem {
     fileprivate let text: String
     fileprivate let controllerInteraction: ChatControllerInteraction
-    fileprivate let theme: ChatPresentationThemeData
-    fileprivate let strings: PresentationStrings
+    fileprivate let presentationData: ChatPresentationData
     
-    init(text: String, controllerInteraction: ChatControllerInteraction, theme: ChatPresentationThemeData, strings: PresentationStrings) {
+    init(text: String, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData) {
         self.text = text
         self.controllerInteraction = controllerInteraction
-        self.theme = theme
-        self.strings = strings
+        self.presentationData = presentationData
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -77,6 +75,8 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     
     private var theme: ChatPresentationThemeData?
     
+    private var item: ChatBotInfoItem?
+    
     init() {
         self.offsetContainer = ASDisplayNode()
         
@@ -106,10 +106,12 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         let currentTextAndEntities = self.currentTextAndEntities
         let currentTheme = self.theme
         return { [weak self] item, params in
+            self?.item = item
+            
             var updatedBackgroundImage: UIImage?
-            if currentTheme != item.theme {
-                let principalGraphics = PresentationResourcesChat.principalGraphics(item.theme.theme, wallpaper: !item.theme.wallpaper.isEmpty)
-                updatedBackgroundImage = PresentationResourcesChat.chatInfoItemBackgroundImage(item.theme.theme, wallpaper: !item.theme.wallpaper.isEmpty)
+            if currentTheme != item.presentationData.theme {
+                //let principalGraphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
+                updatedBackgroundImage = PresentationResourcesChat.chatInfoItemBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             }
             
             var updatedTextAndEntities: (String, [MessageTextEntity])
@@ -123,7 +125,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 updatedTextAndEntities = (item.text, generateTextEntities(item.text, enabledTypes: .all))
             }
             
-            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.theme.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.theme.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, fixedFont: messageFixedFont)
+            let attributedText = stringWithAppliedEntities(updatedTextAndEntities.0, entities: updatedTextAndEntities.1, baseColor: item.presentationData.theme.theme.chat.bubble.infoPrimaryTextColor, linkColor: item.presentationData.theme.theme.chat.bubble.infoLinkTextColor, baseFont: messageFont, linkFont: messageFont, boldFont: messageBoldFont, italicFont: messageItalicFont, fixedFont: messageFixedFont)
             
             let horizontalEdgeInset: CGFloat = 10.0 + params.leftInset
             let horizontalContentInset: CGFloat = 12.0
@@ -138,7 +140,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: textLayout.size.height + verticalItemInset * 2.0 + verticalContentInset * 2.0 + 4.0), insets: UIEdgeInsets())
             return (itemLayout, { _ in
                 if let strongSelf = self {
-                    strongSelf.theme = item.theme
+                    strongSelf.theme = item.presentationData.theme
                     
                     if let updatedBackgroundImage = updatedBackgroundImage {
                         strongSelf.backgroundNode.image = updatedBackgroundImage
@@ -237,5 +239,12 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             default:
                 break
         }
+    }
+    
+    override public var wantsScrollDynamics: Bool {
+        if let disableAnimations = self.item?.presentationData.disableAnimations {
+            return !disableAnimations
+        }
+        return true
     }
 }

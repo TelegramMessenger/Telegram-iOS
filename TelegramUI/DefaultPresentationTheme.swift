@@ -24,6 +24,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
     
     let rootNavigationBar = PresentationThemeRootNavigationBar(
         buttonColor: accentColor,
+        disabledButtonColor: UIColor(rgb: 0xd0d0d0),
         primaryTextColor: .black,
         secondaryTextColor: UIColor(rgb: 0x787878),
         controlColor: UIColor(rgb: 0x7e8791),

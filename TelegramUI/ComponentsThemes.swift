@@ -11,7 +11,7 @@ public extension TabBarControllerTheme {
 public extension NavigationBarTheme {
     public convenience init(rootControllerTheme: PresentationTheme) {
         let theme = rootControllerTheme.rootController.navigationBar
-        self.init(buttonColor: theme.buttonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: theme.backgroundColor, separatorColor: theme.separatorColor, badgeBackgroundColor: theme.badgeBackgroundColor, badgeStrokeColor: theme.badgeStrokeColor, badgeTextColor: theme.badgeTextColor)
+        self.init(buttonColor: theme.buttonColor, disabledButtonColor: theme.disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: theme.backgroundColor, separatorColor: theme.separatorColor, badgeBackgroundColor: theme.badgeBackgroundColor, badgeStrokeColor: theme.badgeStrokeColor, badgeTextColor: theme.badgeTextColor)
     }
 }
 

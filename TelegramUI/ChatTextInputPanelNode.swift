@@ -112,8 +112,12 @@ private final class AccessoryItemIconButton: HighlightableButton {
 
 private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
     let baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
-    let result: CGFloat
-    if baseFontSize.isEqual(to: 17.0) {
+    var result: CGFloat
+    if baseFontSize.isEqual(to: 26.0) {
+        result = 42.0
+    } else if baseFontSize.isEqual(to: 23.0) {
+        result = 38.0
+    } else if baseFontSize.isEqual(to: 17.0) {
         result = 31.0
     } else if baseFontSize.isEqual(to: 19.0) {
         result = 33.0
@@ -122,6 +126,11 @@ private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPres
     } else {
         result = 31.0
     }
+    
+    if case .regular = metrics.widthClass {
+        result = max(33.0, result)
+    }
+    
     return result
 }
 
@@ -178,6 +187,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
     var pasteImages: ([UIImage]) -> Void = { _ in }
+    var pasteData: (Data) -> Void = { _ in }
     var updateHeight: () -> Void = { }
     
     var updateActivity: () -> Void = { }
@@ -482,7 +492,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             let updatedMaxHeight = (CGFloat(maxNumberOfLines) * 22.0 + 10.0)
             
-            textFieldHeight = min(updatedMaxHeight, unboundTextFieldHeight)
+            textFieldHeight = max(textFieldMinHeight, min(updatedMaxHeight, unboundTextFieldHeight))
         } else {
             textFieldHeight = textFieldMinHeight
         }
@@ -1296,26 +1306,28 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
+        let pasteboard = UIPasteboard.general
+        
         var images: [UIImage] = []
-        var text: String?
-        
-        for item in UIPasteboard.general.items {
-            if let image = item[kUTTypeJPEG as String] as? UIImage {
-                images.append(image)
-            } else if let image = item[kUTTypePNG as String] as? UIImage {
-                images.append(image)
-            } else if let image = item[kUTTypeGIF as String] as? UIImage {
-                images.append(image)
-            }
-        }
-        
-        if !images.isEmpty {
-            self.pasteImages(images)
-            
+        if let gifData = pasteboard.data(forPasteboardType: "com.compuserve.gif") {
+            self.pasteData(gifData)
             return false
         } else {
-            return true
+            for item in UIPasteboard.general.items {
+                if let image = item[kUTTypeJPEG as String] as? UIImage {
+                    images.append(image)
+                } else if let image = item[kUTTypePNG as String] as? UIImage {
+                    images.append(image)
+                } else if let image = item[kUTTypeGIF as String] as? UIImage {
+                    images.append(image)
+                }
+            }
+            if !images.isEmpty {
+                self.pasteImages(images)
+                return false
+            }
         }
+        return true
     }
     
     @objc func sendButtonPressed() {

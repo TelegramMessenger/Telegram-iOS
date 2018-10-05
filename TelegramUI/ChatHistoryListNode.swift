@@ -172,12 +172,12 @@ private func mappedInsertEntries(account: Account, chatLocation: ChatLocation, a
                         item = ListMessageHoleItem()
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
-            case let .UnreadEntry(_, theme, strings):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, theme: theme, strings: strings), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(text, theme, strings):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, theme: theme, strings: strings), directionHint: entry.directionHint)
-            case let .EmptyChatInfoEntry(theme, strings, tagMask):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(theme: theme, strings: strings, tagMask: tagMask), directionHint: entry.directionHint)
+            case let .UnreadEntry(_, presentationData):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(text, presentationData):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .EmptyChatInfoEntry(presentationData, tagMask):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(presentationData: presentationData, tagMask: tagMask), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     controllerInteraction.openSearch()
@@ -217,12 +217,12 @@ private func mappedUpdateEntries(account: Account, chatLocation: ChatLocation, a
                         item = ListMessageHoleItem()
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
-            case let .UnreadEntry(_, theme, strings):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, theme: theme, strings: strings), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(text, theme, strings):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, theme: theme, strings: strings), directionHint: entry.directionHint)
-            case let .EmptyChatInfoEntry(theme, strings, tagMask):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(theme: theme, strings: strings, tagMask: tagMask), directionHint: entry.directionHint)
+            case let .UnreadEntry(_, presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(text, presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .EmptyChatInfoEntry(presentationData, tagMask):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatEmptyItem(presentationData: presentationData, tagMask: tagMask), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     controllerInteraction.openSearch()
@@ -261,7 +261,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
             for entry in view.additionalData {
                 if case let .peer(_, value) = entry {
                     if let channel = value as? TelegramChannel, case .group = channel.info {
-                        automaticMediaDownloadPeerType = .channel
+                        automaticMediaDownloadPeerType = .group
                     }
                     break
                 }
@@ -357,7 +357,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.currentPresentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.currentPresentationData.theme, wallpaper: self.currentPresentationData.chatWallpaper), fontSize: self.currentPresentationData.fontSize, strings: self.currentPresentationData.strings, dateTimeFormat: self.currentPresentationData.dateTimeFormat))
+        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.currentPresentationData.theme, wallpaper: self.currentPresentationData.chatWallpaper), fontSize: self.currentPresentationData.fontSize, strings: self.currentPresentationData.strings, dateTimeFormat: self.currentPresentationData.dateTimeFormat, disableAnimations: self.currentPresentationData.disableAnimations))
         
         super.init()
         
@@ -672,19 +672,22 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     let previousTheme = strongSelf.currentPresentationData.theme
                     let previousStrings = strongSelf.currentPresentationData.strings
                     let previousWallpaper = strongSelf.currentPresentationData.chatWallpaper
+                    let previousDisableAnimations = strongSelf.currentPresentationData.disableAnimations
                     
                     strongSelf.currentPresentationData = presentationData
                     
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper {
+                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousDisableAnimations != presentationData.disableAnimations {
                         let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
+                        let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations)
+                        
                         strongSelf.forEachItemHeaderNode { itemHeaderNode in
                             if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
-                                dateNode.updateThemeAndStrings(theme: themeData, strings: presentationData.strings)
+                                dateNode.updatePresentationData(chatPresentationData)
                             } else if let dateNode = itemHeaderNode as? ListMessageDateHeaderNode {
                                 dateNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
                             }
                         }
-                        strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)))
+                        strongSelf.chatPresentationDataPromise.set(.single(chatPresentationData))
                     }
                 }
             })

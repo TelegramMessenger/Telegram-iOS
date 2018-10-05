@@ -735,10 +735,6 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
     }
     
-    if canEditGroupInfo {
-        entries.append(GroupInfoEntry.setGroupPhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
-    }
-    
     let peerNotificationSettings: TelegramPeerNotificationSettings = (view.notificationSettings as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
     let notificationsText: String
     switch peerNotificationSettings.muteState {
@@ -751,6 +747,10 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     }
     
     if let editingState = state.editingState {
+        if canEditGroupInfo {
+            entries.append(GroupInfoEntry.setGroupPhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
+        }
+        
         if let group = view.peers[view.peerId] as? TelegramGroup {
             if case .creator = group.role {
                 entries.append(.adminManagement(presentationData.theme, presentationData.strings.GroupInfo_ChatAdmins))

@@ -14,8 +14,9 @@ public class TermsOfServiceControllerTheme {
     public let itemSeparator: UIColor
     public let primary: UIColor
     public let accent: UIColor
+    public let disabled: UIColor
     
-    public init(statusBarStyle: StatusBarStyle, navigationBackground: UIColor, navigationSeparator: UIColor, listBackground: UIColor, itemBackground: UIColor, itemSeparator: UIColor, primary: UIColor, accent: UIColor) {
+    public init(statusBarStyle: StatusBarStyle, navigationBackground: UIColor, navigationSeparator: UIColor, listBackground: UIColor, itemBackground: UIColor, itemSeparator: UIColor, primary: UIColor, accent: UIColor, disabled: UIColor) {
         self.statusBarStyle = statusBarStyle
         self.navigationBackground = navigationBackground
         self.navigationSeparator = navigationSeparator
@@ -24,16 +25,17 @@ public class TermsOfServiceControllerTheme {
         self.itemSeparator = itemSeparator
         self.primary = primary
         self.accent = accent
+        self.disabled = disabled
     }
 }
 
 public extension TermsOfServiceControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
-        self.init(statusBarStyle: presentationTheme.rootController.statusBar.style.style, navigationBackground: presentationTheme.rootController.navigationBar.backgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor)
+        self.init(statusBarStyle: presentationTheme.rootController.statusBar.style.style, navigationBackground: presentationTheme.rootController.navigationBar.backgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor, disabled: presentationTheme.rootController.navigationBar.disabledButtonColor)
     }
     
     convenience init(authTheme: AuthorizationTheme) {
-        self.init(statusBarStyle: authTheme.statusBarStyle, navigationBackground: authTheme.navigationBarBackgroundColor, navigationSeparator: authTheme.navigationBarSeparatorColor, listBackground: authTheme.listBackgroundColor, itemBackground: authTheme.backgroundColor, itemSeparator: authTheme.separatorColor, primary: authTheme.primaryColor, accent: authTheme.accentColor)
+        self.init(statusBarStyle: authTheme.statusBarStyle, navigationBackground: authTheme.navigationBarBackgroundColor, navigationSeparator: authTheme.navigationBarSeparatorColor, listBackground: authTheme.listBackgroundColor, itemBackground: authTheme.backgroundColor, itemSeparator: authTheme.separatorColor, primary: authTheme.primaryColor, accent: authTheme.accentColor, disabled: authTheme.accentColor)
     }
     
     var presentationTheme: PresentationTheme {
@@ -93,7 +95,7 @@ public class TermsOfServiceController: ViewController {
         self.decline = decline
         self.openUrl = openUrl
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.theme.accent, primaryTextColor: self.theme.primary, backgroundColor: self.theme.navigationBackground, separatorColor: self.theme.navigationSeparator, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(back: strings.Common_Back, close: strings.Common_Close)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.theme.accent, disabledButtonColor: self.theme.disabled, primaryTextColor: self.theme.primary, backgroundColor: self.theme.navigationBackground, separatorColor: self.theme.navigationSeparator, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(back: strings.Common_Back, close: strings.Common_Close)))
         
         self.statusBar.statusBarStyle = self.theme.statusBarStyle
         

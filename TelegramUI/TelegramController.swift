@@ -4,6 +4,12 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 
+enum MediaAccessoryPanelVisibility {
+    case none
+    case specific(size: ContainerViewLayoutSizeClass)
+    case always
+}
+
 enum LocationBroadcastPanelSource {
     case none
     case summary
@@ -36,7 +42,7 @@ private func presentLiveLocationController(account: Account, peerId: PeerId, con
 public class TelegramController: ViewController {
     private let account: Account
     
-    let enableMediaAccessoryPanel: Bool
+    let mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility
     let locationBroadcastPanelSource: LocationBroadcastPanelSource
     
     private var mediaStatusDisposable: Disposable?
@@ -70,18 +76,22 @@ public class TelegramController: ViewController {
         return height
     }
     
-    init(account: Account, navigationBarPresentationData: NavigationBarPresentationData?, enableMediaAccessoryPanel: Bool, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
+    public var primaryNavigationHeight: CGFloat {
+        return super.navigationHeight
+    }
+    
+    init(account: Account, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        self.enableMediaAccessoryPanel = enableMediaAccessoryPanel
+        self.mediaAccessoryPanelVisibility = mediaAccessoryPanelVisibility
         self.locationBroadcastPanelSource = locationBroadcastPanelSource
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
-        if enableMediaAccessoryPanel {
+        if case .none = mediaAccessoryPanelVisibility {} else {
             self.mediaStatusDisposable = (account.telegramApplicationContext.mediaManager.globalMediaPlayerState
                 |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
-                if let strongSelf = self, strongSelf.enableMediaAccessoryPanel {
+                if let strongSelf = self {
                     if !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.0, playlistStateAndType?.0.item) ||
                         strongSelf.playlistStateAndType?.1 != playlistStateAndType?.0.order || strongSelf.playlistStateAndType?.2 != playlistStateAndType?.1 {
                         var previousVoiceItem: SharedMediaPlaylistItem?
@@ -352,7 +362,17 @@ public class TelegramController: ViewController {
             }
         }
         
-        if let (item, _, type) = self.playlistStateAndType {
+        let mediaAccessoryPanelHidden: Bool
+        switch self.mediaAccessoryPanelVisibility {
+            case .always:
+                mediaAccessoryPanelHidden = false
+            case .none:
+                mediaAccessoryPanelHidden = true
+            case let .specific(size):
+                mediaAccessoryPanelHidden = size != layout.metrics.widthClass
+        }
+        
+        if let (item, _, type) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {

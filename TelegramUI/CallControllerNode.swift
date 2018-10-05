@@ -25,6 +25,8 @@ final class CallControllerNode: ASDisplayNode {
     private let buttonsNode: CallControllerButtonsNode
     private var keyPreviewNode: CallControllerKeyPreviewNode?
     
+    private var debugNode: CallDebugNode?
+    
     private var keyTextData: (Data, String)?
     private let keyButtonNode: HighlightableButtonNode
     
@@ -433,16 +435,47 @@ final class CallControllerNode: ASDisplayNode {
     }
 }
 
-final private class CallControllerDebugNode: ASDisplayNode {
-    
+final private class CallDebugNode: ASDisplayNode {
     private let disposable = MetaDisposable()
     
+    private let dimNode: ASDisplayNode
+    private let textNode: ASTextNode
+    
     override init() {
-        super.init()
+        self.dimNode = ASDisplayNode()
+        self.dimNode.isLayerBacked = true
+        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
+        self.textNode = ASTextNode()
+        self.textNode.isUserInteractionEnabled = false
+        
+        super.init()
     }
     
     deinit {
         disposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.view.addGestureRecognizer(tapRecognizer)
+    }
+    
+    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        let size = self.bounds.size
+        
+        self.dimNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width))
+        
+        
+        //let labelSize = labelNode.measure(CGSize(width: , height: 100.0))
+        //textNode.frame = CGRect(origin: CGPoint(x: floor(size.width, y: 81.0), size: labelSize)
     }
 }

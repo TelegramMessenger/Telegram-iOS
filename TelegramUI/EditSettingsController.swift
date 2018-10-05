@@ -293,89 +293,10 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
     var updateHiddenAvatarImpl: (() -> Void)?
+    var changeProfilePhotoImpl: (() -> Void)?
     
     let wallpapersPromise = Promise<[TelegramWallpaper]>()
     wallpapersPromise.set(telegramWallpapers(postbox: account.postbox, network: account.network))
-    
-    let changeProfilePhotoImpl: () -> Void = {
-        let _ = (account.postbox.transaction { transaction -> Peer? in
-            return transaction.getPeer(account.peerId)
-        } |> deliverOnMainQueue).start(next: { peer in
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            
-            let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
-            legacyController.statusBar.statusBarStyle = .Ignore
-            
-            let emptyController = LegacyEmptyController(context: legacyController.context)!
-            let navigationController = makeLegacyNavigationController(rootController: emptyController)
-            navigationController.setNavigationBarHidden(true, animated: false)
-            navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
-            
-            legacyController.bind(controller: navigationController)
-            
-            presentControllerImpl?(legacyController, nil)
-            
-            var hasPhotos = false
-            if let peer = peer, !peer.profileImageRepresentations.isEmpty {
-                hasPhotos = true
-            }
-            
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
-            let _ = currentAvatarMixin.swap(mixin)
-            mixin.didFinishWithImage = { image in
-                if let image = image {
-                    if let data = UIImageJPEGRepresentation(image, 0.6) {
-                        let resource = LocalFileMediaResource(fileId: arc4random64())
-                        account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                        let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
-                        updateState {
-                            $0.withUpdatedUpdatingAvatar(.image(representation))
-                        }
-                        updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource) |> deliverOnMainQueue).start(next: { result in
-                            switch result {
-                            case .complete:
-                                updateState {
-                                    $0.withUpdatedUpdatingAvatar(nil)
-                                }
-                            case .progress:
-                                break
-                            }
-                        }))
-                    }
-                }
-            }
-            mixin.didFinishWithDelete = {
-                let _ = currentAvatarMixin.swap(nil)
-                updateState {
-                    if let profileImage = peer?.smallProfileImage {
-                        return $0.withUpdatedUpdatingAvatar(.image(profileImage))
-                    } else {
-                        return $0.withUpdatedUpdatingAvatar(.none)
-                    }
-                }
-                updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: nil) |> deliverOnMainQueue).start(next: { result in
-                    switch result {
-                    case .complete:
-                        updateState {
-                            $0.withUpdatedUpdatingAvatar(nil)
-                        }
-                    case .progress:
-                        break
-                    }
-                }))
-            }
-            mixin.didDismiss = { [weak legacyController] in
-                let _ = currentAvatarMixin.swap(nil)
-                legacyController?.dismiss()
-            }
-            let menuController = mixin.present()
-            if let menuController = menuController {
-                menuController.customRemoveFromParentViewController = { [weak legacyController] in
-                    legacyController?.dismiss()
-                }
-            }
-        })
-    }
     
     let arguments = EditSettingsItemArguments(account: account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
@@ -388,7 +309,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             return
         }
         
-        changeProfilePhotoImpl()
+        changeProfilePhotoImpl?()
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, presentController: { controller in
@@ -500,6 +421,88 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             }
         }
     }
+    changeProfilePhotoImpl = { [weak controller] in
+        let _ = (account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(account.peerId)
+            } |> deliverOnMainQueue).start(next: { peer in
+                controller?.view.endEditing(true)
+                
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                
+                let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
+                legacyController.statusBar.statusBarStyle = .Ignore
+                
+                let emptyController = LegacyEmptyController(context: legacyController.context)!
+                let navigationController = makeLegacyNavigationController(rootController: emptyController)
+                navigationController.setNavigationBarHidden(true, animated: false)
+                navigationController.navigationBar.transform = CGAffineTransform(translationX: -1000.0, y: 0.0)
+                
+                legacyController.bind(controller: navigationController)
+                
+                presentControllerImpl?(legacyController, nil)
+                
+                var hasPhotos = false
+                if let peer = peer, !peer.profileImageRepresentations.isEmpty {
+                    hasPhotos = true
+                }
+                
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
+                let _ = currentAvatarMixin.swap(mixin)
+                mixin.didFinishWithImage = { image in
+                    if let image = image {
+                        if let data = UIImageJPEGRepresentation(image, 0.6) {
+                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                            let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                            updateState {
+                                $0.withUpdatedUpdatingAvatar(.image(representation))
+                            }
+                            updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                                switch result {
+                                case .complete:
+                                    updateState {
+                                        $0.withUpdatedUpdatingAvatar(nil)
+                                    }
+                                case .progress:
+                                    break
+                                }
+                            }))
+                        }
+                    }
+                }
+                mixin.didFinishWithDelete = {
+                    let _ = currentAvatarMixin.swap(nil)
+                    updateState {
+                        if let profileImage = peer?.smallProfileImage {
+                            return $0.withUpdatedUpdatingAvatar(.image(profileImage))
+                        } else {
+                            return $0.withUpdatedUpdatingAvatar(.none)
+                        }
+                    }
+                    updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: nil) |> deliverOnMainQueue).start(next: { result in
+                        switch result {
+                        case .complete:
+                            updateState {
+                                $0.withUpdatedUpdatingAvatar(nil)
+                            }
+                        case .progress:
+                            break
+                        }
+                    }))
+                }
+                mixin.didDismiss = { [weak legacyController] in
+                    let _ = currentAvatarMixin.swap(nil)
+                    legacyController?.dismiss()
+                }
+                let menuController = mixin.present()
+                if let menuController = menuController {
+                    menuController.customRemoveFromParentViewController = { [weak legacyController] in
+                        legacyController?.dismiss()
+                    }
+                }
+            })
+    }
+    
     return controller
 }
 

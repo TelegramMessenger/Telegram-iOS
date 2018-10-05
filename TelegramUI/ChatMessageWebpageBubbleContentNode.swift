@@ -124,8 +124,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             if let strongSelf = self, let item = strongSelf.item {
                 if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content, let image = content.image, let instantPage = content.instantPage {
                     var isGallery = false
-                    switch websiteType(of: content) {
-                        case .instagram, .twitter:
+                    switch instantPageType(of: content) {
+                        case .album:
                             let count = instantPageGalleryMedia(webpageId: webPage.webpageId, page: instantPage, galleryMedia: image).count
                             if count > 1 {
                                 isGallery = true
@@ -331,8 +331,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             if let webPage = self.webPage, case let .Loaded(content) = webPage.content, content.instantPage != nil {
-                switch instantPageType(of: content) {
-                    case .album:
+                switch websiteType(of: content) {
+                    case .instagram, .twitter:
                         return .none
                     default:
                         return .instantPage

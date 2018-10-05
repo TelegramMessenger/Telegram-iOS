@@ -145,6 +145,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     public var themeAccentColor: Int32?
     public var fontSize: PresentationFontSize
     public var automaticThemeSwitchSetting: AutomaticThemeSwitchSetting
+    public var disableAnimations: Bool
     
     public var relatedResources: [MediaResourceId] {
         switch self.chatWallpaper {
@@ -156,15 +157,16 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(chatWallpaper: .builtin, theme: .builtin(.dayClassic), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent))
+        return PresentationThemeSettings(chatWallpaper: .builtin, theme: .builtin(.dayClassic), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
     }
     
-    public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, themeAccentColor: Int32?, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting) {
+    public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, themeAccentColor: Int32?, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, disableAnimations: Bool) {
         self.chatWallpaper = chatWallpaper
         self.theme = theme
         self.themeAccentColor = themeAccentColor
         self.fontSize = fontSize
         self.automaticThemeSwitchSetting = automaticThemeSwitchSetting
+        self.disableAnimations = disableAnimations
     }
     
     public init(decoder: PostboxDecoder) {
@@ -173,6 +175,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
         self.themeAccentColor = decoder.decodeOptionalInt32ForKey("themeAccentColor")
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
         self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent)
+        self.disableAnimations = decoder.decodeBoolForKey("disableAnimations", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -185,6 +188,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
         }
         encoder.encodeInt32(self.fontSize.rawValue, forKey: "f")
         encoder.encodeObject(self.automaticThemeSwitchSetting, forKey: "automaticThemeSwitchSetting")
+        encoder.encodeBool(self.disableAnimations, forKey: "disableAnimations")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
@@ -196,7 +200,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
-        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.theme == rhs.theme && lhs.themeAccentColor == rhs.themeAccentColor && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting
+        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.theme == rhs.theme && lhs.themeAccentColor == rhs.themeAccentColor && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.disableAnimations == rhs.disableAnimations
     }
 }
 

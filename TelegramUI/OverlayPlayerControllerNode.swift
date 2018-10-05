@@ -41,10 +41,10 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         self.requestDismiss = requestDismiss
         self.requestShare = requestShare
         
-        if case .reversed = initialOrder {
-            self.currentIsReversed = true
-        } else {
+        if case .regular = initialOrder {
             self.currentIsReversed = false
+        } else {
+            self.currentIsReversed = true
         }
         
         var openMessageImpl: ((MessageId) -> Bool)?
@@ -125,8 +125,10 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         self.controlsNode.updateOrder = { [weak self] order in
             if let strongSelf = self {
-                var reversed = false
-                if case .reversed = order {
+                let reversed: Bool
+                if case .regular = order {
+                    reversed = false
+                } else {
                     reversed = true
                 }
                 if reversed != strongSelf.currentIsReversed {

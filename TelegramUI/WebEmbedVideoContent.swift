@@ -33,7 +33,6 @@ final class WebEmbedVideoContent: UniversalVideoContent {
 private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     private let webpageContent: TelegramMediaWebpageLoadedContent
     private let intrinsicDimensions: CGSize
-    private let approximateDuration: Int32
     
     private let playbackCompletedListeners = Bag<() -> Void>()
     
@@ -55,11 +54,6 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         return self._ready.get()
     }
     
-    private let _preloadCompleted = ValuePromise<Bool>()
-    var preloadCompleted: Signal<Bool, NoError> {
-        return self._preloadCompleted.get()
-    }
-    
     private let imageNode: TransformImageNode
     private let playerNode: WebEmbedPlayerNode
     
@@ -67,7 +61,6 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent) {
         self.webpageContent = webpageContent
-        self.approximateDuration = Int32(webpageContent.duration ?? 0)
         
         if let embedSize = webpageContent.embedSize {
             self.intrinsicDimensions = embedSize
@@ -85,8 +78,6 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         
         self.addSubnode(self.playerNode)
         self.addSubnode(self.imageNode)
-        
-        self._preloadCompleted.set(true)
         
         if let image = webpageContent.image {
             self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image)))
@@ -116,9 +107,11 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
 
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size))
         
-        let makeImageLayout = self.imageNode.asyncLayout()
-        let applyImageLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets()))
-        applyImageLayout()
+        if let image = webpageContent.image, let representation = image.representationForDisplayAtSize(self.intrinsicDimensions)  {
+            let makeImageLayout = self.imageNode.asyncLayout()
+            let applyImageLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: representation.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+            applyImageLayout()
+        }
     }
     
     func play() {

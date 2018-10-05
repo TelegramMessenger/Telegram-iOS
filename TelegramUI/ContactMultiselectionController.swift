@@ -153,7 +153,7 @@ class ContactMultiselectionController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(account: self.account, options: self.options, filters: filters)
+        self.displayNode = ContactMultiselectionControllerNode(account: self.account, mode: self.mode, options: self.options, filters: filters)
         self._listReady.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.dismiss = { [weak self] in

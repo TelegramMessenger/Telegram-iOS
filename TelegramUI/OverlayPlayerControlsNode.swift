@@ -177,9 +177,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         self.addSubnode(self.separatorNode)
         
-        let mappedStatus = status |> map { value -> MediaPlayerStatus in
+        let mappedStatus = combineLatest(status, self.scrubberNode.scrubbingTimestamp) |> map { value, scrubbingTimestamp -> MediaPlayerStatus in
             if let value = value {
-                return value.status
+                return MediaPlayerStatus(generationTimestamp: value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status)
             } else {
                 return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
             }
@@ -222,16 +222,23 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     
                     displayData = value.item.displayData
                     
+                    let baseColor: UIColor
+                    if strongSelf.theme.list.itemPrimaryTextColor.isEqual(strongSelf.theme.list.itemAccentColor) {
+                        baseColor = strongSelf.theme.list.controlSecondaryColor
+                    } else {
+                        baseColor = strongSelf.theme.list.itemPrimaryTextColor
+                    }
+                    
                     if value.order != strongSelf.currentOrder {
                         strongSelf.updateOrder?(value.order)
                         strongSelf.currentOrder = value.order
                         switch value.order {
                             case .regular:
-                                strongSelf.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: strongSelf.theme.list.itemPrimaryTextColor)
+                                strongSelf.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: baseColor)
                             case .reversed:
                                 strongSelf.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: strongSelf.theme.list.itemAccentColor)
                             case .random:
-                            strongSelf.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderRandom"), color: strongSelf.theme.list.itemPrimaryTextColor)
+                                strongSelf.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderRandom"), color: strongSelf.theme.list.itemAccentColor)
                         }
                     }
                     if value.looping != strongSelf.currentLooping {
@@ -239,15 +246,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                         
                         switch value.looping {
                             case .none:
-                                let baseColor: UIColor
-                                if strongSelf.theme.list.itemPrimaryTextColor.isEqual(strongSelf.theme.list.itemAccentColor) {
-                                    baseColor = strongSelf.theme.list.controlSecondaryColor
-                                } else {
-                                    baseColor = strongSelf.theme.list.itemPrimaryTextColor
-                                }
                                 strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: baseColor)
                             case .item:
-                                strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/RepeatOne"), color: strongSelf.theme.list.itemPrimaryTextColor)
+                                strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/RepeatOne"), color: strongSelf.theme.list.itemAccentColor)
                             case .all:
                                 strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: strongSelf.theme.list.itemAccentColor)
                         }

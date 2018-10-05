@@ -24,6 +24,7 @@ private let rootTabBar = PresentationThemeRootTabBar(
 
 private let rootNavigationBar = PresentationThemeRootNavigationBar(
     buttonColor: accentColor,
+    disabledButtonColor: UIColor(rgb: 0x525252),
     primaryTextColor: accentColor,
     secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     controlColor: accentColor,

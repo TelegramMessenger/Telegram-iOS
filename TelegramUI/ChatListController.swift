@@ -27,6 +27,8 @@ private let tabImageUnread = tabImageNone.flatMap({ image in
 })
 
 public class ChatListController: TelegramController, UIViewControllerPreviewingDelegate {
+    private var validLayout: ContainerViewLayout?
+    
     private let account: Account
     private let controlsHistoryPreload: Bool
     
@@ -67,7 +69,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         
         self.titleView = NetworkStatusTitleView(theme: self.presentationData.theme)
         
-        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .summary)
+        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -270,12 +272,12 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         if self.isNodeLoaded {
-            self.chatListDisplayNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder)
+            self.chatListDisplayNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         }
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(account: self.account, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder)
+        self.displayNode = ChatListControllerNode(account: self.account, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -525,6 +527,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+        self.validLayout = layout
+        
         self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
@@ -589,6 +593,10 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
+        guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
+            return nil
+        }
+        
         let boundsSize = self.view.bounds.size
         var contentSize = CGSize(width: boundsSize.width, height: boundsSize.height - (boundsSize.height > boundsSize.width ? 50.0 : 10.0))
         if (boundsSize.width.isEqual(to: 375.0) && boundsSize.height.isEqual(to: 812.0))  {

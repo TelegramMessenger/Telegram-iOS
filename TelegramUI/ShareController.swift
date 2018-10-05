@@ -259,11 +259,8 @@ public final class ShareController: ViewController {
             for entry in view.0.entries.reversed() {
                 switch entry {
                     case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
-                        if let peer = renderedPeer.chatMainPeer, peer.id != accountPeer.id {
-                            if let user = peer as? TelegramUser, (user.firstName ?? "").isEmpty, (user.lastName ?? "").isEmpty {
-                            } else if canSendMessagesToPeer(peer) {
-                                peers.append(peer)
-                            }
+                        if let peer = renderedPeer.chatMainPeer, peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
+                            peers.append(peer)
                         }
                     default:
                         break

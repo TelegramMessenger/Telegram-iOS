@@ -191,7 +191,11 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         self.candidateHistoryNodeReadyDisposable.dispose()
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets) -> Void) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeightAndPrimaryHeight: (CGFloat, CGFloat), transition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets) -> Void) {
+        let navigationBarHeight = navigationBarHeightAndPrimaryHeight.0
+        let primaryNavigationBarHeight = navigationBarHeightAndPrimaryHeight.1
+        let navigationBarHeightDelta = (navigationBarHeight - primaryNavigationBarHeight)
+        
         self.containerLayout = (layout, navigationBarHeight)
         
         var vanillaInsets = layout.insets(options: [])
@@ -207,19 +211,19 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
             if !searchDisplayController.isDeactivating {
-                vanillaInsets.top += layout.statusBarHeight ?? 0.0
+                vanillaInsets.top += (layout.statusBarHeight ?? 0.0) - navigationBarHeightDelta
             }
         }
         
         let sectionsHeight = self.sectionsNode.updateLayout(width: layout.size.width, additionalInset: additionalInset, transition: transition, interfaceState: self.mediaCollectionInterfaceState)
         var sectionOffset: CGFloat = 0.0
-        if navigationBarHeight.isZero {
-            sectionOffset = -sectionsHeight
+        if primaryNavigationBarHeight.isZero {
+            sectionOffset = -sectionsHeight - navigationBarHeightDelta
         }
         transition.updateFrame(node: self.sectionsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + sectionOffset), size: CGSize(width: layout.size.width, height: sectionsHeight)))
         
         var insets = vanillaInsets
-        if !navigationBarHeight.isZero {
+        if !primaryNavigationBarHeight.isZero {
             insets.top += sectionsHeight
         }
         

@@ -2873,17 +2873,23 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         
         if let frontSideDocument = innerState.frontSideDocument {
             entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: frontSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
-            centralIndex = index
+            if document.id == frontSideDocument.id {
+                centralIndex = index
+            }
             index += 1
         }
         if let backSideDocument = innerState.backSideDocument {
             entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: backSideDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
-            centralIndex = index
+            if document.id == backSideDocument.id {
+                centralIndex = index
+            }
             index += 1
         }
         if let selfieDocument = innerState.selfieDocument {
             entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: selfieDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
-            centralIndex = index
+            if document.id == selfieDocument.id {
+                centralIndex = index
+            }
             index += 1
         }
         if let _ = innerState.documents.index(where: { $0.id == document.id }) {

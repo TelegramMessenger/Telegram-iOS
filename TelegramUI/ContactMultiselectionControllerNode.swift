@@ -44,12 +44,20 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
+    init(account: Account, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
+        let placeholder: String
+        switch mode {
+            case .peerSelection:
+                placeholder = self.presentationData.strings.Contacts_SearchLabel
+            default:
+                placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
+        }
+        
         self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: false, options: options), filters: filters, selectionState: ContactListNodeGroupSelectionState())
-        self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.chatList.searchBarKeyboardColor), placeholder: self.presentationData.strings.Compose_TokenListPlaceholder)
+        self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.chatList.searchBarKeyboardColor), placeholder: placeholder)
         
         super.init()
         

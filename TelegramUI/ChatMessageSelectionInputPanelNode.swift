@@ -116,7 +116,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         self.validLayout = (width, leftInset, rightInset, maxHeight, metrics)
         
-        let panelHeight: CGFloat = 45.0
+        let panelHeight = defaultHeight(metrics: metrics)
         
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
@@ -186,6 +186,6 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 45.0
+        return defaultHeight(metrics: metrics)
     }
 }

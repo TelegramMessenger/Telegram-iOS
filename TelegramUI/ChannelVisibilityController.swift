@@ -564,7 +564,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             text = presentationData.strings.Channel_NotificationLoading
         }
         entries.append(.privateLink(presentationData.theme, text, link))
-        entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
+        entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
         switch mode {
             case .initialSetup:
                 break
@@ -867,9 +867,6 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                                 invokeAction()
                             }
                         })
-                        
-                        
-
                     } else {
                         switch mode {
                             case .initialSetup:
@@ -926,7 +923,13 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                 }
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_TypeSetup_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let title: String
+            if case .privateLink = mode {
+                title = presentationData.strings.GroupInfo_InviteLink_Title
+            } else {
+                title = isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_TypeSetup_Title
+            }
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state), style: .blocks, crossfadeState: crossfade, animateChanges: false)
             
             return (controllerState, (listState, arguments))

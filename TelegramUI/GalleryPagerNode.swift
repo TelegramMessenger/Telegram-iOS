@@ -155,8 +155,6 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        var removedNodes: [GalleryItemNode] = []
-        
         if !transaction.deleteItems.isEmpty || !transaction.insertItems.isEmpty {
             let deleteItems = transaction.deleteItems.sorted()
             
@@ -164,8 +162,8 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.items.remove(at: deleteItemIndex)
                 for i in 0 ..< self.itemNodes.count {
                     if self.itemNodes[i].index == deleteItemIndex {
-                        removedNodes.append(self.itemNodes[i])
                         self.removeVisibleItemNode(internalIndex: i)
+                        break
                     }
                 }
             }

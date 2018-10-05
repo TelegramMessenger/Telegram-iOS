@@ -51,9 +51,9 @@ private func screenRecordingActive() -> Signal<Bool, NoError> {
 }
 
 func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
-    return Signal { susbcriber in
+    return Signal { subscriber in
         let observer = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationUserDidTakeScreenshot, object: nil, queue: .main, using: { _ in
-            susbcriber.putNext(.still)
+            subscriber.putNext(.still)
         })
         
         var previous = false
@@ -61,7 +61,7 @@ func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
             if value != previous {
                 previous = value
                 if value {
-                    susbcriber.putNext(.video)
+                    subscriber.putNext(.video)
                 }
             }
         })

@@ -211,9 +211,9 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: mode, chatLocation: chatLocation)
         
-        var enableMediaAccessoryPanel = false
+        var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
         if case .standard = mode {
-            enableMediaAccessoryPanel = true
+            mediaAccessoryPanelVisibility = .specific(size: .compact)
         } else {
             locationBroadcastPanelSource = .none
         }
@@ -224,7 +224,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
             default:
                 navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
         }
-        super.init(account: account, navigationBarPresentationData: navigationBarPresentationData, enableMediaAccessoryPanel: enableMediaAccessoryPanel, locationBroadcastPanelSource: locationBroadcastPanelSource)
+        super.init(account: account, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
@@ -2848,6 +2848,8 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         
         self.validLayout = layout
         
+        self.chatTitleView?.layoutMetrics = layout.metrics
+        
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop)
         })
@@ -3621,7 +3623,7 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     }
     
     private func enqueueMediaMessages(signals: [Any]?) {
-        if case let .peer(peerId) = self.chatLocation {
+        if case .peer = self.chatLocation {
             self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.account, signals: signals!) |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self {
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId

@@ -9,15 +9,13 @@ private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
 class ChatUnreadItem: ListViewItem {
     let index: MessageIndex
-    let theme: ChatPresentationThemeData
-    let strings: PresentationStrings
+    let presentationData: ChatPresentationData
     let header: ChatMessageDateHeader
     
-    init(index: MessageIndex, theme: ChatPresentationThemeData, strings: PresentationStrings) {
+    init(index: MessageIndex, presentationData: ChatPresentationData) {
         self.index = index
-        self.theme = theme
-        self.strings = strings
-        self.header = ChatMessageDateHeader(timestamp: index.timestamp, theme: theme, strings: strings)
+        self.presentationData = presentationData
+        self.header = ChatMessageDateHeader(timestamp: index.timestamp, presentationData: presentationData)
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
@@ -110,18 +108,18 @@ class ChatUnreadItemNode: ListViewItemNode {
         
         return { item, params, dateAtBottom in
             var updatedBackgroundImage: UIImage?
-            if currentTheme != item.theme {
-                updatedBackgroundImage = PresentationResourcesChat.chatUnreadBarBackgroundImage(item.theme.theme)
+            if currentTheme != item.presentationData.theme {
+                updatedBackgroundImage = PresentationResourcesChat.chatUnreadBarBackgroundImage(item.presentationData.theme.theme)
             }
             
-            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Conversation_UnreadMessages, font: titleFont, textColor: item.theme.theme.chat.serviceMessage.unreadBarTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Conversation_UnreadMessages, font: titleFont, textColor: item.presentationData.theme.theme.chat.serviceMessage.unreadBarTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let backgroundSize = CGSize(width: params.width, height: 25.0)
             
             return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 25.0), insets: UIEdgeInsets(top: 6.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 5.0, right: 0.0)), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
-                    strongSelf.theme = item.theme
+                    strongSelf.theme = item.presentationData.theme
                     
                     if let updatedBackgroundImage = updatedBackgroundImage {
                         strongSelf.backgroundNode.image = updatedBackgroundImage
@@ -148,5 +146,12 @@ class ChatUnreadItemNode: ListViewItemNode {
         super.animateRemoved(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+    }
+    
+    override public var wantsScrollDynamics: Bool {
+        if let disableAnimations = self.item?.presentationData.disableAnimations {
+            return !disableAnimations
+        }
+        return true
     }
 }

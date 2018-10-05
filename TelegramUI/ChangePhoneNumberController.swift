@@ -98,7 +98,11 @@ final class ChangePhoneNumberController: ViewController {
     }
     
     @objc func nextPressed() {
-        let (_, number) = self.controllerNode.codeAndNumber
+        let (code, number) = self.controllerNode.codeAndNumber
+        var phoneNumber = number
+        if let code = code {
+            phoneNumber = "\(code)\(phoneNumber)"
+        }
         if !number.isEmpty {
             self.inProgress = true
             self.requestDisposable.set((requestChangeAccountPhoneNumberVerification(account: self.account, phoneNumber: self.controllerNode.currentNumber) |> deliverOnMainQueue).start(next: { [weak self] next in
@@ -119,7 +123,7 @@ final class ChangePhoneNumberController: ViewController {
                         case .invalidPhoneNumber:
                             text = presentationData.strings.Login_InvalidPhoneError
                         case .phoneNumberOccupied:
-                            text = presentationData.strings.ChangePhone_ErrorOccupied(number).0
+                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).0
                         case .generic:
                             text = presentationData.strings.Login_UnknownError
                     }

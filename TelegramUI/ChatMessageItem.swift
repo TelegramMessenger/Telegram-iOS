@@ -279,11 +279,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.effectiveAuthorId = effectiveAuthor?.id
         
         
-        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, theme: presentationData.theme, strings: presentationData.strings, action: { timestamp in
-            
-//
+        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, presentationData: presentationData, action: { timestamp in
             var calendar = NSCalendar.current
-
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
             let components = calendar.dateComponents([.year, .month, .day], from: date)
@@ -291,21 +288,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             if let date = calendar.date(from: components) {
                 controllerInteraction.navigateToFirstDateMessage(Int32(date.timeIntervalSince1970))
             }
-
-            
-            /*
-             unsigned unitFlags = NSCalendarUnitDay| NSCalendarUnitYear | NSCalendarUnitMonth;
-             NSDateComponents *components = [cal components:unitFlags fromDate:date];
-             NSDateComponents *comps = [[NSDateComponents alloc] init];
-             comps.day = day;
-             comps.year = components.year;
-             comps.month = components.month;
-             return [cal dateFromComponents:comps];
- */
-            
-           // item.chatInteraction?.jumpToDate(CalendarUtils.monthDay(components.day!, date: date))
-            
-
         })
         
         if displayAuthorInfo {
@@ -330,7 +312,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         self.accessoryItem = accessoryItem
-        
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {

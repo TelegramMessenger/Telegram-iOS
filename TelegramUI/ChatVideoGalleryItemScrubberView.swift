@@ -76,9 +76,17 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     }
     
     func setStatusSignal(_ status: Signal<MediaPlayerStatus, NoError>?) {
-        self.scrubberNode.status = status
-        self.leftTimestampNode.status = status
-        self.rightTimestampNode.status = status
+        let mappedStatus: Signal<MediaPlayerStatus, NoError>?
+        if let status = status {
+            mappedStatus = combineLatest(status, self.scrubberNode.scrubbingTimestamp) |> map { status, scrubbingTimestamp -> MediaPlayerStatus in
+                return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: status.dimensions, timestamp: scrubbingTimestamp ?? status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status)
+            }
+        } else {
+            mappedStatus = nil
+        }
+        self.scrubberNode.status = mappedStatus
+        self.leftTimestampNode.status = mappedStatus
+        self.rightTimestampNode.status = mappedStatus
     }
     
     func setBufferingStatusSignal(_ status: Signal<(IndexSet, Int)?, NoError>?) {

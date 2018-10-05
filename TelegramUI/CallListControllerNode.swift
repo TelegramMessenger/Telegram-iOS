@@ -69,19 +69,20 @@ struct CallListNodeState: Equatable {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
+    let disableAnimations: Bool
     let editing: Bool
     let messageIdWithRevealedOptions: MessageId?
     
-    func withUpdatedPresentationData(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> CallListNodeState {
-        return CallListNodeState(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, editing: self.editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
+    func withUpdatedPresentationData(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, disableAnimations: Bool) -> CallListNodeState {
+        return CallListNodeState(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations, editing: self.editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
     }
     
     func withUpdatedEditing(_ editing: Bool) -> CallListNodeState {
-        return CallListNodeState(theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, editing: editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
+        return CallListNodeState(theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, disableAnimations: self.disableAnimations, editing: editing, messageIdWithRevealedOptions: self.messageIdWithRevealedOptions)
     }
     
     func withUpdatedMessageIdWithRevealedOptions(_ messageIdWithRevealedOptions: MessageId?) -> CallListNodeState {
-        return CallListNodeState(theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, editing: self.editing, messageIdWithRevealedOptions: messageIdWithRevealedOptions)
+        return CallListNodeState(theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, disableAnimations: self.disableAnimations, editing: self.editing, messageIdWithRevealedOptions: messageIdWithRevealedOptions)
     }
     
     static func ==(lhs: CallListNodeState, rhs: CallListNodeState) -> Bool {
@@ -198,7 +199,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.openInfo = openInfo
         self.emptyStateUpdated = emptyStateUpdated
         
-        self.currentState = CallListNodeState(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, editing: false, messageIdWithRevealedOptions: nil)
+        self.currentState = CallListNodeState(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations, editing: false, messageIdWithRevealedOptions: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.listNode = ListView()
@@ -322,7 +323,7 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             }
             
-            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, account: account, scrollPosition: update.scrollPosition)
+            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: state.disableAnimations, account: account, scrollPosition: update.scrollPosition)
                 |> map({ mappedCallListNodeViewListTransition(account: account, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
                 |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
@@ -371,8 +372,8 @@ final class CallListControllerNode: ASDisplayNode {
         self.emptyStateDisposable.dispose()
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
-        if theme !== self.currentState.theme || strings !== self.currentState.strings {
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, disableAnimations: Bool) {
+        if theme !== self.currentState.theme || strings !== self.currentState.strings || disableAnimations != self.currentState.disableAnimations {
             switch self.mode {
                 case .tab:
                     self.backgroundColor = theme.chatList.backgroundColor
@@ -385,7 +386,7 @@ final class CallListControllerNode: ASDisplayNode {
             self.updateEmptyPlaceholder(theme: theme, strings: strings, type: self.currentLocationAndType.type, hidden: self.emptyTextNode.isHidden)
             
             self.updateState {
-                return $0.withUpdatedPresentationData(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat)
+                return $0.withUpdatedPresentationData(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations)
             }
         }
     }

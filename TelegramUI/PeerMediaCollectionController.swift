@@ -47,7 +47,7 @@ public class PeerMediaCollectionController: TelegramController {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.interfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
-        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(self.presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), enableMediaAccessoryPanel: true, locationBroadcastPanelSource: .none)
+        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(self.presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
         
         self.title = self.presentationData.strings.SharedMedia_TitleAll
         
@@ -515,7 +515,7 @@ public class PeerMediaCollectionController: TelegramController {
         
         self.validLayout = layout
         
-        self.mediaCollectionDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition,  listViewTransaction: { updateSizeAndInsets in
+        self.mediaCollectionDisplayNode.containerLayoutUpdated(layout, navigationBarHeightAndPrimaryHeight: (self.navigationHeight, self.primaryNavigationHeight), transition: transition, listViewTransaction: { updateSizeAndInsets in
             self.mediaCollectionDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         })
     }

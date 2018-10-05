@@ -129,7 +129,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        let panelHeight: CGFloat = 45.0
+        let panelHeight = defaultHeight(metrics: metrics)
         
         let buttonSize = self.button.bounds.size
         self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
@@ -141,6 +141,6 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 45.0
+        return defaultHeight(metrics: metrics)
     }
 }

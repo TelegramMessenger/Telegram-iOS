@@ -154,7 +154,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
             case .disabled:
                 return .single(([], [:]))
             case let .peers(peers):
-                return combineLatest(peers.map {account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<([Peer], [PeerId: UnreadSearchBadge]), NoError> in
+                return combineLatest(peers.filter { !$0.isDeleted }.map {account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<([Peer], [PeerId: UnreadSearchBadge]), NoError> in
                     return account.postbox.unreadMessageCountsView(items: peerViews.map {.peer($0.peerId)}) |> map { values in
                         
                         var peers:[Peer] = []

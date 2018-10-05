@@ -164,27 +164,29 @@ private enum RevealOptionKey: Int32 {
 
 private let itemHeight: CGFloat = 76.0
 
-private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool?, isMuted: Bool?, hasPeerGroupId: Bool?, canDelete: Bool) -> [ItemListRevealOption] {
+private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool?, isMuted: Bool?, hasPeerGroupId: Bool?, canDelete: Bool, isEditing: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
-    if let isPinned = isPinned {
-        if isPinned {
-            options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
-        } else {
-            options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+    if !isEditing {
+        if let isPinned = isPinned {
+            if isPinned {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.neutral1.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+            }
         }
-    }
-    if let isMuted = isMuted {
-        if isMuted {
-            options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.Conversation_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
-        } else {
-            options.append(ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: strings.Conversation_Mute, icon: muteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+        if let isMuted = isMuted {
+            if isMuted {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.Conversation_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: strings.Conversation_Mute, icon: muteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+            }
         }
-    }
-    if let hasPeerGroupId = hasPeerGroupId {
-        if hasPeerGroupId {
-            options.append(ItemListRevealOption(key: RevealOptionKey.ungroup.rawValue, title: "Ungroup", icon: ungroupIcon, color: theme.list.itemAccentColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
-        } else {
-            options.append(ItemListRevealOption(key: RevealOptionKey.group.rawValue, title: "Group", icon: groupIcon, color: theme.list.itemAccentColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+        if let hasPeerGroupId = hasPeerGroupId {
+            if hasPeerGroupId {
+                options.append(ItemListRevealOption(key: RevealOptionKey.ungroup.rawValue, title: "Ungroup", icon: ungroupIcon, color: theme.list.itemAccentColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.group.rawValue, title: "Group", icon: groupIcon, color: theme.list.itemAccentColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+            }
         }
     }
     if canDelete {
@@ -709,8 +711,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         isPinned = item.index.pinningIndex != nil
                     }
                     
-                    if item.enableContextActions && !item.editing && !isAd {
-                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, hasPeerGroupId: hasPeerGroupId, canDelete: true)
+                    if item.enableContextActions && !isAd {
+                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: item.account.peerId != item.index.messageIndex.id.peerId ? (currentMutedIconImage != nil) : nil, hasPeerGroupId: hasPeerGroupId, canDelete: true, isEditing: item.editing)
                         if itemPeer.peerId != item.account.peerId {
                             peerLeftRevealOptions = leftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread)
                         } else {
@@ -723,8 +725,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 case .groupReference:
                     let isPinned = item.index.pinningIndex != nil
                     
-                    if item.enableContextActions && !item.editing {
-                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: nil, hasPeerGroupId: nil, canDelete: false)
+                    if item.enableContextActions {
+                        peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: nil, hasPeerGroupId: nil, canDelete: false, isEditing: item.editing)
                     } else {
                         peerRevealOptions = []
                     }

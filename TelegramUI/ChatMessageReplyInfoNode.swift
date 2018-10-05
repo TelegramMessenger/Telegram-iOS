@@ -76,7 +76,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     textColor = titleColor
             }
             
-            var leftInset: CGFloat = 10.0
+            var leftInset: CGFloat = 11.0
+            let spacing: CGFloat = 2.0
             
             var overlayIcon: UIImage?
             
@@ -112,7 +113,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             var applyImage: (() -> TransformImageNode)?
             if let imageDimensions = imageDimensions {
-                leftInset += 36.0
+                leftInset += 32.0
                 let boundingSize = CGSize(width: 30.0, height: 30.0)
                 var radius: CGFloat = 2.0
                 var imageSize = imageDimensions.aspectFilled(boundingSize)
@@ -151,7 +152,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: textString, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let size = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + leftInset, height: titleLayout.size.height + textLayout.size.height)
+            let size = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + leftInset, height: titleLayout.size.height + textLayout.size.height + 2 * spacing)
             
             return (size, {
                 let node: ChatMessageReplyInfoNode
@@ -186,8 +187,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.addSubnode(imageNode)
                         node.imageNode = imageNode
                     }
-                    imageFrame = CGRect(origin: CGPoint(x: 8.0, y: 3.0), size: CGSize(width: 30.0, height: 30.0))
-                    imageNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 3.0), size: CGSize(width: 30.0, height: 30.0))
+                    imageNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 30.0, height: 30.0))
+                    imageFrame = imageNode.frame
                     
                     if let updateImageSignal = updateImageSignal {
                         imageNode.setSignal(updateImageSignal)
@@ -216,11 +217,11 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     node.overlayIconNode = nil
                 }
                 
-                titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: titleLayout.size)
-                textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: titleLayout.size.height), size: textLayout.size)
+                titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: spacing), size: titleLayout.size)
+                textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: titleNode.frame.maxY + spacing), size: textLayout.size)
                 
                 node.lineNode.image = lineImage
-                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 4.0)))
+                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 5.0)))
                 
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                 

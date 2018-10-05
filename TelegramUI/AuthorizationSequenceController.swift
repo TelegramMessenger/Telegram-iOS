@@ -10,7 +10,7 @@ import CoreTelephony
 
 public final class AuthorizationSequenceController: NavigationController {
     static func navigationBarTheme(_ theme: AuthorizationTheme) -> NavigationBarTheme {
-        return NavigationBarTheme(buttonColor: theme.accentColor, primaryTextColor: .black, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+        return NavigationBarTheme(buttonColor: theme.accentColor, disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     }
     
     private var account: UnauthorizedAccount

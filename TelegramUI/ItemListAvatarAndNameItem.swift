@@ -453,7 +453,12 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                 statusColor = item.theme.list.itemPrimaryTextColor
             }
             
-            let (statusNodeLayout, statusNodeApply) = layoutStatusNode(TextNodeLayoutArguments(attributedString: NSAttributedString(string: statusText, font: statusFont, textColor: statusColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: baseWidth - 20, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var availableStatusWidth = baseWidth - 20
+            if item.call != nil {
+                availableStatusWidth -= 44.0
+            }
+            
+            let (statusNodeLayout, statusNodeApply) = layoutStatusNode(TextNodeLayoutArguments(attributedString: NSAttributedString(string: statusText, font: statusFont, textColor: statusColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: availableStatusWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
@@ -660,6 +665,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                     inputFirstField.textColor = item.theme.list.itemPrimaryTextColor
                                     inputFirstField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                                     inputFirstField.autocorrectionType = .no
+                                    inputFirstField.returnKeyType = .next
                                     inputFirstField.attributedPlaceholder = NSAttributedString(string: item.strings.UserInfo_FirstNamePlaceholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
                                     inputFirstField.attributedText = NSAttributedString(string: firstName, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
                                     strongSelf.inputFirstField = inputFirstField
@@ -675,6 +681,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                     inputSecondField.textColor = item.theme.list.itemPrimaryTextColor
                                     inputSecondField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                                     inputSecondField.autocorrectionType = .no
+                                    inputSecondField.returnKeyType = .done
                                     inputSecondField.attributedPlaceholder = NSAttributedString(string: item.strings.UserInfo_LastNamePlaceholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
                                     inputSecondField.attributedText = NSAttributedString(string: lastName, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
                                     strongSelf.inputSecondField = inputSecondField

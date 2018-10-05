@@ -185,39 +185,55 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
+    private func updateNetworkStatusNode(networkState: AccountNetworkState, metrics: LayoutMetrics) {
+        var isOnline = false
+        if case .online = networkState {
+            isOnline = true
+        }
+        
+        if isOnline || metrics.widthClass == .regular {
+            self.contentContainer.isHidden = false
+            if let networkStatusNode = self.networkStatusNode {
+                self.networkStatusNode = nil
+                networkStatusNode.removeFromSupernode()
+            }
+        } else {
+            self.contentContainer.isHidden = true
+            let statusNode: ChatTitleNetworkStatusNode
+            if let current = self.networkStatusNode {
+                statusNode = current
+            } else {
+                statusNode = ChatTitleNetworkStatusNode(theme: self.theme)
+                self.networkStatusNode = statusNode
+                self.insertSubview(statusNode.view, belowSubview: self.button.view)
+            }
+            switch self.networkState {
+            case .waitingForNetwork:
+                statusNode.title = self.strings.State_WaitingForNetwork
+            case .connecting:
+                statusNode.title = self.strings.State_Connecting
+            case .updating:
+                statusNode.title = self.strings.State_Updating
+            case .online:
+                break
+            }
+        }
+        
+        self.setNeedsLayout()
+    }
+    
     var networkState: AccountNetworkState = .online(proxy: nil) {
         didSet {
             if self.networkState != oldValue {
-                if case .online = self.networkState {
-                    self.contentContainer.isHidden = false
-                    if let networkStatusNode = self.networkStatusNode {
-                        self.networkStatusNode = nil
-                        networkStatusNode.removeFromSupernode()
-                    }
-                } else {
-                    self.contentContainer.isHidden = true
-                    let statusNode: ChatTitleNetworkStatusNode
-                    if let current = self.networkStatusNode {
-                        statusNode = current
-                    } else {
-                        statusNode = ChatTitleNetworkStatusNode(theme: self.theme)
-                        self.networkStatusNode = statusNode
-                        self.insertSubview(statusNode.view, belowSubview: self.button.view)
-                    }
-                    switch self.networkState {
-                        case .waitingForNetwork:
-                            statusNode.title = self.strings.State_WaitingForNetwork
-                        case .connecting:
-                            statusNode.title = self.strings.State_Connecting
-                        case .updating:
-                            statusNode.title = self.strings.State_Updating
-                        case .online:
-                            break
-                    }
-                    
-                }
-                
-                self.setNeedsLayout()
+                updateNetworkStatusNode(networkState: self.networkState, metrics: self.layoutMetrics)
+            }
+        }
+    }
+    
+    var layoutMetrics: LayoutMetrics = LayoutMetrics() {
+        didSet {
+            if self.layoutMetrics != oldValue {
+                updateNetworkStatusNode(networkState: self.networkState, metrics: self.layoutMetrics)
             }
         }
     }

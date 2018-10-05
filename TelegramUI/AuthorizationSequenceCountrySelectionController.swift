@@ -186,7 +186,7 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
         self.strings = strings
         self.displayCodes = displayCodes
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: theme.searchBar.accent, primaryTextColor: theme.searchBar.primaryText, backgroundColor: theme.searchBar.background, separatorColor: theme.searchBar.separator, badgeBackgroundColor: theme.searchBar.accent, badgeStrokeColor: .clear, badgeTextColor: theme.searchBar.background), strings: NavigationBarStrings(presentationStrings: strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: theme.searchBar.accent, disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: theme.searchBar.primaryText, backgroundColor: theme.searchBar.background, separatorColor: theme.searchBar.separator, badgeBackgroundColor: theme.searchBar.accent, badgeStrokeColor: .clear, badgeTextColor: theme.searchBar.background), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self.statusBar.statusBarStyle = theme.statusBar.style
         

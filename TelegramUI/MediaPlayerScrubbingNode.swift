@@ -173,11 +173,16 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
     
     private var playbackStatusValue: MediaPlayerPlaybackStatus?
     private var scrubbingBeginTimestamp: Double?
-    private var scrubbingTimestamp: Double?
+    private var scrubbingTimestampValue: Double?
     
     var playbackStatusUpdated: ((MediaPlayerPlaybackStatus?) -> Void)?
     var playerStatusUpdated: ((MediaPlayerStatus?) -> Void)?
     var seek: ((Double) -> Void)?
+    
+    private let _scrubbingTimestamp = Promise<Double?>(nil)
+    var scrubbingTimestamp: Signal<Double?, NoError> {
+        return self._scrubbingTimestamp.get()
+    }
     
     var ignoreSeekId: Int?
     
@@ -361,7 +366,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                     if let strongSelf = self {
                         if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
                             strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
-                            strongSelf.scrubbingTimestamp = statusValue.timestamp
+                            strongSelf.scrubbingTimestampValue = statusValue.timestamp
+                            strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
                             strongSelf.updateProgress()
                         }
                     }
@@ -369,7 +375,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
                     if let strongSelf = self {
                         if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                            strongSelf.scrubbingTimestamp = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
+                            strongSelf.scrubbingTimestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
+                            strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
                             strongSelf.updateProgress()
                         }
                     }
@@ -377,13 +384,14 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 handleNodeContainer.endScrubbing = { [weak self] apply in
                     if let strongSelf = self {
                         strongSelf.scrubbingBeginTimestamp = nil
-                        let scrubbingTimestamp = strongSelf.scrubbingTimestamp
-                        strongSelf.scrubbingTimestamp = nil
-                        if let scrubbingTimestamp = scrubbingTimestamp, apply {
+                        let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue
+                        strongSelf.scrubbingTimestampValue = nil
+                        strongSelf._scrubbingTimestamp.set(.single(nil))
+                        if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
                             if let statusValue = strongSelf.statusValue {
                                 strongSelf.ignoreSeekId = statusValue.seekId
                             }
-                            strongSelf.seek?(scrubbingTimestamp)
+                            strongSelf.seek?(scrubbingTimestampValue)
                         }
                         strongSelf.updateProgress()
                     }
@@ -404,7 +412,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                     if let strongSelf = self {
                         if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
                             strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
-                            strongSelf.scrubbingTimestamp = statusValue.timestamp
+                            strongSelf.scrubbingTimestampValue = statusValue.timestamp
                             strongSelf.updateProgress()
                         }
                     }
@@ -412,7 +420,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
                     if let strongSelf = self {
                         if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                            strongSelf.scrubbingTimestamp = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
+                            strongSelf.scrubbingTimestampValue = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
                             strongSelf.updateProgress()
                         }
                     }
@@ -420,10 +428,10 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 handleNodeContainer.endScrubbing = { [weak self] apply in
                     if let strongSelf = self {
                         strongSelf.scrubbingBeginTimestamp = nil
-                        let scrubbingTimestamp = strongSelf.scrubbingTimestamp
-                        strongSelf.scrubbingTimestamp = nil
-                        if let scrubbingTimestamp = scrubbingTimestamp, apply {
-                            strongSelf.seek?(scrubbingTimestamp)
+                        let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue
+                        strongSelf.scrubbingTimestampValue = nil
+                        if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
+                            strongSelf.seek?(scrubbingTimestampValue)
                         }
                         strongSelf.updateProgress()
                     }
@@ -529,8 +537,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                     if case .buffering(true, _) = statusValue.status {
                         initialBuffering = true
                     } else if Double(0.0).isLess(than: statusValue.duration) {
-                        if let scrubbingTimestamp = self.scrubbingTimestamp {
-                            timestampAndDuration = (max(0.0, min(scrubbingTimestamp, statusValue.duration)), statusValue.duration)
+                        if let scrubbingTimestampValue = self.scrubbingTimestampValue {
+                            timestampAndDuration = (max(0.0, min(scrubbingTimestampValue, statusValue.duration)), statusValue.duration)
                         } else {
                             timestampAndDuration = (statusValue.timestamp, statusValue.duration)
                         }
@@ -539,7 +547,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 
                 if let (timestamp, duration) = timestampAndDuration {
                     let progress = CGFloat(timestamp / duration)
-                    if let _ = scrubbingTimestamp {
+                    if let _ = scrubbingTimestampValue {
                         let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
                         let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
                         
@@ -641,8 +649,8 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 
                 let timestampAndDuration: (timestamp: Double, duration: Double)?
                 if let statusValue = self.statusValue, Double(0.0).isLess(than: statusValue.duration) {
-                    if let scrubbingTimestamp = self.scrubbingTimestamp {
-                        timestampAndDuration = (max(0.0, min(scrubbingTimestamp, statusValue.duration)), statusValue.duration)
+                    if let scrubbingTimestampValue = self.scrubbingTimestampValue {
+                        timestampAndDuration = (max(0.0, min(scrubbingTimestampValue, statusValue.duration)), statusValue.duration)
                     } else {
                         timestampAndDuration = (statusValue.timestamp, statusValue.duration)
                     }
@@ -652,7 +660,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 
                 if let (timestamp, duration) = timestampAndDuration {
                     let progress = CGFloat(timestamp / duration)
-                    if let _ = scrubbingTimestamp {
+                    if let _ = scrubbingTimestampValue {
                         let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
                         let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
                         

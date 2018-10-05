@@ -37,6 +37,7 @@
 		09874E582107A4C300E190B8 /* VimeoEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09874E3A21075BF400E190B8 /* VimeoEmbedImplementation.swift */; };
 		09874E592107BD4100E190B8 /* GenericEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09874E4021075C1700E190B8 /* GenericEmbedImplementation.swift */; };
 		09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */; };
+		09C3466D2167D63A00B76780 /* Accessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C3466C2167D63A00B76780 /* Accessibility.swift */; };
 		09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
@@ -1057,6 +1058,7 @@
 		09874E4221075C3000E190B8 /* VKEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VKEmbedImplementation.swift; sourceTree = "<group>"; };
 		09874E4421075C3F00E190B8 /* StreamableEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamableEmbedImplementation.swift; sourceTree = "<group>"; };
 		09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySecureIdScanController.swift; sourceTree = "<group>"; };
+		09C3466C2167D63A00B76780 /* Accessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accessibility.swift; sourceTree = "<group>"; };
 		09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		D00219051DDD1C9E00BE708A /* ImageContainingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageContainingNode.swift; sourceTree = "<group>"; };
@@ -4312,6 +4314,7 @@
 				D044A0F220BDA05800326FAC /* ThrottledValue.swift */,
 				D0EC55A2210231D600D1992C /* SearchPeerMembers.swift */,
 				D0192D45210F4F940005FA10 /* FixSearchableListNodeScrolling.swift */,
+				09C3466C2167D63A00B76780 /* Accessibility.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -4917,6 +4920,7 @@
 				D0EC6D2D1EB9F58800EBF1C3 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */,
 				D0AF7C461ED84BC500CD8E0F /* LanguageSelectionController.swift in Sources */,
 				D0B69C3C20EBD8C8003632C7 /* CheckDeviceAccess.swift in Sources */,
+				09C3466D2167D63A00B76780 /* Accessibility.swift in Sources */,
 				D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */,
 				D0BE30492061C0F500FBE6D8 /* SecureIdAuthHeaderNode.swift in Sources */,
 				D0EC6D2E1EB9F58800EBF1C3 /* ImageNode.swift in Sources */,

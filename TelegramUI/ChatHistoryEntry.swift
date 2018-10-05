@@ -27,9 +27,9 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     case HoleEntry(MessageHistoryHole, PresentationTheme, PresentationStrings)
     case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, Bool)
     case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, Bool)], ChatPresentationData)
-    case UnreadEntry(MessageIndex, ChatPresentationThemeData, PresentationStrings)
-    case ChatInfoEntry(String, ChatPresentationThemeData, PresentationStrings)
-    case EmptyChatInfoEntry(PresentationTheme, PresentationStrings, MessageTags?)
+    case UnreadEntry(MessageIndex, ChatPresentationData)
+    case ChatInfoEntry(String, ChatPresentationData)
+    case EmptyChatInfoEntry(ChatPresentationData, MessageTags?)
     case SearchEntry(PresentationTheme, PresentationStrings)
     
     var stableId: UInt64 {
@@ -59,7 +59,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 return MessageIndex(message)
             case let .MessageGroupEntry(_, messages, _):
                 return MessageIndex(messages[messages.count - 1].0)
-            case let .UnreadEntry(index, _, _):
+            case let .UnreadEntry(index, _):
                 return index
             case .ChatInfoEntry:
                 return MessageIndex.absoluteLowerBound()
@@ -173,20 +173,20 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 } else {
                     return false
                 }
-            case let .UnreadEntry(lhsIndex, lhsTheme, lhsStrings):
-                if case let .UnreadEntry(rhsIndex, rhsTheme, rhsStrings) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+            case let .UnreadEntry(lhsIndex, lhsPresentationData):
+                if case let .UnreadEntry(rhsIndex, rhsPresentationData) = rhs, lhsIndex == rhsIndex, lhsPresentationData === rhsPresentationData {
                     return true
                 } else {
                     return false
                 }
-            case let .ChatInfoEntry(lhsText, lhsTheme, lhsStrings):
-                if case let .ChatInfoEntry(rhsText, rhsTheme, rhsStrings) = rhs, lhsText == rhsText, lhsTheme == rhsTheme, lhsStrings === rhsStrings {
+            case let .ChatInfoEntry(lhsText, lhsPresentationData):
+                if case let .ChatInfoEntry(rhsText, rhsPresentationData) = rhs, lhsText == rhsText, lhsPresentationData === rhsPresentationData {
                     return true
                 } else {
                     return false
                 }
-            case let .EmptyChatInfoEntry(lhsTheme, lhsStrings, lhsTagMask):
-                if case let .EmptyChatInfoEntry(rhsTheme, rhsStrings, rhsTagMask) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsTagMask == rhsTagMask {
+            case let .EmptyChatInfoEntry(lhsPresentationData, lhsTagMask):
+                if case let .EmptyChatInfoEntry(rhsPresentationData, rhsTagMask) = rhs, lhsPresentationData === rhsPresentationData, lhsTagMask == rhsTagMask {
                     return true
                 } else {
                     return false

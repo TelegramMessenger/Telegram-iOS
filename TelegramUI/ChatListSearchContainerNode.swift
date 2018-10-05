@@ -507,7 +507,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         self.openMessage = openMessage
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder))
+        self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
         
         self.recentListNode = ListView()
         self.listNode = ListView()

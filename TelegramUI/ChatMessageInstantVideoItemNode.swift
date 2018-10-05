@@ -8,10 +8,9 @@ import TelegramCore
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
+    private var selectionNode: ChatMessageSelectionNode?
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
-    
-    private var selectionNode: ChatMessageSelectionNode?
     
     private var appliedItem: ChatMessageItem?
     
@@ -20,6 +19,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     private var replyInfoNode: ChatMessageReplyInfoNode?
     private var replyBackgroundNode: ASImageNode?
+    
+    private var actionButtonsNode: ChatMessageActionButtonsNode?
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
@@ -76,9 +77,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         let currentForwardBackgroundNode = self.forwardBackgroundNode
         
+        let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
+        
         let currentItem = self.appliedItem
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+            let baseWidth = params.width - params.leftInset - params.rightInset
             let incoming = item.message.effectivelyIncoming(item.account.peerId)
             
             let avatarInset: CGFloat
@@ -124,6 +128,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
             var updatedReplyBackgroundNode: ASImageNode?
             var replyBackgroundImage: UIImage?
+            var replyMarkup: ReplyMarkupMessageAttribute?
+            var inlineBotNameString: String?
+            
             for attribute in item.message.attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - videoLayout.contentSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
@@ -136,6 +143,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     }
                     replyBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.presentationData.theme.theme)
                     break
+                } else if let attribute = attribute as? InlineBotMessageAttribute {
+                    if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
+                        inlineBotNameString = bot.username
+                    } else {
+                        inlineBotNameString = attribute.title
+                    }
+                } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
+                    replyMarkup = attribute
                 }
             }
             
@@ -173,7 +188,25 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 forwardBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.presentationData.theme.theme)
             }
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: videoLayout.contentSize.height), insets: layoutInsets), { [weak self] animation in
+            var maxContentWidth = videoLayout.contentSize.width
+            var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
+            if let replyMarkup = replyMarkup {
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.account, item.presentationData.theme.theme, item.presentationData.strings, replyMarkup, item.message, maxContentWidth)
+                maxContentWidth = max(maxContentWidth, minWidth)
+                actionButtonsFinalize = buttonsLayout
+            }
+            
+            var actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?
+            if let actionButtonsFinalize = actionButtonsFinalize {
+                actionButtonsSizeAndApply = actionButtonsFinalize(maxContentWidth)
+            }
+            
+            var layoutSize = CGSize(width: params.width, height: videoLayout.contentSize.height)
+            if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                layoutSize.height += actionButtonsSizeAndApply.0.height
+            }
+            
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation in
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
                 
@@ -240,6 +273,35 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     } else if let forwardInfoNode = strongSelf.forwardInfoNode {
                         forwardInfoNode.removeFromSupernode()
                         strongSelf.forwardInfoNode = nil
+                    }
+                    
+                    if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                        var animated = false
+                        if let _ = strongSelf.actionButtonsNode {
+                            if case .System = animation {
+                                animated = true
+                            }
+                        }
+                        let actionButtonsNode = actionButtonsSizeAndApply.1(animated)
+                        let previousFrame = actionButtonsNode.frame
+                        let actionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY), size: actionButtonsSizeAndApply.0)
+                        actionButtonsNode.frame = actionButtonsFrame
+                        if actionButtonsNode !== strongSelf.actionButtonsNode {
+                            strongSelf.actionButtonsNode = actionButtonsNode
+                            actionButtonsNode.buttonPressed = { button in
+                                if let strongSelf = self {
+                                    strongSelf.performMessageButtonAction(button: button)
+                                }
+                            }
+                            strongSelf.addSubnode(actionButtonsNode)
+                        } else {
+                            if case let .System(duration) = animation {
+                                actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                            }
+                        }
+                    } else if let actionButtonsNode = strongSelf.actionButtonsNode {
+                        actionButtonsNode.removeFromSupernode()
+                        strongSelf.actionButtonsNode = nil
                     }
                 }
             })

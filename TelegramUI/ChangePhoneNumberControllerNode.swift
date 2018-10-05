@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import CoreTelephony
 
 private func generateCountryButtonBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
@@ -149,7 +150,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         
         self.phoneInputNode.countryCodeUpdated = { [weak self] code in
             if let strongSelf = self {
-                if let code = Int(code), let (coutnryId, countryName) = countryCodeToIdAndName[code] {
+                if let code = Int(code), let (_, countryName) = countryCodeToIdAndName[code] {
                     strongSelf.countryButton.setTitle(countryName, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
                 } else {
                     strongSelf.countryButton.setTitle(strongSelf.presentationData.strings.Login_CountryCode, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
@@ -157,7 +158,29 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
             }
         }
         
-        self.phoneInputNode.number = "+1"
+        var countryId: String? = nil
+        let networkInfo = CTTelephonyNetworkInfo()
+        if let carrier = networkInfo.subscriberCellularProvider {
+            countryId = carrier.isoCountryCode
+        }
+        
+        if countryId == nil {
+            countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
+        }
+        
+        var countryCodeAndId: (Int32, String) = (1, "US")
+        
+        if let countryId = countryId {
+            let normalizedId = countryId.uppercased()
+            for (code, idAndName) in countryCodeToIdAndName {
+                if idAndName.0 == normalizedId {
+                    countryCodeAndId = (Int32(code), idAndName.0.uppercased())
+                    break
+                }
+            }
+        }
+        
+        self.phoneInputNode.number = "+\(countryCodeAndId.0)"
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

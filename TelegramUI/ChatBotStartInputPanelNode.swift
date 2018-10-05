@@ -94,7 +94,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         
         let buttonSize = self.button.measure(CGSize(width: width - 80.0, height: 100.0))
         
-        let panelHeight: CGFloat = 45.0
+        let panelHeight = defaultHeight(metrics: metrics)
         
         self.button.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
         
@@ -105,6 +105,6 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 45.0
+        return defaultHeight(metrics: metrics)
     }
 }

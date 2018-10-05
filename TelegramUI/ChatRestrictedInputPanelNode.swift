@@ -33,7 +33,7 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        let panelHeight: CGFloat = 45.0
+        let panelHeight = defaultHeight(metrics: metrics)
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset - 8.0 * 2.0, height: panelHeight))
         
         self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - textSize.width) / 2.0), y: floor((panelHeight - textSize.height) / 2.0)), size: textSize)
@@ -42,6 +42,6 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
     }
     
     override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        return 45.0
+        return defaultHeight(metrics: metrics)
     }
 }

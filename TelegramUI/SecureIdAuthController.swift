@@ -99,14 +99,12 @@ final class SecureIdAuthController: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.title = self.presentationData.strings.Passport_Title
-        let leftButtonTitle: String
         switch mode {
             case .form:
-                leftButtonTitle = self.presentationData.strings.Common_Cancel
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
             case .list:
-                leftButtonTitle = self.presentationData.strings.Common_Done
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.cancelPressed))
         }
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: leftButtonTitle, style: .plain, target: self, action: #selector(self.cancelPressed))
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))
         
         self.challengeDisposable.set((twoStepAuthData(account.network)

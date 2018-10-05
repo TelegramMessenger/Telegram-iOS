@@ -470,7 +470,7 @@ func autodownloadMediaCategoryController(account: Account, category: AutomaticDo
                         case .cellular:
                             settings.peers.channels.voiceMessage.cellular = !settings.peers.channels.voiceMessage.cellular
                         case .wifi:
-                            settings.peers.channels.voiceMessage.wifi = !settings.peers.channels.file.wifi
+                            settings.peers.channels.voiceMessage.wifi = !settings.peers.channels.voiceMessage.wifi
                         }
                     }
                 case .videoMessage:
@@ -501,7 +501,7 @@ func autodownloadMediaCategoryController(account: Account, category: AutomaticDo
                         case .cellular:
                             settings.peers.channels.videoMessage.cellular = !settings.peers.channels.videoMessage.cellular
                         case .wifi:
-                            settings.peers.channels.videoMessage.wifi = !settings.peers.channels.file.wifi
+                            settings.peers.channels.videoMessage.wifi = !settings.peers.channels.videoMessage.wifi
                         }
                     }
             }

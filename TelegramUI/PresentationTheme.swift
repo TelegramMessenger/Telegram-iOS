@@ -67,6 +67,7 @@ public final class PresentationThemeRootNavigationStatusBar {
 
 public final class PresentationThemeRootNavigationBar {
     public let buttonColor: UIColor
+    public let disabledButtonColor: UIColor
     public let primaryTextColor: UIColor
     public let secondaryTextColor: UIColor
     public let controlColor: UIColor
@@ -77,8 +78,9 @@ public final class PresentationThemeRootNavigationBar {
     public let badgeStrokeColor: UIColor
     public let badgeTextColor: UIColor
     
-    public init(buttonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
+    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
         self.buttonColor = buttonColor
+        self.disabledButtonColor = disabledButtonColor
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
         self.controlColor = controlColor

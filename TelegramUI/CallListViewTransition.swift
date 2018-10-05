@@ -45,7 +45,7 @@ enum CallListNodeViewScrollPosition {
     case index(index: MessageIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
 }
 
-func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toView: CallListNodeView, reason: CallListNodeViewTransitionReason, account: Account, scrollPosition: CallListNodeViewScrollPosition?) -> Signal<CallListNodeViewTransition, NoError> {
+func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toView: CallListNodeView, reason: CallListNodeViewTransitionReason, disableAnimations: Bool, account: Account, scrollPosition: CallListNodeViewScrollPosition?) -> Signal<CallListNodeViewTransition, NoError> {
     return Signal { subscriber in
         let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
         
@@ -74,7 +74,9 @@ func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toV
                 let _ = options.insert(.Synchronous)
             case .interactiveChanges:
                 let _ = options.insert(.AnimateAlpha)
-                let _ = options.insert(.AnimateInsertion)
+                if !disableAnimations {
+                    let _ = options.insert(.AnimateInsertion)
+                }
                 
                 for (index, _, _) in indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
                     let adjustedIndex = updatedCount - 1 - index

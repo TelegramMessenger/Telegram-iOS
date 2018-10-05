@@ -565,7 +565,7 @@ final class ContactListNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder)>
+    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)>
     
     init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
@@ -576,7 +576,7 @@ final class ContactListNode: ASDisplayNode {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder))
+        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.disableAnimations))
         
         super.init()
         
@@ -722,7 +722,7 @@ final class ContactListNode: ASDisplayNode {
                         let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
                         let previous = previousEntries.swap(entries)
                         let animated: Bool
-                        if let previous = previous {
+                        if let previous = previous, !themeAndStrings.5 {
                             animated = (entries.count - previous.count) < 20
                         } else {
                             animated = false
@@ -747,12 +747,13 @@ final class ContactListNode: ASDisplayNode {
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
+                let previousDisableAnimations = strongSelf.presentationData.disableAnimations
                 
                 strongSelf.presentationData = presentationData
                 
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousDisableAnimations != presentationData.disableAnimations {
                     strongSelf.backgroundColor = presentationData.theme.chatList.backgroundColor
-                    strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder)))
+                    strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder, presentationData.disableAnimations)))
                     
                     strongSelf.listNode.forEachAccessoryItemNode({ accessoryItemNode in
                         if let accessoryItemNode = accessoryItemNode as? ContactsSectionHeaderAccessoryItemNode {

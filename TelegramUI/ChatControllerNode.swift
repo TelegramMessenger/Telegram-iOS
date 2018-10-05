@@ -298,7 +298,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         }
                         
-                        if case let .peer(peerId) = strongSelf.chatLocation {
+                        if case .peer = strongSelf.chatLocation {
                             strongSelf.sendMessages(messages)
                         }
                     }
@@ -309,11 +309,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.textInputPanelNode?.pasteImages = { [weak self] images in
             self?.displayPasteMenu(images)
         }
-        
+        self.textInputPanelNode?.pasteData = { [weak self] data in
+            //self?.sendGifData(data)
+        }
         self.textInputPanelNode?.displayAttachmentMenu = { [weak self] in
             self?.displayAttachmentMenu()
         }
-        
         self.textInputPanelNode?.updateActivity = { [weak self] in
             self?.updateTypingActivity(true)
         }
@@ -639,7 +640,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if case .standard(true) = self.chatPresentationInterfaceState.mode {
-            inputPanelSize = CGSize(width: layout.size.width, height: 47.0)
+            self.inputPanelNode = nil
+            inputPanelSize = CGSize(width: layout.size.width, height: 0.0)
         }
         
         if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
@@ -649,7 +651,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 56.0)))
         
         var titleAccessoryPanelFrame: CGRect?
-        if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let panelHeight = titleAccessoryPanelHeight {
+        if let _ = self.titleAccessoryPanelNode, let panelHeight = titleAccessoryPanelHeight {
             titleAccessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
             insets.top += panelHeight
         }
@@ -855,8 +857,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 listInsets.left += 6.0
                 listInsets.right += 6.0
                 listInsets.top += 6.0
-                containerInsets.bottom += 6.0
-                //listInsets.bottom += 6.0
             }
         }
         
@@ -1675,7 +1675,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             if let menuHeight = menuHeight {
                 if let _ = self.controllerInteraction.contextHighlightedState?.messageStableId, let (menuController, node, frame) = displayContextMenuController {
-                    
                     self.controllerInteraction.presentController(menuController, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
                         if let strongSelf = self {
                             var bounds = strongSelf.bounds
