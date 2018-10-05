@@ -7,17 +7,7 @@
 		<key>Display.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>6</integer>
-		</dict>
-		<key>DisplayMac.xcscheme</key>
-		<dict>
-			<key>orderHint</key>
-			<integer>25</integer>
-		</dict>
-		<key>DisplayTests.xcscheme</key>
-		<dict>
-			<key>orderHint</key>
-			<integer>8</integer>
+			<integer>4</integer>
 		</dict>
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
