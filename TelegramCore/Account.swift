@@ -874,10 +874,10 @@ public class Account {
     private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
     private var peerInputActivityManager: PeerInputActivityManager!
     private var localInputActivityManager: PeerInputActivityManager!
+    private var accountPresenceManager: AccountPresenceManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
     fileprivate let managedStickerPacksDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
-    private let updatedPresenceDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
     
@@ -948,6 +948,8 @@ public class Account {
             self?.stateManager.addUpdates(updates)
         })
         self.localInputActivityManager = PeerInputActivityManager()
+        self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
+        
         self.viewTracker = AccountViewTracker(account: self)
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
         self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
@@ -1146,16 +1148,17 @@ public class Account {
         
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
-            self.pendingMessageManager.hasPendingMessages |> map { $0 ? AccountRunningImportantTasks.pendingMessages : [] }
+            self.pendingMessageManager.hasPendingMessages |> map { $0 ? AccountRunningImportantTasks.pendingMessages : [] },
+            self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
         ]
         let importantBackgroundOperationsRunning = combineLatest(importantBackgroundOperations)
-            |> deliverOn(Queue())
-            |> map { values -> AccountRunningImportantTasks in
-                var result: AccountRunningImportantTasks = []
-                for value in values {
-                    result.formUnion(value)
-                }
-                return result
+        |> deliverOn(Queue())
+        |> map { values -> AccountRunningImportantTasks in
+            var result: AccountRunningImportantTasks = []
+            for value in values {
+                result.formUnion(value)
+            }
+            return result
         }
         
         self.managedOperationsDisposable.add(importantBackgroundOperationsRunning.start(next: { [weak self] value in
@@ -1170,32 +1173,38 @@ public class Account {
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
         
-        let updatedPresence = self.shouldKeepOnlinePresence.get()
-            |> distinctUntilChanged
-            |> mapToSignal { [weak self] online -> Signal<Void, NoError> in
-                if let strongSelf = self {
-                    let delayRequest: Signal<Void, NoError> = .complete() |> delay(60.0, queue: Queue.concurrentDefaultQueue())
-                    let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: online ? .boolFalse : .boolTrue))
-                        |> retryRequest
-                        |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                    let pushStatusRepeatedly = (pushStatusOnce |> then(delayRequest)) |> restart
-                    let peerId = strongSelf.peerId
-                    let updatePresenceLocally = strongSelf.postbox.transaction { transaction -> Void in
-                        let timestamp: Double
-                        if online {
-                            timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
-                        } else {
-                            timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
-                        }
-                        transaction.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
+        /*let updatedPresence = self.shouldKeepOnlinePresence.get()
+        |> distinctUntilChanged
+        |> mapToSignal { [weak self] online -> Signal<Void, NoError> in
+            if let strongSelf = self {
+                let delayRequest: Signal<Void, NoError> = .complete()
+                |> delay(60.0, queue: Queue.concurrentDefaultQueue())
+                let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: online ? .boolFalse : .boolTrue))
+                |> retryRequest
+                |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                
+                let pushStatusRepeatedly = (pushStatusOnce
+                |> then(delayRequest))
+                |> restart
+                
+                let peerId = strongSelf.peerId
+                let updatePresenceLocally = strongSelf.postbox.transaction { transaction -> Void in
+                    let timestamp: Double
+                    if online {
+                        timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
+                    } else {
+                        timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
                     }
-                    return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
-                        |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                } else {
-                    return .complete()
+                    transaction.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
                 }
+                return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
+                |> mapToSignal { _ -> Signal<Void, NoError> in return .complete()
+                }
+            } else {
+                return .complete()
+            }
         }
-        self.updatedPresenceDisposable.set(updatedPresence.start())
+        self.updatedPresenceDisposable.set(updatedPresence.start())*/
     }
     
     deinit {
@@ -1204,7 +1213,6 @@ public class Account {
         self.notificationTokenDisposable.dispose()
         self.voipTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
-        self.updatedPresenceDisposable.dispose()
         self.managedOperationsDisposable.dispose()
     }
     

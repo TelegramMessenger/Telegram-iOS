@@ -157,7 +157,7 @@ struct AccountMutableState {
         self.preCachedResources.append(contentsOf: other.preCachedResources)
         for (peerId, namespaces) in other.namespacesWithHolesFromPreviousState {
             if self.namespacesWithHolesFromPreviousState[peerId] == nil {
-                self.self.namespacesWithHolesFromPreviousState[peerId] = Set()
+                self.namespacesWithHolesFromPreviousState[peerId] = Set()
             }
             for namespace in namespaces {
                 self.namespacesWithHolesFromPreviousState[peerId]!.insert(namespace)
