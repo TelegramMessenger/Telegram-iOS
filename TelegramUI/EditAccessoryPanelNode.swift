@@ -10,8 +10,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     
     let closeButton: ASButtonNode
     let lineNode: ASImageNode
-    let titleNode: ASTextNode
-    let textNode: ASTextNode
+    let titleNode: ImmediateTextNode
+    let textNode: ImmediateTextNode
     let imageNode: TransformImageNode
     
     private let activityIndicator: ActivityIndicator
@@ -68,13 +68,11 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
         
-        self.titleNode = ASTextNode()
-        self.titleNode.truncationMode = .byTruncatingTail
+        self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.displaysAsynchronously = false
         
-        self.textNode = ASTextNode()
-        self.textNode.truncationMode = .byTruncatingTail
+        self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 1
         self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = true
@@ -308,10 +306,10 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
         self.imageNode.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 8.0), size: CGSize(width: 35.0, height: 35.0))
         
-        let titleSize = self.titleNode.measure(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 7.0), size: titleSize)
         
-        let textSize = self.textNode.measure(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
         self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 25.0), size: textSize)
         
         self.tapNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: bounds.width - leftInset - rightInset - closeButtonSize.width - 4.0, height: bounds.height))

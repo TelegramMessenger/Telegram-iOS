@@ -2647,27 +2647,29 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
         self.interfaceInteraction = interfaceInteraction
         self.chatDisplayNode.interfaceInteraction = interfaceInteraction
         
-        self.galleryHiddenMesageAndMediaDisposable.set(self.account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
-            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                var messageIdAndMedia: [MessageId: [Media]] = [:]
-                
-                for id in ids {
-                    if case let .chat(messageId, media) = id {
-                        messageIdAndMedia[messageId] = [media]
-                    }
-                }
-                
-                //if controllerInteraction.hiddenMedia != messageIdAndMedia {
-                    controllerInteraction.hiddenMedia = messageIdAndMedia
+        if let mediaManager = self.account.telegramApplicationContext.mediaManager {
+            self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
+                if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                    var messageIdAndMedia: [MessageId: [Media]] = [:]
                     
-                    strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView {
-                            itemNode.updateHiddenMedia()
+                    for id in ids {
+                        if case let .chat(messageId, media) = id {
+                            messageIdAndMedia[messageId] = [media]
                         }
                     }
-                //}
-            }
-        }))
+                    
+                    //if controllerInteraction.hiddenMedia != messageIdAndMedia {
+                        controllerInteraction.hiddenMedia = messageIdAndMedia
+                    
+                        strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? ChatMessageItemView {
+                                itemNode.updateHiddenMedia()
+                            }
+                        }
+                    //}
+                }
+            }))
+        }
         
         self.chatDisplayNode.dismissAsOverlay = { [weak self] in
             if let strongSelf = self {
@@ -3692,8 +3694,11 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                     self.audioRecorderFeedback = HapticFeedback()
                     self.audioRecorderFeedback?.prepareTap()
                 }
-                self.audioRecorder.set(applicationContext.mediaManager.audioRecorder(beginWithTone: beginWithTone, applicationBindings: applicationContext.applicationBindings, beganWithTone: { _ in
-                }))
+                
+                if let mediaManager = applicationContext.mediaManager {
+                    self.audioRecorder.set(mediaManager.audioRecorder(beginWithTone: beginWithTone, applicationBindings: applicationContext.applicationBindings, beganWithTone: { _ in
+                    }))
+                }
             }
         }
     }

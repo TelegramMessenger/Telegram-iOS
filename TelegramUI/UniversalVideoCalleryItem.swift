@@ -255,7 +255,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.footerContentNode.scrubberView = nil
             }
             
-            let videoNode = UniversalVideoNode(postbox: item.account.postbox, audioSession: item.account.telegramApplicationContext.mediaManager.audioSession, manager: item.account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
+            guard let mediaManager = item.account.telegramApplicationContext.mediaManager else {
+                preconditionFailure()
+            }
+            
+            let videoNode = UniversalVideoNode(postbox: item.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
             let videoSize = CGSize(width: item.content.dimensions.width * 2.0, height: item.content.dimensions.height * 2.0)
             videoNode.updateLayout(size: videoSize, transition: .immediate)
             videoNode.ownsContentNodeUpdated = { [weak self] value in
@@ -439,7 +443,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
-            self.account.telegramApplicationContext.mediaManager.setOverlayVideoNode(nil)
+            self.account.telegramApplicationContext.mediaManager?.setOverlayVideoNode(nil)
         } else {
             var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
@@ -696,9 +700,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if let item = self.item, let _ = self.videoNode {
             let account = self.account
             let baseNavigationController = self.baseNavigationController()
-            let mediaManager = self.account.telegramApplicationContext.mediaManager
+            let mediaManager = self.account.telegramApplicationContext.mediaManager!
             var expandImpl: (() -> Void)?
-            let overlayNode = OverlayUniversalVideoNode(account: self.account, audioSession: self.account.telegramApplicationContext.mediaManager.audioSession, manager: self.account.telegramApplicationContext.mediaManager.universalVideoManager, content: item.content, expand: {
+            let overlayNode = OverlayUniversalVideoNode(account: self.account, audioSession: self.account.telegramApplicationContext.mediaManager!.audioSession, manager: self.account.telegramApplicationContext.mediaManager!.universalVideoManager, content: item.content, expand: {
                 expandImpl?()
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
@@ -734,7 +738,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         break
                 }
             }
-            account.telegramApplicationContext.mediaManager.setOverlayVideoNode(overlayNode)
+            account.telegramApplicationContext.mediaManager?.setOverlayVideoNode(overlayNode)
             if overlayNode.supernode != nil {
                 self.beginCustomDismiss()
                 self.animateOut(toOverlay: overlayNode, completion: { [weak self] in

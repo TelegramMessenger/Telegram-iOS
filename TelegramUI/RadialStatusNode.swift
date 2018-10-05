@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-enum RadialStatusNodeState: Equatable {
+public enum RadialStatusNodeState: Equatable {
     case none
     case download(UIColor)
     case play(UIColor)
@@ -11,7 +11,7 @@ enum RadialStatusNodeState: Equatable {
     case customIcon(UIImage)
     case secretTimeout(color: UIColor, icon: UIImage?, beginTime: Double, timeout: Double)
     
-    static func ==(lhs: RadialStatusNodeState, rhs: RadialStatusNodeState) -> Bool {
+    public static func ==(lhs: RadialStatusNodeState, rhs: RadialStatusNodeState) -> Bool {
         switch lhs {
             case .none:
                 if case .none = rhs {
@@ -99,13 +99,13 @@ enum RadialStatusNodeState: Equatable {
                     node.progress = value
                     return node
                 }
-        case let .secretTimeout(color, icon, beginTime, timeout):
-            return RadialStatusSecretTimeoutContentNode(color: color, beginTime: beginTime, timeout: timeout, icon: icon)
+            case let .secretTimeout(color, icon, beginTime, timeout):
+                return RadialStatusSecretTimeoutContentNode(color: color, beginTime: beginTime, timeout: timeout, icon: icon)
         }
     }
 }
 
-final class RadialStatusNode: ASControlNode {
+public final class RadialStatusNode: ASControlNode {
     private var backgroundNodeColor: UIColor
     
     private(set) var state: RadialStatusNodeState = .none
@@ -114,13 +114,13 @@ final class RadialStatusNode: ASControlNode {
     private var contentNode: RadialStatusContentNode?
     private var nextContentNode: RadialStatusContentNode?
     
-    init(backgroundNodeColor: UIColor) {
+    public init(backgroundNodeColor: UIColor) {
         self.backgroundNodeColor = backgroundNodeColor
         
         super.init()
     }
     
-    func transitionToState(_ state: RadialStatusNodeState, animated: Bool = true, completion: @escaping () -> Void) {
+    public func transitionToState(_ state: RadialStatusNodeState, animated: Bool = true, completion: @escaping () -> Void) {
         if self.state != state {
             self.state = state
             
@@ -221,7 +221,7 @@ final class RadialStatusNode: ASControlNode {
         }
     }
     
-    override func layout() {
+    override public func layout() {
         self.backgroundNode?.frame = self.bounds
         if let contentNode = self.contentNode {
             contentNode.frame = self.bounds

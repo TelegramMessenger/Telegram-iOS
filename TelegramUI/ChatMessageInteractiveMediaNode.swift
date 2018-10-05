@@ -384,9 +384,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     strongSelf.videoNode = nil
                                 }
                                 
-                                if replaceVideoNode, let updatedVideoFile = updateVideoFile {
+                                if replaceVideoNode, let updatedVideoFile = updateVideoFile, let mediaManager = account.telegramApplicationContext.mediaManager {
                                     let cornerRadius: CGFloat = arguments.corners.topLeft.radius
-                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager.audioSession, manager: account.telegramApplicationContext.mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: cornerRadius, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), enableSound: false, fetchAutomatically: false), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: cornerRadius, nativeSize: nativeSize), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), enableSound: false, fetchAutomatically: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode

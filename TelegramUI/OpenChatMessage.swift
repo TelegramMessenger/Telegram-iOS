@@ -217,8 +217,10 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 dismissInput()
                 present(controller, nil)
                 return true
-            case .document:
-                present(ShareController(account: account, subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
+            case let .document(file):
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                navigationController?.view.window?.rootViewController?.present(DocumentPreviewController(theme: presentationData.theme, strings: presentationData.strings, postbox: account.postbox, file: file), animated: true, completion: nil)
+                //present(ShareController(account: account, subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
                 return true
             case let .audio(file):
                 let location: PeerMessagesPlaylistLocation
@@ -245,7 +247,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                     }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
                 }
-                account.telegramApplicationContext.mediaManager.setPlaylist(PeerMessagesMediaPlaylist(postbox: account.postbox, network: account.network, location: location), type: playerType)
+                account.telegramApplicationContext.mediaManager?.setPlaylist(PeerMessagesMediaPlaylist(postbox: account.postbox, network: account.network, location: location), type: playerType)
                 return true
             case let .gallery(gallery):
                 dismissInput()

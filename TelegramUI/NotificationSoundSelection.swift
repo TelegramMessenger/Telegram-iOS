@@ -216,7 +216,7 @@ private func playSound(account: Account, sound: PeerMessageSound, defaultSound: 
         return Signal { subscriber in
             var currentPlayer: AudioPlayerWrapper?
             var deactivateImpl: (() -> Void)?
-            let session = account.telegramApplicationContext.mediaManager.audioSession.push(audioSessionType: .play, activate: { _ in
+            let session = account.telegramApplicationContext.mediaManager?.audioSession.push(audioSessionType: .play, activate: { _ in
                 if let url = Bundle.main.url(forResource: fileNameForNotificationSound(sound, defaultSound: defaultSound), withExtension: "m4a") {
                     currentPlayer = AudioPlayerWrapper(url: url, completed: {
                         deactivateImpl?()
@@ -230,10 +230,10 @@ private func playSound(account: Account, sound: PeerMessageSound, defaultSound: 
                 return .complete()
             })
             deactivateImpl = {
-                session.dispose()
+                session?.dispose()
             }
             return ActionDisposable {
-                session.dispose()
+                session?.dispose()
                 currentPlayer?.stop()
                 currentPlayer = nil
             }

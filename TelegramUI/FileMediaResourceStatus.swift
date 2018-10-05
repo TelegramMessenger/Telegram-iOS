@@ -19,10 +19,14 @@ private func internalMessageFileMediaPlaybackStatus(account: Account, file: Tele
     }
     
     if let (playlistId, itemId) = peerMessagesMediaPlaylistAndItemId(message, isRecentActions: isRecentActions) {
-        return account.telegramApplicationContext.mediaManager.filteredPlaylistState(playlistId: playlistId, itemId: itemId, type: playerType)
+        if let mediaManager = account.telegramApplicationContext.mediaManager {
+            return mediaManager.filteredPlaylistState(playlistId: playlistId, itemId: itemId, type: playerType)
             |> mapToSignal { state -> Signal<MediaPlayerStatus?, NoError> in
                 return .single(state?.status)
             }
+        } else {
+            return .single(nil)
+        }
     } else {
         return .single(nil)
     }

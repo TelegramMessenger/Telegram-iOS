@@ -109,8 +109,8 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 if self.mediaPlayer != nil {
                     self.mediaPlayer?.pause()
                 }
-                if let account = self.account {
-                    let mediaPlayer = MediaPlayer(audioSessionManager: account.telegramApplicationContext.mediaManager.audioSession, postbox: account.postbox, resourceReference: .standalone(resource: recordedMediaPreview.resource), streamable: false, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                if let account = self.account, let mediaManager = account.telegramApplicationContext.mediaManager {
+                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: account.postbox, resourceReference: .standalone(resource: recordedMediaPreview.resource), streamable: false, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
                     self.mediaPlayer = mediaPlayer
                     self.durationLabel.defaultDuration = Double(recordedMediaPreview.duration)
                     self.durationLabel.status = mediaPlayer.status

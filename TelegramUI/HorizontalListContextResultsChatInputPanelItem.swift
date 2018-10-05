@@ -347,10 +347,6 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                     }
                                 }
                             }
-                            
-                            /*if let applicationContext = item.account.applicationContext as? TelegramApplicationContext {
-                                strongSelf.videoNode.acquireContext(account: item.account, mediaManager: applicationContext.mediaManager, id: ChatContextResultManagedMediaId(result: item.result), resource: videoResource, priority: 1)
-                            }*/
                         }
                     }
                     

@@ -14,7 +14,7 @@ enum ChatTitleContent {
 private final class ChatTitleNetworkStatusNode: ASDisplayNode {
     private var theme: PresentationTheme
     
-    private let titleNode: ASTextNode
+    private let titleNode: ImmediateTextNode
     private let activityIndicator: ActivityIndicator
     
     var title: String = "" {
@@ -28,11 +28,10 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
     init(theme: PresentationTheme) {
         self.theme = theme
         
-        self.titleNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         self.titleNode.isUserInteractionEnabled = false
         
@@ -57,7 +56,7 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
         let indicatorSize = self.activityIndicator.bounds.size
         let indicatorPadding = indicatorSize.width + 6.0
         
-        let titleSize = self.titleNode.measure(CGSize(width: max(1.0, size.width - indicatorPadding), height: size.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width - indicatorPadding), height: size.height))
         let combinedHeight = titleSize.height
         
         let titleFrame = CGRect(origin: CGPoint(x: indicatorPadding + floor((size.width - titleSize.width - indicatorPadding) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
@@ -81,11 +80,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     private var dateTimeFormat: PresentationDateTimeFormat
     
     private let contentContainer: ASDisplayNode
-    private let titleNode: ASTextNode
+    private let titleNode: ImmediateTextNode
     private let titleLeftIconNode: ASImageNode
     private let titleRightIconNode: ASImageNode
-    private let infoNode: ASTextNode
-    private let typingNode: ASTextNode
+    private let infoNode: ImmediateTextNode
+    private let typingNode: ImmediateTextNode
     private var typingIndicator: TGModernConversationTitleActivityIndicator?
     private let button: HighlightTrackingButtonNode
     
@@ -428,10 +427,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         self.contentContainer = ASDisplayNode()
         
-        self.titleNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         
         self.titleLeftIconNode = ASImageNode()
@@ -444,16 +442,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.titleRightIconNode.displayWithoutProcessing = true
         self.titleRightIconNode.displaysAsynchronously = false
         
-        self.infoNode = ASTextNode()
+        self.infoNode = ImmediateTextNode()
         self.infoNode.displaysAsynchronously = false
         self.infoNode.maximumNumberOfLines = 1
-        self.infoNode.truncationMode = .byTruncatingTail
         self.infoNode.isOpaque = false
         
-        self.typingNode = ASTextNode()
+        self.typingNode = ImmediateTextNode()
         self.typingNode.displaysAsynchronously = false
         self.typingNode.maximumNumberOfLines = 1
-        self.typingNode.truncationMode = .byTruncatingTail
         self.typingNode.isOpaque = false
         
         self.button = HighlightTrackingButtonNode()
@@ -548,9 +544,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
         
         if size.height > 40.0 {
-            let titleSize = self.titleNode.measure(CGSize(width: clearBounds.width - leftIconWidth - rightIconWidth, height: size.height))
-            let infoSize = self.infoNode.measure(clearBounds.size)
-            let typingSize = self.typingNode.measure(clearBounds.size)
+            let titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - rightIconWidth, height: size.height))
+            let infoSize = self.infoNode.updateLayout(clearBounds.size)
+            let typingSize = self.typingNode.updateLayout(clearBounds.size)
             let titleInfoSpacing: CGFloat = 0.0
             
             var titleFrame: CGRect
@@ -590,9 +586,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.minY + 7.0), size: image.size)
             }
         } else {
-            let titleSize = self.titleNode.measure(CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - rightIconWidth), height: size.height))
-            let infoSize = self.infoNode.measure(CGSize(width: floor(clearBounds.width / 2.0), height: size.height))
-            let typingSize = self.typingNode.measure(CGSize(width: floor(clearBounds.width / 2.0), height: size.height))
+            let titleSize = self.titleNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - rightIconWidth), height: size.height))
+            let infoSize = self.infoNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height))
+            let typingSize = self.typingNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height))
             
             let titleInfoSpacing: CGFloat = 8.0
             let combinedWidth = titleSize.width + leftIconWidth + rightIconWidth + infoSize.width + titleInfoSpacing

@@ -540,17 +540,15 @@ func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> S
         }
 }
 
-func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return chatMessagePhotoInternal(postbox: postbox, photoReference: photoReference)
+public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference))
     |> map { _, generate in
         return generate
     }
 }
 
-func chatMessagePhotoInternal(postbox: Postbox, photoReference: ImageMediaReference) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
-    let signal = chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference)
-    
-    return signal
+public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoError>) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+    return photoData
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return ({
             return nil
@@ -1432,7 +1430,7 @@ func chatMessagePhotoStatus(account: Account, messageId: MessageId, photoReferen
     }
 }
 
-func chatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference) -> Signal<FetchResourceSourceType, NoError> {
+public func chatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference) -> Signal<FetchResourceSourceType, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return fetchedMediaResource(postbox: account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image)
     } else {

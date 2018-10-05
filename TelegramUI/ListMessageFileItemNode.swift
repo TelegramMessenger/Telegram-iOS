@@ -777,7 +777,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                 }
             case .playbackStatus:
                 if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext {
-                    applicationContext.mediaManager.playlistControl(.playback(.togglePlayPause))
+                    applicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause))
                 }
             }
         }

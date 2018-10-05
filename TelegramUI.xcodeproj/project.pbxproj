@@ -993,6 +993,7 @@
 		D0EC6EA61EB9FC2400EBF1C3 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D07551901DDA4FC70073E051 /* libc++.tbd */; };
 		D0EC6EBD1EBA100F00EBF1C3 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EC6EBC1EBA100F00EBF1C3 /* CoreAudio.framework */; };
 		D0EC6FFD1EBA1F2400EBF1C3 /* OngoingCallThreadLocalContext.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0EC6FFC1EBA1F2400EBF1C3 /* OngoingCallThreadLocalContext.mm */; };
+		D0EEE9A12165585F001292A6 /* DocumentPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EEE9A02165585F001292A6 /* DocumentPreviewController.swift */; };
 		D0F0AAE01EC1E12C005EE2A5 /* PresentationCall.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F0AADF1EC1E12C005EE2A5 /* PresentationCall.swift */; };
 		D0F0AAE21EC20EF8005EE2A5 /* CallControllerStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F0AAE11EC20EF8005EE2A5 /* CallControllerStatusNode.swift */; };
 		D0F0AAE41EC21AAA005EE2A5 /* CallControllerButtonsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F0AAE31EC21AAA005EE2A5 /* CallControllerButtonsNode.swift */; };
@@ -1970,6 +1971,7 @@
 		D0EC6FFC1EBA1F2400EBF1C3 /* OngoingCallThreadLocalContext.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = OngoingCallThreadLocalContext.mm; sourceTree = "<group>"; };
 		D0ED5D4A1DC806D7007CBB15 /* ApplicationSpecificData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationSpecificData.swift; sourceTree = "<group>"; };
 		D0EE97191D88BCA0006C18E1 /* ChatInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInfo.swift; sourceTree = "<group>"; };
+		D0EEE9A02165585F001292A6 /* DocumentPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPreviewController.swift; sourceTree = "<group>"; };
 		D0EF40DC1E72F00E000DFCD4 /* SelectivePrivacySettingsPeersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SelectivePrivacySettingsPeersController.swift; sourceTree = "<group>"; };
 		D0EF40DE1E73100D000DFCD4 /* ChatHistoryNavigationStack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryNavigationStack.swift; sourceTree = "<group>"; };
 		D0EFD8951DDE8249009E508A /* LegacyLocationPicker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyLocationPicker.swift; sourceTree = "<group>"; };
@@ -3779,6 +3781,14 @@
 			name = "Peer Info";
 			sourceTree = "<group>";
 		};
+		D0EEE99F2165583B001292A6 /* Document */ = {
+			isa = PBXGroup;
+			children = (
+				D0EEE9A02165585F001292A6 /* DocumentPreviewController.swift */,
+			);
+			name = Document;
+			sourceTree = "<group>";
+		};
 		D0F53BF51E79592300117362 /* Sign Up */ = {
 			isa = PBXGroup;
 			children = (
@@ -4132,6 +4142,7 @@
 				D0B7F8DF1D8A17D20045D939 /* Collection */,
 				D0F69E4F1D6B8BC40046BCD6 /* Gallery */,
 				D0575AF81EA0FD94006F2541 /* Avatar Gallery */,
+				D0EEE99F2165583B001292A6 /* Document */,
 				D0104F261F471702004E4881 /* Instant Page Gallery */,
 				D0F69E671D6B8C030046BCD6 /* Map Input */,
 				D07827CC1E03F32C00071108 /* Instant Page */,
@@ -5210,6 +5221,7 @@
 				D06CF82920D0119500AC4CFF /* SecureIdAuthListFieldNode.swift in Sources */,
 				D0EC6DCD1EB9F58900EBF1C3 /* ChatInputContextPanelNode.swift in Sources */,
 				D0F8C399201774AF00236FC5 /* FeedGroupingControllerNode.swift in Sources */,
+				D0EEE9A12165585F001292A6 /* DocumentPreviewController.swift in Sources */,
 				D0EC6DCE1EB9F58900EBF1C3 /* HorizontalStickersChatContextPanelNode.swift in Sources */,
 				D0BCC3D2203F0A6C008126C2 /* StringForMessageTimestampStatus.swift in Sources */,
 				D0EC6DCF1EB9F58900EBF1C3 /* HorizontalStickerGridItem.swift in Sources */,

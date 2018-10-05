@@ -37,7 +37,7 @@ public class TransformImageNode: ASDisplayNode {
         }
     }
     
-    func setSignal(_ signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, dispatchOnDisplayLink: Bool = true) {
+    public func setSignal(_ signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, dispatchOnDisplayLink: Bool = true) {
         let argumentsPromise = self.argumentsPromise
         
         let result = combineLatest(signal, argumentsPromise.get())

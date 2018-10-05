@@ -168,7 +168,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var cutout: TextNodeCutout?
                 if let statusSize = statusSize {
-                    cutout = TextNodeCutout(position: .BottomRight, size: statusSize)
+                    cutout = TextNodeCutout(bottomRight: statusSize)
                 }
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))
@@ -178,16 +178,14 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var statusFrame: CGRect?
                 if let statusSize = statusSize {
-                    var frame = CGRect(origin: CGPoint(), size: statusSize)
+                    var frame = CGRect(origin: CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY - statusSize.height), size: statusSize)
                     
-                    let trailingLineWidth = textLayout.trailingLineWidth
+                    /*let trailingLineWidth = textLayout.trailingLineWidth
                     if textSize.width - trailingLineWidth >= statusSize.width {
                         frame.origin = CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY - statusSize.height)
                     } else if trailingLineWidth + statusSize.width < textConstrainedSize.width {
                         frame.origin = CGPoint(x: textFrame.minX + trailingLineWidth, y: textFrame.maxY - statusSize.height)
-                    } else {
-                        frame.origin = CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY)
-                    }
+                    }*/
                     statusFrame = frame
                 }
                 

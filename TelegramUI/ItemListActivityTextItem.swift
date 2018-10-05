@@ -96,7 +96,7 @@ class ItemListActivityTextItemNode: ListViewItemNode {
                 titleString.addAttributes([NSAttributedStringKey.font: titleFont], range: NSMakeRange(0, titleString.length))
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - 22.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: TextNodeCutout(position: .TopLeft, size: CGSize(width: activityWidth, height: 4.0)), insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - 22.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: TextNodeCutout(topLeft: CGSize(width: activityWidth, height: 4.0)), insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             let insets: UIEdgeInsets

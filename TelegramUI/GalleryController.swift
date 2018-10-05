@@ -72,26 +72,9 @@ private func mediaForMessage(message: Message) -> Media? {
 }
 
 private let internalExtensions = Set<String>([
-    "txt",
-    "doc",
-    "docx",
-    "xls",
-    "xlsx",
-    "ppt",
-    "pptx",
-    "php",
-    "cpp",
-    "h",
-    "swift",
-    "m",
-    "mm",
-    "java",
     "jpg",
     "png",
-    "jpeg",
-    "json",
-    "rs",
-    "cs"
+    "jpeg"
 ])
 
 private let internalNotSupportedExtensions = Set<String>([
@@ -99,17 +82,12 @@ private let internalNotSupportedExtensions = Set<String>([
 ])
 
 private let internalMimeTypes = Set<String>([
-    "application/pdf",
-    "application/postscript",
-    "application/text"
 ])
 
 private let internalMimePrefixes: [String] = [
     "image/jpeg",
     "image/jpg",
-    "image/png",
-    "text/",
-    "application/vnd.ms-"
+    "image/png"
 ]
 
 private let supportedVideoMimeTypes = Set<String>([
@@ -455,13 +433,15 @@ class GalleryController: ViewController {
             }
         }))
         
-        self.hiddenMediaManagerIndex = account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get() |> map { messageIdAndMedia in
-            if let (messageId, media) = messageIdAndMedia {
-                return .chat(messageId, media)
-            } else {
-                return nil
-            }
-        })
+        if let mediaManager = account.telegramApplicationContext.mediaManager {
+            self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get() |> map { messageIdAndMedia in
+                if let (messageId, media) = messageIdAndMedia {
+                    return .chat(messageId, media)
+                } else {
+                    return nil
+                }
+            })
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -471,8 +451,8 @@ class GalleryController: ViewController {
     deinit {
         self.disposable.dispose()
         self.centralItemAttributesDisposable.dispose()
-        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
-            self.account.telegramApplicationContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
+        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex, let mediaManager = self.account.telegramApplicationContext.mediaManager {
+            mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
     }
     

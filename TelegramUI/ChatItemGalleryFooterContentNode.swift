@@ -72,7 +72,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     private let deleteButton: UIButton
     private let actionButton: UIButton
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
     private let backwardButton: HighlightableButtonNode
@@ -138,7 +138,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.deleteButton.setImage(deleteImage, for: [.normal])
         self.actionButton.setImage(actionImage, for: [.normal])
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 10
         self.textNode.isLayerBacked = true
         self.authorNameNode = ASTextNode()
         self.authorNameNode.maximumNumberOfLines = 1
@@ -295,7 +296,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
             let textBottomInset: CGFloat = 8.0
-            let textSize = self.textNode.measure(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
             panelHeight += textSize.height + topInset + textBottomInset
             textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
         }

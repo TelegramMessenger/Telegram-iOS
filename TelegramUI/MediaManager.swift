@@ -131,7 +131,8 @@ public final class MediaManager: NSObject {
         
         super.init()
        
-        let combinedPlayersSignal: Signal<(SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> = combineLatest(self.voiceMediaPlayerState, self.musicMediaPlayerState) |> map { voice, music -> (SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)? in
+        let combinedPlayersSignal: Signal<(SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> = combineLatest(queue: Queue.mainQueue(), self.voiceMediaPlayerState, self.musicMediaPlayerState)
+        |> map { voice, music -> (SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)? in
             if let voice = voice {
                 return (voice, .voice)
             } else if let music = music {
@@ -339,7 +340,7 @@ public final class MediaManager: NSObject {
         }))
         
        
-        let shouldKeepAudioSession: Signal<Bool, NoError> = combineLatest(self.globalMediaPlayerState |> deliverOnMainQueue, inForeground |> deliverOnMainQueue)
+        let shouldKeepAudioSession: Signal<Bool, NoError> = combineLatest(queue: Queue.mainQueue(), self.globalMediaPlayerState, inForeground)
         |> map { stateAndType, inForeground -> Bool in
             var isPlaying = false
             if let (state, _) = stateAndType {
