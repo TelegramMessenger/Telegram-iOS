@@ -593,7 +593,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }))
         requestService.delegate = self
         
-        self._multiplexedRequestManager = MultiplexedRequestManager(takeWorker: { [weak self] target in
+        self._multiplexedRequestManager = MultiplexedRequestManager(takeWorker: { [weak self] target, tag in
             if let strongSelf = self {
                 let datacenterId: Int
                 let isCdn: Bool
@@ -606,7 +606,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                         datacenterId = id
                         isCdn = true
                 }
-                return strongSelf.makeWorker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: nil)
+                return strongSelf.makeWorker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: tag)
             }
             return nil
         })

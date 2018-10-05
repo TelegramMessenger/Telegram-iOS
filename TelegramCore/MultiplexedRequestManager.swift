@@ -20,15 +20,17 @@ private final class RequestData {
     let target: MultiplexedRequestTarget
     let functionDescription: FunctionDescription
     let payload: Buffer
+    let tag: MediaResourceFetchTag?
     let deserializeResponse: (Buffer) -> Any?
     let completed: (Any) -> Void
     let error: (MTRpcError) -> Void
     
-    init(id: Int32, consumerId: Int64, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any) -> Void, error: @escaping (MTRpcError) -> Void) {
+    init(id: Int32, consumerId: Int64, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any) -> Void, error: @escaping (MTRpcError) -> Void) {
         self.id = id
         self.consumerId = consumerId
         self.target = target
         self.functionDescription = functionDescription
+        self.tag = tag
         self.payload = payload
         self.deserializeResponse = deserializeResponse
         self.completed = completed
@@ -71,7 +73,7 @@ private typealias SignalKitTimer = SwiftSignalKit.Timer
 
 private final class MultiplexedRequestManagerContext {
     private let queue: Queue
-    private let takeWorker: (MultiplexedRequestTarget) -> Download?
+    private let takeWorker: (MultiplexedRequestTarget, MediaResourceFetchTag?) -> Download?
     
     private var queuedRequests: [RequestData] = []
     private var nextId: Int32 = 0
@@ -79,7 +81,7 @@ private final class MultiplexedRequestManagerContext {
     private var targetContexts: [MultiplexedRequestTarget: [RequestTargetContext]] = [:]
     private var emptyTargetTimers: [MultiplexedRequestTargetTimerKey: SignalKitTimer] = [:]
     
-    init(queue: Queue, takeWorker: @escaping (MultiplexedRequestTarget) -> Download?) {
+    init(queue: Queue, takeWorker: @escaping (MultiplexedRequestTarget, MediaResourceFetchTag?) -> Download?) {
         self.queue = queue
         self.takeWorker = takeWorker
     }
@@ -100,7 +102,7 @@ private final class MultiplexedRequestManagerContext {
     func request(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, completed: @escaping (Any) -> Void, error: @escaping (MTRpcError) -> Void) -> Disposable {
         let requestId = self.nextId
         self.nextId += 1
-        self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, target: target, functionDescription: data.0, payload: data.1, deserializeResponse: { buffer in
+        self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, target: target, functionDescription: data.0, payload: data.1, tag: tag, deserializeResponse: { buffer in
             return data.2(buffer)
         }, completed: { result in
             completed(result)
@@ -159,7 +161,7 @@ private final class MultiplexedRequestManagerContext {
                 }
             }
             if selectedContext == nil && self.targetContexts[request.target]!.count < maxWorkersPerTarget {
-                if let worker = self.takeWorker(request.target) {
+                if let worker = self.takeWorker(request.target, request.tag) {
                     let contextId = self.nextId
                     self.nextId += 1
                     let targetContext = RequestTargetContext(id: contextId, worker: worker)
@@ -256,7 +258,7 @@ final class MultiplexedRequestManager {
     private let queue = Queue()
     private let context: QueueLocalObject<MultiplexedRequestManagerContext>
     
-    init(takeWorker: @escaping (MultiplexedRequestTarget) -> Download?) {
+    init(takeWorker: @escaping (MultiplexedRequestTarget, MediaResourceFetchTag?) -> Download?) {
         let queue = self.queue
         self.context = QueueLocalObject(queue: self.queue, generate: {
             return MultiplexedRequestManagerContext(queue: queue, takeWorker: takeWorker)
