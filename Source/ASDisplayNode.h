@@ -2,17 +2,9 @@
 //  ASDisplayNode.h
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #pragma once
@@ -22,6 +14,7 @@
 #import <AsyncDisplayKit/_ASAsyncTransactionContainer.h>
 #import <AsyncDisplayKit/ASBaseDefines.h>
 #import <AsyncDisplayKit/ASDimension.h>
+#import <AsyncDisplayKit/ASDisplayNode+InterfaceState.h>
 #import <AsyncDisplayKit/ASAsciiArtBoxCreator.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 #import <AsyncDisplayKit/ASLayoutElement.h>
@@ -31,6 +24,10 @@
 NS_ASSUME_NONNULL_BEGIN
 
 #define ASDisplayNodeLoggingEnabled 0
+
+#ifndef AS_MAX_INTERFACE_STATE_DELEGATES
+#define AS_MAX_INTERFACE_STATE_DELEGATES 4
+#endif
 
 @class ASDisplayNode;
 @protocol ASContextTransitioning;
@@ -70,37 +67,6 @@ typedef ASLayoutSpec * _Nonnull(^ASLayoutSpecBlock)(__kindof ASDisplayNode *node
  * errors that happens in production.
  */
 typedef void (^ASDisplayNodeNonFatalErrorBlock)(NSError *error);
-
-/**
- * Interface state is available on ASDisplayNode and ASViewController, and
- * allows checking whether a node is in an interface situation where it is prudent to trigger certain
- * actions: measurement, data loading, display, and visibility (the latter for animations or other onscreen-only effects).
- * 
- * The defualt state, ASInterfaceStateNone, means that the element is not predicted to be onscreen soon and
- * preloading should not be performed. Swift: use [] for the default behavior.
- */
-typedef NS_OPTIONS(NSUInteger, ASInterfaceState)
-{
-  /** The element is not predicted to be onscreen soon and preloading should not be performed */
-  ASInterfaceStateNone          = 0,
-  /** The element may be added to a view soon that could become visible.  Measure the layout, including size calculation. */
-  ASInterfaceStateMeasureLayout = 1 << 0,
-  /** The element is likely enough to come onscreen that disk and/or network data required for display should be fetched. */
-  ASInterfaceStatePreload       = 1 << 1,
-  /** The element is very likely to become visible, and concurrent rendering should be executed for any -setNeedsDisplay. */
-  ASInterfaceStateDisplay       = 1 << 2,
-  /** The element is physically onscreen by at least 1 pixel.
-   In practice, all other bit fields should also be set when this flag is set. */
-  ASInterfaceStateVisible       = 1 << 3,
-
-  /**
-   * The node is not contained in a cell but it is in a window.
-   *
-   * Currently we only set `interfaceState` to other values for
-   * nodes contained in table views or collection views.
-   */
-  ASInterfaceStateInHierarchy   = ASInterfaceStateMeasureLayout | ASInterfaceStatePreload | ASInterfaceStateDisplay | ASInterfaceStateVisible,
-};
 
 typedef NS_ENUM(NSInteger, ASCornerRoundingType) {
   ASCornerRoundingTypeDefaultSlowCALayer,
@@ -298,6 +264,26 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  * @see ASInterfaceState
  */
 @property (readonly) ASInterfaceState interfaceState;
+
+/**
+ * @abstract Adds a delegate to receive notifications on interfaceState changes.
+ *
+ * @warning This must be called from the main thread.
+ * There is a hard limit on the number of delegates a node can have; see
+ * AS_MAX_INTERFACE_STATE_DELEGATES above.
+ *
+ * @see ASInterfaceState
+ */
+- (void)addInterfaceStateDelegate:(id <ASInterfaceStateDelegate>)interfaceStateDelegate;
+
+/**
+ * @abstract Removes a delegate from receiving notifications on interfaceState changes.
+ *
+ * @warning This must be called from the main thread.
+ *
+ * @see ASInterfaceState
+ */
+- (void)removeInterfaceStateDelegate:(id <ASInterfaceStateDelegate>)interfaceStateDelegate;
 
 /**
  * @abstract Class property that allows to set a block that can be called on non-fatal errors. This
@@ -643,10 +629,10 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  */
 - (void)layoutIfNeeded;
 
-@property           CGRect frame;                          // default=CGRectZero
-@property           CGRect bounds;                         // default=CGRectZero
-@property           CGPoint position;                      // default=CGPointZero
-@property           CGFloat alpha;                         // default=1.0f
+@property           CGRect frame;                             // default=CGRectZero
+@property           CGRect bounds;                            // default=CGRectZero
+@property           CGPoint position;                         // default=CGPointZero
+@property           CGFloat alpha;                            // default=1.0f
 
 /* @abstract Sets the corner rounding method to use on the ASDisplayNode.
  * There are three types of corner rounding provided by Texture: CALayer, Precomposited, and Clipping.
@@ -670,7 +656,7 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  *
  * @default ASCornerRoundingTypeDefaultSlowCALayer
  */
-@property           ASCornerRoundingType cornerRoundingType;  // default=Slow CALayer .cornerRadius (offscreen rendering)
+@property           ASCornerRoundingType cornerRoundingType;  // default=ASCornerRoundingTypeDefaultSlowCALayer .cornerRadius (offscreen rendering)
 
 /** @abstract The radius to use when rounding corners of the ASDisplayNode.
  *
@@ -679,24 +665,24 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  */
 @property           CGFloat cornerRadius;                     // default=0.0
 
-@property           BOOL clipsToBounds;                    // default==NO
-@property (getter=isHidden)  BOOL hidden;                           // default==NO
-@property (getter=isOpaque)  BOOL opaque;                           // default==YES
+@property           BOOL clipsToBounds;                       // default==NO
+@property (getter=isHidden)  BOOL hidden;                     // default==NO
+@property (getter=isOpaque)  BOOL opaque;                     // default==YES
 
-@property (nullable) id contents;                           // default=nil
-@property           CGRect contentsRect;                   // default={0,0,1,1}. @see CALayer.h for details.
-@property           CGRect contentsCenter;                 // default={0,0,1,1}. @see CALayer.h for details.
-@property           CGFloat contentsScale;                 // default=1.0f. See @contentsScaleForDisplay for details.
-@property           CGFloat rasterizationScale;            // default=1.0f.
+@property (nullable) id contents;                             // default=nil
+@property           CGRect contentsRect;                      // default={0,0,1,1}. @see CALayer.h for details.
+@property           CGRect contentsCenter;                    // default={0,0,1,1}. @see CALayer.h for details.
+@property           CGFloat contentsScale;                    // default=1.0f. See @contentsScaleForDisplay for details.
+@property           CGFloat rasterizationScale;               // default=1.0f.
 
-@property           CGPoint anchorPoint;                   // default={0.5, 0.5}
-@property           CGFloat zPosition;                     // default=0.0
-@property           CATransform3D transform;               // default=CATransform3DIdentity
-@property           CATransform3D subnodeTransform;        // default=CATransform3DIdentity
+@property           CGPoint anchorPoint;                      // default={0.5, 0.5}
+@property           CGFloat zPosition;                        // default=0.0
+@property           CATransform3D transform;                  // default=CATransform3DIdentity
+@property           CATransform3D subnodeTransform;           // default=CATransform3DIdentity
 
 @property (getter=isUserInteractionEnabled) BOOL userInteractionEnabled; // default=YES (NO for layer-backed nodes)
 #if TARGET_OS_IOS
-@property (getter=isExclusiveTouch) BOOL exclusiveTouch;    // default=NO
+@property (getter=isExclusiveTouch) BOOL exclusiveTouch;      // default=NO
 #endif
 
 /**
@@ -705,10 +691,10 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  * @discussion In contrast to UIView, setting a transparent color will not set opaque = NO.
  * This only affects nodes that implement +drawRect like ASTextNode.
 */
-@property (nullable, copy) UIColor *backgroundColor;              // default=nil
+@property (nullable, copy) UIColor *backgroundColor;           // default=nil
 
-@property (null_resettable, copy) UIColor *tintColor;             // default=Blue
-- (void)tintColorDidChange;                                                    // Notifies the node when the tintColor has changed.
+@property (null_resettable, copy) UIColor *tintColor;          // default=Blue
+- (void)tintColorDidChange;                                    // Notifies the node when the tintColor has changed.
 
 /**
  * @abstract A flag used to determine how a node lays out its content when its bounds change.
@@ -718,24 +704,24 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  * Thus, UIViewContentModeRedraw is not allowed; use needsDisplayOnBoundsChange = YES instead, and pick an appropriate 
  * contentMode for your content while it's being re-rendered.
  */
-@property           UIViewContentMode contentMode;         // default=UIViewContentModeScaleToFill
-@property (copy)             NSString *contentsGravity;             // Use .contentMode in preference when possible.
-@property           UISemanticContentAttribute semanticContentAttribute;
+@property            UIViewContentMode contentMode;         // default=UIViewContentModeScaleToFill
+@property (copy)     NSString *contentsGravity;             // Use .contentMode in preference when possible.
+@property            UISemanticContentAttribute semanticContentAttribute;
 
-@property (nullable)         CGColorRef shadowColor;                // default=opaque rgb black
-@property           CGFloat shadowOpacity;                 // default=0.0
-@property           CGSize shadowOffset;                   // default=(0, -3)
-@property           CGFloat shadowRadius;                  // default=3
-@property           CGFloat borderWidth;                   // default=0
-@property (nullable)         CGColorRef borderColor;                // default=opaque rgb black
+@property (nullable) CGColorRef shadowColor;                // default=opaque rgb black
+@property            CGFloat shadowOpacity;                 // default=0.0
+@property            CGSize shadowOffset;                   // default=(0, -3)
+@property            CGFloat shadowRadius;                  // default=3
+@property            CGFloat borderWidth;                   // default=0
+@property (nullable) CGColorRef borderColor;                // default=opaque rgb black
 
-@property           BOOL allowsGroupOpacity;
-@property           BOOL allowsEdgeAntialiasing;
-@property           unsigned int edgeAntialiasingMask;     // default==all values from CAEdgeAntialiasingMask
+@property            BOOL allowsGroupOpacity;
+@property            BOOL allowsEdgeAntialiasing;
+@property            unsigned int edgeAntialiasingMask;     // default==all values from CAEdgeAntialiasingMask
 
-@property           BOOL needsDisplayOnBoundsChange;       // default==NO
-@property           BOOL autoresizesSubviews;              // default==YES (undefined for layer-backed nodes)
-@property           UIViewAutoresizing autoresizingMask;   // default==UIViewAutoresizingNone (undefined for layer-backed nodes)
+@property            BOOL needsDisplayOnBoundsChange;       // default==NO
+@property            BOOL autoresizesSubviews;              // default==YES (undefined for layer-backed nodes)
+@property            UIViewAutoresizing autoresizingMask;   // default==UIViewAutoresizingNone (undefined for layer-backed nodes)
 
 /**
  * @abstract Content margins

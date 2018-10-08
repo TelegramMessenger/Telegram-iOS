@@ -2,17 +2,9 @@
 //  ASLayoutTransition.h
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASDimension.h>
@@ -22,8 +14,6 @@
 
 #import <AsyncDisplayKit/ASDisplayNode.h>
 #import <AsyncDisplayKit/ASLayoutSpec.h>
-
-#import <memory>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -60,12 +50,12 @@ AS_SUBCLASSING_RESTRICTED
 /**
  * Previous layout to transition from
  */
-@property (nonatomic, readonly) std::shared_ptr<ASDisplayNodeLayout> previousLayout;
+@property (nonatomic, readonly) const ASDisplayNodeLayout &previousLayout NS_RETURNS_INNER_POINTER;
 
 /**
  * Pending layout to transition to
  */
-@property (nonatomic, readonly) std::shared_ptr<ASDisplayNodeLayout> pendingLayout;
+@property (nonatomic, readonly) const ASDisplayNodeLayout &pendingLayout NS_RETURNS_INNER_POINTER;
 
 /**
  * Returns if the layout transition needs to happen synchronously
@@ -76,8 +66,8 @@ AS_SUBCLASSING_RESTRICTED
  * Returns a newly initialized layout transition
  */
 - (instancetype)initWithNode:(ASDisplayNode *)node
-               pendingLayout:(std::shared_ptr<ASDisplayNodeLayout>)pendingLayout
-              previousLayout:(std::shared_ptr<ASDisplayNodeLayout>)previousLayout NS_DESIGNATED_INITIALIZER;
+               pendingLayout:(const ASDisplayNodeLayout &)pendingLayout
+              previousLayout:(const ASDisplayNodeLayout &)previousLayout NS_DESIGNATED_INITIALIZER;
 
 /**
  * Insert and remove subnodes that were added or removed between the previousLayout and the pendingLayout
@@ -85,20 +75,18 @@ AS_SUBCLASSING_RESTRICTED
 - (void)commitTransition;
 
 /**
- * Insert all new subnodes that were added between the previous layout and the pending layout
+ * Insert all new subnodes that were added and move the subnodes that moved between the previous layout and
+ * the pending layout.
  */
-- (void)applySubnodeInsertions;
+- (void)applySubnodeInsertionsAndMoves;
 
 /**
  * Remove all subnodes that are removed between the previous layout and the pending layout
  */
 - (void)applySubnodeRemovals;
 
-@end
-
-@interface ASLayoutTransition (Unavailable)
-
-- (instancetype)init __unavailable;
+- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)new NS_UNAVAILABLE;
 
 @end
 

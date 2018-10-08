@@ -2,17 +2,9 @@
 //  ASThread.h
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <Foundation/Foundation.h>
@@ -106,15 +98,19 @@ ASDISPLAYNODE_INLINE void _ASUnlockScopeCleanup(id<NSLocking> __strong *lockPtr)
 #define TIME_LOCKER 0
 /**
  * Enable this flag to collect information on the owning thread and ownership level of a mutex.
- * These properties are useful to determine if a mutext has been acquired and in case of a recursive mutex, how many times that happened.
+ * These properties are useful to determine if a mutex has been acquired and in case of a recursive mutex, how many times that happened.
  * 
- * This flag also enable locking assertions (e.g ASDisplayNodeAssertLockUnownedByCurrentThread(node)).
+ * This flag also enable locking assertions (e.g ASAssertUnlocked(node)).
  * The assertions are useful when you want to indicate and enforce the locking policy/expectation of methods.
  * To determine when and which methods acquired a (recursive) mutex (to debug deadlocks, for example),
  * put breakpoints at some assertions. When the breakpoints hit, walk through stack trace frames 
  * and check ownership count of the mutex.
  */
+#if ASDISPLAYNODE_ASSERTIONS_ENABLED
+#define CHECK_LOCKING_SAFETY 1
+#else
 #define CHECK_LOCKING_SAFETY 0
+#endif
 
 #if TIME_LOCKER
 #import <QuartzCore/QuartzCore.h>
@@ -138,11 +134,11 @@ ASDISPLAYNODE_INLINE void _ASUnlockScopeCleanup(id<NSLocking> __strong *lockPtr)
  * and check ownership count of the mutex.
  */
 #if CHECK_LOCKING_SAFETY
-#define ASDisplayNodeAssertLockUnownedByCurrentThread(lock) ASDisplayNodeAssertFalse(lock.ownedByCurrentThread())
-#define ASDisplayNodeAssertLockOwnedByCurrentThread(lock) ASDisplayNodeAssert(lock.ownedByCurrentThread())
+#define ASAssertUnlocked(lock) ASDisplayNodeAssertFalse(lock.locked())
+#define ASAssertLocked(lock) ASDisplayNodeAssert(lock.locked(), @"Lock must be held by current thread")
 #else
-#define ASDisplayNodeAssertLockUnownedByCurrentThread(lock)
-#define ASDisplayNodeAssertLockOwnedByCurrentThread(lock)
+#define ASAssertUnlocked(lock)
+#define ASAssertLocked(lock)
 #endif
 
 namespace ASDN {
@@ -283,7 +279,7 @@ namespace ASDN {
           return os_unfair_lock_trylock(&_unfair);
         }
       } else {
-        auto result = pthread_mutex_trylock(&_m);
+        let result = pthread_mutex_trylock(&_m);
         if (result == 0) {
           return true;
         } else if (result == EBUSY) {
@@ -346,7 +342,7 @@ namespace ASDN {
     pthread_mutex_t *mutex () { return &_m; }
 
 #if CHECK_LOCKING_SAFETY
-    bool ownedByCurrentThread() {
+    bool locked() {
       return _count > 0 && pthread_mach_thread_np(pthread_self()) == _owner;
     }
 #endif

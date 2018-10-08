@@ -1,8 +1,9 @@
 //
 //  Sample.h
-//  Sample
+//  Texture
 //
-//  Copyright © 2016 Facebook. All rights reserved.
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <UIKit/UIKit.h>

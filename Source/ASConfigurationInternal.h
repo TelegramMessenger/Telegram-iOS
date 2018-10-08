@@ -2,12 +2,8 @@
 //  ASConfigurationInternal.h
 //  Texture
 //
-//  Copyright (c) 2018-present, Pinterest, Inc.  All rights reserved.
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 /// Note this has to be public because it's imported by public header ASThread.h =/
@@ -25,6 +21,11 @@ NS_ASSUME_NONNULL_BEGIN
  * The delegate will be notified asynchronously.
  */
 AS_EXTERN BOOL ASActivateExperimentalFeature(ASExperimentalFeatures option);
+
+/**
+ * Notify the configuration delegate that the framework initialized, if needed.
+ */
+AS_EXTERN void ASNotifyInitialized(void);
 
 AS_SUBCLASSING_RESTRICTED
 @interface ASConfigurationManager : NSObject

@@ -2,17 +2,9 @@
 //  _ASDisplayView.mm
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/_ASDisplayView.h>
@@ -85,8 +77,8 @@ static _ASDisplayViewMethodOverrides GetASDisplayViewMethodOverrides(Class c)
   BOOL _inHitTest;
   BOOL _inPointInside;
 
-  NSArray *_accessibleElements;
-  CGRect _lastAccessibleElementsFrame;
+  NSArray *_accessibilityElements;
+  CGRect _lastAccessibilityElementsFrame;
   
   _ASDisplayViewMethodOverrides _methodOverrides;
 }
@@ -291,7 +283,7 @@ static _ASDisplayViewMethodOverrides GetASDisplayViewMethodOverrides(Class c)
   [super addSubview:view];
   
 #ifndef ASDK_ACCESSIBILITY_DISABLE
-  self.accessibleElements = nil;
+  self.accessibilityElements = nil;
 #endif
 }
 
@@ -300,7 +292,7 @@ static _ASDisplayViewMethodOverrides GetASDisplayViewMethodOverrides(Class c)
   [super willRemoveSubview:subview];
   
 #ifndef ASDK_ACCESSIBILITY_DISABLE
-  self.accessibleElements = nil;
+  self.accessibilityElements = nil;
 #endif
 }
 
@@ -454,25 +446,24 @@ static _ASDisplayViewMethodOverrides GetASDisplayViewMethodOverrides(Class c)
 
 #pragma mark UIResponder Handling
 
-#define IMPLEMENT_RESPONDER_METHOD(__sel, __methodOverride) \
+#define IMPLEMENT_RESPONDER_METHOD(__sel, __nodeMethodOverride, __viewMethodOverride) \
 - (BOOL)__sel\
 {\
   ASDisplayNode *node = _asyncdisplaykit_node; /* Create strong reference to weak ivar. */ \
-  SEL sel = @selector(__sel); \
-  /* Prevent an infinite loop in here if [super canBecomeFirstResponder] was called on a
-  / _ASDisplayView subclass */ \
-  if (self->_methodOverrides & __methodOverride) { \
-    /* Check if we can call through to ASDisplayNode subclass directly */ \
-    if (ASDisplayNodeSubclassOverridesSelector([node class], sel)) { \
-      return [node __sel]; \
-    } else { \
-    /* Call through to views superclass as we expect super was called from the
-      _ASDisplayView subclass and a node subclass does not overwrite canBecomeFirstResponder */ \
-      return [self __##__sel]; \
-    } \
+  /* Check if we can call through to ASDisplayNode subclass directly */ \
+  if (node.methodOverrides & __nodeMethodOverride) { \
+    return [node __sel]; \
   } else { \
-    /* Call through to internal node __canBecomeFirstResponder that will consider the view in responding */ \
-    return [node __##__sel]; \
+    /* Prevent an infinite loop in here if [super __sel] was called on a \
+     / _ASDisplayView subclass */ \
+    if (self->_methodOverrides & __viewMethodOverride) { \
+      /* Call through to views superclass as we expect super was called from the
+        _ASDisplayView subclass and a node subclass does not overwrite __sel */ \
+      return [self __##__sel]; \
+    } else { \
+      /* Call through to internal node __sel method that will consider the view in responding */ \
+      return [node __##__sel]; \
+    } \
   } \
 }\
 /* All __ prefixed methods are called from ASDisplayNode to let the view decide in what UIResponder state they \
@@ -482,11 +473,21 @@ are not overridden by a ASDisplayNode subclass */ \
   return [super __sel]; \
 } \
 
-IMPLEMENT_RESPONDER_METHOD(canBecomeFirstResponder, _ASDisplayViewMethodOverrideCanBecomeFirstResponder);
-IMPLEMENT_RESPONDER_METHOD(becomeFirstResponder, _ASDisplayViewMethodOverrideBecomeFirstResponder);
-IMPLEMENT_RESPONDER_METHOD(canResignFirstResponder, _ASDisplayViewMethodOverrideCanResignFirstResponder);
-IMPLEMENT_RESPONDER_METHOD(resignFirstResponder, _ASDisplayViewMethodOverrideResignFirstResponder);
-IMPLEMENT_RESPONDER_METHOD(isFirstResponder, _ASDisplayViewMethodOverrideIsFirstResponder);
+IMPLEMENT_RESPONDER_METHOD(canBecomeFirstResponder,
+                             ASDisplayNodeMethodOverrideCanBecomeFirstResponder,
+                             _ASDisplayViewMethodOverrideCanBecomeFirstResponder);
+IMPLEMENT_RESPONDER_METHOD(becomeFirstResponder,
+                             ASDisplayNodeMethodOverrideBecomeFirstResponder,
+                             _ASDisplayViewMethodOverrideBecomeFirstResponder);
+IMPLEMENT_RESPONDER_METHOD(canResignFirstResponder,
+                             ASDisplayNodeMethodOverrideCanResignFirstResponder,
+                             _ASDisplayViewMethodOverrideCanResignFirstResponder);
+IMPLEMENT_RESPONDER_METHOD(resignFirstResponder,
+                             ASDisplayNodeMethodOverrideResignFirstResponder,
+                             _ASDisplayViewMethodOverrideResignFirstResponder);
+IMPLEMENT_RESPONDER_METHOD(isFirstResponder,
+                             ASDisplayNodeMethodOverrideIsFirstResponder,
+                             _ASDisplayViewMethodOverrideIsFirstResponder);
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender
 {

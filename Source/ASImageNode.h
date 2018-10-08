@@ -2,17 +2,9 @@
 //  ASImageNode.h
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <UIKit/UIKit.h>
@@ -186,9 +178,8 @@ typedef UIImage * _Nullable (^asimagenode_modification_block_t)(UIImage *image);
  *
  * @discussion This method is for subclasses to override so they can know if an animated image
  * has been set on the node.
- * @warning this method is called with the node's lock held.
  */
-- (void)animatedImageSet:(id <ASAnimatedImageProtocol>)newAnimatedImage previousAnimatedImage:(id <ASAnimatedImageProtocol>)previousAnimatedImage;
+- (void)animatedImageSet:(nullable id <ASAnimatedImageProtocol>)newAnimatedImage previousAnimatedImage:(nullable id <ASAnimatedImageProtocol>)previousAnimatedImage ASDISPLAYNODE_REQUIRES_SUPER;
 
 @end
 #endif

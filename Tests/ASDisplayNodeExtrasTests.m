@@ -2,8 +2,8 @@
 //  ASDisplayNodeExtrasTests.m
 //  Texture
 //
-//  Created by Kiel Gillard on 27/06/2016.
-//  Copyright © 2016 Facebook. All rights reserved.
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <XCTest/XCTest.h>

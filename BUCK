@@ -4,6 +4,8 @@
 COMMON_PREPROCESSOR_FLAGS = [
   '-fobjc-arc',
   '-DDEBUG=1',
+  '-fno-exceptions',
+  '-fno-objc-arc-exceptions'
 ]
 
 COMMON_LANG_PREPROCESSOR_FLAGS = {

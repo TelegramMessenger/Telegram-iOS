@@ -2,17 +2,9 @@
 //  _ASDisplayViewAccessiblity.mm
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef ASDK_ACCESSIBILITY_DISABLE
@@ -243,7 +235,7 @@ static void CollectAccessibilityElementsForView(_ASDisplayView *view, NSMutableA
 }
 
 @interface _ASDisplayView () {
-  NSArray *_accessibleElements;
+  NSArray *_accessibilityElements;
 }
 
 @end
@@ -252,43 +244,29 @@ static void CollectAccessibilityElementsForView(_ASDisplayView *view, NSMutableA
 
 #pragma mark - UIAccessibility
 
-- (void)setAccessibleElements:(NSArray *)accessibleElements
+- (void)setAccessibilityElements:(NSArray *)accessibilityElements
 {
-  _accessibleElements = nil;
+  ASDisplayNodeAssertMainThread();
+  _accessibilityElements = nil;
 }
 
-- (NSArray *)accessibleElements
+- (NSArray *)accessibilityElements
 {
+  ASDisplayNodeAssertMainThread();
+  
   ASDisplayNode *viewNode = self.asyncdisplaykit_node;
   if (viewNode == nil) {
     return @[];
   }
-  
-  if (_accessibleElements != nil) {
-    return _accessibleElements;
+
+  if (_accessibilityElements == nil) {
+    NSMutableArray *accessibilityElements = [[NSMutableArray alloc] init];
+    CollectAccessibilityElementsForView(self, accessibilityElements);
+    SortAccessibilityElements(accessibilityElements);
+    _accessibilityElements = accessibilityElements;
   }
   
-  NSMutableArray *accessibleElements = [[NSMutableArray alloc] init];
-  CollectAccessibilityElementsForView(self, accessibleElements);
-  SortAccessibilityElements(accessibleElements);
-  _accessibleElements = accessibleElements;
-  
-  return _accessibleElements;
-}
-
-- (NSInteger)accessibilityElementCount
-{
-  return self.accessibleElements.count;
-}
-
-- (id)accessibilityElementAtIndex:(NSInteger)index
-{
-  return self.accessibleElements[index];
-}
-
-- (NSInteger)indexOfAccessibilityElement:(id)element
-{
-  return [self.accessibleElements indexOfObjectIdenticalTo:element];
+  return _accessibilityElements;
 }
 
 @end

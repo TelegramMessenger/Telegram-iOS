@@ -2,17 +2,9 @@
 //  ASDisplayNode+Subclasses.h
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASBlockTypes.h>
@@ -41,74 +33,6 @@ NS_ASSUME_NONNULL_BEGIN
  * variable access, and the possibility of the asynchronous display pass grabbing an inconsistent state across multiple
  * variables.
  */
-
-@protocol ASInterfaceStateDelegate <NSObject>
-@required
-
-/**
- * @abstract Called whenever any bit in the ASInterfaceState bitfield is changed.
- * @discussion Subclasses may use this to monitor when they become visible, should free cached data, and much more.
- * @see ASInterfaceState
- */
-- (void)interfaceStateDidChange:(ASInterfaceState)newState fromState:(ASInterfaceState)oldState;
-
-/**
- * @abstract Called whenever the node becomes visible.
- * @discussion Subclasses may use this to monitor when they become visible.
- * @note This method is guaranteed to be called on main.
- */
-- (void)didEnterVisibleState;
-
-/**
- * @abstract Called whenever the node is no longer visible.
- * @discussion Subclasses may use this to monitor when they are no longer visible.
- * @note This method is guaranteed to be called on main.
- */
-- (void)didExitVisibleState;
-
-/**
- * @abstract Called whenever the the node has entered the display state.
- * @discussion Subclasses may use this to monitor when a node should be rendering its content.
- * @note This method is guaranteed to be called on main.
- */
-- (void)didEnterDisplayState;
-
-/**
- * @abstract Called whenever the the node has exited the display state.
- * @discussion Subclasses may use this to monitor when a node should no longer be rendering its content.
- * @note This method is guaranteed to be called on main.
- */
-- (void)didExitDisplayState;
-
-/**
- * @abstract Called whenever the the node has entered the preload state.
- * @discussion Subclasses may use this to monitor data for a node should be preloaded, either from a local or remote source.
- * @note This method is guaranteed to be called on main.
- */
-- (void)didEnterPreloadState;
-
-/**
- * @abstract Called whenever the the node has exited the preload state.
- * @discussion Subclasses may use this to monitor whether preloading data for a node should be canceled.
- * @note This method is guaranteed to be called on main.
- */
-- (void)didExitPreloadState;
-
-/**
- * @abstract Called when the node has completed applying the layout.
- * @discussion Can be used for operations that are performed after layout has completed.
- * @note This method is guaranteed to be called on main.
- */
-- (void)nodeDidLayout;
-
-/**
- * @abstract Called when the node loads.
- * @discussion Can be used for operations that are performed after the node's view is available.
- * @note This method is guaranteed to be called on main.
- */
-- (void)nodeDidLoad;
-
-@end
 
 @interface ASDisplayNode (Subclassing) <ASInterfaceStateDelegate>
 

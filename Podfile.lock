@@ -1,0 +1,62 @@
+PODS:
+  - FBSnapshotTestCase/Core (2.1.4)
+  - FLAnimatedImage (1.0.12)
+  - JGMethodSwizzler (2.0.1)
+  - OCMock (3.4.1)
+  - PINCache (3.0.1-beta.6):
+    - PINCache/Arc-exception-safe (= 3.0.1-beta.6)
+    - PINCache/Core (= 3.0.1-beta.6)
+  - PINCache/Arc-exception-safe (3.0.1-beta.6):
+    - PINCache/Core
+  - PINCache/Core (3.0.1-beta.6):
+    - PINOperation (~> 1.1.0)
+  - PINOperation (1.1.1)
+  - PINRemoteImage (3.0.0-beta.13):
+    - PINRemoteImage/FLAnimatedImage (= 3.0.0-beta.13)
+    - PINRemoteImage/PINCache (= 3.0.0-beta.13)
+  - PINRemoteImage/Core (3.0.0-beta.13):
+    - PINOperation
+  - PINRemoteImage/FLAnimatedImage (3.0.0-beta.13):
+    - FLAnimatedImage (>= 1.0)
+    - PINRemoteImage/Core
+  - PINRemoteImage/PINCache (3.0.0-beta.13):
+    - PINCache (= 3.0.1-beta.6)
+    - PINRemoteImage/Core
+
+DEPENDENCIES:
+  - FBSnapshotTestCase/Core (~> 2.1)
+  - JGMethodSwizzler (from `https://github.com/JonasGessner/JGMethodSwizzler`, branch `master`)
+  - OCMock (= 3.4.1)
+  - PINRemoteImage (= 3.0.0-beta.13)
+
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - FBSnapshotTestCase
+    - FLAnimatedImage
+    - OCMock
+    - PINCache
+    - PINOperation
+    - PINRemoteImage
+
+EXTERNAL SOURCES:
+  JGMethodSwizzler:
+    :branch: master
+    :git: https://github.com/JonasGessner/JGMethodSwizzler
+
+CHECKOUT OPTIONS:
+  JGMethodSwizzler:
+    :commit: 8791eccc5342224bd293b5867348657e3a240c7f
+    :git: https://github.com/JonasGessner/JGMethodSwizzler
+
+SPEC CHECKSUMS:
+  FBSnapshotTestCase: 094f9f314decbabe373b87cc339bea235a63e07a
+  FLAnimatedImage: 4a0b56255d9b05f18b6dd7ee06871be5d3b89e31
+  JGMethodSwizzler: 7328146117fffa8a4038c42eb7cd3d4c75006f97
+  OCMock: 2cd0716969bab32a2283ff3a46fd26a8c8b4c5e3
+  PINCache: d195fdba255283f7e9900a55e3cced377f431f9b
+  PINOperation: a6219e6fc9db9c269eb7a7b871ac193bcf400aac
+  PINRemoteImage: d6d51c5d2adda55f1ce30c96e850b6c4ebd2856a
+
+PODFILE CHECKSUM: 42715d61f73cc22cc116bf80d7b268cb1f9e4742
+
+COCOAPODS: 1.5.3

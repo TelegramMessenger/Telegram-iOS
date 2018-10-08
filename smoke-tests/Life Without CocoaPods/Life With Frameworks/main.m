@@ -1,9 +1,9 @@
 //
 //  main.m
-//  Life With Frameworks
+//  Texture
 //
-//  Created by Kiel Gillard on 7/07/2016.
-//  Copyright © 2016 Facebook. All rights reserved.
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <UIKit/UIKit.h>

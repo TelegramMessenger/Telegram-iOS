@@ -2,17 +2,9 @@
 //  ASRangeController.mm
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
@@ -226,7 +218,7 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
 
   // TODO: Consider if we need to use this codepath, or can rely on something more similar to the data & display ranges
   // Example: ... = [_layoutController indexPathsForScrolling:scrollDirection rangeType:ASLayoutRangeTypeVisible];
-  auto visibleElements = [_dataSource visibleElementsForRangeController:self];
+  var visibleElements = [_dataSource visibleElementsForRangeController:self];
   NSHashTable *newVisibleNodes = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
 
   ASSignpostStart(ASSignpostRangeControllerUpdate);
@@ -527,6 +519,7 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
 // Skip the many method calls of the recursive operation if the top level cell node already has the right interfaceState.
 - (void)clearContents
 {
+  ASDisplayNodeAssertMainThread();
   for (ASCollectionElement *element in [_dataSource elementMapForRangeController:self]) {
     ASCellNode *node = element.nodeIfAllocated;
     if (ASInterfaceStateIncludesDisplay(node.interfaceState)) {
@@ -537,6 +530,7 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
 
 - (void)clearPreloadedData
 {
+  ASDisplayNodeAssertMainThread();
   for (ASCollectionElement *element in [_dataSource elementMapForRangeController:self]) {
     ASCellNode *node = element.nodeIfAllocated;
     if (ASInterfaceStateIncludesPreload(node.interfaceState)) {

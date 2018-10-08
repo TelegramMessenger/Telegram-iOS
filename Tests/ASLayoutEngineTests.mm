@@ -2,12 +2,8 @@
 //  ASLayoutEngineTests.mm
 //  Texture
 //
-//  Copyright (c) 2017-present, Pinterest, Inc.  All rights reserved.
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ASTestCase.h"
@@ -298,7 +294,7 @@
       // are common to both fixture2 and fixture4 are available from the cache.
     } else {
       // Incorrect behavior: nodeC will get measured against its new bounds on main.
-      auto cPendingSize = [fixture2 layoutForNode:nodeC].size;
+      let cPendingSize = [fixture2 layoutForNode:nodeC].size;
       OCMExpect([nodeC.mock calculateLayoutThatFits:ASSizeRangeMake(cPendingSize)]).onMainThread();
     }
     [window layoutIfNeeded];
@@ -368,16 +364,16 @@
 
 - (void)verifyFixture:(ASTLayoutFixture *)fixture
 {
-  auto expected = fixture.layout;
+  let expected = fixture.layout;
 
   // Ensure expected == frames
-  auto frames = [fixture.rootNode currentLayoutBasedOnFrames];
+  let frames = [fixture.rootNode currentLayoutBasedOnFrames];
   if (![expected isEqual:frames]) {
     XCTFail(@"\n*** Layout verification failed – frames don't match expected. ***\nGot:\n%@\nExpected:\n%@", [frames recursiveDescription], [expected recursiveDescription]);
   }
 
   // Ensure expected == calculatedLayout
-  auto calculated = fixture.rootNode.calculatedLayout;
+  let calculated = fixture.rootNode.calculatedLayout;
   if (![expected isEqual:calculated]) {
     XCTFail(@"\n*** Layout verification failed – calculated layout doesn't match expected. ***\nGot:\n%@\nExpected:\n%@", [calculated recursiveDescription], [expected recursiveDescription]);
   }
@@ -406,22 +402,22 @@
  */
 - (ASTLayoutFixture *)createFixture1
 {
-  auto fixture = [[ASTLayoutFixture alloc] init];
+  let fixture = [[ASTLayoutFixture alloc] init];
 
   // nodeB
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeB];
-  auto layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
+  let layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
 
   // nodeC
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeC];
-  auto layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{2,1} position:{4,0} sublayouts:nil];
+  let layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{2,1} position:{4,0} sublayouts:nil];
 
   // nodeD
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeD];
-  auto layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{1,1} position:{9,0} sublayouts:nil];
+  let layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{1,1} position:{9,0} sublayouts:nil];
 
   [fixture addSizeRange:{{10, 1}, {10, 1}} forNode:nodeA];
-  auto layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
+  let layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
   fixture.layout = layoutA;
 
   [fixture.layoutSpecBlocks setObject:fixture1and3and5NodeALayoutSpecBlock forKey:nodeA];
@@ -441,22 +437,22 @@
  */
 - (ASTLayoutFixture *)createFixture2
 {
-  auto fixture = [[ASTLayoutFixture alloc] init];
+  let fixture = [[ASTLayoutFixture alloc] init];
 
   // nodeB
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeB];
-  auto layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
+  let layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
 
   // nodeC
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeC];
-  auto layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{4,1} position:{3,0} sublayouts:nil];
+  let layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{4,1} position:{3,0} sublayouts:nil];
 
   // nodeE
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeE];
-  auto layoutE = [ASLayout layoutWithLayoutElement:nodeE size:{1,1} position:{9,0} sublayouts:nil];
+  let layoutE = [ASLayout layoutWithLayoutElement:nodeE size:{1,1} position:{9,0} sublayouts:nil];
 
   [fixture addSizeRange:{{10, 1}, {10, 1}} forNode:nodeA];
-  auto layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutE ]];
+  let layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutE ]];
   fixture.layout = layoutA;
 
   ASLayoutSpecBlock specBlockA = ^ASLayoutSpec * _Nonnull(__kindof ASDisplayNode * _Nonnull node, ASSizeRange constrainedSize) {
@@ -477,24 +473,24 @@
  */
 - (ASTLayoutFixture *)createFixture3
 {
-  auto fixture = [[ASTLayoutFixture alloc] init];
+  let fixture = [[ASTLayoutFixture alloc] init];
 
   // nodeB wants 8,1 but it will settle for 7,1
   [fixture setReturnedSize:{8,1} forNode:nodeB];
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeB];
   [fixture addSizeRange:{{7, 0}, {7, 1}} forNode:nodeB];
-  auto layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{7,1} position:{0,0} sublayouts:nil];
+  let layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{7,1} position:{0,0} sublayouts:nil];
 
   // nodeC
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeC];
-  auto layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{2,1} position:{7,0} sublayouts:nil];
+  let layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{2,1} position:{7,0} sublayouts:nil];
 
   // nodeD
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeD];
-  auto layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{1,1} position:{9,0} sublayouts:nil];
+  let layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{1,1} position:{9,0} sublayouts:nil];
 
   [fixture addSizeRange:{{10, 1}, {10, 1}} forNode:nodeA];
-  auto layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
+  let layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
   fixture.layout = layoutA;
 
   [fixture.layoutSpecBlocks setObject:fixture1and3and5NodeALayoutSpecBlock forKey:nodeA];
@@ -520,22 +516,22 @@
  */
 - (ASTLayoutFixture *)createFixture4
 {
-  auto fixture = [[ASTLayoutFixture alloc] init];
+  let fixture = [[ASTLayoutFixture alloc] init];
 
   // nodeB
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeB];
-  auto layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
+  let layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
 
   // nodeD
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeD];
-  auto layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{2,1} position:{4,0} sublayouts:nil];
+  let layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{2,1} position:{4,0} sublayouts:nil];
 
   // nodeE
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeE];
-  auto layoutE = [ASLayout layoutWithLayoutElement:nodeE size:{1,1} position:{9,0} sublayouts:nil];
+  let layoutE = [ASLayout layoutWithLayoutElement:nodeE size:{1,1} position:{9,0} sublayouts:nil];
 
   [fixture addSizeRange:{{10, 1}, {10, 1}} forNode:nodeA];
-  auto layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutD, layoutE ]];
+  let layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{10,1} position:ASPointNull sublayouts:@[ layoutB, layoutD, layoutE ]];
   fixture.layout = layoutA;
 
   ASLayoutSpecBlock specBlockA = ^ASLayoutSpec * _Nonnull(__kindof ASDisplayNode * _Nonnull node, ASSizeRange constrainedSize) {
@@ -552,22 +548,22 @@
  */
 - (ASTLayoutFixture *)createFixture5
 {
-  auto fixture = [[ASTLayoutFixture alloc] init];
+  let fixture = [[ASTLayoutFixture alloc] init];
 
   // nodeB
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeB];
-  auto layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
+  let layoutB = [ASLayout layoutWithLayoutElement:nodeB size:{1,1} position:{0,0} sublayouts:nil];
 
   // nodeC
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeC];
-  auto layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{2,1} position:{4,0} sublayouts:nil];
+  let layoutC = [ASLayout layoutWithLayoutElement:nodeC size:{2,1} position:{4,0} sublayouts:nil];
 
   // nodeD
   [fixture addSizeRange:{{0, 0}, {INFINITY, 1}} forNode:nodeD];
-  auto layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{1,1} position:{9,0} sublayouts:nil];
+  let layoutD = [ASLayout layoutWithLayoutElement:nodeD size:{1,1} position:{9,0} sublayouts:nil];
 
   [fixture addSizeRange:{{15, 1}, {15, 1}} forNode:nodeA];
-  auto layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{15,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
+  let layoutA = [ASLayout layoutWithLayoutElement:nodeA size:{15,1} position:ASPointNull sublayouts:@[ layoutB, layoutC, layoutD ]];
   fixture.layout = layoutA;
 
   [fixture.layoutSpecBlocks setObject:fixture1and3and5NodeALayoutSpecBlock forKey:nodeA];

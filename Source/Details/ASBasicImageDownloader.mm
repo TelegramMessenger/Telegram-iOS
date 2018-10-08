@@ -2,17 +2,9 @@
 //  ASBasicImageDownloader.mm
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 #ifndef MINIMAL_ASDK
 #import <AsyncDisplayKit/ASBasicImageDownloader.h>
@@ -245,7 +237,7 @@ static const char *kContextKey = NSStringFromClass(ASBasicImageDownloaderContext
   // cause significant performance issues.
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     // associate metadata with it
-    NSMutableDictionary *callbackData = [[NSMutableDictionary alloc] init];
+    let callbackData = [[NSMutableDictionary alloc] init];
     callbackData[kASBasicImageDownloaderContextCallbackQueue] = callbackQueue ? : dispatch_get_main_queue();
 
     if (downloadProgress) {
@@ -256,7 +248,7 @@ static const char *kContextKey = NSStringFromClass(ASBasicImageDownloaderContext
       callbackData[kASBasicImageDownloaderContextCompletionBlock] = [completion copy];
     }
 
-    [context addCallbackData:[NSDictionary dictionaryWithDictionary:callbackData]];
+    [context addCallbackData:[[NSDictionary alloc] initWithDictionary:callbackData]];
 
     // Create new task if necessary
     NSURLSessionDownloadTask *task = (NSURLSessionDownloadTask *)[context createSessionTaskIfNecessaryWithBlock:^(){return [_session downloadTaskWithURL:URL];}];

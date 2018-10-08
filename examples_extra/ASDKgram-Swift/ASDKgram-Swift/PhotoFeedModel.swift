@@ -1,117 +1,107 @@
 //
 //  PhotoFeedModel.swift
-//  ASDKgram-Swift
+//  Texture
 //
-//  Created by Calum Harris on 07/01/2017.
-//
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 import UIKit
 
 final class PhotoFeedModel {
+    
+    // MARK: Properties
 
 	public private(set) var photoFeedModelType: PhotoFeedModelType
-	public private(set) var photos: [PhotoModel] = []
-	public private(set) var imageSize: CGSize
-	private var url: URL
-	private var ids: [Int] = []
+   
+    private var orderedPhotos: OrderedDictionary<String, PhotoModel> = [:]
 	private var currentPage: Int = 0
 	private var totalPages: Int = 0
-	public private(set) var totalItems: Int = 0
+	private var totalItems: Int = 0
 	private var fetchPageInProgress: Bool = false
-	private var refreshFeedInProgress: Bool = false
 
-	init(initWithPhotoFeedModelType: PhotoFeedModelType, requiredImageSize: CGSize) {
-		self.photoFeedModelType = initWithPhotoFeedModelType
-		self.imageSize = requiredImageSize
-		self.url = URL.URLForFeedModelType(feedModelType: initWithPhotoFeedModelType)
-	}
+    // MARK: Lifecycle
 
-	var numberOfItemsInFeed: Int {
-		return photos.count
+	init(photoFeedModelType: PhotoFeedModelType) {
+        self.photoFeedModelType = photoFeedModelType
 	}
+    
+    // MARK: API
+    
+    lazy var url: URL = {
+        return URL.URLForFeedModelType(feedModelType: self.photoFeedModelType)
+    }()
+
+	var numberOfItems: Int {
+        return orderedPhotos.count
+	}
+    
+    func itemAtIndexPath(_ indexPath: IndexPath) -> PhotoModel {
+        return orderedPhotos[indexPath.row].value
+    }
 
 	// return in completion handler the number of additions and the status of internet connection
 
 	func updateNewBatchOfPopularPhotos(additionsAndConnectionStatusCompletion: @escaping (Int, InternetStatus) -> ()) {
+        
+        // For this example let's use the main thread as locking queue
+        DispatchQueue.main.async {
+            guard !self.fetchPageInProgress else {
+                return
+            }
 
-		guard !fetchPageInProgress else { return }
+            self.fetchPageInProgress = true
+            self.fetchNextPageOfPopularPhotos(replaceData: false) { [unowned self] additions, error in
+                self.fetchPageInProgress = false
 
-		fetchPageInProgress = true
-		fetchNextPageOfPopularPhotos(replaceData: false) { [unowned self] additions, errors in
-			self.fetchPageInProgress = false
-
-			if let error = errors {
-				switch error {
-				case .noInternetConnection:
-				additionsAndConnectionStatusCompletion(0, .noConnection)
-				default: additionsAndConnectionStatusCompletion(0, .connected)
-				}
-			} else {
-				additionsAndConnectionStatusCompletion(additions, .connected)
-			}
-		}
+                if let error = error {
+                    switch error {
+                    case .noInternetConnection:
+                        additionsAndConnectionStatusCompletion(0, .noConnection)
+                    default:
+                        additionsAndConnectionStatusCompletion(0, .connected)
+                    }
+                } else {
+                    additionsAndConnectionStatusCompletion(additions, .connected)
+                }
+            }
+        }
 	}
 
-	private func fetchNextPageOfPopularPhotos(replaceData: Bool, numberOfAdditionsCompletion: @escaping (Int, NetworkingErrors?) -> ()) {
-
+	private func fetchNextPageOfPopularPhotos(replaceData: Bool, numberOfAdditionsCompletion: @escaping (Int, NetworkingError?) -> ()) {
 		if currentPage == totalPages, currentPage != 0 {
-			DispatchQueue.main.async {
-				numberOfAdditionsCompletion(0, .customError("No pages left to parse"))
-			}
+            numberOfAdditionsCompletion(0, .customError("No pages left to parse"))
             return
 		}
 
-		var newPhotos: [PhotoModel] = []
-		var newIDs: [Int] = []
-
 		let pageToFetch = currentPage + 1
-
-		let url = self.url.addImageParameterForClosestImageSizeAndpage(size: imageSize, page: pageToFetch)
-
-		WebService().load(resource: parsePopularPage(withURL: url)) { [unowned self] result in
-
+		WebService().load(resource: parsePopularPage(withURL: url, page: pageToFetch)) { [unowned self] result in
+            // Callback will happen on main for now
 			switch result {
-				case .success(let popularPage):
-				self.totalItems = popularPage.totalNumberOfItems
-				self.totalPages = popularPage.totalPages
-				self.currentPage = popularPage.page
+				case .success(let itemsPage):
+                    // Update current state
+                    self.totalItems = itemsPage.totalNumberOfItems
+                    self.totalPages = itemsPage.totalPages
+                    self.currentPage = itemsPage.page
 
-				for photo in popularPage.photos {
-					if !replaceData || !self.ids.contains(photo.photoID) {
-						newPhotos.append(photo)
-						newIDs.append(photo.photoID)
-					}
-				}
+                    // Update photos
+                    if replaceData {
+                        self.orderedPhotos = []
+                    }
+                    var insertedItems = 0
+                    for photo in itemsPage.photos {
+                        if !self.orderedPhotos.containsKey(photo.photoID) {
+                            // Append a new key-value pair by setting a value for an non-existent key
+                            self.orderedPhotos[photo.photoID] = photo
+                            insertedItems += 1
+                        }
+                    }
 
-				DispatchQueue.main.async {
-					if replaceData {
-						self.photos = newPhotos
-						self.ids = newIDs
-					} else {
-						self.photos += newPhotos
-						self.ids += newIDs
-					}
-
-					numberOfAdditionsCompletion(newPhotos.count, nil)
-				}
-
+                    numberOfAdditionsCompletion(insertedItems, nil)
 				case .failure(let fail):
-				print(fail)
-                DispatchQueue.main.async {
+                    print(fail)
                     numberOfAdditionsCompletion(0, fail)
-                }
 			}
 		}
 	}

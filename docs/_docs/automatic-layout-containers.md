@@ -10,13 +10,13 @@ Texture includes a library of `layoutSpec` components that can be composed to de
 
 The **child(ren) of a layoutSpec may be a node, a layoutSpec or a combination of the two types.**  In the below image, an `ASStackLayoutSpec` (vertical) containing a text node and an image node, is wrapped in another `ASStackLayoutSpec` (horizontal) with another text node. 
 
-<img src="/static/images/layoutable-types.png">
+<img src="http://texturegroup.org/static/images/layoutable-types.png">
 
 Both nodes and layoutSpecs conform to the `<ASLayoutable>` protocol.  Any `ASLayoutable` object may be the child of a layoutSpec. <a href = "automatic-layout-containers.html#aslayoutable-properties">ASLayoutable properties</a> may be applied to `ASLayoutable` objects to create complex UI designs. 
 
 ### Single Child layoutSpecs
 
-<table style="width:100%"  class = "paddingBetweenCols">
+<table style="width:100%" class="paddingBetweenCols">
   <tr>
     <th>LayoutSpec</th>
     <th>Description</th> 
@@ -39,10 +39,10 @@ Both nodes and layoutSpecs conform to the `<ASLayoutable>` protocol.  Any `ASLay
   </tr>
   <tr>
     <td><b><code>ASRatioLayoutSpec</code></b></td>
-    <td><p>Lays out a component at a fixed aspect ratio (which can be scaled).</p> <p><i>This spec is great for objects that do not have an intrinisic size, such as ASNetworkImageNodes and <code>ASVideoNodes</code>.</i></p> </td> 
+    <td><p>Lays out a component at a fixed aspect ratio (which can be scaled).</p> <p><i>This spec is great for objects that do not have an intrinisic size, such as ASNetworkImageNodes and <code>ASVideoNodes</code>.</i></p></td> 
   </tr>
   <tr>
-    <td><b><code>ASRelativeLayoutSpec<code></b></td>
+    <td><b><code>ASRelativeLayoutSpec</code></b></td>
     <td><p>Lays out a component and positions it within the layout bounds according to vertical and horizontal positional specifiers. Similar to the “9-part” image areas, a child can be positioned at any of the 4 corners, or the middle of any of the 4 edges, as well as the center.</p> </td> 
   </tr>
   <tr>
@@ -70,7 +70,7 @@ The following layoutSpecs may contain one or more children.
   </tr>
 </table>
 
-# ASLayoutable Properties
+### ASLayoutable Properties
 
 The following properties can be applied to both nodes _and_ `layoutSpec`s; both conform to the `ASLayoutable` protocol. 
 
@@ -184,7 +184,7 @@ An overlay spec requires the underlay object (object to which the overlay item w
 
 An inset spec requires its object to have an intrinsic size. It adds the inset padding to this size to calculate the final size of the inset spec. 
 
-<img src="/static/images/overlay-vs-inset-spec.png">
+<img src="http://texturegroup.org/static/images/overlay-vs-inset-spec.png">
 
 ### Best Practices
   - Texture layout is called on a background thread. Do not access the device screen bounds, or any other UIKit methods in `layoutSpecThatFits:`.

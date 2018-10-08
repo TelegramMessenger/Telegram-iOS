@@ -2,24 +2,21 @@
 //  ASTextLayout.m
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) through the present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASTextLayout.h>
+
+#import <AsyncDisplayKit/ASAssert.h>
+#import <AsyncDisplayKit/ASConfigurationInternal.h>
 #import <AsyncDisplayKit/ASTextUtilities.h>
 #import <AsyncDisplayKit/ASTextAttribute.h>
 #import <AsyncDisplayKit/NSAttributedString+ASText.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
+
+#import <pthread.h>
 
 const CGSize ASTextContainerMaxSize = (CGSize){0x100000, 0x100000};
 
@@ -130,26 +127,36 @@ static CGColorRef ASTextGetCGColor(CGColorRef color) {
   return self;
 }
 
-- (id)copyWithZone:(NSZone *)zone {
-  ASTextContainer *one = [self.class new];
+- (id)copyForced:(BOOL)forceCopy
+{
   dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER);
+  if (_readonly && !forceCopy) {
+    dispatch_semaphore_signal(_lock);
+    return self;
+  }
+
+  ASTextContainer *one = [self.class new];
   one->_size = _size;
   one->_insets = _insets;
   one->_path = _path;
-  one->_exclusionPaths = _exclusionPaths.copy;
+  one->_exclusionPaths = [_exclusionPaths copy];
   one->_pathFillEvenOdd = _pathFillEvenOdd;
   one->_pathLineWidth = _pathLineWidth;
   one->_verticalForm = _verticalForm;
   one->_maximumNumberOfRows = _maximumNumberOfRows;
   one->_truncationType = _truncationType;
-  one->_truncationToken = _truncationToken.copy;
+  one->_truncationToken = [_truncationToken copy];
   one->_linePositionModifier = [(NSObject *)_linePositionModifier copy];
   dispatch_semaphore_signal(_lock);
   return one;
 }
 
-- (id)mutableCopyWithZone:(nullable NSZone *)zone {
-  return [self copyWithZone:zone];
+- (id)copyWithZone:(NSZone *)zone {
+  return [self copyForced:NO];
+}
+
+- (id)mutableCopyWithZone:(NSZone *)zone {
+  return [self copyForced:YES];
 }
 
 - (void)encodeWithCoder:(NSCoder *)aCoder {
@@ -185,18 +192,25 @@ static CGColorRef ASTextGetCGColor(CGColorRef color) {
   return self;
 }
 
+- (void)makeImmutable
+{
+  dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER);
+  _readonly = YES;
+  dispatch_semaphore_signal(_lock);
+}
+
 #define Getter(...) \
 dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); \
 __VA_ARGS__; \
 dispatch_semaphore_signal(_lock);
 
 #define Setter(...) \
-if (_readonly) { \
-@throw [NSException exceptionWithName:NSInternalInconsistencyException \
-reason:@"Cannot change the property of the 'container' in 'ASTextLayout'." userInfo:nil]; \
-return; \
-} \
 dispatch_semaphore_wait(_lock, DISPATCH_TIME_FOREVER); \
+if (__builtin_expect(_readonly, NO)) { \
+  ASDisplayNodeFailAssert(@"Attempt to modify immutable text container."); \
+  dispatch_semaphore_signal(_lock); \
+  return; \
+} \
 __VA_ARGS__; \
 dispatch_semaphore_signal(_lock);
 
@@ -320,7 +334,6 @@ dispatch_semaphore_signal(_lock);
 @property (nonatomic) NSAttributedString *text;
 @property (nonatomic) NSRange range;
 
-@property (nonatomic) CTFramesetterRef frameSetter;
 @property (nonatomic) CTFrameRef frame;
 @property (nonatomic) NSArray *lines;
 @property (nonatomic) ASTextLine *truncatedLine;
@@ -404,11 +417,10 @@ dispatch_semaphore_signal(_lock);
   if (lineRowsIndex) free(lineRowsIndex); \
   return nil; }
   
-  text = text.mutableCopy;
-  container = container.copy;
+  container = [container copy];
   if (!text || !container) return nil;
   if (range.location + range.length > text.length) return nil;
-  container->_readonly = YES;
+  [container makeImmutable];
   maximumNumberOfRows = container.maximumNumberOfRows;
   
   // It may use larger constraint size when create CTFrame with
@@ -484,10 +496,71 @@ dispatch_semaphore_signal(_lock);
     frameAttrs[(id)kCTFrameProgressionAttributeName] = @(kCTFrameProgressionRightToLeft);
   }
   
-  // create CoreText objects
-  ctSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)text);
+  /*
+   * Framesetter cache.
+   * Framesetters can only be used by one thread at a time.
+   * Create a CFSet with no callbacks (raw pointers) to keep track of which
+   * framesetters are in use on other threads. If the one for our string is already in use,
+   * just create a new one. This should be pretty rare.
+   */
+  static pthread_mutex_t busyFramesettersLock = PTHREAD_MUTEX_INITIALIZER;
+  static NSCache<NSAttributedString *, id> *framesetterCache;
+  static CFMutableSetRef busyFramesetters;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    if (ASActivateExperimentalFeature(ASExperimentalFramesetterCache)) {
+      framesetterCache = [[NSCache alloc] init];
+      framesetterCache.name = @"org.TextureGroup.Texture.framesetterCache";
+      busyFramesetters = CFSetCreateMutable(NULL, 0, NULL);
+    }
+  });
+
+  BOOL haveCached = NO, useCached = NO;
+  if (framesetterCache) {
+    // Check if there's one in the cache.
+    ctSetter = (__bridge_retained CTFramesetterRef)[framesetterCache objectForKey:text];
+
+    if (ctSetter) {
+      haveCached = YES;
+
+      // Check-and-set busy on the cached one.
+      pthread_mutex_lock(&busyFramesettersLock);
+      BOOL busy = CFSetContainsValue(busyFramesetters, ctSetter);
+      if (!busy) {
+        CFSetAddValue(busyFramesetters, ctSetter);
+        useCached = YES;
+      }
+      pthread_mutex_unlock(&busyFramesettersLock);
+
+      // Release if it was busy.
+      if (busy) {
+        CFRelease(ctSetter);
+        ctSetter = NULL;
+      }
+    }
+  }
+
+  // Create a framesetter if needed.
+  if (!ctSetter) {
+    ctSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)text);
+  }
+
   if (!ctSetter) FAIL_AND_RETURN
   ctFrame = CTFramesetterCreateFrame(ctSetter, ASTextCFRangeFromNSRange(range), cgPath, (CFDictionaryRef)frameAttrs);
+
+  // Return to cache.
+  if (framesetterCache) {
+    if (useCached) {
+      // If reused: mark available.
+      pthread_mutex_lock(&busyFramesettersLock);
+      CFSetRemoveValue(busyFramesetters, ctSetter);
+      pthread_mutex_unlock(&busyFramesettersLock);
+    } else if (!haveCached) {
+      // If first framesetter, add to cache.
+      [framesetterCache setObject:(__bridge id)ctSetter forKey:text];
+    }
+  }
+
   if (!ctFrame) FAIL_AND_RETURN
   lines = [NSMutableArray new];
   ctLines = CTFrameGetLines(ctFrame);
@@ -857,8 +930,7 @@ dispatch_semaphore_signal(_lock);
   if (attachments.count == 0) {
     attachments = attachmentRanges = attachmentRects = nil;
   }
-  
-  layout.frameSetter = ctSetter;
+
   layout.frame = ctFrame;
   layout.lines = lines;
   layout.truncatedLine = truncatedLine;
@@ -903,14 +975,6 @@ dispatch_semaphore_signal(_lock);
   return layouts;
 }
 
-- (void)setFrameSetter:(CTFramesetterRef)frameSetter {
-  if (_frameSetter != frameSetter) {
-    if (frameSetter) CFRetain(frameSetter);
-    if (_frameSetter) CFRelease(_frameSetter);
-    _frameSetter = frameSetter;
-  }
-}
-
 - (void)setFrame:(CTFrameRef)frame {
   if (_frame != frame) {
     if (frame) CFRetain(frame);
@@ -920,7 +984,6 @@ dispatch_semaphore_signal(_lock);
 }
 
 - (void)dealloc {
-  if (_frameSetter) CFRelease(_frameSetter);
   if (_frame) CFRelease(_frame);
   if (_lineRowsIndex) free(_lineRowsIndex);
   if (_lineRowsEdge) free(_lineRowsEdge);
@@ -1959,7 +2022,7 @@ dispatch_semaphore_signal(_lock);
   range = [self _correctedRangeWithEdge:range];
   
   BOOL isVertical = _container.verticalForm;
-  NSMutableArray *rects = [[NSMutableArray<NSValue *> alloc] init];
+  NSMutableArray *rects = [[NSMutableArray<ASTextSelectionRect *> alloc] init];
   if (!range) return rects;
   
   NSUInteger startLineIndex = [self lineIndexForPosition:range.start];

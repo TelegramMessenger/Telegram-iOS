@@ -2,12 +2,8 @@
 //  ASLayoutTestNode.mm
 //  Texture
 //
-//  Copyright (c) 2017-present, Pinterest, Inc.  All rights reserved.
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ASLayoutTestNode.h"
@@ -39,7 +35,7 @@
 
 - (ASLayout *)_currentLayoutBasedOnFramesForRootNode:(BOOL)isRootNode
 {
-  auto sublayouts = [NSMutableArray<ASLayout *> array];
+  let sublayouts = [[NSMutableArray<ASLayout *> alloc] init];
   for (ASLayoutTestNode *subnode in self.subnodes) {
     [sublayouts addObject:[subnode _currentLayoutBasedOnFramesForRootNode:NO]];
   }
@@ -64,7 +60,7 @@
     return [super calculateLayoutThatFits:constrainedSize];
   } else {
     // Interestingly, the infra will auto-clamp sizes from calculateSizeThatFits, but not from calculateLayoutThatFits.
-    auto size = ASSizeRangeClamp(constrainedSize, self.testSize);
+    let size = ASSizeRangeClamp(constrainedSize, self.testSize);
     return [ASLayout layoutWithLayoutElement:self size:size];
   }
 }

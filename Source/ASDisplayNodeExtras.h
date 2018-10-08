@@ -2,17 +2,9 @@
 //  ASDisplayNodeExtras.h
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <QuartzCore/QuartzCore.h>
@@ -30,7 +22,7 @@
   #define ASSetDebugName(node, format, ...) node.debugName = [NSString stringWithFormat:format, __VA_ARGS__]
   #define ASSetDebugNames(...) _ASSetDebugNames(self.class, @"" # __VA_ARGS__, __VA_ARGS__, nil)
 #else
-  #define ASSetDebugName(node, name)
+  #define ASSetDebugName(node, format, ...)
   #define ASSetDebugNames(...)
 #endif
 
@@ -216,6 +208,6 @@ AS_EXTERN void ASDisplayNodeDisableHierarchyNotifications(ASDisplayNode *node);
 AS_EXTERN void ASDisplayNodeEnableHierarchyNotifications(ASDisplayNode *node);
 
 // Not to be called directly.
-AS_EXTERN void _ASSetDebugNames(Class owningClass, NSString *names, ASDisplayNode *object, ...);
+AS_EXTERN void _ASSetDebugNames(Class owningClass, NSString *names, ASDisplayNode * _Nullable object, ...);
 
 NS_ASSUME_NONNULL_END

@@ -2,12 +2,8 @@
 //  ASIntegerMap.mm
 //  Texture
 //
-//  Copyright (c) 2017-present, Pinterest, Inc.  All rights reserved.
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ASIntegerMap.h"
@@ -102,7 +98,7 @@
     return NSNotFound;
   }
 
-  auto result = _map.find(key);
+  let result = _map.find(key);
   return result != _map.end() ? result->second : NSNotFound;
 }
 
@@ -122,9 +118,10 @@
     return self;
   }
 
-  auto result = [[ASIntegerMap alloc] init];
-  for (auto it = _map.begin(); it != _map.end(); it++) {
-    result->_map[it->second] = it->first;
+  let result = [[ASIntegerMap alloc] init];
+  
+  for (let &e : _map) {
+    result->_map[e.second] = e.first;
   }
   return result;
 }
@@ -137,7 +134,7 @@
     return self;
   }
 
-  auto newMap = [[ASIntegerMap allocWithZone:zone] init];
+  let newMap = [[ASIntegerMap allocWithZone:zone] init];
   newMap->_map = _map;
   return newMap;
 }
@@ -155,8 +152,8 @@
   } else {
     // { 1->2 3->4 5->6 }
     NSMutableString *str = [NSMutableString string];
-    for (auto it = _map.begin(); it != _map.end(); it++) {
-      [str appendFormat:@" %zd->%zd", it->first, it->second];
+    for (let &e : _map) {
+      [str appendFormat:@" %ld->%ld", (long)e.first, (long)e.second];
     }
     // Remove leading space
     if (str.length > 0) {
@@ -179,7 +176,7 @@
     return YES;
   }
 
-  if (auto otherMap = ASDynamicCast(object, ASIntegerMap)) {
+  if (let otherMap = ASDynamicCast(object, ASIntegerMap)) {
     return otherMap->_map == _map;
   }
   return NO;

@@ -2,17 +2,9 @@
 //  ASLayout.h
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #pragma once
@@ -130,16 +122,14 @@ AS_EXTERN ASLayout *ASCalculateLayout(id<ASLayoutElement>layoutElement, const AS
  */
 + (instancetype)layoutWithLayoutElement:(id<ASLayoutElement>)layoutElement
                                    size:(CGSize)size NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
+
 /**
  * Traverses the existing layout tree and generates a new tree that represents only ASDisplayNode layouts
  */
 - (ASLayout *)filteredNodeLayoutTree NS_RETURNS_RETAINED AS_WARN_UNUSED_RESULT;
 
-@end
-
-@interface ASLayout (Unavailable)
-
 - (instancetype)init NS_UNAVAILABLE;
+- (instancetype)new NS_UNAVAILABLE;
 
 @end
 
@@ -149,15 +139,11 @@ AS_EXTERN ASLayout *ASCalculateLayout(id<ASLayoutElement>layoutElement, const AS
 
 /**
  * Set to YES to tell all ASLayout instances to retain their sublayout elements. Defaults to NO.
- * Can be overridden at instance level.
+ * See `-retainSublayoutLayoutElements` to control this per-instance.
+ *
+ * Note: Weaver relies on this API.
  */
-+ (void)setShouldRetainSublayoutLayoutElements:(BOOL)shouldRetain;
-
-/**
- * Whether or not ASLayout instances should retain their sublayout elements.
- * Can be overridden at instance level.
- */
-+ (BOOL)shouldRetainSublayoutLayoutElements;
+@property (class) BOOL shouldRetainSublayoutLayoutElements;
 
 /**
  * Recrusively output the description of the layout tree.

@@ -19,6 +19,7 @@ The following `ASLayoutSpec` subclasses can be used to compose simple or very co
 <li><a href="layout2-layoutspec-types.html#asrelativelayoutspec"><code>AS<b>Relative</b>LayoutSpec</code></a></li>
 <li><a href="layout2-layoutspec-types.html#asabsolutelayoutspec"><code>AS<b>Absolute</b>LayoutSpec</code></a></li>
 </ul>
+<li><a href="layout2-layoutspec-types.html#ascornerlayoutspec"><code>AS<b>Corner</b>LayoutSpec</code></a></li>
 
 You may also subclass <a href="layout2-layoutspec-types.html#aslayoutspec">`ASLayoutSpec`</a> in order to make your own, custom layout specs. 
 
@@ -429,6 +430,48 @@ override func layoutSpecThatFits(_ constrainedSize: ASSizeRange) -> ASLayoutSpec
   hlsVideoNode.style.preferredSize = CGSize(width: maxConstrainedSize.width / 2.0, height: maxConstrainedSize.height / 3.0)
 
   return ASAbsoluteLayoutSpec(children: [guitarVideoNode, nicCageVideoNode, simonVideoNode, hlsVideoNode])
+}
+</pre>
+</div>
+</div>
+
+## ASCornerLayoutSpec
+`ASCornerLayoutSpec` is a new convenient layout spec for fast corner element layout. The easy way to position an element in corner is to use declarative code expression rather than manual coordinate calculation, and ASCornerLayoutSpec can achieve this goal.
+
+<img src="/static/images/example-app-screenshots/ASCornerLayoutSpec.png" width="75%">
+
+`ASCornerLayoutSpec` takes good care of its own size calculation. The best scenario to explain this would be the case that adding a small badge view at the corner of user's avatar image and there is no need to worry about the fact that little-exceeded badge frame (which out of avatar image frame) may affect the whole layout size. By default, the size of corner element will not be added to layout size, only if you manually turn on the `wrapsCorner` property.
+
+`ASCornerLayoutSpec` is introduced from version 2.7 and above. 
+
+<div class = "highlight-group">
+<span class="language-toggle">
+  <a data-lang="swift" class="swiftButton">Swift</a>
+  <a data-lang="objective-c" class = "active objcButton">Objective-C</a>
+</span>
+
+<div class = "code">
+<pre lang="objc" class="objcCode">
+- (ASLayoutSpec *)layoutSpecThatFits:(ASSizeRange)constrainedSize
+{
+  ...
+  // Layout the center of badge to the top right corner of avatar.
+  ASCornerLayoutSpec *cornerSpec = [ASCornerLayoutSpec cornerLayoutSpecWithChild:self.avatarNode corner:self.badgeNode location:ASCornerLayoutLocationTopRight];
+  // Slightly shift center of badge inside of avatar.
+  cornerSpec.offset = CGPointMake(-3, 3);
+  ...
+}
+</pre>
+
+<pre lang="swift" class = "swiftCode hidden">
+override func layoutSpecThatFits(_ constrainedSize: ASSizeRange) -> ASLayoutSpec
+{
+  ...
+  // Layout the center of badge to the top right corner of avatar.
+  let cornerSpec = ASCornerLayoutSpec(child: avatarNode, corner: badgeNode, location: .topRight)
+  // Slightly shift center of badge inside of avatar.
+  cornerSpec.offset = CGPoint(x: -3, y: 3)
+  ...
 }
 </pre>
 </div>

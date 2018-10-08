@@ -1,9 +1,9 @@
 //
 //  ASCollectionSectionController.m
-//  Sample
+//  Texture
 //
-//  Created by Adlai Holler on 12/29/16.
-//  Copyright © 2016 Facebook. All rights reserved.
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ASCollectionSectionController.h"

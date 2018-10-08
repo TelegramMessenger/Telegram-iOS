@@ -138,5 +138,5 @@ Using this option does not eliminate all of the performance advantages of Textur
 <code>UITableViewCell</code> has properties like <code>selectionStyle</code>, <code>accessoryType</code> and <code>seperatorInset</code> that many of us use sometimes to give the Cell more detail. For this case <code>ASCellNode</code> has the same (passthrough) properties that can be used. 
 
 <div class = "note">
-UIKits <code>UITableViewCell</code> contains <code>ASCellNode</code> as a subview. Depending how your <code>ASLayoutSpec</code> is defined it may occure that your Layout overlays the <code>UITableViewCell.accessoryView</code> and therefore not visible. Make sure that your Layout doesn't overlays any <code>UITableViewCell</code>'s specific properties.
+UIKits <code>UITableViewCell</code> contains <code>ASCellNode</code> as a subview. Depending how your <code>ASLayoutSpec</code> is defined it may occur that your Layout overlays the <code>UITableViewCell.accessoryView</code> and therefore is not visible. Make sure that your Layout doesn't overlay any of <code>UITableViewCell</code>'s specific properties.
 </div>

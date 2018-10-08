@@ -1,20 +1,10 @@
 //
 //  PhotoTableViewCell.swift
-//  ASDKgram-Swift
+//  Texture
 //
-//  Created by Calum Harris on 08/01/2017.
-//
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 import UIKit
@@ -25,15 +15,15 @@ class PhotoTableViewCell: UITableViewCell {
 		didSet {
 			if let model = photoModel {
 				photoImageView.loadImageUsingUrlString(urlString: model.url)
-				avatarImageView.loadImageUsingUrlString(urlString: model.ownerPicURL)
-				photoLikesLabel.attributedText = model.attrStringLikes(withSize: Constants.CellLayout.FontSize)
-				usernameLabel.attributedText = model.attrStringForUserName(withSize: Constants.CellLayout.FontSize)
-				timeIntervalLabel.attributedText = model.attrStringForTimeSinceString(withSize: Constants.CellLayout.FontSize)
-				photoDescriptionLabel.attributedText = model.attrStringForDescription(withSize: Constants.CellLayout.FontSize)
+				avatarImageView.loadImageUsingUrlString(urlString: model.user.profileImage)
+                photoLikesLabel.attributedText = model.attributedStringLikes(withSize: Constants.CellLayout.FontSize)
+                usernameLabel.attributedText = model.attributedStringForUserName(withSize: Constants.CellLayout.FontSize)
+                timeIntervalLabel.attributedText = model.attributedStringForTimeSinceString(withSize: Constants.CellLayout.FontSize)
+                photoDescriptionLabel.attributedText = model.attributedStringForDescription(withSize: Constants.CellLayout.FontSize)
 				photoDescriptionLabel.sizeToFit()
 				var rect = photoDescriptionLabel.frame
 				let availableWidth = self.bounds.size.width - Constants.CellLayout.HorizontalBuffer * 2
-				rect.size = model.attrStringForDescription(withSize: Constants.CellLayout.FontSize).boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: .usesLineFragmentOrigin, context: nil).size
+                rect.size = model.attributedStringForDescription(withSize: Constants.CellLayout.FontSize).boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: .usesLineFragmentOrigin, context: nil).size
 				photoDescriptionLabel.frame = rect
 			}
 		}
@@ -133,7 +123,7 @@ class PhotoTableViewCell: UITableViewCell {
 		let photoHeight = width
 		let font = UIFont.systemFont(ofSize: Constants.CellLayout.FontSize)
 		let likesHeight = round(font.lineHeight)
-		let descriptionAttrString = photo.attrStringForDescription(withSize: Constants.CellLayout.FontSize)
+        let descriptionAttrString = photo.attributedStringForDescription(withSize: Constants.CellLayout.FontSize)
 		let availableWidth = width - Constants.CellLayout.HorizontalBuffer * 2
 		let descriptionHeight = descriptionAttrString.boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: .usesLineFragmentOrigin, context: nil).size.height
 		

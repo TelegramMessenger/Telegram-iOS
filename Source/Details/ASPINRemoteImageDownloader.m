@@ -2,17 +2,9 @@
 //  ASPINRemoteImageDownloader.m
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
@@ -47,11 +39,9 @@
 #if PIN_ANIMATED_AVAILABLE
 
 @interface ASPINRemoteImageDownloader () <PINRemoteImageManagerAlternateRepresentationProvider>
-
 @end
 
 @interface PINCachedAnimatedImage (ASPINRemoteImageDownloader) <ASAnimatedImageProtocol>
-
 @end
 
 @implementation PINCachedAnimatedImage (ASPINRemoteImageDownloader)
@@ -108,8 +98,8 @@
 
 @end
 
-
 static ASPINRemoteImageDownloader *sharedDownloader = nil;
+static PINRemoteImageManager *sharedPINRemoteImageManager = nil;
 
 @interface ASPINRemoteImageDownloader ()
 @end
@@ -129,43 +119,55 @@ static ASPINRemoteImageDownloader *sharedDownloader = nil;
 + (void)setSharedImageManagerWithConfiguration:(nullable NSURLSessionConfiguration *)configuration
 {
   NSAssert(sharedDownloader == nil, @"Singleton has been created and session can no longer be configured.");
-  __unused PINRemoteImageManager *sharedManager = [self sharedPINRemoteImageManagerWithConfiguration:configuration];
+  NSAssert1(sharedPINRemoteImageManager == nil, @"An instance of %@ has been set. Either configuration or preconfigured image manager can be set at a time and only once.", [[sharedPINRemoteImageManager class] description]);
+  __unused PINRemoteImageManager *sharedManager = [self sharedPINRemoteImageManagerWithConfiguration:configuration preconfiguredPINRemoteImageManager:nil];
 }
 
-+ (PINRemoteImageManager *)sharedPINRemoteImageManagerWithConfiguration:(NSURLSessionConfiguration *)configuration
++ (void)setSharedPreconfiguredRemoteImageManager:(nullable PINRemoteImageManager *)preconfiguredPINRemoteImageManager
 {
-  static ASPINRemoteImageManager *sharedPINRemoteImageManager;
+  NSAssert(sharedDownloader == nil, @"Singleton has been created and session can no longer be configured.");
+  NSAssert1(sharedPINRemoteImageManager == nil, @"An instance of %@ has been set. Either configuration or preconfigured image manager can be set at a time and only once.", [[sharedPINRemoteImageManager class] description]);
+  __unused PINRemoteImageManager *sharedManager = [self sharedPINRemoteImageManagerWithConfiguration:nil preconfiguredPINRemoteImageManager:preconfiguredPINRemoteImageManager];
+}
+
++ (PINRemoteImageManager *)sharedPINRemoteImageManagerWithConfiguration:(NSURLSessionConfiguration *)configuration preconfiguredPINRemoteImageManager:(PINRemoteImageManager *)preconfiguredPINRemoteImageManager
+{
+  NSAssert(!(configuration != nil && preconfiguredPINRemoteImageManager != nil), @"Either configuration or preconfigured image manager can be set at a time.");
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
 
+    if (preconfiguredPINRemoteImageManager) {
+      sharedPINRemoteImageManager = preconfiguredPINRemoteImageManager;
+    } else {
 #if PIN_ANIMATED_AVAILABLE
-    // Check that Carthage users have linked both PINRemoteImage & PINCache by testing for one file each
-    if (!(NSClassFromString(@"PINRemoteImageManager"))) {
-      NSException *e = [NSException
-                        exceptionWithName:@"FrameworkSetupException"
-                        reason:@"Missing the path to the PINRemoteImage framework."
-                        userInfo:nil];
-      @throw e;
-    }
-    if (!(NSClassFromString(@"PINCache"))) {
-      NSException *e = [NSException
-                        exceptionWithName:@"FrameworkSetupException"
-                        reason:@"Missing the path to the PINCache framework."
-                        userInfo:nil];
-      @throw e;
-    }
-    sharedPINRemoteImageManager = [[ASPINRemoteImageManager alloc] initWithSessionConfiguration:configuration
-                                                              alternativeRepresentationProvider:[self sharedDownloader]];
+      // Check that Carthage users have linked both PINRemoteImage & PINCache by testing for one file each
+      if (!(NSClassFromString(@"PINRemoteImageManager"))) {
+        NSException *e = [NSException
+                          exceptionWithName:@"FrameworkSetupException"
+                          reason:@"Missing the path to the PINRemoteImage framework."
+                          userInfo:nil];
+        @throw e;
+      }
+      if (!(NSClassFromString(@"PINCache"))) {
+        NSException *e = [NSException
+                          exceptionWithName:@"FrameworkSetupException"
+                          reason:@"Missing the path to the PINCache framework."
+                          userInfo:nil];
+        @throw e;
+      }
+      sharedPINRemoteImageManager = [[ASPINRemoteImageManager alloc] initWithSessionConfiguration:configuration
+                                                                alternativeRepresentationProvider:[self sharedDownloader]];
 #else
-    sharedPINRemoteImageManager = [[ASPINRemoteImageManager alloc] initWithSessionConfiguration:configuration];
+      sharedPINRemoteImageManager = [[ASPINRemoteImageManager alloc] initWithSessionConfiguration:configuration];
 #endif
+    }
   });
   return sharedPINRemoteImageManager;
 }
 
 - (PINRemoteImageManager *)sharedPINRemoteImageManager
 {
-  return [ASPINRemoteImageDownloader sharedPINRemoteImageManagerWithConfiguration:nil];
+  return [ASPINRemoteImageDownloader sharedPINRemoteImageManagerWithConfiguration:nil preconfiguredPINRemoteImageManager:nil];
 }
 
 - (BOOL)sharedImageManagerSupportsMemoryRemoval

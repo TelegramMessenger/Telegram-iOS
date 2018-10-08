@@ -1,9 +1,9 @@
 //
 //  ImageCollectionViewCell.h
-//  Sample
+//  Texture
 //
-//  Created by Hannah Troisi on 1/28/17.
-//  Copyright © 2017 Facebook. All rights reserved.
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <UIKit/UIKit.h>

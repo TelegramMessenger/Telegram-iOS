@@ -19,8 +19,6 @@ build
 
 *.swp
 
-*.lock
-
 *.gcov
 *.gcno
 *.gcda

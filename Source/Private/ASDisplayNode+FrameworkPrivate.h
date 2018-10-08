@@ -2,17 +2,9 @@
 //  ASDisplayNode+FrameworkPrivate.h
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 //
@@ -137,9 +129,6 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
 
 // Returns the bounds of the node without reaching the view or layer
 - (CGRect)_locked_threadSafeBounds;
-
-// delegate to inform of ASInterfaceState changes (used by ASNodeController)
-@property (nonatomic, weak) id<ASInterfaceStateDelegate> interfaceStateDelegate;
 
 // The -pendingInterfaceState holds the value that will be applied to -interfaceState by the
 // ASCATransactionQueue. If already applied, it matches -interfaceState. Thread-safe access.
@@ -301,13 +290,18 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyStateChange(ASHierarc
 - (BOOL)_isLayoutTransitionInvalid;
 
 /**
+ * Same as @c -_isLayoutTransitionInvalid but must be called with the node's instance lock held.
+ */
+- (BOOL)_locked_isLayoutTransitionInvalid;
+
+/**
  * Internal method that can be overriden by subclasses to add specific behavior after the measurement of a layout
  * transition did finish.
  */
 - (void)_layoutTransitionMeasurementDidFinish;
 
 /**
- * Informs the node that hte pending layout transition did complete
+ * Informs the node that the pending layout transition did complete
  */
 - (void)_completePendingLayoutTransition;
 

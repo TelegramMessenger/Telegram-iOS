@@ -2,17 +2,9 @@
 //  _ASCoreAnimationExtras.mm
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/_ASCoreAnimationExtras.h>
@@ -26,6 +18,11 @@ void ASDisplayNodeSetupLayerContentsWithResizableImage(CALayer *layer, UIImage *
 
 void ASDisplayNodeSetResizableContents(id<ASResizableContents> obj, UIImage *image)
 {
+  // FIXME (https://github.com/TextureGroup/Texture/issues/1046): This method does not currently handle UIImageResizingModeTile, which is the default.
+  // See also https://developer.apple.com/documentation/uikit/uiimage/1624157-resizingmode?language=objc
+  // I'm not sure of a way to use CALayer directly to perform such tiling on the GPU, though the stretch is handled by the GPU,
+  // and CALayer.h documents the fact that contentsCenter is used to stretch the pixels.
+
   if (image) {
     ASDisplayNodeCAssert(image.resizingMode == UIImageResizingModeStretch || UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero),
                          @"Image insets must be all-zero or resizingMode has to be UIImageResizingModeStretch. XCode assets default value is UIImageResizingModeTile which is not supported by Texture because of GPU-accelerated CALayer features.");
@@ -98,7 +95,7 @@ static const struct _UIContentModeStringLUTEntry UIContentModeDescriptionLUT[] =
 
 NSString *ASDisplayNodeNSStringFromUIContentMode(UIViewContentMode contentMode)
 {
-  for (auto &e : UIContentModeDescriptionLUT) {
+  for (let &e : UIContentModeDescriptionLUT) {
     if (e.contentMode == contentMode) {
       return e.string;
     }
@@ -108,7 +105,7 @@ NSString *ASDisplayNodeNSStringFromUIContentMode(UIViewContentMode contentMode)
 
 UIViewContentMode ASDisplayNodeUIContentModeFromNSString(NSString *string)
 {
-  for (auto &e : UIContentModeDescriptionLUT) {
+  for (let &e : UIContentModeDescriptionLUT) {
     if (ASObjectIsEqual(e.string, string)) {
       return e.contentMode;
     }
@@ -118,12 +115,12 @@ UIViewContentMode ASDisplayNodeUIContentModeFromNSString(NSString *string)
 
 NSString *const ASDisplayNodeCAContentsGravityFromUIContentMode(UIViewContentMode contentMode)
 {
-  for (auto &e : UIContentModeCAGravityLUT) {
+  for (let &e : UIContentModeCAGravityLUT) {
     if (e.contentMode == contentMode) {
       return e.string;
     }
   }
-  ASDisplayNodeCAssert(contentMode == UIViewContentModeRedraw, @"Encountered an unknown contentMode %zd. Is this a new version of iOS?", contentMode);
+  ASDisplayNodeCAssert(contentMode == UIViewContentModeRedraw, @"Encountered an unknown contentMode %ld. Is this a new version of iOS?", (long)contentMode);
   // Redraw is ok to return nil.
   return nil;
 }
@@ -140,7 +137,7 @@ UIViewContentMode ASDisplayNodeUIContentModeFromCAContentsGravity(NSString *cons
     return cachedModes[foundCacheIndex];
   }
   
-  for (auto &e : UIContentModeCAGravityLUT) {
+  for (let &e : UIContentModeCAGravityLUT) {
     if (ASObjectIsEqual(e.string, contentsGravity)) {
       UIViewContentMode foundContentMode = e.contentMode;
       

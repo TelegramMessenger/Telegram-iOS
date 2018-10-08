@@ -2,21 +2,14 @@
 //  ASAbsoluteLayoutSpec.mm
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/ASAbsoluteLayoutSpec.h>
 
+#import <AsyncDisplayKit/ASCollections.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
 #import <AsyncDisplayKit/ASLayoutSpecUtilities.h>
@@ -72,7 +65,8 @@
   };
   
   NSArray *children = self.children;
-  NSMutableArray *sublayouts = [NSMutableArray arrayWithCapacity:children.count];
+  ASLayout *rawSublayouts[children.count];
+  int i = 0;
 
   for (id<ASLayoutElement> child in children) {
     CGPoint layoutPosition = child.style.layoutPosition;
@@ -85,13 +79,14 @@
     
     ASLayout *sublayout = [child layoutThatFits:childConstraint parentSize:size];
     sublayout.position = layoutPosition;
-    [sublayouts addObject:sublayout];
+    rawSublayouts[i++] = sublayout;
   }
-  
+  let sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
+
   if (_sizing == ASAbsoluteLayoutSpecSizingSizeToFit || isnan(size.width)) {
     size.width = constrainedSize.min.width;
     for (ASLayout *sublayout in sublayouts) {
-      size.width  = MAX(size.width,  sublayout.position.x + sublayout.size.width);
+      size.width = MAX(size.width,  sublayout.position.x + sublayout.size.width);
     }
   }
   

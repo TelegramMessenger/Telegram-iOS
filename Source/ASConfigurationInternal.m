@@ -2,15 +2,12 @@
 //  ASConfigurationInternal.m
 //  Texture
 //
-//  Copyright (c) 2018-present, Pinterest, Inc.  All rights reserved.
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import "ASConfigurationInternal.h"
+#import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASConfiguration.h>
 #import <AsyncDisplayKit/ASConfigurationDelegate.h>
 #import <stdatomic.h>
@@ -20,6 +17,7 @@
 @implementation ASConfigurationManager {
   ASConfiguration *_config;
   dispatch_queue_t _delegateQueue;
+  BOOL _frameworkInitialized;
   _Atomic(ASExperimentalFeatures) _activatedExperiments;
 }
 
@@ -53,6 +51,21 @@
     }
   }
   return self;
+}
+
+- (void)frameworkDidInitialize
+{
+  ASDisplayNodeAssertMainThread();
+  if (_frameworkInitialized) {
+    ASDisplayNodeFailAssert(@"Framework initialized twice.");
+    return;
+  }
+  _frameworkInitialized = YES;
+  
+  let delegate = _config.delegate;
+  if ([delegate respondsToSelector:@selector(textureDidInitialize)]) {
+    [delegate textureDidInitialize];
+  }
 }
 
 - (BOOL)activateExperimentalFeature:(ASExperimentalFeatures)requested
@@ -93,4 +106,9 @@
 BOOL ASActivateExperimentalFeature(ASExperimentalFeatures feature)
 {
   return [ASGetSharedConfigMgr() activateExperimentalFeature:feature];
+}
+
+void ASNotifyInitialized()
+{
+  [ASGetSharedConfigMgr() frameworkDidInitialize];
 }

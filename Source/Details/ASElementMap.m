@@ -2,17 +2,9 @@
 //  ASElementMap.m
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #ifndef MINIMAL_ASDK
@@ -246,7 +238,7 @@
   NSInteger sectionCount = _sectionsOfItems.count;
   if (section >= sectionCount || section < 0) {
     if (assert) {
-      ASDisplayNodeFailAssert(@"Invalid section index %zd when there are only %zd sections!", section, sectionCount);
+      ASDisplayNodeFailAssert(@"Invalid section index %ld when there are only %ld sections!", (long)section, (long)sectionCount);
     }
     return NO;
   } else {
@@ -274,7 +266,7 @@
   NSInteger item = indexPath.item;
   if (item >= itemCount || item < 0) {
     if (assert) {
-      ASDisplayNodeFailAssert(@"Invalid item index %zd in section %zd which only has %zd items!", item, section, itemCount);
+      ASDisplayNodeFailAssert(@"Invalid item index %ld in section %ld which only has %ld items!", (long)item, (long)section, (long)itemCount);
     }
     return NO;
   }

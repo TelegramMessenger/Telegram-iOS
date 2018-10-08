@@ -1,10 +1,10 @@
-/**
- * XCTest extensions for CGGeometry.
- *
- * Prefer these to XCTAssert(CGRectEqualToRect(...)) because you get output
- * that tells you what went wrong.
- * Could use NSValue, but using strings makes the description messages shorter.
- */
+//
+//  ASXCTExtensions.h
+//  Texture
+//
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
+//
 
 #import <XCTest/XCTestAssertionsImpl.h>
 

@@ -1,92 +1,116 @@
 //
 //  PhotoModel.swift
-//  ASDKgram-Swift
+//  Texture
 //
-//  Created by Calum Harris on 07/01/2017.
-//
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 import UIKit
 
-typealias JSONDictionary = [String : Any]
+// MARK: ProfileImage
 
-struct PhotoModel {
-	
-	let url: String
-	let photoID: Int
-	let dateString: String
-	let descriptionText: String
+struct ProfileImage: Codable {
+    let large: String
+    let medium: String
+    let small: String
+}
+
+// MARK: UserModel
+
+struct UserModel: Codable {
+    let userName: String
+    let profileImages: ProfileImage
+    
+    enum CodingKeys: String, CodingKey {
+        case userName = "username"
+        case profileImages = "profile_image"
+    }
+}
+
+extension UserModel {
+    var profileImage: String {
+        return profileImages.medium
+    }
+}
+
+// MARK: PhotoURL
+
+struct PhotoURL: Codable {
+    let full: String
+    let raw: String
+    let regular: String
+    let small: String
+    let thumb: String
+}
+
+// MARK: PhotoModel
+
+struct PhotoModel: Codable {
+    let urls: PhotoURL
+	let photoID: String
+    let uploadedDateString: String
+	let descriptionText: String?
 	let likesCount: Int
-	let ownerUserName: String
-	let ownerPicURL: String
-	
-	init?(dictionary: JSONDictionary) {
-		
-        guard let images = dictionary["images"] as? [[String: Any]],
-            let url = images[0]["url"] as? String,
-            let date = dictionary["created_at"] as? String,
-            let photoID = dictionary["id"] as? Int,
-            let descriptionText = dictionary["name"] as? String,
-            let likesCount = dictionary["positive_votes_count"] as? Int else
-        { print("error parsing JSON within PhotoModel Init"); return nil }
-		
-		guard let user = dictionary["user"] as? JSONDictionary,
-            let username = user["username"] as? String,
-            let ownerPicURL = user["userpic_url"] as? String else
-        { print("error parsing JSON within PhotoModel Init"); return nil }
-		
-		self.url = url
-		self.photoID = photoID
-		self.descriptionText = descriptionText
-		self.likesCount = likesCount
-		self.dateString = date
-		self.ownerUserName = username
-		self.ownerPicURL = ownerPicURL
-	}
+    let width: Int
+    let height: Int
+    let user: UserModel
+
+    enum CodingKeys: String, CodingKey {
+        case photoID = "id"
+        case urls = "urls"
+        case uploadedDateString = "created_at"
+        case descriptionText = "description"
+        case likesCount = "likes"
+        case width = "width"
+        case height = "height"
+        case user = "user"
+    }
+}
+
+extension PhotoModel {
+    var url: String {
+        return urls.regular
+    }
 }
 
 extension PhotoModel {
 	
 	// MARK: - Attributed Strings
 	
-	func attrStringForUserName(withSize size: CGFloat) -> NSAttributedString {
-		let attr = [
+	func attributedStringForUserName(withSize size: CGFloat) -> NSAttributedString {
+		let attributes = [
 			NSForegroundColorAttributeName : UIColor.darkGray,
 			NSFontAttributeName: UIFont.boldSystemFont(ofSize: size)
 		]
-		return NSAttributedString(string: self.ownerUserName, attributes: attr)
+		return NSAttributedString(string: user.userName, attributes: attributes)
 	}
 	
-	func attrStringForDescription(withSize size: CGFloat) -> NSAttributedString {
-		let attr = [
+	func attributedStringForDescription(withSize size: CGFloat) -> NSAttributedString {
+		let attributes = [
 			NSForegroundColorAttributeName : UIColor.darkGray,
 			NSFontAttributeName: UIFont.systemFont(ofSize: size)
 		]
-		return NSAttributedString(string: self.descriptionText, attributes: attr)
+		return NSAttributedString(string: descriptionText ?? "", attributes: attributes)
 	}
 	
-	func attrStringLikes(withSize size: CGFloat) -> NSAttributedString {
+	func attributedStringLikes(withSize size: CGFloat) -> NSAttributedString {
+        guard let formattedLikesNumber = NumberFormatter.decimalNumberFormatter.string(from: NSNumber(value: likesCount)) else {
+            return NSAttributedString()
+        }
 		
-		let formatter = NumberFormatter()
-		formatter.numberStyle = .decimal
-		let formattedLikesNumber: String? = formatter.string(from: NSNumber(value: self.likesCount))
-		let likesString: String = "\(formattedLikesNumber!) Likes"
-		let textAttr = [NSForegroundColorAttributeName : UIColor.mainBarTintColor(), NSFontAttributeName: UIFont.systemFont(ofSize: size)]
-		let likesAttrString = NSAttributedString(string: likesString, attributes: textAttr)
+        let likesAttributes = [
+            NSForegroundColorAttributeName : UIColor.mainBarTintColor,
+            NSFontAttributeName: UIFont.systemFont(ofSize: size)
+        ]
+		let likesAttrString = NSAttributedString(string: "\(formattedLikesNumber) Likes", attributes: likesAttributes)
 		
-		let heartAttr = [NSForegroundColorAttributeName : UIColor.red, NSFontAttributeName: UIFont.systemFont(ofSize: size)]
-		let heartAttrString = NSAttributedString(string: "♥︎ ", attributes: heartAttr)
+		let heartAttributes = [
+            NSForegroundColorAttributeName : UIColor.red,
+            NSFontAttributeName: UIFont.systemFont(ofSize: size)
+        ]
+		let heartAttrString = NSAttributedString(string: "♥︎ ", attributes: heartAttributes)
 		
 		let combine = NSMutableAttributedString()
 		combine.append(heartAttrString)
@@ -94,32 +118,16 @@ extension PhotoModel {
 		return combine
 	}
 	
-	func attrStringForTimeSinceString(withSize size: CGFloat) -> NSAttributedString {
-		
-		let attr = [
-			NSForegroundColorAttributeName : UIColor.mainBarTintColor(),
+	func attributedStringForTimeSinceString(withSize size: CGFloat) -> NSAttributedString {
+        guard let date = Date.iso8601Formatter.date(from: self.uploadedDateString) else {
+            return NSAttributedString();
+        }
+
+        let attributes = [
+			NSForegroundColorAttributeName : UIColor.mainBarTintColor,
 			NSFontAttributeName: UIFont.systemFont(ofSize: size)
 		]
 		
-		let date = Date.iso8601Formatter.date(from: self.dateString)!
-		return NSAttributedString(string: timeStringSince(fromConverted: date), attributes: attr)
-	}
-	
-	private func timeStringSince(fromConverted date: Date) -> String {
-		let diffDates = NSCalendar.current.dateComponents([.day, .hour, .second], from: date, to: Date())
-		
-		if let week = diffDates.day, week > 7 {
-			return "\(week / 7)w"
-		} else if let day = diffDates.day, day > 0 {
-			return "\(day)d"
-		} else if let hour = diffDates.hour, hour > 0 {
-			return "\(hour)h"
-		} else if let second = diffDates.second, second > 0 {
-			return "\(second)s"
-		} else if let zero = diffDates.second, zero == 0 {
-			return "1s"
-		} else {
-			return "ERROR"
-		}
+		return NSAttributedString(string: Date.timeStringSince(fromConverted: date), attributes: attributes)
 	}
 }

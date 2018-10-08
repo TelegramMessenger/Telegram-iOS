@@ -1,9 +1,9 @@
 //
 //  TailLoadingNode.h
-//  Sample
+//  Texture
 //
-//  Created by Adlai Holler on 1/3/17.
-//  Copyright © 2017 Facebook. All rights reserved.
+//  Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <AsyncDisplayKit/AsyncDisplayKit.h>

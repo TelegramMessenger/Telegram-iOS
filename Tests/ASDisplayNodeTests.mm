@@ -2,17 +2,9 @@
 //  ASDisplayNodeTests.mm
 //  Texture
 //
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the /ASDK-Licenses directory of this source tree. An additional
-//  grant of patent rights can be found in the PATENTS file in the same directory.
-//
-//  Modifications to this file made after 4/13/2017 are: Copyright (c) 2017-present,
-//  Pinterest, Inc.  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 #import <QuartzCore/QuartzCore.h>
@@ -26,6 +18,7 @@
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
+#import <AsyncDisplayKit/ASDisplayNodeCornerLayerDelegate.h>
 #import "ASDisplayNodeTestsHelper.h"
 #import <AsyncDisplayKit/UIView+ASConvenience.h>
 #import <AsyncDisplayKit/ASCellNode.h>
@@ -189,6 +182,11 @@ for (ASDisplayNode *n in @[ nodes ]) {\
   _displayWillStartCount++;
 }
 
+- (CALayer *__strong (*)[NUM_CLIP_CORNER_LAYERS])clipCornerLayers
+{
+  return &self->_clipCornerLayers;
+}
+
 @end
 
 @interface ASSynchronousTestDisplayNodeViaViewClass : ASDisplayNode
@@ -266,6 +264,14 @@ for (ASDisplayNode *n in @[ nodes ]) {\
   return NO;
 }
 
+@end
+
+@interface ASTestResponderNodeWithOverride : ASDisplayNode
+@end
+@implementation ASTestResponderNodeWithOverride
+- (BOOL)canBecomeFirstResponder {
+  return YES;
+}
 @end
 
 @interface ASTestViewController: ASViewController<ASDisplayNode *>
@@ -356,6 +362,21 @@ for (ASDisplayNode *n in @[ nodes ]) {\
   // If the textNode resigns it's first responder the view should not be the first responder
   XCTAssertTrue([window firstResponder] == nil);
   XCTAssertFalse([textNode.view isFirstResponder]);
+}
+
+- (void)testResponderOverrrideCanBecomeFirstResponder
+{
+  UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  ASTestResponderNodeWithOverride *node = [[ASTestResponderNodeWithOverride alloc] init];
+  
+  // We have to add the text node to a window otherwise the responder methods responses are undefined
+  // This will also create the backing view of the node
+  [window addSubnode:node];
+  [window makeKeyAndVisible];
+  
+  XCTAssertTrue([node canBecomeFirstResponder]);
+  XCTAssertTrue([node becomeFirstResponder]);
+  XCTAssertTrue([window firstResponder] == node.view);
 }
 
 - (void)testUnsupportedResponderSetupWillThrow
@@ -2397,6 +2418,77 @@ static bool stringContainsPointer(NSString *description, id p) {
   XCTAssertThrowsSpecificNamed([node calculateLayoutThatFits:ASSizeRangeMake(CGSizeMake(100, 100))], NSException, NSInternalInconsistencyException);
 }
 
+- (void)testThatStackSpecOrdersSubnodesCorrectlyRandomness
+{
+  // This test ensures that the z-order of nodes matches the stack spec, including after several random relayouts / transitions.
+  ASDisplayNode *node = [[ASDisplayNode alloc] init];
+  node.automaticallyManagesSubnodes = YES;
+
+  DeclareNodeNamed(a);
+  DeclareNodeNamed(b);
+  DeclareNodeNamed(c);
+  DeclareNodeNamed(d);
+  DeclareNodeNamed(e);
+  DeclareNodeNamed(f);
+  DeclareNodeNamed(g);
+  DeclareNodeNamed(h);
+  DeclareNodeNamed(i);
+  DeclareNodeNamed(j);
+
+  NSMutableArray *allNodes = [@[a, b, c, d, e, f, g, h, i, j] mutableCopy];
+  NSArray *testPrevious = @[];
+  NSArray __block *testPending = @[];
+
+  int len1 = 1 + arc4random_uniform(9);
+  for (NSUInteger n = 0; n < len1; n++) { // shuffle and add
+    [allNodes exchangeObjectAtIndex:n withObjectAtIndex:n + arc4random_uniform(10 - (uint32_t) n)];
+    testPrevious = [testPrevious arrayByAddingObject:allNodes[n]];
+  }
+
+  __block NSUInteger testCount = 0;
+  node.layoutSpecBlock = ^(ASDisplayNode *node, ASSizeRange size) {
+    ASStackLayoutSpec *stack = [ASStackLayoutSpec verticalStackLayoutSpec];
+
+    if (testCount++ == 0) {
+      stack.children = testPrevious;
+    }
+    else {
+      testPending = @[];
+      int len2 = 1 + arc4random_uniform(9);
+      for (NSUInteger n = 0; n < len2; n++) { // shuffle and add
+        [allNodes exchangeObjectAtIndex:n withObjectAtIndex:n + arc4random_uniform(10 - (uint32_t) n)];
+        testPending = [testPending arrayByAddingObject:allNodes[n]];
+      }
+      stack.children = testPending;
+    }
+
+    return stack;
+  };
+
+  ASDisplayNodeSizeToFitSize(node, CGSizeMake(100, 100));
+  [node.view layoutIfNeeded];
+
+  // Because automaticallyManagesSubnodes is used, the subnodes array is constructed from the layout spec's children.
+  NSString *expected = [[testPrevious valueForKey:@"debugName"] componentsJoinedByString:@","];
+  XCTAssert([node.subnodes isEqualToArray:testPrevious], @"subnodes: %@, array: %@", node.subnodes, testPrevious);
+  XCTAssertNodeSubnodeSubviewSublayerOrder(node, YES /* isLoaded */, NO /* isLayerBacked */,
+          expected, @"Initial order");
+
+  for (NSUInteger n = 0; n < 25; n++) {
+    [node invalidateCalculatedLayout];
+    [node.view setNeedsLayout];
+    [node.view layoutIfNeeded];
+
+
+    XCTAssert([node.subnodes isEqualToArray:testPending], @"subnodes: %@, array: %@", node.subnodes, testPending);
+    expected = [[testPending valueForKey:@"debugName"] componentsJoinedByString:@","];
+
+    XCTAssertEqualObjects(orderStringFromSubnodes(node), expected, @"Incorrect node order for Random order #%ld", (unsigned long) n);
+    XCTAssertEqualObjects(orderStringFromSubviews(node.view), expected, @"Incorrect subviews for Random order #%ld", (unsigned long) n);
+    XCTAssertEqualObjects(orderStringFromSublayers(node.layer), expected, @"Incorrect sublayers for Random order #%ld", (unsigned long) n);
+  }
+}
+
 - (void)testThatStackSpecOrdersSubnodesCorrectly
 {
   // This test ensures that the z-order of nodes matches the stack spec, including after relayout / transition.
@@ -2407,14 +2499,26 @@ static bool stringContainsPointer(NSString *description, id p) {
   DeclareNodeNamed(b);
   DeclareNodeNamed(c);
   DeclareNodeNamed(d);
+  DeclareNodeNamed(e);
 
   NSArray *nodesForwardOrder = @[a, b, c, d];
   NSArray *nodesReverseOrder = @[d, c, b, a];
+  NSArray *addAndMoveOrder = @[a, b, e, d, c];
   __block BOOL flipItemOrder = NO;
 
+  __block NSUInteger testCount = 0;
   node.layoutSpecBlock = ^(ASDisplayNode *node, ASSizeRange size) {
     ASStackLayoutSpec *stack = [ASStackLayoutSpec verticalStackLayoutSpec];
-    stack.children = flipItemOrder ? nodesReverseOrder : nodesForwardOrder;
+    switch(testCount) {
+      case 0:
+        stack.children = nodesForwardOrder; break;
+      case 1:
+        stack.children = nodesReverseOrder; break;
+      case 2:
+      default:
+        stack.children = addAndMoveOrder; break;
+    }
+    testCount++;
     return stack;
   };
 
@@ -2428,13 +2532,22 @@ static bool stringContainsPointer(NSString *description, id p) {
 
   flipItemOrder = YES;
   [node invalidateCalculatedLayout];
+  [node.view setNeedsLayout];
   [node.view layoutIfNeeded];
 
   // In this case, it's critical that the items are in the new order so that event handling and apparent z-position are correct.
   // FIXME: The reversal case is not currently passing.
-  // XCTAssert([node.subnodes isEqualToArray:nodesReverseOrder], @"subnodes: %@, array: %@", node.subnodes, nodesReverseOrder);
-  // XCTAssertNodeSubnodeSubviewSublayerOrder(node, YES /* isLoaded */, NO /* isLayerBacked */,
-  //                                          @"d,c,b,a", @"Reverse order");
+   XCTAssert([node.subnodes isEqualToArray:nodesReverseOrder], @"subnodes: %@, array: %@", node.subnodes, nodesReverseOrder);
+   XCTAssertNodeSubnodeSubviewSublayerOrder(node, YES /* isLoaded */, NO /* isLayerBacked */,
+                                            @"d,c,b,a", @"Reverse order");
+
+  [node invalidateCalculatedLayout];
+  [node.view setNeedsLayout];
+  [node.view layoutIfNeeded];
+  XCTAssert([node.subnodes isEqualToArray:addAndMoveOrder], @"subnodes: %@, array: %@", node.subnodes, addAndMoveOrder);
+  XCTAssertNodeSubnodeSubviewSublayerOrder(node, YES /* isLoaded */, NO /* isLayerBacked */,
+          @"a,b,e,d,c", @"AddAndMove order");
+
 }
 
 - (void)testThatOverlaySpecOrdersSubnodesCorrectly
@@ -2576,6 +2689,18 @@ static bool stringContainsPointer(NSString *description, id p) {
 {
   ASSynchronousTestDisplayNodeViaLayerClass *node = [[ASSynchronousTestDisplayNodeViaLayerClass alloc] init];
   XCTAssertTrue([node isSynchronous], @"Node should be synchronous if viewClass is ovewritten and not a subclass of _ASDisplayView");
+}
+
+- (void)testCornerRoundingTypeClippingRoundedCornersIsUsingASDisplayNodeCornerLayerDelegate
+{
+  ASTestDisplayNode *node = [[ASTestDisplayNode alloc] init];
+  node.cornerRoundingType = ASCornerRoundingTypeClipping;
+  node.cornerRadius = 10.0;
+  auto l = node.clipCornerLayers;
+  for (int i = 0; i < NUM_CLIP_CORNER_LAYERS; i++) {
+    CALayer *cornerLayer = (*l)[i];
+    XCTAssertTrue([cornerLayer.delegate isKindOfClass:[ASDisplayNodeCornerLayerDelegate class]], @"");
+  }
 }
 
 @end

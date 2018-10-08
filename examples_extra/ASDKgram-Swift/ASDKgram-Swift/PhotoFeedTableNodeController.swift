@@ -1,104 +1,95 @@
 //
 //  PhotoFeedTableNodeController.swift
-//  ASDKgram-Swift
+//  Texture
 //
-//  Created by Calum Harris on 06/01/2017.
-//
-//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-//  FACEBOOK BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-//   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  Copyright (c) Facebook, Inc. and its affiliates.  All rights reserved.
+//  Changes after 4/13/2017 are: Copyright (c) Pinterest, Inc.  All rights reserved.
+//  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
 import AsyncDisplayKit
 
 class PhotoFeedTableNodeController: ASViewController<ASTableNode> {
+    
+    // MARK: Lifecycle
 	
-	var activityIndicator: UIActivityIndicatorView!
-	var photoFeed: PhotoFeedModel
+    private lazy var activityIndicatorView: UIActivityIndicatorView = {
+        return UIActivityIndicatorView(activityIndicatorStyle: .gray)
+    }()
+	
+	var photoFeedModel = PhotoFeedModel(photoFeedModelType: .photoFeedModelTypePopular)
 	
 	init() {
-		photoFeed = PhotoFeedModel(initWithPhotoFeedModelType: .photoFeedModelTypePopular, requiredImageSize: screenSizeForWidth)
-		super.init(node: ASTableNode())
-		self.navigationItem.title = "ASDK"
+        super.init(node: ASTableNode())
 		
+        navigationItem.title = "ASDK"
 	}
 	
 	required init?(coder aDecoder: NSCoder) {
 		fatalError("init(coder:) has not been implemented")
 	}
+    
+    // MAKR: UIViewController
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		setupActivityIndicator()
+        
 		node.allowsSelection = false
-		node.view.separatorStyle = .none
 		node.dataSource = self
 		node.delegate = self
 		node.leadingScreensForBatching = 2.5
-		navigationController?.hidesBarsOnSwipe = true
+        node.view.separatorStyle = .none
+        
+        navigationController?.hidesBarsOnSwipe = true
+        
+        node.view.addSubview(activityIndicatorView)
 	}
-	
-	// helper functions
-	func setupActivityIndicator() {
-		let activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
-		self.activityIndicator = activityIndicator
-		let bounds = self.node.frame
-		var refreshRect = activityIndicator.frame
-		refreshRect.origin = CGPoint(x: (bounds.size.width - activityIndicator.frame.size.width) / 2.0, y: (bounds.size.height - activityIndicator.frame.size.height) / 2.0)
-		activityIndicator.frame = refreshRect
-		self.node.view.addSubview(activityIndicator)
-	}
-	
-	var screenSizeForWidth: CGSize = {
-		let screenRect = UIScreen.main.bounds
-		let screenScale = UIScreen.main.scale
-		return CGSize(width: screenRect.size.width * screenScale, height: screenRect.size.width * screenScale)
-	}()
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+      
+        // Center the activity indicator view
+        let bounds = node.bounds
+        activityIndicatorView.frame.origin = CGPoint(
+            x: (bounds.width - activityIndicatorView.frame.width) / 2.0,
+            y: (bounds.height - activityIndicatorView.frame.height) / 2.0
+        )
+    }
 	
 	func fetchNewBatchWithContext(_ context: ASBatchContext?) {
 		DispatchQueue.main.async {
-			self.activityIndicator.startAnimating()
+			self.activityIndicatorView.startAnimating()
 		}
 
-		photoFeed.updateNewBatchOfPopularPhotos() { additions, connectionStatus in
+		photoFeedModel.updateNewBatchOfPopularPhotos() { additions, connectionStatus in
 			switch connectionStatus {
 			case .connected:
-				self.activityIndicator.stopAnimating()
+				self.activityIndicatorView.stopAnimating()
 				self.addRowsIntoTableNode(newPhotoCount: additions)
 				context?.completeBatchFetching(true)
 			case .noConnection:
-				self.activityIndicator.stopAnimating()
-				if context != nil {
-					context!.completeBatchFetching(true)
-				}
-				break
+				self.activityIndicatorView.stopAnimating()
+                context?.completeBatchFetching(true)
 			}
 		}
 	}
 	
 	func addRowsIntoTableNode(newPhotoCount newPhotos: Int) {
-		let indexRange = (photoFeed.photos.count - newPhotos..<photoFeed.photos.count)
+		let indexRange = (photoFeedModel.numberOfItems - newPhotos..<photoFeedModel.numberOfItems)
 		let indexPaths = indexRange.map { IndexPath(row: $0, section: 0) }
 		node.insertRows(at: indexPaths, with: .none)
 	}
 }
 
+// MARK: ASTableDataSource / ASTableDelegate
+
 extension PhotoFeedTableNodeController: ASTableDataSource, ASTableDelegate {
-	
 	func tableNode(_ tableNode: ASTableNode, numberOfRowsInSection section: Int) -> Int {
-		return photoFeed.numberOfItemsInFeed
+		return photoFeedModel.numberOfItems
 	}
 	
 	func tableNode(_ tableNode: ASTableNode, nodeBlockForRowAt indexPath: IndexPath) -> ASCellNodeBlock {
-		let photo = photoFeed.photos[indexPath.row]
+        let photo = photoFeedModel.itemAtIndexPath(indexPath)
 		let nodeBlock: ASCellNodeBlock = { _ in
 			return PhotoTableNodeCell(photoModel: photo)
 		}

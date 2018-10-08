@@ -204,7 +204,7 @@ As discussed in the <a href = "containers-astablenode.html">previous section</a>
 
 Right now, cells will grow to fit their constrained size and will be laid out by whatever `UICollectionViewLayout` you provide.
 
-Soon, there will be a method such as `ASTableNode`'s `-constrainedSizeForRow:` but at the moment, if you'd like to constrain the size of a cell used in a collection node, you need to wrap your layoutSpec object in an `ASStaticLayoutSpec` and provide it with a 
+You can also constrain cells used in a collection node using `ASCollectionNode`'s `-constrainedSizeForItemAtIndexPath:`.
 
 ### Examples
 
