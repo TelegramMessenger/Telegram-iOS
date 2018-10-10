@@ -43,6 +43,11 @@ enum ChatListIntermediateEntry {
     }
 }
 
+public enum ChatListRelativePosition {
+    case later(than: ChatListIndex?)
+    case earlier(than: ChatListIndex?)
+}
+
 private enum ChatListEntryType: Int8 {
     case message = 1
     case hole = 2
@@ -635,16 +640,31 @@ final class ChatListTable: Table {
         return entries
     }
     
-    func getEarliestUnreadChatListIndex(postbox: Postbox, filtered: Bool, earlierThan: ChatListIndex?) -> ChatListIndex? {
+    func getRelativeUnreadChatListIndex(postbox: Postbox, filtered: Bool, position: ChatListRelativePosition) -> ChatListIndex? {
         let groupId: PeerGroupId? = nil
         var result: ChatListIndex?
+        
         let lower: ValueBoxKey
-        if let earlierThan = earlierThan {
-            lower = self.key(groupId: groupId, index: earlierThan, type: .message)
-        } else {
-            lower = self.lowerBound(groupId: groupId)
+        let upper: ValueBoxKey
+        
+        switch position {
+            case let .earlier(index):
+                upper = self.upperBound(groupId: groupId)
+                if let index = index {
+                    lower = self.key(groupId: groupId, index: index, type: .message)
+                } else {
+                    lower = self.lowerBound(groupId: groupId)
+                }
+            case let .later(index):
+                upper = self.lowerBound(groupId: groupId)
+                if let index = index {
+                    lower = self.key(groupId: groupId, index: index, type: .message)
+                } else {
+                    lower = self.upperBound(groupId: groupId)
+            }
         }
-        self.valueBox.range(self.table, start: lower, end: self.upperBound(groupId: groupId), values: { key, value in
+        
+        self.valueBox.range(self.table, start: lower, end: upper, values: { key, value in
             let (keyGroupId, pinningIndex, messageIndex, type) = extractKey(key)
             assert(groupId == keyGroupId)
             

@@ -856,9 +856,9 @@ public final class Transaction {
         self.postbox?.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
     }
     
-    public func getEarliestUnreadChatListIndex(filtered: Bool, earlierThan: ChatListIndex?) -> ChatListIndex? {
+    public func getRelativeUnreadChatListIndex(filtered: Bool, position: ChatListRelativePosition) -> ChatListIndex? {
         assert(!self.disposed)
-        return self.postbox?.getEarliestUnreadChatListIndex(filtered: filtered, earlierThan: earlierThan)
+        return self.postbox?.getRelativeUnreadChatListIndex(filtered: filtered, position: position)
     }
     
     public func getDeviceContactImportInfo(_ identifier: ValueBoxKey) -> PostboxCoding? {
@@ -3272,8 +3272,8 @@ public final class Postbox {
         self.invalidatedMessageHistoryTagsSummaryTable.remove(entry, operations: &self.currentInvalidateMessageTagSummaries)
     }
     
-    fileprivate func getEarliestUnreadChatListIndex(filtered: Bool, earlierThan: ChatListIndex?) -> ChatListIndex? {
-        return self.chatListTable.getEarliestUnreadChatListIndex(postbox: self, filtered: filtered, earlierThan: earlierThan)
+    fileprivate func getRelativeUnreadChatListIndex(filtered: Bool, position: ChatListRelativePosition) -> ChatListIndex? {
+        return self.chatListTable.getRelativeUnreadChatListIndex(postbox: self, filtered: filtered, position: position)
     }
     
     func getMessage(_ id: MessageId) -> Message? {
