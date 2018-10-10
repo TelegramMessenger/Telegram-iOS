@@ -254,14 +254,26 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
     // Therefore we have to be careful in methods that are involved with setNeedsDisplay to not run into a deadlock
     [self setNeedsDisplay];
     
+<<<<<<< HEAD
     if (_displayWithoutProcessing && ASDisplayNodeThreadIsMain()) {
       BOOL stretchable = !UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero);
       if (stretchable) {
-        ASDisplayNodeSetResizableContents(self, image);
+        ASDisplayNodeSetupLayerContentsWithResizableImage(self.layer, image);
       } else {
         self.contents = (id)image.CGImage;
       }
       return;
+=======
+    // For debugging purposes we don't care about locking for now
+    if ([ASImageNode shouldShowImageScalingOverlay] && _debugLabelNode == nil) {
+      // do not use ASPerformBlockOnMainThread here, if it performs the block synchronously it will continue
+      // holding the lock while calling addSubnode.
+      dispatch_async(dispatch_get_main_queue(), ^{
+        _debugLabelNode = [[ASTextNode alloc] init];
+        _debugLabelNode.layerBacked = YES;
+        [self addSubnode:_debugLabelNode];
+      });
+>>>>>>> 565da7d4935740d12fc204aa061faf093831da1e
     }
   } else {
     self.contents = nil;

@@ -43,29 +43,69 @@ CGSize const ASLayoutElementParentSizeUndefined = {ASLayoutElementParentDimensio
 int32_t const ASLayoutElementContextInvalidTransitionID = 0;
 int32_t const ASLayoutElementContextDefaultTransitionID = ASLayoutElementContextInvalidTransitionID + 1;
 
+<<<<<<< HEAD
+#ifdef MINIMAL_ASDK
+static ASLayoutElementContext *mainThreadTlsContext = nil;
+
+static ASLayoutElementContext *get_tls_context() {
+  if ([NSThread isMainThread]) {
+    return mainThreadTlsContext;
+  } else {
+    return [NSThread currentThread].threadDictionary[@"ASDK_tls_context"];
+  }
+}
+
+static void set_tls_context(ASLayoutElementContext *value) {
+  if ([NSThread isMainThread]) {
+    mainThreadTlsContext = value;
+  } else {
+    if (value != nil) {
+      [NSThread currentThread].threadDictionary[@"ASDK_tls_context"] = value;
+    } else {
+      [[NSThread currentThread].threadDictionary removeObjectForKey:@"ASDK_tls_context"];
+    }
+  }
+}
+#else
+=======
 #if AS_TLS_AVAILABLE
 
+>>>>>>> 565da7d4935740d12fc204aa061faf093831da1e
 static _Thread_local __unsafe_unretained ASLayoutElementContext *tls_context;
+#endif
 
 void ASLayoutElementPushContext(ASLayoutElementContext *context)
 {
+#ifdef MINIMAL_ASDK
+  // NOTE: It would be easy to support nested contexts – just use an NSMutableArray here.
+  ASDisplayNodeCAssertNil(get_tls_context(), @"Nested ASLayoutElementContexts aren't supported.");
+  
+  ;
+  set_tls_context(context);
+#else
   // NOTE: It would be easy to support nested contexts – just use an NSMutableArray here.
   ASDisplayNodeCAssertNil(tls_context, @"Nested ASLayoutElementContexts aren't supported.");
   
   tls_context = (__bridge ASLayoutElementContext *)(__bridge_retained CFTypeRef)context;
+#endif
 }
 
 ASLayoutElementContext *ASLayoutElementGetCurrentContext()
 {
   // Don't retain here. Caller will retain if it wants to!
-  return tls_context;
+  return get_tls_context();
 }
 
 void ASLayoutElementPopContext()
 {
+#ifdef MINIMAL_ASDK
+  ASDisplayNodeCAssertNotNil(get_tls_context(), @"Attempt to pop context when there wasn't a context!");
+  set_tls_context(nil);
+#else
   ASDisplayNodeCAssertNotNil(tls_context, @"Attempt to pop context when there wasn't a context!");
   CFRelease((__bridge CFTypeRef)tls_context);
   tls_context = nil;
+#endif
 }
 
 #else

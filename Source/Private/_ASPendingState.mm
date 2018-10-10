@@ -839,24 +839,6 @@ static UIColor *defaultTintColor = nil;
   if (flags.setSublayerTransform)
     layer.sublayerTransform = sublayerTransform;
 
-  if (flags.setContents)
-    layer.contents = contents;
-
-  if (flags.setContentsGravity)
-    layer.contentsGravity = contentsGravity;
-
-  if (flags.setContentsRect)
-    layer.contentsRect = contentsRect;
-
-  if (flags.setContentsCenter)
-    layer.contentsCenter = contentsCenter;
-
-  if (flags.setContentsScale)
-    layer.contentsScale = contentsScale;
-
-  if (flags.setRasterizationScale)
-    layer.rasterizationScale = rasterizationScale;
-
   if (flags.setClipsToBounds)
     layer.masksToBounds = clipsToBounds;
 
@@ -916,6 +898,24 @@ static UIColor *defaultTintColor = nil;
 
   ASPendingStateApplyMetricsToLayer(self, layer);
   
+  if (flags.setContents)
+    layer.contents = contents;
+  
+  if (flags.setContentsScale)
+    layer.contentsScale = contentsScale;
+  
+  if (flags.setRasterizationScale)
+    layer.rasterizationScale = rasterizationScale;
+  
+  if (flags.setContentsGravity)
+    layer.contentsGravity = contentsGravity;
+  
+  if (flags.setContentsRect)
+    layer.contentsRect = contentsRect;
+  
+  if (flags.setContentsCenter)
+    layer.contentsCenter = contentsCenter;
+  
   if (flags.needsLayout)
     [layer setNeedsLayout];
   
@@ -957,24 +957,6 @@ static UIColor *defaultTintColor = nil;
 
   if (flags.setSublayerTransform)
     layer.sublayerTransform = sublayerTransform;
-
-  if (flags.setContents)
-    layer.contents = contents;
-
-  if (flags.setContentsGravity)
-    layer.contentsGravity = contentsGravity;
-
-  if (flags.setContentsRect)
-    layer.contentsRect = contentsRect;
-
-  if (flags.setContentsCenter)
-    layer.contentsCenter = contentsCenter;
-
-  if (flags.setContentsScale)
-    layer.contentsScale = contentsScale;
-
-  if (flags.setRasterizationScale)
-    layer.rasterizationScale = rasterizationScale;
 
   if (flags.setClipsToBounds)
     view.clipsToBounds = clipsToBounds;
@@ -1142,6 +1124,24 @@ static UIColor *defaultTintColor = nil;
   } else {
     ASPendingStateApplyMetricsToLayer(self, layer);
   }
+  
+  if (flags.setContents)
+    layer.contents = contents;
+  
+  if (flags.setContentsGravity)
+    layer.contentsGravity = contentsGravity;
+  
+  if (flags.setContentsRect)
+    layer.contentsRect = contentsRect;
+  
+  if (flags.setContentsCenter)
+    layer.contentsCenter = contentsCenter;
+  
+  if (flags.setContentsScale)
+    layer.contentsScale = contentsScale;
+  
+  if (flags.setRasterizationScale)
+    layer.rasterizationScale = rasterizationScale;
   
   if (flags.needsLayout)
     [view setNeedsLayout];

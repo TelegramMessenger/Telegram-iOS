@@ -11,11 +11,7 @@
 
 #pragma once
 
-#ifdef __i386__
-  #define AS_TLS_AVAILABLE 0
-#else
-  #define AS_TLS_AVAILABLE 1
-#endif
+#define AS_TLS_AVAILABLE 0
 
 #ifndef AS_USE_PHOTOS
 # define AS_USE_PHOTOS 0
