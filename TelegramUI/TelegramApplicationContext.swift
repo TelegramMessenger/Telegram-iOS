@@ -107,6 +107,12 @@ public final class TelegramApplicationContext {
     
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
     
+    public var isCurrent: Bool = false {
+        didSet {
+            self.mediaManager?.isCurrent = self.isCurrent
+        }
+    }
+    
     public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, account: Account?, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, postbox: Postbox) {
         if account != nil {
             self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)

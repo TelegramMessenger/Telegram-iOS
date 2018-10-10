@@ -483,7 +483,7 @@ private final class DeviceContactDataManagerImpl {
         var importableContactData: [String: (DeviceContactStableId, ImportableDeviceContactData)] = [:]
         for (stableId, basicData) in self.stableIdToBasicContactData {
             for phoneNumber in basicData.phoneNumbers {
-                let normalizedNumber = formatPhoneNumber(phoneNumber.value)
+                let normalizedNumber = phoneNumber.value
                 var replace = false
                 if let current = importableContactData[normalizedNumber] {
                     if stableId < current.0 {

@@ -46,6 +46,15 @@ public final class MediaManager: NSObject {
         return sharedAudioSession
     }
     
+    private let isCurrentPromise = ValuePromise<Bool>(false)
+    var isCurrent: Bool = false {
+        didSet {
+            if self.isCurrent != oldValue {
+                self.isCurrentPromise.set(self.isCurrent)
+            }
+        }
+    }
+    
     private let queue = Queue.mainQueue()
     
     private let postbox: Postbox
@@ -370,8 +379,11 @@ public final class MediaManager: NSObject {
         }
         
         self.globalAudioSessionForegroundDisposable.set((shouldKeepAudioSession |> deliverOnMainQueue).start(next: { [weak self] value in
-            if value {
-                self?.audioSession.dropAll()
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.isCurrent && value {
+                strongSelf.audioSession.dropAll()
             }
         }))
     }
