@@ -1,30 +1,27 @@
 import Foundation
 
+public struct OrderedContactsPeersUpdate {
+}
+
 final class MutableOrderedContactsView: MutablePostboxView {
     fileprivate let id: UInt32
     fileprivate var version: Int32 = 0
     
-    fileprivate var updatedPresences: [PeerId: PeerPresence] = [:]
-    fileprivate var updatedPeers: [Peer] = []
+    fileprivate var update: OrderedContactsPeersUpdate?
     
     init(postbox: Postbox) {
         self.id = postbox.takeNextUniqueId()
-        
-        for peerId in postbox.contactsTable.get() {
-            if let peer = postbox.peerTable.get(peerId) {
-                self.updatedPeers.append(peer)
-                if let presence = postbox.peerPresenceTable.get(peerId) {
-                    self.updatedPresences[peerId] = presence
-                }
-            }
-        }
     }
     
     func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
-        if !transaction.currentUpdatedPeerPresences.isEmpty {
-            
+        var updated = false
+        
+        if updated {
+            self.version += 1
+        } else {
+            self.update = nil
         }
-        return false
+        return updated
     }
     
     func immutableView() -> PostboxView {
@@ -35,13 +32,11 @@ final class MutableOrderedContactsView: MutablePostboxView {
 public final class OrderedContactsView: PostboxView {
     public let id: UInt32
     public let version: Int32
-    public let updatedPresences: [PeerId: PeerPresence]
-    public let updatedPeers: [Peer]
+    public let update: OrderedContactsPeersUpdate?
     
     init(_ view: MutableOrderedContactsView) {
         self.id = view.id
         self.version = view.version
-        self.updatedPresences = view.updatedPresences
-        self.updatedPeers = view.updatedPeers
+        self.update = view.update
     }
 }
