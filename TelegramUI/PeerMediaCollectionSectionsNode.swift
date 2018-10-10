@@ -40,13 +40,13 @@ final class PeerMediaCollectionSectionsNode: ASDisplayNode {
         self.segmentedControl.addTarget(self, action: #selector(indexChanged), for: .valueChanged)
     }
     
-    func updateLayout(width: CGFloat, additionalInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: PeerMediaCollectionInterfaceState) -> CGFloat {
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: PeerMediaCollectionInterfaceState) -> CGFloat {
         let panelHeight: CGFloat = 39.0 + additionalInset
         
         let controlHeight: CGFloat = 29.0
         let sideInset: CGFloat = 8.0
         transition.animateView {
-            self.segmentedControl.frame = CGRect(origin: CGPoint(x: sideInset, y: panelHeight - 11.0 - controlHeight), size: CGSize(width: width - sideInset * 2.0, height: controlHeight))
+            self.segmentedControl.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: panelHeight - 11.0 - controlHeight), size: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset, height: controlHeight))
         }
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))

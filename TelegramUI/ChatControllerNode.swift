@@ -736,7 +736,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var immediatelyLayoutInputContextPanelAndAnimateAppearance = false
-        if let inputContextPanelNode = inputContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.inputContextPanelNode, interfaceInteraction: self.interfaceInteraction) {
+        if let inputContextPanelNode = inputContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.inputContextPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction) {
             if inputContextPanelNode !== self.inputContextPanelNode {
                 dismissedInputContextPanelNode = self.inputContextPanelNode
                 self.inputContextPanelNode = inputContextPanelNode
@@ -1353,6 +1353,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let itemNode = itemNode as? ChatMessageItemView {
                 itemNode.updateAutomaticMediaDownloadSettings()
             }
+        }
+    }
+    
+    var isInputViewFocused: Bool {
+        if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
+            return inputPanelNode.isFocused
+        } else {
+            return false
         }
     }
     

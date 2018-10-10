@@ -215,7 +215,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             }
         }
         
-        let sectionsHeight = self.sectionsNode.updateLayout(width: layout.size.width, additionalInset: additionalInset, transition: transition, interfaceState: self.mediaCollectionInterfaceState)
+        let sectionsHeight = self.sectionsNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalInset: additionalInset, transition: transition, interfaceState: self.mediaCollectionInterfaceState)
         var sectionOffset: CGFloat = 0.0
         if primaryNavigationBarHeight.isZero {
             sectionOffset = -sectionsHeight - navigationBarHeightDelta

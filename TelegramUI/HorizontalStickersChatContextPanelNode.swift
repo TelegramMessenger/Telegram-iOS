@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import Display
+import SwiftSignalKit
 
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: StickerPackItem?
@@ -84,6 +85,7 @@ private func preparedGridEntryTransition(account: Account, from fromEntries: [St
 }
 
 final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
+    private var strings: PresentationStrings
     
     private let backgroundLeftNode: ASImageNode
     private let backgroundNode: ASImageNode
@@ -95,13 +97,13 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     private var currentEntries: [StickerEntry] = []
     private var queuedTransitions: [StickerEntryTransition] = []
     
+    public var controllerInteraction: ChatControllerInteraction?
     private let stickersInteraction: HorizontalStickersChatContextPanelInteraction
     
     private var stickerPreviewController: StickerPreviewController?
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        
-    
+        self.strings = strings
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
@@ -143,14 +145,85 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     override func didLoad() {
         super.didLoad()
         
-        let longTapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.previewGesture(_:)))
-        longTapRecognizer.tapActionAtPoint = { [weak self] location in
-            if let strongSelf = self, let _ = strongSelf.gridNode.itemNodeAtPoint(location) as? HorizontalStickerGridItemNode {
-                return .waitForHold(timeout: 0.2, acceptTap: false)
+        self.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
+            if let strongSelf = self {
+                let convertedPoint = strongSelf.gridNode.view.convert(point, from: strongSelf.view)
+                guard strongSelf.gridNode.bounds.contains(convertedPoint) else {
+                    return nil
+                }
+                
+                if let itemNode = strongSelf.gridNode.itemNodeAtPoint(strongSelf.view.convert(point, to: strongSelf.gridNode.view)) as? HorizontalStickerGridItemNode, let item = itemNode.stickerItem {
+                        return strongSelf.account.postbox.transaction { transaction -> Bool in
+                            return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
+                            }
+                            |> deliverOnMainQueue
+                            |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                                if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                    var menuItems: [PeekControllerMenuItem] = []
+                                    menuItems = [
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
+                                            controllerInteraction.sendSticker(.standalone(media: item.file))
+                                        }),
+                                        PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                            if let strongSelf = self {
+                                                if isStarred {
+                                                    let _ = removeSavedSticker(postbox: strongSelf.account.postbox, mediaId: item.file.fileId).start()
+                                                } else {
+                                                    let _ = addSavedSticker(postbox: strongSelf.account.postbox, network: strongSelf.account.network, file: item.file).start()
+                                                }
+                                            }
+                                        }),
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                                loop: for attribute in item.file.attributes {
+                                                    switch attribute {
+                                                    case let .Sticker(_, packReference, _):
+                                                        if let packReference = packReference {
+                                                            let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference, parentNavigationController: controllerInteraction.navigationController())
+                                                            controller.sendSticker = { file in
+                                                                if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                                                    controllerInteraction.sendSticker(file)
+                                                                }
+                                                            }
+                                                            
+                                                            controllerInteraction.navigationController()?.view.window?.endEditing(true)
+                                                            controllerInteraction.presentController(controller, nil)
+                                                        }
+                                                        break loop
+                                                    default:
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                        }),
+                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
+                                    ]
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: .pack(item), menu: menuItems))
+                                } else {
+                                    return nil
+                                }
+                            }
+                }
             }
-            return .fail
-        }
-        self.gridNode.view.addGestureRecognizer(longTapRecognizer)
+            return nil
+        }, present: { [weak self] content, sourceNode in
+            if let strongSelf = self {
+                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
+                    return sourceNode
+                })
+                strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
+                return controller
+            }
+            return nil
+        }, updateContent: { [weak self] content in
+            if let strongSelf = self {
+                var item: StickerPackItem?
+                if let content = content as? StickerPreviewPeekContent, case let .pack(contentItem) = content.item {
+                    item = contentItem
+                }
+                strongSelf.updatePreviewingItem(item: item, animated: true)
+            }
+        }))
     }
     
     func updateResults(_ results: [TelegramMediaFile]) {
@@ -244,26 +317,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         }
         return super.hitTest(point, with: event)
     }
-    
-    @objc func previewGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-        switch recognizer.state {
-            case .began:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture {
-                    if let itemNode = self.gridNode.itemNodeAtPoint(location) as? HorizontalStickerGridItemNode {
-                        self.updatePreviewingItem(item: itemNode.stickerItem, animated: true)
-                    }
-                }
-            case .ended, .cancelled:
-                self.updatePreviewingItem(item: nil, animated: true)
-            case .changed:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, case .hold = gesture, let itemNode = self.gridNode.itemNodeAtPoint(location) as? HorizontalStickerGridItemNode {
-                    self.updatePreviewingItem(item: itemNode.stickerItem, animated: true)
-                }
-            default:
-                break
-        }
-    }
-    
+        
     private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
         if self.stickersInteraction.previewedStickerItem != item {
             self.stickersInteraction.previewedStickerItem = item
@@ -272,30 +326,6 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                 if let itemNode = itemNode as? HorizontalStickerGridItemNode {
                     itemNode.updatePreviewing(animated: animated)
                 }
-            }
-            
-            if let item = item {
-                if let stickerPreviewController = self.stickerPreviewController {
-                    stickerPreviewController.updateItem(item)
-                } else {
-                    let stickerPreviewController = StickerPreviewController(account: self.account, item: item)
-                    self.stickerPreviewController = stickerPreviewController
-                    self.interfaceInteraction?.presentController(stickerPreviewController, StickerPreviewControllerPresentationArguments(transitionNode: { [weak self] item in
-                        if let strongSelf = self {
-                            var result: ASDisplayNode?
-                            strongSelf.gridNode.forEachItemNode { itemNode in
-                                if let itemNode = itemNode as? HorizontalStickerGridItemNode, itemNode.stickerItem == item {
-                                    result = itemNode.transitionNode()
-                                }
-                            }
-                            return result
-                        }
-                        return nil
-                    }))
-                }
-            } else if let stickerPreviewController = self.stickerPreviewController {
-                stickerPreviewController.dismiss()
-                self.stickerPreviewController = nil
             }
         }
     }

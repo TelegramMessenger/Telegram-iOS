@@ -386,7 +386,7 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds))
         entries.append(.privacyAndSecurity(presentationData.theme, SettingsItemIcons.security, presentationData.strings.Settings_PrivacySettings))
         entries.append(.dataAndStorage(presentationData.theme, SettingsItemIcons.dataAndStorage, presentationData.strings.Settings_ChatSettings))
-        entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.ChatSettings_Appearance.lowercased().capitalized))
+        entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.Settings_Appearance))
         entries.append(.language(presentationData.theme, SettingsItemIcons.language, presentationData.strings.Settings_AppLanguage, presentationData.strings.Localization_LanguageName))
         
         if hasPassport {
@@ -690,7 +690,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
         return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: PresentationResourcesRootController.tabSettingsIcon(presentationData.theme), selectedImage: PresentationResourcesRootController.tabSettingsSelectedIcon(presentationData.theme))
     })
     pushControllerImpl = { [weak controller] value in
-        (controller?.navigationController as? NavigationController)?.pushViewController(value)
+        (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
     }
     presentControllerImpl = { [weak controller] value, arguments in
         controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

@@ -7,6 +7,8 @@ import Postbox
 import TelegramCore
 
 func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+    let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
+    
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
     controller.dismissesByOutsideTap = true
     controller.hasSwipeGesture = true
@@ -31,7 +33,7 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
     var underlyingViews: [UIView] = []
     
     if canSendImageOrVideo {
-        let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false)!
+        let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false)!
         carouselItemView = carouselItem
         carouselItem.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
         carouselItem.recipientName = peer.displayTitle

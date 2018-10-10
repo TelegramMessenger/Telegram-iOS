@@ -235,11 +235,4 @@ public class ChatMessageItemView: ListViewItemNode {
             }
         }
     }
-    
-    override public var wantsScrollDynamics: Bool {
-        if let disableAnimations = self.item?.presentationData.disableAnimations {
-            return !disableAnimations
-        }
-        return true
-    }
 }

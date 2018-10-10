@@ -55,6 +55,8 @@ public final class TelegramApplicationContext {
     let fetchManager: FetchManager
     public var callManager: PresentationCallManager?
     
+    public var keyShortcutsController: KeyShortcutsController?
+    
     public let mediaManager: MediaManager?
     
     let locationManager: DeviceLocationManager?

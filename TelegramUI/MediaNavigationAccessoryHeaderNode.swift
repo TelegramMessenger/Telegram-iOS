@@ -25,6 +25,8 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     
     private let scrubbingNode: MediaPlayerScrubbingNode
     
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    
     var displayScrubber: Bool = true {
         didSet {
             self.scrubbingNode.isHidden = !self.displayScrubber
@@ -62,8 +64,8 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     
     var playbackItem: SharedMediaPlaylistItem? {
         didSet {
-            if !arePlaylistItemsEqual(self.playbackItem, oldValue) {
-                self.updateLayout(size: self.bounds.size, transition: .immediate)
+            if !arePlaylistItemsEqual(self.playbackItem, oldValue), let layout = validLayout {
+                self.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .immediate)
             }
         }
     }
@@ -205,7 +207,9 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor))
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, leftInset, rightInset)
+        
         let minHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
         
         var titleString: NSAttributedString?
@@ -281,12 +285,12 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame)
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width, y: minimizedTitleFrame.minY + 8.0), size: closeButtonSize))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - rightInset, y: minimizedTitleFrame.minY + 8.0), size: closeButtonSize))
         let rateButtonSize = CGSize(width: 24.0, height: minHeight)
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - 18.0 - rateButtonSize.width, y: 0.0), size: rateButtonSize))
-        transition.updateFrame(node: self.actionPlayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
-        transition.updateFrame(node: self.actionPauseNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
-        transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: 0.0, y: minimizedTitleFrame.minY - 4.0), size: CGSize(width: 40.0, height: 37.0)))
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - 18.0 - rateButtonSize.width - rightInset, y: 0.0), size: rateButtonSize))
+        transition.updateFrame(node: self.actionPlayNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
+        transition.updateFrame(node: self.actionPauseNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
+        transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: minimizedTitleFrame.minY - 4.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
 
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: minHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))

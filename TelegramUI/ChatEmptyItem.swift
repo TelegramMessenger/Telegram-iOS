@@ -183,11 +183,4 @@ final class ChatEmptyItemNode: ListViewItemNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
-    
-    override public var wantsScrollDynamics: Bool {
-        if let disableAnimations = self.item?.presentationData.disableAnimations {
-            return !disableAnimations
-        }
-        return true
-    }
 }

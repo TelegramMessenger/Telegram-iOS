@@ -255,8 +255,4 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             action?(self.localTimestamp)
         }
     }
-    
-    override public var wantsScrollDynamics: Bool {
-        return !self.presentationData.disableAnimations
-    }
 }

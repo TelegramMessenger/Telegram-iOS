@@ -66,7 +66,7 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
     return true
 }
 
-public final class ChatController: TelegramController, UIViewControllerPreviewingDelegate, UIDropInteractionDelegate {
+public final class ChatController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     public var peekActions: ChatControllerPeekActions = .standard
@@ -1957,7 +1957,6 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                     let (updatedState, updatedMode) = f(state.interfaceState.effectiveInputState, state.inputMode)
                     return state.updatedInterfaceState { interfaceState in
-                        
                         return interfaceState.withUpdatedEffectiveInputState(updatedState)
                         }.updatedInputMode({ _ in updatedMode })
                 })
@@ -4931,4 +4930,148 @@ public final class ChatController: TelegramController, UIViewControllerPreviewin
     private func commitPurposefulAction() {
         self.purposefulAction?()
     }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        let strings = self.presentationData.strings
+        
+        var inputShortcuts: [KeyShortcut]
+        if self.chatDisplayNode.isInputViewFocused {
+            inputShortcuts = [KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {
+                
+            })]
+        } else {
+            inputShortcuts = [KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        return state.updatedInterfaceState { interfaceState in
+                            return interfaceState.withUpdatedEffectiveInputState(interfaceState.effectiveInputState)
+                            }.updatedInputMode({ _ in ChatInputMode.text })
+                        })
+                }
+            }),
+            KeyShortcut(input: "/", modifiers: [], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        if state.interfaceState.effectiveInputState.inputText.length == 0 {
+                            return state.updatedInterfaceState { interfaceState in
+                                let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "/"))
+                                return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
+                            }.updatedInputMode({ _ in ChatInputMode.text })
+                        } else {
+                            return state
+                        }
+                    })
+                }
+            }),
+            KeyShortcut(input: "2", modifiers: [.shift], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        if state.interfaceState.effectiveInputState.inputText.length == 0 {
+                            return state.updatedInterfaceState { interfaceState in
+                                let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "@"))
+                                return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
+                            }.updatedInputMode({ _ in ChatInputMode.text })
+                        } else {
+                            return state
+                        }
+                    })
+                }
+            }),
+            KeyShortcut(input: "3", modifiers: [.shift], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        if state.interfaceState.effectiveInputState.inputText.length == 0 {
+                            return state.updatedInterfaceState { interfaceState in
+                                let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "#"))
+                                return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
+                            }.updatedInputMode({ _ in ChatInputMode.text })
+                        } else {
+                            return state
+                        }
+                    })
+                }
+            })
+            ]
+            
+            if true {
+                inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
+                    if let strongSelf = self {
+                       
+                    }
+                }))
+            }
+        }
+        
+        let otherShortcuts: [KeyShortcut] = [
+            KeyShortcut(title: strings.KeyCommand_ScrollUp, input: UIKeyInputUpArrow, modifiers: [.shift], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.chatDisplayNode.historyNode.scrollWithDeltaOffset(-75)
+                }
+            }),
+            KeyShortcut(title: strings.KeyCommand_ScrollDown, input: UIKeyInputDownArrow, modifiers: [.shift], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.chatDisplayNode.historyNode.scrollWithDeltaOffset(75)
+                }
+            }),
+            KeyShortcut(title: strings.KeyCommand_ChatInfo, input: "I", modifiers: [.command, .control], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.interfaceInteraction?.openPeerInfo()
+                }
+            }),
+            KeyShortcut(input: "/", modifiers: [.command], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        return state.updatedInterfaceState { interfaceState in
+                            return interfaceState.withUpdatedEffectiveInputState(interfaceState.effectiveInputState)
+                        }.updatedInputMode({ _ in ChatInputMode.media(mode: .other, expanded: nil) })
+                    })
+                }
+            }),
+            KeyShortcut(input: "W", modifiers: [.command], action: {
+                
+            })
+        ]
+        
+        return inputShortcuts + otherShortcuts
+    }
+    
+    
+//    NSMutableArray *commands = [[NSMutableArray alloc] init];
+//
+//    if (!_inputTextPanel.maybeInputField.isFirstResponder)
+//    {
+//    TGKeyCommand *focusKeyCommand = [TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.FocusOnInputField") input:@"\r" modifierFlags:0];
+//
+//    if ([self canEditLastMessage])
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputUpArrow modifierFlags:0]];
+//    }
+//    else
+//    {
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.SendMessage") input:@"\r" modifierFlags:0]];
+//
+//    if ([_inputTextPanel associatedPanel] != nil)
+//    {
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputUpArrow modifierFlags:0]];
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputDownArrow modifierFlags:0]];
+//    }
+//    else if ([self canEditLastMessage])
+//    {
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputUpArrow modifierFlags:0]];
+//    }
+//
+//    if (_inputTextPanel.messageEditingContext != nil)
+//    {
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputEscape modifierFlags:0]];
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:@"\t" modifierFlags:0]];
+//    }
+//    }
+//
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:@"/" modifierFlags:UIKeyModifierCommand]];
+//
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.ScrollUp") input:UIKeyInputUpArrow modifierFlags:UIKeyModifierShift]];
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.ScrollDown") input:UIKeyInputDownArrow modifierFlags:UIKeyModifierShift]];
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.ChatInfo") input:@"I" modifierFlags:UIKeyModifierControl | UIKeyModifierCommand]];
+//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:@"W" modifierFlags:UIKeyModifierCommand]];
+//
+//    return commands;
 }

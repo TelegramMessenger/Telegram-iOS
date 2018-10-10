@@ -254,7 +254,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
             entries.append(.turnPasswordOff(presentationData.theme, presentationData.strings.TwoStepAuth_RemovePassword))
             entries.append(.setupRecoveryEmail(presentationData.theme, emailSet ? presentationData.strings.TwoStepAuth_ChangeEmail : presentationData.strings.TwoStepAuth_SetupEmail))
             if pendingEmailPattern.isEmpty {
-                entries.append(.passwordInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EnterPasswordHelp))
+                entries.append(.passwordInfo(presentationData.theme, presentationData.strings.TwoStepAuth_GenericHelp))
             } else {
                 entries.append(.passwordInfo(presentationData.theme, presentationData.strings.TwoStepAuth_PendingEmailHelp(pendingEmailPattern).0))
             }

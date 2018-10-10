@@ -147,11 +147,4 @@ class ChatUnreadItemNode: ListViewItemNode {
         
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
-    
-    override public var wantsScrollDynamics: Bool {
-        if let disableAnimations = self.item?.presentationData.disableAnimations {
-            return !disableAnimations
-        }
-        return true
-    }
 }

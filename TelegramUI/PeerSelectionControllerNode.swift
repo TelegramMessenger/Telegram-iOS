@@ -74,7 +74,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self?.requestActivateSearch?()
         }
         
-        self.chatListNode.peerSelected = { [weak self] peerId in
+        self.chatListNode.peerSelected = { [weak self] peerId, _ in
             self?.requestOpenPeer?(peerId)
         }
         

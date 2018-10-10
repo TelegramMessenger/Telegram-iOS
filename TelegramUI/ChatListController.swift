@@ -26,7 +26,7 @@ private let tabImageUnread = tabImageNone.flatMap({ image in
     })
 })
 
-public class ChatListController: TelegramController, UIViewControllerPreviewingDelegate {
+public class ChatListController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
     private let account: Account
@@ -277,7 +277,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(account: self.account, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
+        self.displayNode = ChatListControllerNode(account: self.account, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -357,7 +357,7 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
             }
         }
         
-        self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId in
+        self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId, animated in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     /*let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(postbox: strongSelf.account.postbox)
@@ -370,7 +370,8 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                             })]), in: .window(.root))
                         }
                     })*/
-                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId))
+                    
+                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), animated: animated)
                     strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
             }
@@ -598,11 +599,11 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
         }
         
         let boundsSize = self.view.bounds.size
-        var contentSize = CGSize(width: boundsSize.width, height: boundsSize.height - (boundsSize.height > boundsSize.width ? 50.0 : 10.0))
-        if (boundsSize.width.isEqual(to: 375.0) && boundsSize.height.isEqual(to: 812.0))  {
-            contentSize.height -= 56.0
-        } else if (boundsSize.height.isEqual(to: 375.0) && boundsSize.width.isEqual(to: 812.0)) {
-            contentSize.height += 107.0
+        let contentSize: CGSize
+        if let metrics = DeviceMetrics.forScreenSize(layout.size) {
+            contentSize = metrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
+        } else {
+            contentSize = boundsSize
         }
         
         if let searchController = self.chatListDisplayNode.searchDisplayController {
@@ -696,5 +697,49 @@ public class ChatListController: TelegramController, UIViewControllerPreviewingD
                 }
             }
         }
+    }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        let strings = self.presentationData.strings
+        
+        let toggleSearch: () -> Void = { [weak self] in
+            if let strongSelf = self {
+                if strongSelf.displayNavigationBar {
+                    strongSelf.activateSearch()
+                } else {
+                    strongSelf.deactivateSearch(animated: true)
+                }
+            }
+        }
+        
+        return [
+            KeyShortcut(title: strings.KeyCommand_JumpToPreviousChat, input: UIKeyInputUpArrow, modifiers: [.alternate], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.previous(unread: false))
+                }
+            }),
+            KeyShortcut(title: strings.KeyCommand_JumpToNextChat, input: UIKeyInputDownArrow, modifiers: [.alternate], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.next(unread: false))
+                }
+            }),
+            KeyShortcut(title: strings.KeyCommand_JumpToPreviousUnreadChat, input: UIKeyInputUpArrow, modifiers: [.alternate, .shift], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.previous(unread: true))
+                }
+            }),
+            KeyShortcut(title: strings.KeyCommand_JumpToNextUnreadChat, input: UIKeyInputDownArrow, modifiers: [.alternate, .shift], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.next(unread: true))
+                }
+            }),
+            KeyShortcut(title: strings.KeyCommand_NewMessage, input: "N", modifiers: [.command], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.composePressed()
+                }
+            }),
+            KeyShortcut(title: strings.KeyCommand_Find, input: "\t", modifiers: [], action: toggleSearch),
+            KeyShortcut(input: UIKeyInputEscape, modifiers: [], action: toggleSearch)
+        ]
     }
 }

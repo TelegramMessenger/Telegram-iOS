@@ -134,6 +134,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                     if itemNode.frame.contains(convertedPoint), let itemNode = itemNode as? HorizontalListContextResultsChatInputPanelItemNode, let item = itemNode.item {
                         if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isSticker {
                             var menuItems: [PeekControllerMenuItem] = []
+                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
+                                item.resultSelected(item.result)
+                            }))
                             for case let .Sticker(_, packReference, _) in file.attributes {
                                 guard let packReference = packReference else {
                                     continue
@@ -152,10 +155,6 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     }
                                 }))
                             }
-                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
-                                item.resultSelected(item.result)
-                            }))
-                            
                             selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
                         } else {
                             var menuItems: [PeekControllerMenuItem] = []

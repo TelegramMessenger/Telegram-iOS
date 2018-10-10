@@ -23,12 +23,12 @@ class ChatListControllerNode: ASDisplayNode {
     
     var themeAndStrings: (PresentationTheme, PresentationStrings, dateTimeFormat: PresentationDateTimeFormat)
     
-    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData) {
         self.account = account
         self.groupId = groupId
-        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations)
+        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
-        self.themeAndStrings = (theme, strings, dateTimeFormat)
+        self.themeAndStrings = (presentationData.theme, presentationData.strings, presentationData.dateTimeFormat)
         
         super.init()
         
@@ -36,7 +36,7 @@ class ChatListControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = theme.chatList.backgroundColor
+        self.backgroundColor = presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.chatListNode)
         self.chatListNode.isEmptyUpdated = { [weak self] isEmpty in
@@ -65,6 +65,7 @@ class ChatListControllerNode: ASDisplayNode {
         self.themeAndStrings = (theme, strings, dateTimeFormat)
         
         self.backgroundColor = theme.chatList.backgroundColor
+        
         self.chatListNode.updateThemeAndStrings(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations)
         self.searchDisplayController?.updateThemeAndStrings(theme: theme, strings: strings)
         self.chatListEmptyNode?.updateThemeAndStrings(theme: theme, strings: strings)

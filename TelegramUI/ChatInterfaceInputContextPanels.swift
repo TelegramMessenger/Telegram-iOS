@@ -31,7 +31,7 @@ private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult
     }
 }
 
-func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
+func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputContextPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
     guard let _ = chatPresentationInterfaceState.renderedPeer?.peer else {
         return nil
     }
@@ -75,6 +75,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     return currentPanel
                 } else {
                     let panel = HorizontalStickersChatContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                    panel.controllerInteraction = controllerInteraction
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(results.map({ $0.file }))
                     return panel

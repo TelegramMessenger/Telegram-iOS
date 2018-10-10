@@ -739,7 +739,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                 if let strongSelf = self {
                                     var menuItems: [PeekControllerMenuItem] = []
                                     menuItems = [
-                                        PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
                                             if let strongSelf = self {
                                                 strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file))
                                             }
@@ -821,7 +821,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                     if let strongSelf = self {
                                         var menuItems: [PeekControllerMenuItem] = []
                                         menuItems = [
-                                            PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
                                                 if let strongSelf = self {
                                                     strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file))
                                                 }

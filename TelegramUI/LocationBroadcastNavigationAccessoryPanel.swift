@@ -29,7 +29,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private let closeButton: HighlightableButtonNode
     private let separatorNode: ASDisplayNode
     
-    private var validLayout: CGSize?
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
     private var peersAndMode: ([Peer], LocationBroadcastNavigationAccessoryPanelMode)?
     
     init(accountPeerId: PeerId, theme: PresentationTheme, strings: PresentationStrings, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
@@ -99,8 +99,8 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, leftInset, rightInset)
         
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: size))
         
@@ -157,23 +157,23 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         let minimizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleLayout.size.width) / 2.0), y: 20.0), size: subtitleLayout.size)
         
         if let image = self.iconNode.image {
-            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: 7.0, y: 8.0), size: image.size))
-            transition.updateFrame(node: self.wavesNode, frame: CGRect(origin: CGPoint(x: -2.0, y: -4.0), size: CGSize(width: 48.0, height: 48.0)))
+            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: 7.0 + leftInset, y: 8.0), size: image.size))
+            transition.updateFrame(node: self.wavesNode, frame: CGRect(origin: CGPoint(x: -2.0 + leftInset, y: -4.0), size: CGSize(width: 48.0, height: 48.0)))
         }
         
         transition.updateFrame(node: self.titleNode, frame: minimizedTitleFrame)
         transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame)
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width, y: minimizedTitleFrame.minY + 8.0), size: closeButtonSize))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - rightInset, y: minimizedTitleFrame.minY + 8.0), size: closeButtonSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
     }
     
     func update(peers: [Peer], mode: LocationBroadcastNavigationAccessoryPanelMode) {
         self.peersAndMode = (peers, mode)
-        if let size = validLayout {
-            self.updateLayout(size: size, transition: .immediate)
+        if let layout = validLayout {
+            self.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .immediate)
         }
     }
     

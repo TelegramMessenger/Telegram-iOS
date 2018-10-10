@@ -29,6 +29,8 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, account: 
 }
 
 func legacyAssetPicker(applicationContext: TelegramApplicationContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+    let isSecretChat = (peer?.id.namespace ?? 0) == Namespaces.Peer.SecretChat
+    
     return Signal { subscriber in
         let intent = fileMode ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
         
@@ -45,7 +47,7 @@ func legacyAssetPicker(applicationContext: TelegramApplicationContext, presentat
                     } else {
                         Queue.mainQueue().async {
                             subscriber.putNext({ context in
-                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia)
+                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia)
                                 return controller!
                             })
                             subscriber.putCompletion()
@@ -54,7 +56,7 @@ func legacyAssetPicker(applicationContext: TelegramApplicationContext, presentat
                 })
             } else {
                 subscriber.putNext({ context in
-                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: saveEditedPhotos, allowGrouping: allowGrouping)
+                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping)
                     return controller!
                 })
                 subscriber.putCompletion()

@@ -120,7 +120,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return UserInfoSection.actions.rawValue
             case .botSettings, .botHelp, .botPrivacy:
                 return UserInfoSection.bot.rawValue
-            case .sharedMedia, .notifications, .notificationSound, .secretEncryptionKey, .groupsInCommon:
+            case .sharedMedia, .notifications, .notificationSound, .groupsInCommon, .secretEncryptionKey:
                 return UserInfoSection.sharedMediaAndNotifications.rawValue
             case .botReport, .block:
                 return UserInfoSection.block.rawValue
@@ -351,9 +351,9 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return 1012
             case .notificationSound:
                 return 1013
-            case .groupsInCommon:
-                return 1014
             case .secretEncryptionKey:
+                return 1014
+            case .groupsInCommon:
                 return 1015
             case .botReport:
                 return 1016
@@ -542,7 +542,7 @@ private func stringForBlockAction(strings: PresentationStrings, action: Destruct
     }
 }
 
-private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, deviceContacts: [(DeviceContactStableId, DeviceContactBasicData)], mode: UserInfoControllerMode, state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
+private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, cachedPeerData: CachedPeerData?, deviceContacts: [(DeviceContactStableId, DeviceContactBasicData)], mode: UserInfoControllerMode, state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {
@@ -561,11 +561,11 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     }
     
     var callsAvailable = true
-    if let cachedUserData = view.cachedData as? CachedUserData {
+    if let cachedUserData = cachedPeerData as? CachedUserData {
         callsAvailable = cachedUserData.callsAvailable
     }
     
-    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: user, presence: view.peerPresences[user.id], cachedData: view.cachedData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil && callsAvailable))
+    entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: user, presence: view.peerPresences[user.id], cachedData: cachedPeerData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil && callsAvailable))
     
     if case let .calls(messages) = mode, !isEditing {
         entries.append(UserInfoEntry.calls(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, messages: messages))
@@ -609,7 +609,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         }
     }
     
-    if let cachedUserData = view.cachedData as? CachedUserData, let about = cachedUserData.about, !about.isEmpty {
+    if let cachedUserData = cachedPeerData as? CachedUserData, let about = cachedUserData.about, !about.isEmpty {
         let title: String
         if let peer = peer as? TelegramUser, let _ = peer.botInfo {
             title = presentationData.strings.Profile_BotInfo
@@ -632,7 +632,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
                 entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.UserInfo_AddContact))
             }
             
-            if let cachedUserData = view.cachedData as? CachedUserData, !(cachedUserData.hasAccountPeerPhone ?? false) {
+            if let cachedUserData = cachedPeerData as? CachedUserData, !(cachedUserData.hasAccountPeerPhone ?? false) {
                 entries.append(UserInfoEntry.shareMyContact(presentationData.theme, presentationData.strings.UserInfo_ShareMyContactInfo))
             }
             
@@ -647,7 +647,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             }
             entries.append(UserInfoEntry.botShare(presentationData.theme, presentationData.strings.UserInfo_ShareBot))
             
-            if let cachedUserData = view.cachedData as? CachedUserData, let botInfo = cachedUserData.botInfo {
+            if let cachedUserData = cachedPeerData as? CachedUserData, let botInfo = cachedUserData.botInfo {
                 for command in botInfo.commands {
                     if command.text == "settings" {
                         entries.append(UserInfoEntry.botSettings(presentationData.theme, presentationData.strings.UserInfo_BotSettings))
@@ -669,9 +669,6 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
     }
     entries.append(UserInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsLabel))
-    if let groupsInCommon = (view.cachedData as? CachedUserData)?.commonGroupCount, groupsInCommon != 0 && !isEditing {
-        entries.append(UserInfoEntry.groupsInCommon(presentationData.theme, presentationData.strings.UserInfo_GroupsInCommon, groupsInCommon))
-    }
     
     if isEditing {
         var messageSound: PeerMessageSound = .default
@@ -689,11 +686,15 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             entries.append(UserInfoEntry.secretEncryptionKey(presentationData.theme, presentationData.strings.Profile_EncryptionKey, keyFingerprint))
         }
         
+        if let groupsInCommon = (cachedPeerData as? CachedUserData)?.commonGroupCount, groupsInCommon != 0 {
+            entries.append(UserInfoEntry.groupsInCommon(presentationData.theme, presentationData.strings.UserInfo_GroupsInCommon, groupsInCommon))
+        }
+        
         if let peer = peer as? TelegramUser, let _ = peer.botInfo {
             entries.append(UserInfoEntry.botReport(presentationData.theme, presentationData.strings.ReportPeer_Report))
         }
         
-        if let cachedData = view.cachedData as? CachedUserData {
+        if let cachedData = cachedPeerData as? CachedUserData {
             if cachedData.isBlocked {
                 entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .unblock, peer: user), .unblock))
             } else {
@@ -766,18 +767,27 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
     
     let cachedAvatarEntries = Atomic<Promise<[AvatarGalleryEntry]>?>(value: nil)
     
-    let peerView = Promise<PeerView>()
-    peerView.set(account.viewTracker.peerView(peerId))
+    let peerView = Promise<(PeerView, CachedPeerData?)>()
+    peerView.set(account.viewTracker.peerView(peerId) |> mapToSignal({ view -> Signal<(PeerView, CachedPeerData?), NoError> in
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            if let peer = peerViewMainPeer(view) {
+                return account.viewTracker.peerView(peer.id) |> map({ secretChatView -> (PeerView, CachedPeerData?) in
+                    return (view, secretChatView.cachedData)
+                })
+            }
+        }
+        return .single((view, view.cachedData))
+    }))
     
     let requestCallImpl: () -> Void = {
         let _ = (peerView.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { view in
-            guard let peer = peerViewMainPeer(view) else {
+            guard let peer = peerViewMainPeer(view.0) else {
                 return
             }
             
-            if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
+            if let cachedUserData = view.1 as? CachedUserData, cachedUserData.callsPrivate {
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 return
@@ -919,14 +929,26 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
             pushControllerImpl?(controller)
         }
     }, openGroupsInCommon: {
-        pushControllerImpl?(groupsInCommonController(account: account, peerId: peerId))
+        let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let peer = peer else {
+                    return
+                }
+                
+                pushControllerImpl?(groupsInCommonController(account: account, peerId: peer.id))
+        })
     }, updatePeerBlocked: { value in
-        let _ = (account.postbox.loadedPeerWithId(peerId)
+        let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
         |> take(1)
         |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             if let user = peer as? TelegramUser, user.botInfo != nil {
-                updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: value).start())
+                updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peer.id, isBlocked: value).start())
                 if !value {
                     let _ = enqueueMessages(account: account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
                     openChatImpl?()
@@ -939,7 +961,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
                     text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle).0
                 }
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
-                    updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: value).start())
+                    updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peer.id, isBlocked: value).start())
                 })]), nil)
             }
         })
@@ -1038,7 +1060,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
         
     let deviceContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData)], NoError> = peerView.get()
     |> map { peerView -> String in
-        if let peer = peerView.peers[peerId] as? TelegramUser {
+        if let peer = peerView.0.peers[peerId] as? TelegramUser {
             return peer.phone ?? ""
         }
         return ""
@@ -1055,7 +1077,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView.get(), deviceContacts, account.postbox.combinedView(keys: [.peerChatState(peerId: peerId), globalNotificationsKey]))
         |> map { presentationData, state, view, deviceContacts, combinedView -> (ItemListControllerState, (ItemListNodeState<UserInfoEntry>, UserInfoEntry.ItemGenerationArguments)) in
-            let peer = peerViewMainPeer(view)
+            let peer = peerViewMainPeer(view.0)
             
             var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
             if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
@@ -1153,7 +1175,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
-            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view, deviceContacts: deviceContacts, mode: mode, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
+            let listState = ItemListNodeState(entries: userInfoEntries(account: account, presentationData: presentationData, view: view.0, cachedPeerData: view.1, deviceContacts: deviceContacts, mode: mode, state: state, peerChatState: (combinedView.views[.peerChatState(peerId: peerId)] as? PeerChatStateView)?.chatState, globalNotificationSettings: globalNotificationSettings), style: .plain)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

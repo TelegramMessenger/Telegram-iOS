@@ -221,7 +221,7 @@ public class TelegramController: ViewController {
             if let current = self.locationBroadcastAccessoryPanel {
                 locationBroadcastAccessoryPanel = current
                 transition.updateFrame(node: locationBroadcastAccessoryPanel, frame: panelFrame)
-                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)
+                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
             } else {
                 let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
                 locationBroadcastAccessoryPanel = LocationBroadcastNavigationAccessoryPanel(accountPeerId: self.account.peerId, theme: presentationData.theme, strings: presentationData.strings, tapAction: { [weak self] in
@@ -346,7 +346,7 @@ public class TelegramController: ViewController {
                 self.locationBroadcastAccessoryPanel = locationBroadcastAccessoryPanel
                 locationBroadcastAccessoryPanel.frame = panelFrame
                 locationBroadcastAccessoryPanel.update(peers: locationBroadcastPeers, mode: locationBroadcastMode)
-                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, transition: .immediate)
+                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
                 if transition.isAnimated {
                     locationBroadcastAccessoryPanel.animateIn(transition)
                 }
@@ -377,7 +377,7 @@ public class TelegramController: ViewController {
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
-                mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: transition)
+                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                
                 if let mediaManager = self.account.telegramApplicationContext.mediaManager {
@@ -458,7 +458,7 @@ public class TelegramController: ViewController {
                     self.displayNode.addSubnode(mediaAccessoryPanel)
                 }
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
-                mediaAccessoryPanel.updateLayout(size: panelFrame.size, transition: .immediate)
+                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                 if let mediaManager = self.account.telegramApplicationContext.mediaManager {
                     mediaAccessoryPanel.containerNode.headerNode.playbackStatus = mediaManager.globalMediaPlayerState

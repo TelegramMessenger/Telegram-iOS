@@ -572,9 +572,10 @@ final class ContactListNode: ASDisplayNode {
         self.presentation = presentation
         self.filters = filters
         
-        self.listNode = ListView()
-        
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        
+        self.listNode = ListView()
+        self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.disableAnimations))
         
@@ -754,6 +755,8 @@ final class ContactListNode: ASDisplayNode {
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousDisableAnimations != presentationData.disableAnimations {
                     strongSelf.backgroundColor = presentationData.theme.chatList.backgroundColor
                     strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder, presentationData.disableAnimations)))
+                    
+                    strongSelf.listNode.dynamicBounceEnabled = !presentationData.disableAnimations
                     
                     strongSelf.listNode.forEachAccessoryItemNode({ accessoryItemNode in
                         if let accessoryItemNode = accessoryItemNode as? ContactsSectionHeaderAccessoryItemNode {

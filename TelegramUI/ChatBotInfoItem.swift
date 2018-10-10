@@ -240,11 +240,4 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 break
         }
     }
-    
-    override public var wantsScrollDynamics: Bool {
-        if let disableAnimations = self.item?.presentationData.disableAnimations {
-            return !disableAnimations
-        }
-        return true
-    }
 }

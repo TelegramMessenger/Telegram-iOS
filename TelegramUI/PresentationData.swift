@@ -239,11 +239,16 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         
         if automaticThemeShouldSwitchNow(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme) {
             effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
-            switch themeSettings.automaticThemeSwitchSetting.theme {
-                case .nightAccent:
-                    effectiveChatWallpaper = .color(0x18222D)
-                case .nightGrayscale:
-                    effectiveChatWallpaper = .color(0x000000)
+            switch effectiveChatWallpaper {
+                case .builtin, .color:
+                    switch themeSettings.automaticThemeSwitchSetting.theme {
+                        case .nightAccent:
+                            effectiveChatWallpaper = .color(0x18222d)
+                        case .nightGrayscale:
+                            effectiveChatWallpaper = .color(0x000000)
+                        default:
+                            break
+                    }
                 default:
                     break
             }
@@ -361,11 +366,16 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
             var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
             if shouldSwitch {
                 effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
-                switch themeSettings.automaticThemeSwitchSetting.theme {
-                    case .nightAccent:
-                        effectiveChatWallpaper = .color(0x18222d)
-                    case .nightGrayscale:
-                        effectiveChatWallpaper = .color(0x000000)
+                switch effectiveChatWallpaper {
+                    case .builtin, .color:
+                        switch themeSettings.automaticThemeSwitchSetting.theme {
+                            case .nightAccent:
+                                effectiveChatWallpaper = .color(0x18222d)
+                            case .nightGrayscale:
+                                effectiveChatWallpaper = .color(0x000000)
+                            default:
+                                break
+                        }
                     default:
                         break
                 }

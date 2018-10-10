@@ -67,13 +67,14 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
     override init() {
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 0
-        self.titleNode.lineSpacing = 0.15
+        self.titleNode.lineSpacing = 0.25
         self.titleNode.textAlignment = .center
         self.titleNode.isLayerBacked = true
         self.titleNode.displaysAsynchronously = false
         
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.maximumNumberOfLines = 0
+        self.subtitleNode.lineSpacing = 0.25
         self.subtitleNode.isLayerBacked = true
         self.subtitleNode.displaysAsynchronously = false
         
@@ -145,7 +146,7 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
         
         let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
         let titleSpacing: CGFloat = 5.0
-        let subtitleSpacing: CGFloat = 4.0
+        let subtitleSpacing: CGFloat = 10.0
         let iconInset: CGFloat = 14.0
         
         var contentWidth: CGFloat = 100.0
@@ -173,7 +174,7 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
         let subtitleFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: titleFrame.maxY + titleSpacing), size: subtitleSize)
         transition.updateFrame(node: self.subtitleNode, frame: subtitleFrame)
         
-        var lineOffset = subtitleFrame.maxY + subtitleSpacing
+        var lineOffset = subtitleFrame.maxY + subtitleSpacing / 2.0
         for (textSize, iconNode, textNode) in lineNodes {
             if let image = iconNode.image {
                 transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.minX, y: lineOffset + 1.0), size: image.size))

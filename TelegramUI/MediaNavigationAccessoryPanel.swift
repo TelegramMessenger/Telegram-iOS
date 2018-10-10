@@ -38,9 +38,9 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.containerNode.updateLayout(size: size, transition: transition)
+        self.containerNode.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: transition)
     }
     
     func animateIn(transition: ContainedViewLayoutTransition) {

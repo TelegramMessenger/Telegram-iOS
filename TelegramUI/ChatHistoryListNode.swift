@@ -361,6 +361,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         super.init()
         
+        self.dynamicBounceEnabled = !self.currentPresentationData.disableAnimations
+        
         //self.stackFromBottom = true
         
         //self.debugInfo = true
@@ -680,6 +682,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
                         let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations)
                         
+                        strongSelf.dynamicBounceEnabled = !presentationData.disableAnimations
+                        
                         strongSelf.forEachItemHeaderNode { itemHeaderNode in
                             if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
                                 dateNode.updatePresentationData(chatPresentationData)
@@ -781,6 +785,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public func scrollToMessage(from fromIndex: MessageIndex, to toIndex: MessageIndex, animated: Bool, highlight: Bool = true, scrollPosition: ListViewScrollPosition = .center(.bottom)) {
         self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: .message(toIndex), anchorIndex: .message(toIndex), sourceIndex: .message(fromIndex), scrollPosition: scrollPosition, animated: animated))
+    }
+    
+    func scrollWithDeltaOffset(_ offset: CGFloat) {
+
     }
     
     public func anchorMessageInCurrentHistoryView() -> Message? {
