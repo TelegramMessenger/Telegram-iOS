@@ -197,12 +197,15 @@ NSString *const TGPassportEmptyCharacter = @"<";
                 result->_nativeFirstName = firstName;
                 result->_firstName = [self transliterateRussianName:firstName];
                 
-                NSString *lastSeriesDigit = [optional1 substringToIndex:1];
-                NSMutableString *fullDocumentNo = [[NSMutableString alloc] init];
-                [fullDocumentNo insertString:[result->_documentNumber substringToIndex:3] atIndex:0];
-                [fullDocumentNo appendString:lastSeriesDigit];
-                [fullDocumentNo appendString:[result->_documentNumber substringFromIndex:3]];
-                result->_documentNumber = fullDocumentNo;
+                if (result->_documentNumber != nil)
+                {
+                    NSString *lastSeriesDigit = [optional1 substringToIndex:1];
+                    NSMutableString *fullDocumentNo = [[NSMutableString alloc] init];
+                    [fullDocumentNo insertString:[result->_documentNumber substringToIndex:3] atIndex:0];
+                    [fullDocumentNo appendString:lastSeriesDigit];
+                    [fullDocumentNo appendString:[result->_documentNumber substringFromIndex:3]];
+                    result->_documentNumber = fullDocumentNo;
+                }
             }
             
             
