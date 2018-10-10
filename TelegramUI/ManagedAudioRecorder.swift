@@ -431,12 +431,10 @@ final class ManagedAudioRecorderContext {
             self.beganWithTone(false)
         }
         
-        self.audioUnit.with { audioUnit -> Void in
-            if let audioUnit = audioUnit {
-                guard AudioOutputUnitStart(audioUnit) == noErr else {
-                    self.stop()
-                    return
-                }
+        if let audioUnit = self.audioUnit.with({ $0 }) {
+            guard AudioOutputUnitStart(audioUnit) == noErr else {
+                self.stop()
+                return
             }
         }
     }
