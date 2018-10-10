@@ -1204,48 +1204,49 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
         if let state = transaction.getPeerChatState(peerId) as? SecretChatState, let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
             let decryptedMessage = boxedDecryptedSecretMessageAction(action: action)
             return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: action.globallyUniqueId, file: nil, asService: true, wasDelivered: wasDelivered)
-                |> mapToSignal { result in
-                    return postbox.transaction { transaction -> Void in
-                        if result == nil {
-                            replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: action.globallyUniqueId)
-                        } else {
-                            markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
-                        }
-                        if let messageId = action.messageId {
-                            var resultTimestamp: Int32?
-                            transaction.updateMessage(messageId, update: { currentMessage in
-                                var flags = StoreMessageFlags(currentMessage.flags)
-                                var timestamp = currentMessage.timestamp
-                                if let result = result {
-                                    switch result {
-                                        case let .sentEncryptedMessage(date):
-                                            timestamp = date
-                                        case let .sentEncryptedFile(date, _):
-                                            timestamp = date
-                                    }
-                                    flags.remove(.Unsent)
-                                    flags.remove(.Sending)
-                                } else {
-                                    flags = [.Failed]
+            |> mapToSignal { result in
+                return postbox.transaction { transaction -> Void in
+                    if result == nil {
+                        replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: action.globallyUniqueId)
+                    } else {
+                        markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
+                    }
+                    if let messageId = action.messageId {
+                        var resultTimestamp: Int32?
+                        transaction.updateMessage(messageId, update: { currentMessage in
+                            var flags = StoreMessageFlags(currentMessage.flags)
+                            var timestamp = currentMessage.timestamp
+                            if let result = result {
+                                switch result {
+                                    case let .sentEncryptedMessage(date):
+                                        timestamp = date
+                                    case let .sentEncryptedFile(date, _):
+                                        timestamp = date
                                 }
-                                resultTimestamp = timestamp
-                                var storeForwardInfo: StoreMessageForwardInfo?
-                                if let forwardInfo = currentMessage.forwardInfo {
-                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                                }
-                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
-                            })
-                            
-                            if let resultTimestamp = resultTimestamp {
-                                maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: messageId, timestamp: resultTimestamp))
+                                flags.remove(.Unsent)
+                                flags.remove(.Sending)
+                            } else {
+                                flags = [.Failed]
                             }
+                            resultTimestamp = timestamp
+                            var storeForwardInfo: StoreMessageForwardInfo?
+                            if let forwardInfo = currentMessage.forwardInfo {
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                            }
+                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: timestamp, flags: flags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                        })
+                        
+                        if let resultTimestamp = resultTimestamp {
+                            maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: messageId, timestamp: resultTimestamp))
                         }
                     }
                 }
+            }
         } else {
             return .complete()
         }
-    } |> switchToLatest
+    }
+    |> switchToLatest
 }
 
 private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer: TelegramSecretChat, state: SecretChatState, operationIndex: Int32, decryptedMessage: BoxedDecryptedMessage, globallyUniqueId: Int64, file: SecretChatOutgoingFile?, asService: Bool, wasDelivered: Bool) -> Signal<Api.messages.SentEncryptedMessage?, NoError> {

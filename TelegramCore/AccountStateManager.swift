@@ -89,8 +89,8 @@ public final class AccountStateManager {
         return self.isUpdatingValue.get()
     }
     
-    private let notificationMessagesPipe = ValuePipe<[([Message], PeerGroupId?)]>()
-    public var notificationMessages: Signal<[([Message], PeerGroupId?)], NoError> {
+    private let notificationMessagesPipe = ValuePipe<[([Message], PeerGroupId?, Bool)]>()
+    public var notificationMessages: Signal<[([Message], PeerGroupId?, Bool)], NoError> {
         return self.notificationMessagesPipe.signal()
     }
     
@@ -532,12 +532,12 @@ public final class AccountStateManager {
                     let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
                 }
                 
-                let signal = self.account.postbox.transaction { transaction -> [([Message], PeerGroupId?)] in
-                    var messageList: [([Message], PeerGroupId?)] = []
+                let signal = self.account.postbox.transaction { transaction -> [([Message], PeerGroupId?, Bool)] in
+                    var messageList: [([Message], PeerGroupId?, Bool)] = []
                     for id in events.addedIncomingMessageIds {
                         let (messages, notify, _, _) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
-                        if !messages.isEmpty && notify {
-                            messageList.append((messages, transaction.getPeerGroupId(messages[0].id.peerId)))
+                        if !messages.isEmpty {
+                            messageList.append((messages, transaction.getPeerGroupId(messages[0].id.peerId), notify))
                         }
                     }
                     return messageList

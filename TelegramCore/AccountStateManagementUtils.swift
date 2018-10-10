@@ -2428,7 +2428,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
     var addedSecretMessageAuthorIds: [PeerId: PeerId] = [:]
     
     for peerId in peerIdsWithAddedSecretMessages {
-        while true {
+        inner: while true {
             let keychain = (transaction.getPeerChatState(peerId) as? SecretChatState)?.keychain
             if processSecretChatIncomingEncryptedOperations(transaction: transaction, peerId: peerId) {
                 let processResult = processSecretChatIncomingDecryptedOperations(mediaBox: mediaBox, transaction: transaction, peerId: peerId)
@@ -2447,7 +2447,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
             }
             let updatedKeychain = (transaction.getPeerChatState(peerId) as? SecretChatState)?.keychain
             if updatedKeychain == keychain {
-                break
+                break inner
             }
         }
     }

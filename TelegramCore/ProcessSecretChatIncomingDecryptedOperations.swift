@@ -328,9 +328,11 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transactio
         if let maxAcknowledgedCanonicalOperationIndex = maxAcknowledgedCanonicalOperationIndex {
             switch updatedState.embeddedState {
                 case let .sequenceBasedLayer(sequenceState):
-                    let tagLocalIndex = max(0, sequenceState.outgoingOperationIndexFromCanonicalOperationIndex(maxAcknowledgedCanonicalOperationIndex) - 1)
-                    //Logger.shared.log("SecretChat", "peer \(peerId) dropping acknowledged operations <= \(tagLocalIndex)")
-                    transaction.operationLogRemoveEntries(peerId: peerId, tag: OperationLogTags.SecretOutgoing, withTagLocalIndicesEqualToOrLowerThan: tagLocalIndex)
+                    let tagLocalIndex = max(-1, sequenceState.outgoingOperationIndexFromCanonicalOperationIndex(maxAcknowledgedCanonicalOperationIndex) - 1)
+                    if tagLocalIndex >= 0 {
+                        Logger.shared.log("SecretChat", "peer \(peerId) dropping acknowledged operations <= \(tagLocalIndex)")
+                        transaction.operationLogRemoveEntries(peerId: peerId, tag: OperationLogTags.SecretOutgoing, withTagLocalIndicesEqualToOrLowerThan: tagLocalIndex)
+                    }
                 default:
                     break
             }

@@ -21,6 +21,7 @@ private final class ContactSyncOperation {
 
 private enum ContactSyncOperationContent {
     case waitForUpdatedState
+    case updatePresences
     case sync(importableContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]?)
     case updateIsContact([(PeerId, Bool)])
 }
@@ -56,6 +57,7 @@ private final class ContactSyncManagerImpl {
             }
             strongSelf.addOperation(.waitForUpdatedState)
             strongSelf.addOperation(.sync(importableContacts: importableContacts))
+            strongSelf.addOperation(.updatePresences)
         }))
     }
     
@@ -69,6 +71,15 @@ private final class ContactSyncManagerImpl {
         let operation = ContactSyncOperation(id: id, content: content)
         switch content {
             case .waitForUpdatedState:
+                self.operations.append(operation)
+            case .updatePresences:
+                for i in (0 ..< self.operations.count).reversed() {
+                    if case .updatePresences = self.operations[i].content {
+                        if !self.operations[i].isRunning {
+                            self.operations.remove(at: i)
+                        }
+                    }
+                }
                 self.operations.append(operation)
             case .sync:
                 for i in (0 ..< self.operations.count).reversed() {
@@ -129,6 +140,10 @@ private final class ContactSyncManagerImpl {
             case .waitForUpdatedState:
                 disposable.add((self.stateManager.pollStateUpdateCompletion()
                 |> deliverOn(self.queue)).start(next: { _ in
+                    completion()
+                }))
+            case .updatePresences:
+                disposable.add(updateContactPresences(postbox: self.postbox, network: self.network).start(completed: {
                     completion()
                 }))
             case let .sync(importableContacts):
@@ -329,6 +344,26 @@ private func pushDeviceContactData(postbox: Postbox, network: Network, contacts:
         }
     }
     return batches
+}
+
+private func updateContactPresences(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+    return network.request(Api.functions.contacts.getStatuses())
+    |> `catch` { _ -> Signal<[Api.ContactStatus], NoError> in
+        return .single([])
+    }
+    |> mapToSignal { statuses -> Signal<Never, NoError> in
+        return postbox.transaction { transaction -> Void in
+            var peerPresences: [PeerId: PeerPresence] = [:]
+            for status in statuses {
+                switch status {
+                    case let .contactStatus(userId, status):
+                        peerPresences[PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)] = TelegramUserPresence(apiStatus: status)
+                }
+            }
+            transaction.updatePeerPresences(peerPresences)
+        }
+        |> ignoreValues
+    }
 }
 
 final class ContactSyncManager {
