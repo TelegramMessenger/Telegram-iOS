@@ -94,7 +94,7 @@ open class ListViewItemNode: ASDisplayNode {
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
     
-    open private(set) var wantsScrollDynamics: Bool
+    final let wantsScrollDynamics: Bool
     
     public final var wantsTrailingItemSpaceUpdates: Bool = false
     

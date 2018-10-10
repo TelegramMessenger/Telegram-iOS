@@ -124,6 +124,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private final var displayLink: CADisplayLink!
     private final var needsAnimations = false
     
+    public final var dynamicBounceEnabled = true
+    
     private final var invisibleInset: CGFloat = 500.0
     public var preloadPages: Bool = true {
         didSet {
@@ -558,7 +560,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             let position = itemNode.position
             itemNode.position = CGPoint(x: position.x, y: position.y - deltaY)
             
-            if itemNode.wantsScrollDynamics {
+            if self.dynamicBounceEnabled && itemNode.wantsScrollDynamics {
                 useScrollDynamics = true
                 
                 var distance: CGFloat
@@ -587,7 +589,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.updateItemHeaders(leftInset: self.insets.left, rightInset: self.insets.right)
         
         for (_, headerNode) in self.itemHeaderNodes {
-            if headerNode.wantsScrollDynamics {
+            if self.dynamicBounceEnabled && headerNode.wantsScrollDynamics {
                 useScrollDynamics = true
                 
                 var distance: CGFloat

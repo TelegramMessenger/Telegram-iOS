@@ -20,7 +20,7 @@ public protocol ListViewItemHeader: class {
 
 open class ListViewItemHeaderNode: ASDisplayNode {
     private final var spring: ListViewItemSpring?
-    open private(set) var wantsScrollDynamics: Bool
+    let wantsScrollDynamics: Bool
     let isRotated: Bool
     final private(set) var internalStickLocationDistanceFactor: CGFloat = 0.0
     final var internalStickLocationDistance: CGFloat = 0.0

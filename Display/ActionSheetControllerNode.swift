@@ -84,7 +84,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         insets.left = floor((layout.size.width - containerWidth) / 2.0)
         insets.right = insets.left
-        if insets.bottom > 0 {
+        if !insets.bottom.isZero {
             insets.bottom -= 12.0
         }
         

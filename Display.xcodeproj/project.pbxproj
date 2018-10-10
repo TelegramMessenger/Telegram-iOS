@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09C147D8216CCEF700390252 /* KeyShortcutsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C147D7216CCEF700390252 /* KeyShortcutsController.swift */; };
+		09C147DA216CD7E500390252 /* KeyShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C147D9216CD7E500390252 /* KeyShortcut.swift */; };
 		09E12476214D0978009FC9C3 /* DeviceMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E12475214D0978009FC9C3 /* DeviceMetrics.swift */; };
 		D00701982029CAD6006B9E34 /* TooltipController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701972029CAD6006B9E34 /* TooltipController.swift */; };
 		D007019A2029CAE2006B9E34 /* TooltipControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */; };
@@ -192,6 +194,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		09C147D7216CCEF700390252 /* KeyShortcutsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcutsController.swift; sourceTree = "<group>"; };
+		09C147D9216CD7E500390252 /* KeyShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcut.swift; sourceTree = "<group>"; };
 		09E12475214D0978009FC9C3 /* DeviceMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceMetrics.swift; sourceTree = "<group>"; };
 		D00701972029CAD6006B9E34 /* TooltipController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipController.swift; sourceTree = "<group>"; };
 		D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipControllerNode.swift; sourceTree = "<group>"; };
@@ -387,6 +391,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		09C147D6216CCE9700390252 /* Key Shortcuts */ = {
+			isa = PBXGroup;
+			children = (
+				09C147D9216CD7E500390252 /* KeyShortcut.swift */,
+				09C147D7216CCEF700390252 /* KeyShortcutsController.swift */,
+			);
+			name = "Key Shortcuts";
+			sourceTree = "<group>";
+		};
 		D00701962029CAC4006B9E34 /* Tooltip */ = {
 			isa = PBXGroup;
 			children = (
@@ -775,6 +788,7 @@
 		D0FF9B2E1E7196E2000C66DB /* Keyboard */ = {
 			isa = PBXGroup;
 			children = (
+				09C147D6216CCE9700390252 /* Key Shortcuts */,
 				D0FF9B2F1E7196F6000C66DB /* KeyboardManager.swift */,
 				D036574A1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift */,
 			);
@@ -1039,6 +1053,7 @@
 				D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */,
 				D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */,
 				D05CC2FA1B6955D000E235A3 /* UINavigationItem+Proxy.m in Sources */,
+				09C147D8216CCEF700390252 /* KeyShortcutsController.swift in Sources */,
 				D096A4501EA64F580000A7AE /* ActionSheetCheckboxItem.swift in Sources */,
 				D0C2DFCE1CC4431D0044FF83 /* ListViewAccessoryItem.swift in Sources */,
 				D0CE8CE91F6FC7EC00AA2DB0 /* NavigationBarTitleView.swift in Sources */,
@@ -1101,6 +1116,7 @@
 				D02383801DDF7916004018B6 /* LegacyPresentedController.swift in Sources */,
 				D08E90471D243C2F00533158 /* HighlightTrackingButton.swift in Sources */,
 				D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */,
+				09C147DA216CD7E500390252 /* KeyShortcut.swift in Sources */,
 				D08CAA7B1ED73C990000FDA8 /* ViewControllerTracingNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1,6 +1,6 @@
 import UIKit
 
-enum DeviceMetrics {
+public enum DeviceMetrics {
     case iPhone4
     case iPhone5
     case iPhone6
@@ -12,7 +12,7 @@ enum DeviceMetrics {
     
     static let allDevices = [iPhone4, iPhone5, iPhone6, iPhone6Plus, iPhoneX, iPhoneXSMax, iPad, iPadPro]
     
-    static func forScreenSize(_ size: CGSize) -> DeviceMetrics? {
+    public static func forScreenSize(_ size: CGSize) -> DeviceMetrics? {
         for device in allDevices {
             let width = device.screenSize.width
             let height = device.screenSize.height
@@ -111,6 +111,29 @@ enum DeviceMetrics {
                     return 45.0
                 case .iPad, .iPadPro:
                     return 42.0
+            }
+        }
+    }
+    
+    public func previewingContentSize(inLandscape: Bool) -> CGSize {
+        let screenSize = self.screenSize
+        if inLandscape {
+            switch self {
+                case .iPhoneX:
+                    return CGSize(width: screenSize.height, height: screenSize.width + 48.0)
+                case .iPhoneXSMax:
+                    return CGSize(width: screenSize.height, height: screenSize.width - 30.0)
+                default:
+                    return CGSize(width: screenSize.height, height: screenSize.width - 10.0)
+            }
+        } else {
+            switch self {
+                case .iPhoneX:
+                    return CGSize(width: screenSize.width, height: screenSize.height - 190.0)
+                case .iPhoneXSMax:
+                    return CGSize(width: screenSize.width, height: screenSize.height - 90.0)
+                default:
+                    return CGSize(width: screenSize.width, height: screenSize.height - 50.0)
             }
         }
     }

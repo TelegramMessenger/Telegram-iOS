@@ -103,7 +103,15 @@ final class PeekControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(view: self.blurView, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let layoutInsets = layout.insets(options: [])
+        var layoutInsets = layout.insets(options: [])
+        let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+       
+        layoutInsets.left = floor((layout.size.width - containerWidth) / 2.0)
+        layoutInsets.right = layoutInsets.left
+        if !layoutInsets.bottom.isZero {
+            layoutInsets.bottom -= 12.0
+        }
+        
         let maxContainerSize = CGSize(width: layout.size.width - 14.0 * 2.0, height: layout.size.height - layoutInsets.top - layoutInsets.bottom - 90.0)
         
         var menuSize: CGSize?
