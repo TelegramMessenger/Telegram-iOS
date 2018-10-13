@@ -3,6 +3,54 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 
+public struct OpenInAppIconResourceId: MediaResourceId {
+    public let appStoreId: Int64
+    
+    public var uniqueId: String {
+        return "app-icon-\(appStoreId)"
+    }
+    
+    public var hashValue: Int {
+        return self.appStoreId.hashValue
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? OpenInAppIconResourceId {
+            return self.appStoreId == to.appStoreId
+        } else {
+            return false
+        }
+    }
+}
+
+public class OpenInAppIconResource: TelegramMediaResource {
+    public let appStoreId: Int64
+    
+    public init(appStoreId: Int64) {
+        self.appStoreId = appStoreId
+    }
+    
+    public required init(decoder: PostboxDecoder) {
+        self.appStoreId = decoder.decodeInt64ForKey("i", orElse: 0)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64(self.appStoreId, forKey: "i")
+    }
+    
+    public var id: MediaResourceId {
+        return OpenInAppIconResourceId(appStoreId: self.appStoreId)
+    }
+    
+    public func isEqual(to: TelegramMediaResource) -> Bool {
+        if let to = to as? OpenInAppIconResource {
+            return self.appStoreId == to.appStoreId
+        } else {
+            return false
+        }
+    }
+}
+
 func fetchOpenInAppIconResource(resource: OpenInAppIconResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)

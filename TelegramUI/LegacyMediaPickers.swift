@@ -208,7 +208,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                     let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
                                     let scaledSize = image.size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
                                     if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
-                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.42) {
+                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6) {
                                             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
                                             #if DEBUG
                                                 if #available(iOSApplicationExtension 11.0, *) {

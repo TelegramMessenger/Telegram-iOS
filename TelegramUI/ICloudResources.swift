@@ -60,7 +60,7 @@ struct ICloudFileDescription {
     let fileSize: Int
 }
 
-private func desctiptionWithUrl(_ url: URL) -> ICloudFileDescription? {
+private func descriptionWithUrl(_ url: URL) -> ICloudFileDescription? {
     if #available(iOSApplicationExtension 9.0, *) {
         guard url.startAccessingSecurityScopedResource() else {
             return nil
@@ -101,7 +101,7 @@ func iCloudFileDescription(_ url: URL) -> Signal<ICloudFileDescription?, NoError
         }
         
         if !isRemote || isCurrent {
-            subscriber.putNext(desctiptionWithUrl(url))
+            subscriber.putNext(descriptionWithUrl(url))
             subscriber.putCompletion()
             return EmptyDisposable
         } else {
@@ -126,7 +126,7 @@ func iCloudFileDescription(_ url: URL) -> Signal<ICloudFileDescription?, NoError
                     return
                 }
                 
-                subscriber.putNext(desctiptionWithUrl(url))
+                subscriber.putNext(descriptionWithUrl(url))
                 subscriber.putCompletion()
             })
             

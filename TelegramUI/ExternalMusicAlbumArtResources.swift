@@ -3,6 +3,64 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 
+public struct ExternalMusicAlbumArtResourceId: MediaResourceId {
+    public let title: String
+    public let performer: String
+    public let isThumbnail: Bool
+    
+    public var uniqueId: String {
+        return "ext-album-art-\(isThumbnail ? "thump" : "full")-\(self.title.replacingOccurrences(of: "/", with: "_"))-\(self.performer.replacingOccurrences(of: "/", with: "_"))"
+    }
+    
+    public var hashValue: Int {
+        return self.title.hashValue &* 31 &+ self.performer.hashValue
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? ExternalMusicAlbumArtResourceId {
+            return self.title == to.title && self.performer == to.performer && self.isThumbnail == to.isThumbnail
+        } else {
+            return false
+        }
+    }
+}
+
+public class ExternalMusicAlbumArtResource: TelegramMediaResource {
+    public let title: String
+    public let performer: String
+    public let isThumbnail: Bool
+    
+    public init(title: String, performer: String, isThumbnail: Bool) {
+        self.title = title
+        self.performer = performer
+        self.isThumbnail = isThumbnail
+    }
+    
+    public required init(decoder: PostboxDecoder) {
+        self.title = decoder.decodeStringForKey("t", orElse: "")
+        self.performer = decoder.decodeStringForKey("p", orElse: "")
+        self.isThumbnail = decoder.decodeInt32ForKey("th", orElse: 1) != 0
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.title, forKey: "t")
+        encoder.encodeString(self.performer, forKey: "p")
+        encoder.encodeInt32(self.isThumbnail ? 1 : 0, forKey: "th")
+    }
+    
+    public var id: MediaResourceId {
+        return ExternalMusicAlbumArtResourceId(title: self.title, performer: self.performer, isThumbnail: self.isThumbnail)
+    }
+    
+    public func isEqual(to: TelegramMediaResource) -> Bool {
+        if let to = to as? ExternalMusicAlbumArtResource {
+            return self.title == to.title && self.performer == to.performer && self.isThumbnail == to.isThumbnail
+        } else {
+            return false
+        }
+    }
+}
+
 private func urlEncodedStringFromString(_ string: String) -> String {
     var nsString: NSString = string as NSString
     if let value = nsString.replacingPercentEscapes(using: String.Encoding.utf8.rawValue) {

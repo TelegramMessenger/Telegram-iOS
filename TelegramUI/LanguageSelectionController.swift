@@ -289,9 +289,6 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         self.searchController.searchBar.backgroundImage = UIImage()
                 
         if let textFieldOfSearchBar = self.searchController.searchBar.value(forKey: "searchField") as? UITextField {
-            if #available(iOSApplicationExtension 11.0, *) {
-                textFieldOfSearchBar.textAlignment = .center
-            }
             textFieldOfSearchBar.font = Font.regular(14.0)
             textFieldOfSearchBar.keyboardAppearance = self.presentationData.theme.chatList.searchBarKeyboardColor == .light ? .default : .dark
         }

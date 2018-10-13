@@ -1764,7 +1764,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                 }
             })
         }
-        
+        self.chatDisplayNode.sendGif = { [weak self] data in
+            
+        }
         self.chatDisplayNode.updateTypingActivity = { [weak self] value in
             if let strongSelf = self, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil {
                 if value {
