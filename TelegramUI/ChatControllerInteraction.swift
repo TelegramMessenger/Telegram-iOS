@@ -15,6 +15,7 @@ public struct ChatControllerInitialBotStart {
 }
 
 public enum ChatControllerInteractionNavigateToPeer {
+    case `default`
     case chat(textInputState: ChatTextInputState?, messageId: MessageId?)
     case info
     case withBotStartPayload(ChatControllerInitialBotStart)

@@ -23,17 +23,17 @@ final class StickerPaneSearchInteraction {
 }
 
 private enum StickerSearchEntryId: Equatable, Hashable {
-    case sticker(String, Int64)
+    case sticker(String?, Int64)
     case global(ItemCollectionId)
 }
 
 private enum StickerSearchEntry: Identifiable, Comparable {
-    case sticker(index: Int, code: String, stickerItem: FoundStickerItem, theme: PresentationTheme)
+    case sticker(index: Int, code: String?, stickerItem: FoundStickerItem, theme: PresentationTheme)
     case global(index: Int, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool)
     
     var stableId: StickerSearchEntryId {
         switch self {
-            case let .sticker(index, code, stickerItem, _):
+            case let .sticker(_, code, stickerItem, _):
                 return .sticker(code, stickerItem.file.fileId.id)
             case let .global(_, info, _, _):
                 return .global(info.id)
@@ -252,20 +252,27 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                 return
             }
             
-            let signal: Signal<([(String, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)?, NoError>
+            let signal: Signal<([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)?, NoError>
             if !text.isEmpty {
-                let stickers: Signal<[(String, FoundStickerItem)], NoError> = Signal { subscriber in
-                    var signals: [Signal<(String, [FoundStickerItem]), NoError>] = []
-                    for entry in TGEmojiSuggestions.suggestions(forQuery: text.lowercased()) {
-                        if let entry = entry as? TGAlphacodeEntry {
-                            signals.append(searchStickers(account: account, query: entry.emoji)
-                            |> take(1)
-                            |> map { (entry.emoji, $0) })
+                let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
+                    var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
+                    
+                    if text.isSingleEmoji {
+                        signals.append(searchStickers(account: account, query: text.firstEmoji)
+                        |> take(1)
+                        |> map { (nil, $0) })
+                    } else {
+                        for entry in TGEmojiSuggestions.suggestions(forQuery: text.lowercased()) {
+                            if let entry = entry as? TGAlphacodeEntry {
+                                signals.append(searchStickers(account: account, query: entry.emoji)
+                                |> take(1)
+                                |> map { (entry.emoji, $0) })
+                            }
                         }
                     }
                     
                     return combineLatest(signals).start(next: { results in
-                        var result: [(String, FoundStickerItem)] = []
+                        var result: [(String?, FoundStickerItem)] = []
                         for (emoji, stickers) in results {
                             for sticker in stickers {
                                 result.append((emoji, sticker))
@@ -292,7 +299,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                     })
                 }
                 signal = combineLatest(stickers, packs)
-                |> map { stickers, packs -> ([(String, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)? in
+                |> map { stickers, packs -> ([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)? in
                     return (stickers, packs.0, packs.1, packs.2)
                 }
                 strongSelf.searchBar.activity = true
@@ -322,7 +329,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                         
                         var index = 0
                         for (code, sticker) in stickers {
-                            entries.append(StickerSearchEntry.sticker(index: index, code: code, stickerItem: sticker, theme: theme))
+                            entries.append(.sticker(index: index, code: code, stickerItem: sticker, theme: theme))
                             index += 1
                         }
                         for (collectionId, info, _, installed) in packs.infos {

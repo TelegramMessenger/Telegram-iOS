@@ -52,7 +52,6 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     private var didSetup3dTouch = false
     
-    private let passcodeDisposable = MetaDisposable()
     private var passcodeLockTooltipDisposable = MetaDisposable()
     private var didShowPasscodeLockTooltipController = false
     
@@ -76,7 +75,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         if groupId == nil {
             self.navigationBar?.item = nil
         
-            self.titleView.title = NetworkStatusTitle(text: self.presentationData.strings.DialogList_Title, activity: false, hasProxy: false, connectsViaProxy: false)
+            self.titleView.title = NetworkStatusTitle(text: self.presentationData.strings.DialogList_Title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
             self.navigationItem.titleView = self.titleView
             self.tabBarItem.title = self.presentationData.strings.DialogList_Title
             self.tabBarItem.image = tabImageNone
@@ -128,23 +127,33 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             return lhs == rhs
         })
         
-        self.titleDisposable = (combineLatest(account.networkState |> deliverOnMainQueue, hasProxy |> deliverOnMainQueue)).start(next: { [weak self] state, proxy in
+        let passcode = account.postbox.combinedView(keys: [.accessChallengeData])
+        |> map { view -> (Bool, Bool) in
+            let data = (view.views[.accessChallengeData] as! AccessChallengeDataView).data
+            return (data.isLockable, data.autolockDeadline == 0)
+        }
+        
+        self.titleDisposable = (combineLatest(account.networkState |> deliverOnMainQueue, hasProxy |> deliverOnMainQueue, passcode |> deliverOnMainQueue)).start(next: { [weak self] state, proxy, passcode in
             if let strongSelf = self {
                 let (hasProxy, connectsViaProxy) = proxy
+                let (isPasscodeSet, isManuallyLocked) = passcode
                 var checkProxy = false
                 switch state {
                     case .waitingForNetwork:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
                     case let .connecting(proxy):
-                        let text = strongSelf.presentationData.strings.State_Connecting
+                        var text = strongSelf.presentationData.strings.State_Connecting
+                        if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
+                            text = strongSelf.presentationData.strings.State_ConnectingToProxy
+                        }
                         if let proxy = proxy, proxy.hasConnectionIssues {
                             checkProxy = true
                         }
-                        strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
                     case .updating:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
                     case .online:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
                 }
                 if checkProxy {
                     if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
@@ -186,13 +195,6 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
             }
         })
-        
-        self.passcodeDisposable.set((account.postbox.combinedView(keys: [.accessChallengeData]) |> deliverOnMainQueue).start(next: { [weak self] view in
-            if let strongSelf = self {
-                let data = (view.views[.accessChallengeData] as! AccessChallengeDataView).data
-                strongSelf.titleView.updatePasscode(isPasscodeSet: data.isLockable, isManuallyLocked: data.autolockDeadline == 0)
-            }
-        }))
         
         self.titleView.toggleIsLocked = { [weak self] in
             if let strongSelf = self {
@@ -241,7 +243,6 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.badgeDisposable?.dispose()
         self.badgeIconDisposable?.dispose()
         self.passcodeLockTooltipDisposable.dispose()
-        self.passcodeDisposable.dispose()
         self.presentationDataDisposable?.dispose()
     }
     

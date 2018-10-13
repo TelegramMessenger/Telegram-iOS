@@ -630,6 +630,8 @@ public class PeerMediaCollectionController: TelegramController {
                                 if let navigationController = strongSelf.navigationController as? NavigationController {
                                     navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), botStart: startPayload)
                                 }
+                            default:
+                                break
                         }
                     }
                 }, present: { c, a in

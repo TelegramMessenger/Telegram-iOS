@@ -99,7 +99,7 @@ func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Signal<Medi
             let snapshotter = MKMapSnapshotter(options: options)
             snapshotter.start(with: DispatchQueue.global(), completionHandler: { result, error in
                 if let image = result?.image {
-                    if let data = UIImageJPEGRepresentation(image, 0.6) {
+                    if let data = UIImageJPEGRepresentation(image, 0.9) {
                         subscriber.putNext(MediaResourceDataFetchResult.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
                         subscriber.putCompletion()
                     }

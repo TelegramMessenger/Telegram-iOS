@@ -24,6 +24,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(ContactSynchronizationSettings.self, f: { ContactSynchronizationSettings(decoder: $0) })
     declareEncodable(CachedChannelAdminIds.self, f: { CachedChannelAdminIds(decoder: $0) })
     declareEncodable(StickerSettings.self, f: { StickerSettings(decoder: $0) })
+    declareEncodable(InstantPagePresentationSettings.self, f: { InstantPagePresentationSettings(decoder: $0) })
     return
 }()
 

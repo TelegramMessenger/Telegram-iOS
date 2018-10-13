@@ -249,8 +249,6 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 self.dequeueTransition()
             }
         }
-        
-        
     }
     
     override func animateOut(completion: @escaping () -> Void) {

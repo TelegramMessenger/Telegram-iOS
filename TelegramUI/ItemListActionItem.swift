@@ -23,9 +23,10 @@ class ItemListActionItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: () -> Void
+    let longTapAction: (() -> Void)?
     let tag: Any?
     
-    init(theme: PresentationTheme, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, tag: Any? = nil) {
+    init(theme: PresentationTheme, title: String, kind: ItemListActionKind, alignment: ItemListActionAlignment, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: (() -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.title = title
         self.kind = kind
@@ -33,6 +34,7 @@ class ItemListActionItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.action = action
+        self.longTapAction = longTapAction
         self.tag = tag
     }
     
@@ -280,5 +282,13 @@ class ItemListActionItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override func longTapped() {
+        self.item?.longTapAction?()
+    }
+    
+    override var canBeLongTapped: Bool {
+        return self.item?.longTapAction != nil
     }
 }

@@ -4,12 +4,33 @@ import Postbox
 import Display
 import SwiftSignalKit
 
+private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
+    if case .default = navigation {
+        if let peerId = peerId {
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                return .info
+            } else {
+                return .chat(textInputState: nil, messageId: nil)
+            }
+        } else {
+            return .info
+        }
+    } else {
+        return navigation
+    }
+}
+
 func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, present: (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
     switch resolvedUrl {
         case let .externalUrl(url):
             openExternalUrl(account: account, context: context, url: url, presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: account.telegramApplicationContext, navigationController: navigationController, dismissInput: dismissInput)
-        case let .peer(peerId):
-            openPeer(peerId, .chat(textInputState: nil, messageId: nil))
+        case let .peer(peerId, navigation):
+            if let peerId = peerId {
+                openPeer(peerId, defaultNavigationForPeerId(peerId, navigation: navigation))
+            } else {
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            }
         case let .botStart(peerId, payload):
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload):

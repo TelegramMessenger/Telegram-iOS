@@ -2849,7 +2849,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
         
         self.validLayout = layout
         
-        self.chatTitleView?.layoutMetrics = layout.metrics
+        self.chatTitleView?.layout = layout
         
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop)
@@ -3161,8 +3161,20 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                 self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             case .clearHistory:
                 if case let .peer(peerId) = self.chatLocation {
+                    let text: String
+                    if peerId == account.peerId {
+                        text = self.presentationData.strings.Conversation_ClearSelfHistory
+                    } else if peerId.namespace == Namespaces.Peer.SecretChat {
+                        text = self.presentationData.strings.Conversation_ClearSecretHistory
+                    } else if peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
+                        text = self.presentationData.strings.Conversation_ClearGroupHistory
+                    } else {
+                        text = self.presentationData.strings.Conversation_ClearPrivateHistory
+                    }
+
                     let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: text),
                         ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ClearAll, color: .destructive, action: { [weak self, weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
@@ -3175,6 +3187,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                             actionSheet?.dismissAnimated()
                         })
                     ])])
+                    
                     self.chatDisplayNode.dismissInput()
                     self.present(actionSheet, in: .window(.root))
                 }
@@ -4180,6 +4193,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedBotStartPayload(botStart.payload)
                     })
+                default:
+                    break
             }
         } else {
             if let peerId = peerId {
@@ -4221,6 +4236,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                                 }
                             case let .withBotStartPayload(botStart):
                                 (self.navigationController as? NavigationController)?.pushViewController(ChatController(account: self.account, chatLocation: .peer(peerId), messageId: nil, botStart: botStart))
+                            default:
+                                break
                         }
                     case .group:
                         (self.navigationController as? NavigationController)?.pushViewController(ChatController(account: self.account, chatLocation: .peer(peerId), messageId: fromMessage?.id, botStart: nil))
@@ -4273,7 +4290,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                             self.chatDisplayNode.dismissInput()
                             self.present(controller, in: .window(.root))
                         }
-                    case let .withBotStartPayload(_):
+                    default:
                         break
                 }
             }
@@ -4290,9 +4307,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
         }
         disposable.set((resolvePeerByName(account: self.account, name: name, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peerId in
             if let strongSelf = self {
-                if let peerId = peerId {
-                    (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId), messageId: nil))
-                }
+                strongSelf.openResolved(.peer(peerId, .default))
             }
         }))
     }
@@ -4396,6 +4411,48 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
         }))
     }
     
+    private func openResolved(_ result: ResolvedUrl) {        
+        openResolvedUrl(result, account: self.account, context: .chat, navigationController: self.navigationController as? NavigationController, openPeer: { [weak self] peerId, navigation in
+            guard let strongSelf = self else {
+                return
+            }
+            switch navigation {
+                case let .chat(_, messageId):
+                    if case .peer(peerId) = strongSelf.chatLocation {
+                        if let messageId = messageId {
+                            strongSelf.navigateToMessage(from: nil, to: .id(messageId))
+                        }
+                    } else if let navigationController = strongSelf.navigationController as? NavigationController {
+                        navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always)
+                    }
+                case .info:
+                    strongSelf.navigationActionDisposable.set((strongSelf.account.postbox.loadedPeerWithId(peerId)
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                            if let strongSelf = self, peer.restrictionText == nil {
+                                if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                                }
+                            }
+                        }))
+                case let .withBotStartPayload(startPayload):
+                    if case .peer(peerId) = strongSelf.chatLocation {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                            $0.updatedBotStartPayload(startPayload.payload)
+                        })
+                    } else if let navigationController = strongSelf.navigationController as? NavigationController {
+                        navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), botStart: startPayload)
+                    }
+                default:
+                    break
+                }
+        }, present: { [weak self] c, a in
+            self?.present(c, in: .window(.root), with: a)
+        }, dismissInput: { [weak self] in
+            self?.chatDisplayNode.dismissInput()
+        })
+    }
+    
     private func openUrl(_ url: String, concealed: Bool) {
         let openImpl: () -> Void = { [weak self] in
             guard let strongSelf = self else {
@@ -4411,47 +4468,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
             }
             disposable.set((resolveUrl(account: strongSelf.account, url: url)
             |> deliverOnMainQueue).start(next: { [weak self] result in
-                guard let strongSelf = self else {
-                    return
+                if let strongSelf = self {
+                    strongSelf.openResolved(result)
                 }
-                
-                openResolvedUrl(result, account: strongSelf.account, context: .chat, navigationController: strongSelf.navigationController as? NavigationController, openPeer: { peerId, navigation in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    switch navigation {
-                        case let .chat(_, messageId):
-                            if case .peer(peerId) = strongSelf.chatLocation {
-                                if let messageId = messageId {
-                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId))
-                                }
-                            } else if let navigationController = strongSelf.navigationController as? NavigationController {
-                                navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always)
-                            }
-                        case .info:
-                            strongSelf.navigationActionDisposable.set((strongSelf.account.postbox.loadedPeerWithId(peerId)
-                                |> take(1)
-                                |> deliverOnMainQueue).start(next: { [weak self] peer in
-                                    if let strongSelf = self, peer.restrictionText == nil {
-                                        if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
-                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
-                                        }
-                                    }
-                                }))
-                        case let .withBotStartPayload(startPayload):
-                            if case .peer(peerId) = strongSelf.chatLocation {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                    $0.updatedBotStartPayload(startPayload.payload)
-                                })
-                            } else if let navigationController = strongSelf.navigationController as? NavigationController {
-                                navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), botStart: startPayload)
-                            }
-                    }
-                }, present: { c, a in
-                    self?.present(c, in: .window(.root), with: a)
-                }, dismissInput: {
-                    self?.chatDisplayNode.dismissInput()
-                })
             }))
         }
         
@@ -4722,72 +4741,75 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                                 }
                         }
                     }
-                    if canBan {
-                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                        var items: [ActionSheetItem] = []
-                        
-                        var actions = Set<Int>([0])
-                        
-                        let toggleCheck: (Int, Int) -> Void = { [weak actionSheet] category, itemIndex in
-                            if actions.contains(category) {
-                                actions.remove(category)
-                            } else {
-                                actions.insert(category)
-                            }
-                            actionSheet?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
-                                if let item = item as? ActionSheetCheckboxItem {
-                                    return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
-                                }
-                                return item
-                            })
+                    
+                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                    var items: [ActionSheetItem] = []
+                    
+                    var actions = Set<Int>([0])
+                    
+                    let toggleCheck: (Int, Int) -> Void = { [weak actionSheet] category, itemIndex in
+                        if actions.contains(category) {
+                            actions.remove(category)
+                        } else {
+                            actions.insert(category)
                         }
-                        
-                        var itemIndex = 0
-                        for categoryId in [0, 1, 2, 3] as [Int] {
-                            var title = ""
-                            if categoryId == 0 {
-                                title = strongSelf.presentationData.strings.Conversation_Moderate_Delete
-                            } else if categoryId == 1 {
-                                title = strongSelf.presentationData.strings.Conversation_Moderate_Ban
-                            } else if categoryId == 2 {
-                                title = strongSelf.presentationData.strings.Conversation_Moderate_Report
-                            } else if categoryId == 3 {
-                                title = strongSelf.presentationData.strings.Conversation_Moderate_DeleteAllMessages(author.displayTitle).0
+                        actionSheet?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
+                            if let item = item as? ActionSheetCheckboxItem {
+                                return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
                             }
-                            let index = itemIndex
-                            items.append(ActionSheetCheckboxItem(title: title, label: "", value: actions.contains(categoryId), action: { value in
-                                toggleCheck(categoryId, index)
-                            }))
-                            itemIndex += 1
-                        }
-                        
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Done, action: { [weak self, weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                                if actions.contains(3) {
-                                    let _ = strongSelf.account.postbox.transaction({ transaction -> Void in
-                                        transaction.removeAllMessagesWithAuthor(peerId, authorId: author.id)
-                                    }).start()
-                                    let _ = clearAuthorHistory(account: strongSelf.account, peerId: peerId, memberId: author.id).start()
-                                } else if actions.contains(0) {
-                                    let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
-                                }
-                                if actions.contains(1) {
-                                    let _ = removePeerMember(account: strongSelf.account, peerId: peerId, memberId: author.id).start()
-                                }
-                            }
-                        }))
-                        
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        strongSelf.present(actionSheet, in: .window(.root))
-                    } else {
-                        strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: options)
+                            return item
+                        })
                     }
+                    
+                    var itemIndex = 0
+                    var categories: [Int] = [0]
+                    if canBan {
+                        categories.append(1)
+                    }
+                    categories.append(contentsOf: [2, 3])
+                    
+                    for categoryId in categories as [Int] {
+                        var title = ""
+                        if categoryId == 0 {
+                            title = strongSelf.presentationData.strings.Conversation_Moderate_Delete
+                        } else if categoryId == 1 {
+                            title = strongSelf.presentationData.strings.Conversation_Moderate_Ban
+                        } else if categoryId == 2 {
+                            title = strongSelf.presentationData.strings.Conversation_Moderate_Report
+                        } else if categoryId == 3 {
+                            title = strongSelf.presentationData.strings.Conversation_Moderate_DeleteAllMessages(author.displayTitle).0
+                        }
+                        let index = itemIndex
+                        items.append(ActionSheetCheckboxItem(title: title, label: "", value: actions.contains(categoryId), action: { value in
+                            toggleCheck(categoryId, index)
+                        }))
+                        itemIndex += 1
+                    }
+                    
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Done, action: { [weak self, weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        if let strongSelf = self {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                            if actions.contains(3) {
+                                let _ = strongSelf.account.postbox.transaction({ transaction -> Void in
+                                    transaction.removeAllMessagesWithAuthor(peerId, authorId: author.id)
+                                }).start()
+                                let _ = clearAuthorHistory(account: strongSelf.account, peerId: peerId, memberId: author.id).start()
+                            } else if actions.contains(0) {
+                                let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                            }
+                            if actions.contains(1) {
+                                let _ = removePeerMember(account: strongSelf.account, peerId: peerId, memberId: author.id).start()
+                            }
+                        }
+                    }))
+                    
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    strongSelf.present(actionSheet, in: .window(.root))
                 }
             }))
         }

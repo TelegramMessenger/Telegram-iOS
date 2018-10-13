@@ -323,9 +323,6 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     let peersPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
     let arguments = ChannelMembersControllerArguments(account: account, addMember: {
-        
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with {$0}
-        
         actionsDisposable.add((peersPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { members in
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
             let contactsController = ContactMultiselectionController(account: account, mode: .peerSelection, options: [], filters: [.excludeSelf, .disable(disabledIds)])

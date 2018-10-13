@@ -437,7 +437,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             case .privateLink:
                 break
             case .initialSetup, .generic:
-                entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_Edit_LinkItem))
+                entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader : presentationData.strings.Channel_Edit_LinkItem))
                 entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
                 entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
         
@@ -817,6 +817,8 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                                     default:
                                         doneEnabled = false
                                 }
+                            } else {
+                                doneEnabled = false
                             }
                     }
                 }
@@ -829,7 +831,6 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                     }
                     
                     if let updatedAddressNameValue = updatedAddressNameValue {
-                        
                         let invokeAction: ()->Void = {
                             updateState { state in
                                 return state.withUpdatedUpdatingAddressName(true)

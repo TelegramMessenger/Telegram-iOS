@@ -445,6 +445,8 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                                         navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                         navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
                                     }
+                                default:
+                                    break
                             }
                         }, present: { c, a in
                             if let navigationController = navigationController {
