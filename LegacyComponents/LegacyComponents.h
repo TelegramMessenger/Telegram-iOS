@@ -236,6 +236,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/AVURLAsset+TGMediaItem.h>
 #import <LegacyComponents/UIImage+TGMediaEditableItem.h>
 #import <LegacyComponents/TGMediaVideoConverter.h>
+#import <LegacyComponents/TGGifConverter.h>
 
 #import <LegacyComponents/TGPhotoEditorAnimation.h>
 #import <LegacyComponents/TGPhotoToolbarView.h>
