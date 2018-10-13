@@ -603,6 +603,7 @@ open class NavigationBar: ASDisplayNode {
         self.backButtonArrow.displaysAsynchronously = false
         self.leftButtonNode = NavigationButtonNode()
         self.rightButtonNode = NavigationButtonNode()
+        self.rightButtonNode.hitTestSlop = UIEdgeInsets(top: -4.0, left: -4.0, bottom: -4.0, right: -10.0)
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
@@ -1002,5 +1003,16 @@ open class NavigationBar: ASDisplayNode {
                 }
             }
         }
+    }
+    
+    override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.frame.contains(point) {
+            if !self.rightButtonNode.isHidden {
+                if let result = self.rightButtonNode.hitTest(self.view.convert(point, to: self.rightButtonNode.view), with: event) {
+                    return result
+                }
+            }
+        }
+        return super.hitTest(point, with: event)
     }
 }

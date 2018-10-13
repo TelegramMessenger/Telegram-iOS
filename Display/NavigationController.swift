@@ -718,6 +718,10 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public func pushViewController(_ controller: ViewController) {
+        self.pushViewController(controller, completion: {})
+    }
+    
+    public func pushViewController(_ controller: ViewController, completion: @escaping () -> Void) {
         let navigateAction: () -> Void = { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -784,7 +788,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }))
     }
     
-    public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
+    public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         self.view.endEditing(true)
         if let validLayout = self.validLayout {
             var (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: validLayout), layout: validLayout, index: self.viewControllers.count)
@@ -794,6 +798,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 ready?.set(true)
+                completion()
                 var controllers = strongSelf.viewControllers
                 while controllers.count > 1 {
                     controllers.removeLast()

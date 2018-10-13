@@ -132,6 +132,9 @@ public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UI
     if view.disablesInteractiveTransitionGestureRecognizer {
         return true
     }
+    if let f = view.disablesInteractiveTransitionGestureRecognizerNow, f() {
+        return true
+    }
     if let superview = view.superview {
         return doesViewTreeDisableInteractiveTransitionGestureRecognizer(superview)
     }

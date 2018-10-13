@@ -35,6 +35,7 @@ static const void *UIViewControllerNavigationControllerKey = &UIViewControllerNa
 static const void *UIViewControllerPresentingControllerKey = &UIViewControllerPresentingControllerKey;
 static const void *UIViewControllerPresentingProxyControllerKey = &UIViewControllerPresentingProxyControllerKey;
 static const void *disablesInteractiveTransitionGestureRecognizerKey = &disablesInteractiveTransitionGestureRecognizerKey;
+static const void *disablesInteractiveTransitionGestureRecognizerNowKey = &disablesInteractiveTransitionGestureRecognizerNowKey;
 static const void *disableAutomaticKeyboardHandlingKey = &disableAutomaticKeyboardHandlingKey;
 static const void *setNeedsStatusBarAppearanceUpdateKey = &setNeedsStatusBarAppearanceUpdateKey;
 static const void *inputAccessoryHeightProviderKey = &inputAccessoryHeightProviderKey;
@@ -230,6 +231,14 @@ static bool notyfyingShiftState = false;
 
 - (void)setDisablesInteractiveTransitionGestureRecognizer:(bool)disablesInteractiveTransitionGestureRecognizer {
     [self setAssociatedObject:@(disablesInteractiveTransitionGestureRecognizer) forKey:disablesInteractiveTransitionGestureRecognizerKey];
+}
+
+- (bool (^)())disablesInteractiveTransitionGestureRecognizerNow {
+    return [self associatedObjectForKey:disablesInteractiveTransitionGestureRecognizerNowKey];
+}
+
+- (void)setDisablesInteractiveTransitionGestureRecognizerNow:(bool (^)())disablesInteractiveTransitionGestureRecognizerNow {
+    [self setAssociatedObject:[disablesInteractiveTransitionGestureRecognizerNow copy] forKey:disablesInteractiveTransitionGestureRecognizerNowKey];
 }
 
 - (BOOL (^)(CGPoint))interactiveTransitionGestureRecognizerTest {

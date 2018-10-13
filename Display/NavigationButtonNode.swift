@@ -149,9 +149,9 @@ private final class NavigationButtonItemNode: ASTextNode {
         var apparentBounds = self.bounds
         let hitTestSlop = self.hitTestSlop
         apparentBounds.origin.x += hitTestSlop.left
-        apparentBounds.size.width -= hitTestSlop.left + hitTestSlop.right
+        apparentBounds.size.width += -hitTestSlop.left - hitTestSlop.right
         apparentBounds.origin.y += hitTestSlop.top
-        apparentBounds.size.height -= hitTestSlop.top + hitTestSlop.bottom
+        apparentBounds.size.height += -hitTestSlop.top - hitTestSlop.bottom
         
         return apparentBounds.contains(touch.location(in: self.view))
     }
