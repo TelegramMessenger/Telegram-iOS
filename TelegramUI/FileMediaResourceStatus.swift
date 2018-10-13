@@ -8,7 +8,12 @@ enum FileMediaResourcePlaybackStatus {
     case paused
 }
 
-enum FileMediaResourceStatus {
+struct FileMediaResourceStatus {
+    let mediaStatus: FileMediaResourceMediaStatus
+    let fetchStatus: MediaResourceStatus
+}
+
+enum FileMediaResourceMediaStatus {
     case fetchStatus(MediaResourceStatus)
     case playbackStatus(FileMediaResourcePlaybackStatus)
 }
@@ -50,45 +55,49 @@ func messageFileMediaResourceStatus(account: Account, file: TelegramMediaFile, m
     
     if message.flags.isSending {
         return combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id), playbackStatus)
-            |> map { resourceStatus, pendingStatus, playbackStatus -> FileMediaResourceStatus in
-                if let playbackStatus = playbackStatus {
-                    switch playbackStatus {
-                        case .playing:
-                            return .playbackStatus(.playing)
-                        case .paused:
-                            return .playbackStatus(.paused)
-                        case let .buffering(_, whilePlaying):
-                            if whilePlaying {
-                                return .playbackStatus(.playing)
-                            } else {
-                                return .playbackStatus(.paused)
-                            }
-                    }
-                } else if let pendingStatus = pendingStatus {
-                    return .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
-                } else {
-                    return .fetchStatus(resourceStatus)
+        |> map { resourceStatus, pendingStatus, playbackStatus -> FileMediaResourceStatus in
+            let mediaStatus: FileMediaResourceMediaStatus
+            if let playbackStatus = playbackStatus {
+                switch playbackStatus {
+                    case .playing:
+                        mediaStatus = .playbackStatus(.playing)
+                    case .paused:
+                        mediaStatus = .playbackStatus(.paused)
+                    case let .buffering(_, whilePlaying):
+                        if whilePlaying {
+                            mediaStatus = .playbackStatus(.playing)
+                        } else {
+                            mediaStatus = .playbackStatus(.paused)
+                        }
                 }
+            } else if let pendingStatus = pendingStatus {
+                mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
+            } else {
+                mediaStatus = .fetchStatus(resourceStatus)
+            }
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
         }
     } else {
         return combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), playbackStatus)
-            |> map { resourceStatus, playbackStatus -> FileMediaResourceStatus in
-                if let playbackStatus = playbackStatus {
-                    switch playbackStatus {
-                        case .playing:
-                            return .playbackStatus(.playing)
-                        case .paused:
-                            return .playbackStatus(.paused)
-                        case let .buffering(_, whilePlaying):
-                            if whilePlaying {
-                                return .playbackStatus(.playing)
-                            } else {
-                                return .playbackStatus(.paused)
-                            }
-                    }
-                } else {
-                    return .fetchStatus(resourceStatus)
+        |> map { resourceStatus, playbackStatus -> FileMediaResourceStatus in
+            let mediaStatus: FileMediaResourceMediaStatus
+            if let playbackStatus = playbackStatus {
+                switch playbackStatus {
+                    case .playing:
+                        mediaStatus = .playbackStatus(.playing)
+                    case .paused:
+                        mediaStatus = .playbackStatus(.paused)
+                    case let .buffering(_, whilePlaying):
+                        if whilePlaying {
+                            mediaStatus = .playbackStatus(.playing)
+                        } else {
+                            mediaStatus = .playbackStatus(.paused)
+                        }
                 }
+            } else {
+                mediaStatus = .fetchStatus(resourceStatus)
+            }
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
         }
     }
 }

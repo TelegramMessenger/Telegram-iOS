@@ -201,6 +201,11 @@ class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
         if !self.ignoreZoom {
             self.centerScrollViewContents(transition: self.ignoreZoomTransition ?? .immediate)
         }
+        if self.scrollNode.view.zoomScale.isEqual(to: self.scrollNode.view.minimumZoomScale) {
+            self.scrollNode.view.isScrollEnabled = false
+        } else {
+            self.scrollNode.view.isScrollEnabled = true
+        }
     }
     
     override func contentSize() -> CGSize? {

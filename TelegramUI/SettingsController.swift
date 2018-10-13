@@ -443,7 +443,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
 
     let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
-        let controller = OverlayStatusController(theme: account.telegramApplicationContext.currentPresentationData.with { $0 }.theme, type: .loading)
+        let controller = OverlayStatusController(theme: account.telegramApplicationContext.currentPresentationData.with { $0 }.theme, type: .loading(cancelled: nil))
         presentControllerImpl?(controller, nil)
         let _ = (resolvedUrl.get()
             |> take(1)

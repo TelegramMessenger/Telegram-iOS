@@ -208,6 +208,7 @@ public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResour
         if fetchResult.count != 0 {
             let asset = fetchResult.object(at: 0)
             let option = PHVideoRequestOptions()
+            option.isNetworkAccessAllowed = true
             option.deliveryMode = .highQualityFormat
             
             let alreadyReceivedAsset = Atomic<Bool>(value: false)

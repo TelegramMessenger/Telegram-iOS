@@ -154,7 +154,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
-    private var resourceStatus: FileMediaResourceStatus?
+    private var resourceStatus: FileMediaResourceMediaStatus?
     private let fetchDisposable = MetaDisposable()
     
     private var downloadStatusIconNode: ASImageNode
@@ -396,10 +396,11 @@ final class ListMessageFileItemNode: ListMessageNode {
                     
                     if isAudio {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
-                            updatedStatusSignal = currentUpdatedStatusSignal |> map { status in
-                                switch status {
+                            updatedStatusSignal = currentUpdatedStatusSignal
+                            |> map { status in
+                                switch status.mediaStatus {
                                     case .fetchStatus:
-                                        return .fetchStatus(.Local)
+                                        return FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus)
                                     case .playbackStatus:
                                         return status
                                 }
@@ -571,7 +572,9 @@ final class ListMessageFileItemNode: ListMessageNode {
                     }
                     
                     if let updatedStatusSignal = updatedStatusSignal {
-                        strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                        strongSelf.statusDisposable.set((updatedStatusSignal
+                        |> deliverOnMainQueue).start(next: { [weak strongSelf] fileStatus in
+                            let status = fileStatus.mediaStatus
                             displayLinkDispatcher.dispatch {
                                 if let strongSelf = strongSelf {
                                     strongSelf.resourceStatus = status

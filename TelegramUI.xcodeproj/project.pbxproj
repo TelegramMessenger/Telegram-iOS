@@ -128,6 +128,8 @@
 		D0383EE1207D1A1600C45548 /* emoji_suggestions.h in Headers */ = {isa = PBXBuildFile; fileRef = D0383EDB207D1A1600C45548 /* emoji_suggestions.h */; };
 		D0383EE4207D292800C45548 /* EmojisChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE3207D292800C45548 /* EmojisChatInputContextPanelNode.swift */; };
 		D0383EE6207D299600C45548 /* EmojisChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE5207D299600C45548 /* EmojisChatInputPanelItem.swift */; };
+		D039FB152170D99D00BD1BAD /* RadialCloudProgressContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D039FB142170D99D00BD1BAD /* RadialCloudProgressContentNode.swift */; };
+		D039FB1921711B5D00BD1BAD /* PlatformVideoContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D039FB1821711B5D00BD1BAD /* PlatformVideoContent.swift */; };
 		D03AA4DF202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4DE202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift */; };
 		D03AA4E5202DF8840056C405 /* StickerPreviewPeekContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4E4202DF8840056C405 /* StickerPreviewPeekContent.swift */; };
 		D03AA4E7202DFB160056C405 /* ItemListEditableReorderControlNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4E6202DFB160056C405 /* ItemListEditableReorderControlNode.swift */; };
@@ -1257,6 +1259,8 @@
 		D039EB021DEAEFEE00886EBC /* ChatTextInputAudioRecordingOverlayButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingOverlayButton.swift; sourceTree = "<group>"; };
 		D039EB071DEC725600886EBC /* ChatTextInputAudioRecordingTimeNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingTimeNode.swift; sourceTree = "<group>"; };
 		D039EB091DEC7A8700886EBC /* ChatTextInputAudioRecordingCancelIndicator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputAudioRecordingCancelIndicator.swift; sourceTree = "<group>"; };
+		D039FB142170D99D00BD1BAD /* RadialCloudProgressContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialCloudProgressContentNode.swift; sourceTree = "<group>"; };
+		D039FB1821711B5D00BD1BAD /* PlatformVideoContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformVideoContent.swift; sourceTree = "<group>"; };
 		D03AA4DE202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatContextResultPeekContentNode.swift; sourceTree = "<group>"; };
 		D03AA4E4202DF8840056C405 /* StickerPreviewPeekContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerPreviewPeekContent.swift; sourceTree = "<group>"; };
 		D03AA4E6202DFB160056C405 /* ItemListEditableReorderControlNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListEditableReorderControlNode.swift; sourceTree = "<group>"; };
@@ -2291,6 +2295,7 @@
 				D01776BB1F1E21AF0044446D /* RadialStatusBackgroundNode.swift */,
 				D01776B41F1D6CCC0044446D /* RadialStatusContentNode.swift */,
 				D01776B71F1D6FB30044446D /* RadialProgressContentNode.swift */,
+				D039FB142170D99D00BD1BAD /* RadialCloudProgressContentNode.swift */,
 				D0A723531FC3B40E0094D167 /* RadialCheckContentNode.swift */,
 				D01776B91F1D704F0044446D /* RadialStatusIconContentNode.swift */,
 				D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */,
@@ -2555,6 +2560,7 @@
 				D06BEC761F62F68B0035A545 /* OverlayUniversalVideoNode.swift */,
 				D0943B041FDDFDA0001522CC /* OverlayInstantVideoNode.swift */,
 				D0477D1C1F617E8900412B44 /* NativeVideoContent.swift */,
+				D039FB1821711B5D00BD1BAD /* PlatformVideoContent.swift */,
 				D06BEC8B1F65E30A0035A545 /* WebEmbedVideoContent.swift */,
 				D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */,
 				D0477D1E1F619E0700412B44 /* GalleryVideoDecoration.swift */,
@@ -5122,6 +5128,7 @@
 				D0147BA7206E8B4F00E40378 /* SecureIdAuthAcceptNode.swift in Sources */,
 				D0E8174E2011FC3800B82BBB /* ChatMessageEventLogPreviousDescriptionContentNode.swift in Sources */,
 				D0EC6D981EB9F58900EBF1C3 /* ChatMessageItemView.swift in Sources */,
+				D039FB1921711B5D00BD1BAD /* PlatformVideoContent.swift in Sources */,
 				D0CAD8FD20AE467D00ACD96E /* PeerChannelMemberCategoriesContextsManager.swift in Sources */,
 				D073D2DB1FB61DA9009E1DA2 /* CallListSettings.swift in Sources */,
 				D0430B001FF4570500A35ADD /* WebController.swift in Sources */,
@@ -5330,6 +5337,7 @@
 				D0E9BABD1F05735F00F079A4 /* STPPaymentConfiguration.m in Sources */,
 				D0EC6E0E1EB9F58900EBF1C3 /* PeerAvatarImageGalleryItem.swift in Sources */,
 				D0EC6E0F1EB9F58900EBF1C3 /* MapInputController.swift in Sources */,
+				D039FB152170D99D00BD1BAD /* RadialCloudProgressContentNode.swift in Sources */,
 				D04B4D111EEA04D400711AF6 /* MapResources.swift in Sources */,
 				D0EC6E101EB9F58900EBF1C3 /* MapInputControllerNode.swift in Sources */,
 				D0380DA9204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift in Sources */,

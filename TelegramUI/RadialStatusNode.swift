@@ -7,6 +7,7 @@ public enum RadialStatusNodeState: Equatable {
     case play(UIColor)
     case pause(UIColor)
     case progress(color: UIColor, lineWidth: CGFloat?, value: CGFloat?, cancelEnabled: Bool)
+    case cloudProgress(color: UIColor, strokeBackgroundColor: UIColor, lineWidth: CGFloat, value: CGFloat?)
     case check(UIColor)
     case customIcon(UIImage)
     case secretTimeout(color: UIColor, icon: UIImage?, beginTime: Double, timeout: Double)
@@ -39,6 +40,12 @@ public enum RadialStatusNodeState: Equatable {
                 }
             case let .progress(lhsColor, lhsLineWidth, lhsValue, lhsCancelEnabled):
                 if case let .progress(rhsColor, rhsLineWidth, rhsValue, rhsCancelEnabled) = rhs, lhsColor.isEqual(rhsColor), lhsValue == rhsValue, lhsLineWidth == rhsLineWidth, lhsCancelEnabled == rhsCancelEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .cloudProgress(lhsColor, lhsStrokeBackgroundColor, lhsLineWidth, lhsValue):
+                if case let .cloudProgress(rhsColor, rhsStrokeBackgroundColor, rhsLineWidth, rhsValue) = rhs, lhsColor.isEqual(rhsColor), lhsStrokeBackgroundColor.isEqual(rhsStrokeBackgroundColor), lhsLineWidth.isEqual(to: rhsLineWidth), lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -96,6 +103,18 @@ public enum RadialStatusNodeState: Equatable {
                     return current
                 } else {
                     let node = RadialProgressContentNode(color: color, lineWidth: lineWidth, displayCancel: cancelEnabled)
+                    node.progress = value
+                    return node
+                }
+            case let .cloudProgress(color, strokeLineColor, lineWidth, value):
+                if let current = current as? RadialCloudProgressContentNode {
+                    if !current.color.isEqual(color) {
+                        current.color = color
+                    }
+                    current.progress = value
+                    return current
+                } else {
+                    let node = RadialCloudProgressContentNode(color: color, backgroundStrokeColor: strokeLineColor, lineWidth: lineWidth)
                     node.progress = value
                     return node
                 }

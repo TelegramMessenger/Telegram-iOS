@@ -102,6 +102,56 @@ final class PeerChannelMemberCategoriesContextsManager {
         return self.getContext(postbox: postbox, network: network, peerId: peerId, key: key, requestUpdate: requestUpdate, updated: updated)
     }
     
+    func recentOnline(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<Int32, NoError> {
+        return Signal { [weak self] subscriber in
+            var previousIds: Set<PeerId>?
+            let statusesDisposable = MetaDisposable()
+            let disposableAndControl = self?.recent(postbox: postbox, network: network, peerId: peerId, updated: { state in
+                var idList: [PeerId] = []
+                for item in state.list {
+                    idList.append(item.peer.id)
+                    if idList.count >= 200 {
+                        break
+                    }
+                }
+                let updatedIds = Set(idList)
+                if previousIds != updatedIds {
+                    previousIds = updatedIds
+                    let key: PostboxViewKey = .peerPresences(peerIds: updatedIds)
+                    statusesDisposable.set((postbox.combinedView(keys: [key])
+                    |> map { view -> Int32 in
+                        var count: Int32 = 0
+                        let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                        if let presences = (view.views[key] as? PeerPresencesView)?.presences {
+                            for (_, presence) in presences {
+                                if let presence = presence as? TelegramUserPresence {
+                                    let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                    switch relativeStatus {
+                                        case .online:
+                                            count += 1
+                                        default:
+                                            break
+                                    }
+                                }
+                            }
+                        }
+                        return count
+                    }
+                    |> distinctUntilChanged
+                    |> deliverOnMainQueue).start(next: { count in
+                        subscriber.putNext(count)
+                    }))
+                }
+            })
+            return ActionDisposable {
+                disposableAndControl?.0.dispose()
+                statusesDisposable.dispose()
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        
+    }
+    
     func admins(postbox: Postbox, network: Network, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
         return self.getContext(postbox: postbox, network: network, peerId: peerId, key: .admins(searchQuery), requestUpdate: true, updated: updated)
     }

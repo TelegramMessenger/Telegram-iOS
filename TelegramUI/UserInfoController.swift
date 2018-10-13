@@ -1251,7 +1251,35 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
                     navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(currentPeerId))
                 }
             } else {
-                createSecretChatDisposable.set((createSecretChat(account: account, peerId: peerId) |> deliverOnMainQueue).start(next: { peerId in
+                var createSignal = createSecretChat(account: account, peerId: peerId)
+                var cancelImpl: (() -> Void)?
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    presentControllerImpl?(controller, nil)
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.15, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
+                createSignal = createSignal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                cancelImpl = {
+                    createSecretChatDisposable.set(nil)
+                }
+                
+                createSecretChatDisposable.set((createSignal |> deliverOnMainQueue).start(next: { peerId in
                     if let navigationController = (controller?.navigationController as? NavigationController) {
                         navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
                     }

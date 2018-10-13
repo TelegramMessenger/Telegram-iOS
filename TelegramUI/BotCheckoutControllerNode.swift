@@ -696,6 +696,26 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                 case let .webToken(token):
                     credentials = .generic(data: token.data, saveOnServer: token.saveOnServer)
                 case .applePayStripe:
+                    guard let paymentForm = self.paymentFormValue, let nativeProvider = paymentForm.nativeProvider else {
+                        return
+                    }
+                    //NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:[strongSelf->_paymentForm.nativeParams dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+                    guard let nativeParamsData = nativeProvider.params.data(using: .utf8) else {
+                        return
+                    }
+                    guard let nativeParams = (try? JSONSerialization.jsonObject(with: nativeParamsData, options: [])) as? [String: Any] else {
+                        return
+                    }
+                    
+                    let merchantId: String
+                    if nativeProvider.name == "stripe" {
+                        merchantId = "merchant.ph.telegra.Telegraph"
+                    } else if let paramsId = nativeParams["apple_pay_merchant_id"] as? String {
+                        merchantId = paramsId
+                    } else {
+                        return
+                    }
+                    
                     let botPeerId = self.messageId.peerId
                     let _ = (self.account.postbox.transaction({ transaction -> Peer? in
                         return transaction.getPeer(botPeerId)
@@ -703,7 +723,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                         if let strongSelf = self, let botPeer = botPeer {
                             let request = PKPaymentRequest()
                             
-                            request.merchantIdentifier = "merchant.ph.telegra.Telegraph"
+                            request.merchantIdentifier = merchantId
                             request.supportedNetworks = [.visa, .amex, .masterCard]
                             request.merchantCapabilities = [.capability3DS]
                             request.countryCode = "US"
@@ -898,41 +918,50 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
         guard let nativeParams = (try? JSONSerialization.jsonObject(with: paramsData)) as? [String: Any] else {
             return
         }
-        guard let publishableKey = nativeParams["publishable_key"] as? String else {
-            return
-        }
         
-        let signal: Signal<STPToken, Error> = Signal { subscriber in
-            let configuration = STPPaymentConfiguration.shared().copy() as! STPPaymentConfiguration
-            configuration.smsAutofillDisabled = true
-            configuration.publishableKey = publishableKey
-            configuration.appleMerchantIdentifier = "merchant.ph.telegra.Telegraph"
+        if nativeProvider.name == "stripe" {
+            guard let publishableKey = nativeParams["publishable_key"] as? String else {
+                return
+            }
             
-            let apiClient = STPAPIClient(configuration: configuration)
-            
-            apiClient.createToken(with: payment, completion: { token, error in
-                if let token = token {
-                    subscriber.putNext(token)
-                    subscriber.putCompletion()
-                } else if let error = error {
-                    subscriber.putError(error)
+            let signal: Signal<STPToken, Error> = Signal { subscriber in
+                let configuration = STPPaymentConfiguration.shared().copy() as! STPPaymentConfiguration
+                configuration.smsAutofillDisabled = true
+                configuration.publishableKey = publishableKey
+                configuration.appleMerchantIdentifier = "merchant.ph.telegra.Telegraph"
+                
+                let apiClient = STPAPIClient(configuration: configuration)
+                
+                apiClient.createToken(with: payment, completion: { token, error in
+                    if let token = token {
+                        subscriber.putNext(token)
+                        subscriber.putCompletion()
+                    } else if let error = error {
+                        subscriber.putError(error)
+                    }
+                })
+                
+                return ActionDisposable {
                 }
-            })
+            }
             
-            return ActionDisposable {
-            }
-        }
-        
-        self.paymentAuthDisposable.set((signal |> deliverOnMainQueue).start(next: { [weak self] token in
-            if let strongSelf = self {
-                strongSelf.applePayAuthrorizationCompletion = completion
-                strongSelf.pay(liabilityNoticeAccepted: true, receivedCredentials: .generic(data: "{\"type\": \"card\", \"id\": \"\(token.tokenId)\"}", saveOnServer: false))
-            } else {
+            self.paymentAuthDisposable.set((signal |> deliverOnMainQueue).start(next: { [weak self] token in
+                if let strongSelf = self {
+                    strongSelf.applePayAuthrorizationCompletion = completion
+                    strongSelf.pay(liabilityNoticeAccepted: true, receivedCredentials: .generic(data: "{\"type\": \"card\", \"id\": \"\(token.tokenId)\"}", saveOnServer: false))
+                } else {
+                    completion(.failure)
+                }
+            }, error: { _ in
                 completion(.failure)
+            }))
+        } else {
+            self.applePayAuthrorizationCompletion = completion
+            guard let paymentString = String(data: payment.token.paymentData, encoding: .utf8) else {
+                return
             }
-        }, error: { _ in
-            completion(.failure)
-        }))
+            self.pay(liabilityNoticeAccepted: true, receivedCredentials: .applePay(data: paymentString))
+        }
     }
     
     func paymentAuthorizationViewControllerDidFinish(_ controller: PKPaymentAuthorizationViewController) {
