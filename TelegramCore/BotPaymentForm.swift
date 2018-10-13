@@ -324,6 +324,7 @@ public func validateBotPaymentForm(network: Network, saveInfo: Bool, messageId: 
 public enum BotPaymentCredentials {
     case generic(data: String, saveOnServer: Bool)
     case saved(id: String, tempPassword: Data)
+    case applePay(data: String)
 }
 
 public enum SendBotPaymentFormError {
@@ -349,6 +350,8 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, validated
             apiCredentials = .inputPaymentCredentials(flags: credentialsFlags, data: .dataJSON(data: data))
         case let .saved(id, tempPassword):
             apiCredentials = .inputPaymentCredentialsSaved(id: id, tmpPassword: Buffer(data: tempPassword))
+        case let .applePay(data):
+            apiCredentials = .inputPaymentCredentialsApplePay(paymentData: .dataJSON(data: data))
     }
     var flags: Int32 = 0
     if validatedInfoId != nil {

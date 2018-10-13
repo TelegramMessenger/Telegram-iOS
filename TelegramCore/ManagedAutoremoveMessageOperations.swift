@@ -23,7 +23,7 @@ private final class ManagedAutoremoveMessageOperationsHelper {
         var beginOperations: [(TimestampBasedMessageAttributesEntry, MetaDisposable)] = []
         
         if self.entry?.0.index != head?.index {
-            if let (entry, disposable) = self.entry {
+            if let (_, disposable) = self.entry {
                 self.entry = nil
                 disposeOperations.append(disposable)
             }
@@ -62,31 +62,31 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
             for (entry, disposable) in beginOperations {
                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                 let signal = Signal<Void, NoError>.complete()
-                    |> delay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
-                    |> then(postbox.transaction { transaction -> Void in
-                        if let message = transaction.getMessage(entry.messageId) {
-                            if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-                                deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
-                            } else {
-                                transaction.updateMessage(message.id, update: { currentMessage in
-                                    var storeForwardInfo: StoreMessageForwardInfo?
-                                    if let forwardInfo = currentMessage.forwardInfo {
-                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                |> delay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
+                |> then(postbox.transaction { transaction -> Void in
+                    if let message = transaction.getMessage(entry.messageId) {
+                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                            deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
+                        } else {
+                            transaction.updateMessage(message.id, update: { currentMessage in
+                                var storeForwardInfo: StoreMessageForwardInfo?
+                                if let forwardInfo = currentMessage.forwardInfo {
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                }
+                                var updatedMedia = currentMessage.media
+                                for i in 0 ..< updatedMedia.count {
+                                    if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                    } else if let _ = updatedMedia[i] as? TelegramMediaFile {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
                                     }
-                                    var updatedMedia = currentMessage.media
-                                    for i in 0 ..< updatedMedia.count {
-                                        if let _ = updatedMedia[i] as? TelegramMediaImage {
-                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
-                                        } else if let _ = updatedMedia[i] as? TelegramMediaFile {
-                                            updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
-                                        }
-                                    }
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
-                                })
-                            }
+                                }
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                            })
                         }
-                        transaction.removeTimestampBasedMessageAttribute(tag: 0, messageId: entry.messageId)
-                    })
+                    }
+                    transaction.removeTimestampBasedMessageAttribute(tag: 0, messageId: entry.messageId)
+                })
                 disposable.set(signal.start())
             }
         })

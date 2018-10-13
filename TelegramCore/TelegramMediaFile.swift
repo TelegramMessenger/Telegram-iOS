@@ -523,10 +523,21 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
     return result
 }
 
+public func fileNameFromFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> String? {
+    for attribute in attributes {
+        if case let .FileName(value) = attribute {
+            return value
+        }
+    }
+    return nil
+}
+
 func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
     switch document {
         case let .document(id, accessHash, fileReference, _, mimeType, size, thumb, dcId, attributes):
-            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData()), previewRepresentations: telegramMediaImageRepresentationsFromApiSizes([thumb]), mimeType: mimeType, size: Int(size), attributes: telegramMediaFileAttributesFromApiAttributes(attributes))
+            let parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes)
+            
+            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: telegramMediaImageRepresentationsFromApiSizes([thumb]), mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
         case .documentEmpty:
             return nil
     }

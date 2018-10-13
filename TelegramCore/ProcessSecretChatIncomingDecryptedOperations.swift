@@ -689,7 +689,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             default:
                                 break
                         }
-                        let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: nil), previewRepresentations: previewRepresentations, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+                        let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: nil, fileName: nil), previewRepresentations: previewRepresentations, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                         parsedMedia.append(fileMedia)
                     case let .decryptedMessageMediaWebPage(url):
                         parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: arc4random64()), content: .Pending(0, url)))
@@ -904,7 +904,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             default:
                                 break
                         }
-                        let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: nil), previewRepresentations: [], mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+                        let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: nil, fileName: nil), previewRepresentations: [], mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                         parsedMedia.append(fileMedia)
                     case let .decryptedMessageMediaWebPage(url):
                         parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: arc4random64()), content: .Pending(0, url)))

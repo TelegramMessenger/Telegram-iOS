@@ -679,7 +679,6 @@ public final class AccountStateManager {
             }
         }
         
-        let beginFirst = self.operations.isEmpty
         self.addOperation(.pollCompletion(self.getNextId(), [], [(updatedId, f)]), position: .last)
         
         return updatedId

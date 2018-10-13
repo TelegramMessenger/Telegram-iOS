@@ -141,7 +141,6 @@ public func togglePeerUnreadMarkInteractively(postbox: Postbox, viewTracker: Acc
 
 public func clearPeerUnseenPersonalMessagesInteractively(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
-        let namespace: MessageId.Namespace
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return
         }

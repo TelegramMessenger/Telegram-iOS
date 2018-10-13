@@ -982,6 +982,8 @@ public class Account {
                     if !previous && value {
                         shouldDelay = true
                     }
+                } else {
+                    shouldDelay = true
                 }
                 return value
             }
@@ -1258,7 +1260,8 @@ public func accountNetworkUsageStats(account: Account, reset: ResetNetworkUsageS
 public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
 public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: AnyMediaReference, _ userInteractive: Bool) -> Signal<AnyMediaReference?, NoError>
 
-public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
+public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil, preFetchedResourcePath: @escaping (MediaResource) -> String? = { _ in return nil }) {
+    account.postbox.mediaBox.preFetchedResourcePath = preFetchedResourcePath
     account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         if let strongAccount = account {
             if let result = fetchResource(account: strongAccount, resource: resource, ranges: ranges, parameters: parameters) {
