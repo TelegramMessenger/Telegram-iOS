@@ -264,3 +264,44 @@ public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResour
         }
     }
 }
+
+func fetchLocalFileGifMediaResource(resource: LocalFileGifMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    return Signal { subscriber in
+        subscriber.putNext(.reset)
+        
+        let disposable = MetaDisposable()
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.path), options: Data.ReadingOptions.mappedIfSafe) {
+            let updatedSize = Atomic<Int>(value: 0)
+            let signal = TGGifConverter.convertGif(toMp4: data)!
+            let signalDisposable = signal.start(next: { next in
+                if let result = next as? NSDictionary, let path = result["path"] as? String {
+                    var value = stat()
+                    if stat(path, &value) == 0 {
+                        subscriber.putNext(.moveLocalFile(path: path))
+                        /*if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
+                         var range: Range<Int>?
+                         let _ = updatedSize.modify { updatedSize in
+                         range = updatedSize ..< Int(value.st_size)
+                         return Int(value.st_size)
+                         }
+                         //print("finish size = \(Int(value.st_size)), range: \(range!)")
+                         subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                         subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                         subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
+                         }*/
+                    }
+                    subscriber.putCompletion()
+                }
+            }, error: { _ in
+            }, completed: nil)
+            
+            disposable.set(ActionDisposable {
+                signalDisposable?.dispose()
+            })
+        }
+        
+        return ActionDisposable {
+            disposable.dispose()
+        }
+    }
+}

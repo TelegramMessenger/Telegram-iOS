@@ -28,6 +28,7 @@ private enum ThemeSettingsControllerSection: Int32 {
     case chatPreview
     case themeList
     case fontSize
+    case animations
 }
 
 private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
@@ -38,19 +39,22 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case wallpaper(PresentationTheme, String)
     case accentColor(PresentationTheme, String, Int32)
     case autoNightTheme(PresentationTheme, String, String)
-    case animationsItem(PresentationTheme, String, Bool)
-    case animationsInfo(PresentationTheme, String)
     case themeListHeader(PresentationTheme, String)
     case themeItem(PresentationTheme, String, Bool, Int32)
+    case animationsHeader(PresentationTheme, String)
+    case animationsItem(PresentationTheme, String, Bool)
+    case animationsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
-            case .chatPreviewHeader, .chatPreview, .wallpaper, .accentColor, .autoNightTheme, .animationsItem, .animationsInfo:
+            case .chatPreviewHeader, .chatPreview, .wallpaper, .accentColor, .autoNightTheme:
                 return ThemeSettingsControllerSection.chatPreview.rawValue
             case .themeListHeader, .themeItem:
                 return ThemeSettingsControllerSection.themeList.rawValue
             case .fontSizeHeader, .fontSize:
                 return ThemeSettingsControllerSection.fontSize.rawValue
+            case .animationsHeader, .animationsItem, .animationsInfo:
+                return ThemeSettingsControllerSection.animations.rawValue
         }
     }
     
@@ -70,14 +74,16 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 5
             case .autoNightTheme:
                 return 6
-            case .animationsItem:
-                return 7
-            case .animationsInfo:
-                return 8
             case .themeListHeader:
-                return 9
+                return 7
             case let .themeItem(_, _, _, index):
-                return 10 + index
+                return 8 + index
+            case .animationsHeader:
+                return 100
+            case .animationsItem:
+                return 101
+            case .animationsInfo:
+                return 102
         }
     }
     
@@ -113,18 +119,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .animationsItem(lhsTheme, lhsTitle, lhsValue):
-                if case let .animationsItem(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .animationsInfo(lhsTheme, lhsText):
-                if case let .animationsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
             case let .themeListHeader(lhsTheme, lhsText):
                 if case let .themeListHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -145,6 +139,24 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }
             case let .fontSize(lhsTheme, lhsFontSize):
                 if case let .fontSize(rhsTheme, rhsFontSize) = rhs, lhsTheme === rhsTheme, lhsFontSize == rhsFontSize {
+                    return true
+                } else {
+                    return false
+                }
+            case let .animationsHeader(lhsTheme, lhsText):
+                if case let .animationsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .animationsItem(lhsTheme, lhsTitle, lhsValue):
+                if case let .animationsItem(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .animationsInfo(lhsTheme, lhsText):
+                if case let .animationsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -180,18 +192,20 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openAutoNightTheme()
                 })
-            case let .animationsItem(theme, title, value):
-                return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.disableAnimations(value)
-                })
-            case let .animationsInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .themeListHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .themeItem(theme, title, value, index):
                 return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.selectTheme(index)
                 })
+            case let .animationsHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .animationsItem(theme, title, value):
+                return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.disableAnimations(value)
+                })
+            case let .animationsInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -219,16 +233,17 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
         }
         entries.append(.autoNightTheme(presentationData.theme, strings.Appearance_AutoNightTheme, title))
     }
-    if !UIAccessibility.isReduceMotionEnabled {
-        entries.append(.animationsItem(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
-        entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
-    }
     
     entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeDayClassic, theme.name == .builtin(.dayClassic), 0))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeDay, theme.name == .builtin(.day), 1))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNight, theme.name == .builtin(.nightGrayscale), 2))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNightBlue, theme.name == .builtin(.nightAccent), 3))
+    if !UIAccessibility.isReduceMotionEnabled {
+        entries.append(.animationsHeader(presentationData.theme, strings.Appearance_Animations))
+        entries.append(.animationsItem(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
+        entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
+    }
     
     return entries
 }

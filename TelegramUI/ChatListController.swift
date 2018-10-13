@@ -618,13 +618,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     }
                     
                     let chatController = ChatController(account: self.account, chatLocation: .peer(peerId), mode: .standard(previewing: true))
-                    chatController.peekActions = .remove({ [weak self] in
-                        if let strongSelf = self {
-                            let _ = removeRecentPeer(account: strongSelf.account, peerId: peerId).start()
-                            let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
-                            searchContainer?.removePeerFromTopPeers(peerId)
-                        }
-                    })
+//                    chatController.peekActions = .remove({ [weak self] in
+//                        if let strongSelf = self {
+//                            let _ = removeRecentPeer(account: strongSelf.account, peerId: peerId).start()
+//                            let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
+//                            searchContainer?.removePeerFromTopPeers(peerId)
+//                        }
+//                    })
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return chatController

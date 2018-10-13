@@ -2542,3 +2542,17 @@ func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(Transfor
             })
     }
 }
+
+func callDefaultBackground() -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return .single({ arguments in
+        let context = DrawingContext(size: arguments.drawingSize, clear: true)
+        context.withFlippedContext { c in
+            let colors = [UIColor(rgb: 0x466f92).cgColor, UIColor(rgb: 0x244f74).cgColor]
+            var locations: [CGFloat] = [1.0, 0.0]
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+            c.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: CGGradientDrawingOptions())
+        }
+        return context
+    })
+}

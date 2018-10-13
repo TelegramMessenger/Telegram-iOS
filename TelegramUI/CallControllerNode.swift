@@ -142,13 +142,14 @@ final class CallControllerNode: ASDisplayNode {
     func updatePeer(peer: Peer) {
         if !arePeersEqual(self.peer, peer) {
             self.peer = peer
-            let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]
-            if let peerReference = PeerReference(peer) {
-                representations = peer.profileImageRepresentations.map({ ($0, .avatar(peer: peerReference, resource: $0.resource)) })
+            if let peerReference = PeerReference(peer), !peer.profileImageRepresentations.isEmpty {
+                let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)] = peer.profileImageRepresentations.map({ ($0, .avatar(peer: peerReference, resource: $0.resource)) })
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
+                self.dimNode.isHidden = false
             } else {
-                representations = []
+                self.imageNode.setSignal(callDefaultBackground())
+                self.dimNode.isHidden = true
             }
-            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
             
             self.statusNode.title = peer.displayTitle
             
@@ -342,7 +343,7 @@ final class CallControllerNode: ASDisplayNode {
         let buttonsOffset: CGFloat
         if layout.size.width.isEqual(to: 320.0) {
             if layout.size.height.isEqual(to: 480.0) {
-                buttonsOffset = 53.0
+                buttonsOffset = 60.0
             } else {
                 buttonsOffset = 73.0
             }
@@ -354,7 +355,7 @@ final class CallControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
         
         self.buttonsNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
-        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.safeInsets.bottom), size: CGSize(width: layout.size.width, height: buttonsHeight)))
+        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: buttonsHeight)))
         
         let keyTextSize = self.keyButtonNode.frame.size
         transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: navigationOffset + 8.0), size: keyTextSize))

@@ -1765,7 +1765,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
             })
         }
         self.chatDisplayNode.sendGif = { [weak self] data in
-            
+            if let strongSelf = self {
+                strongSelf.enqueueGifData(data)
+            }
         }
         self.chatDisplayNode.updateTypingActivity = { [weak self] value in
             if let strongSelf = self, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil {
@@ -3688,6 +3690,22 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                 }
             }))
         }
+    }
+    
+    private func enqueueGifData(_ data: Data) {
+        self.enqueueMediaMessageDisposable.set((legacyEnqueueGifMessage(account: self.account, data: data) |> deliverOnMainQueue).start(next: { [weak self] message in
+            if let strongSelf = self {
+                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                        })
+                    }
+                })
+                strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageId) })
+            }
+        }))
     }
     
     private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult) {
