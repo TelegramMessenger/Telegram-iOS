@@ -56,8 +56,13 @@ static const void *positionChangedKey = &positionChangedKey;
                 object_setClass(handleView.layer, subclass);
             });
             
-            _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f), TGScreenPixelFloor(14.5f));
-            _onIconView.frame = CGRectOffset(_onIconView.bounds, 20.0f, 15.0f);
+            CGPoint offset = CGPointZero;
+            if (iosMajorVersion() >= 12) {
+                offset = CGPointMake(-7.0, -3.0);
+            }
+            
+            _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
+            _onIconView.frame = CGRectOffset(_onIconView.bounds, 20.0f + offset.x, 15.0f + offset.y);
             [handleView addSubview:_onIconView];
             [handleView addSubview:_offIconView];
             
