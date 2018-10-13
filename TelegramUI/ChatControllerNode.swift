@@ -348,6 +348,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         self.panRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
+        
+        self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            if let _ = strongSelf.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+                return true
+            }
+            return false
+        }
     }
     
     private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
@@ -1377,6 +1387,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func dismissInput() {
+        if let _ = self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+            return
+        }
+        
         switch self.chatPresentationInterfaceState.inputMode {
             case .none:
                 break

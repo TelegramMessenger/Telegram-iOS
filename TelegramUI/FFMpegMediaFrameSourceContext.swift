@@ -172,7 +172,7 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 context.requestedCompleteFetch = false
             } else {
                 if streamable {
-                    context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: context.readingOffset ..< resourceSize, statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
+                    context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: context.readingOffset ..< Int(Int32.max), statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
                 } else if !context.requestedCompleteFetch && context.fetchAutomatically {
                     context.requestedCompleteFetch = true
                     context.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: statsCategory, preferBackgroundReferenceRevalidation: streamable).start())
@@ -236,7 +236,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         let resourceSize: Int = resourceReference.resource.size ?? Int(Int32.max - 1)
         
         if streamable {
-            self.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: 0 ..< resourceSize, statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
+            self.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, range: 0 ..< Int(Int32.max), statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
         } else if !self.requestedCompleteFetch && self.fetchAutomatically {
             self.requestedCompleteFetch = true
             self.fetchedDataDisposable.set(fetchedMediaResource(postbox: postbox, reference: resourceReference, statsCategory: self.statsCategory ?? .generic, preferBackgroundReferenceRevalidation: streamable).start())
@@ -307,6 +307,26 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                                 avcodec_free_context(&codecContextRef)
                             }
                         }
+                    }
+                } else if codecPar.pointee.codec_id == AV_CODEC_ID_MPEG4 {
+                    if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromMpeg4CodecData(UInt32(kCMVideoCodecType_MPEG4Video), codecPar.pointee.width, codecPar.pointee.height, codecPar.pointee.extradata, codecPar.pointee.extradata_size) {
+                        let (fps, timebase) = FFMpegMediaFrameSourceContextHelpers.streamFpsAndTimeBase(stream: avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!, defaultTimeBase: CMTimeMake(1, 1000))
+                        
+                        let duration = CMTimeMake(avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.duration, timebase.timescale)
+                        
+                        var rotationAngle: Double = 0.0
+                        if let rotationInfo = av_dict_get(avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.metadata, "rotate", nil, 0), let value = rotationInfo.pointee.value {
+                            if strcmp(value, "0") != 0 {
+                                if let angle = Double(String(cString: value)) {
+                                    rotationAngle = angle * Double.pi / 180.0
+                                }
+                            }
+                        }
+                        
+                        let aspect = Double(codecPar.pointee.width) / Double(codecPar.pointee.height)
+                        
+                        videoStream = StreamContext(index: streamIndex, codecContext: nil, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
+                        break
                     }
                 } else if codecPar.pointee.codec_id == AV_CODEC_ID_H264 {
                     if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromAVCCodecData(UInt32(kCMVideoCodecType_H264), codecPar.pointee.width, codecPar.pointee.height, codecPar.pointee.extradata, codecPar.pointee.extradata_size) {

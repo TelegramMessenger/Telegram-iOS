@@ -92,6 +92,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
     legacyController.bind(controller: baseController)
     legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
         if let legacyController = legacyController, let baseController = baseController {
+            legacyController.view.disablesInteractiveTransitionGestureRecognizer = true
             let inputPanelTheme = theme.chat.inputPanel
             var uploadInterface: LegacyLiveUploadInterface?
             if peerId.namespace != Namespaces.Peer.SecretChat {

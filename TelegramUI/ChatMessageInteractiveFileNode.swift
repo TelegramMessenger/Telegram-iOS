@@ -25,6 +25,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var iconNode: TransformImageNode?
     private var statusNode: RadialStatusNode?
+    private var streamingStatusNode: RadialStatusNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
     private let statusDisposable = MetaDisposable()
@@ -35,11 +36,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let fetchDisposable = MetaDisposable()
     
     var activateLocalContent: () -> Void = { }
+    var requestUpdateLayout: (Bool) -> Void = { _ in }
     
     private var account: Account?
     private var message: Message?
     private var themeAndStrings: (ChatPresentationThemeData, PresentationStrings)?
     private var file: TelegramMediaFile?
+    private var progressFrame: CGRect?
+    private var streamingCacheStatusFrame: CGRect?
+    private var fileIconImage: UIImage?
+    private var cloudFetchIconImage: UIImage?
     
     override init() {
         self.titleNode = TextNode()
@@ -77,9 +83,27 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.tapRecognizer = tapRecognizer
     }
     
+    @objc func cacheProgressPressed() {
+        guard let resourceStatus = self.resourceStatus else {
+            return
+        }
+        switch resourceStatus.fetchStatus {
+            case .Fetching:
+                if let cancel = self.fetchControls.with({ return $0?.cancel }) {
+                    cancel()
+                }
+            case .Remote:
+                if let fetch = self.fetchControls.with({ return $0?.fetch }) {
+                    fetch()
+                }
+            case .Local:
+                break
+        }
+    }
+    
     @objc func progressPressed() {
         if let resourceStatus = self.resourceStatus {
-            switch resourceStatus {
+            switch resourceStatus.mediaStatus {
                 case let .fetchStatus(fetchStatus):
                     if let account = self.account, let message = self.message, message.flags.isSending {
                         let _ = account.postbox.transaction({ transaction -> Void in
@@ -109,7 +133,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     @objc func fileTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.progressPressed()
+            if let streamingCacheStatusFrame = self.streamingCacheStatusFrame, streamingCacheStatusFrame.contains(recognizer.location(in: self.view)) {
+                self.cacheProgressPressed()
+            } else {
+                self.progressPressed()
+            }
         }
     }
     
@@ -122,6 +150,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let currentMessage = self.message
         let currentTheme = self.themeAndStrings?.0
+        let currentResourceStatus = self.resourceStatus
         
         return { account, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
             var updatedTheme: ChatPresentationThemeData?
@@ -224,13 +253,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     if case let .Audio(voice, duration, title, performer, waveform) = attribute {
                         isAudio = true
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
-                            updatedStatusSignal = currentUpdatedStatusSignal |> map { status in
-                                switch status {
+                            updatedStatusSignal = currentUpdatedStatusSignal
+                            |> map { status in
+                                switch status.mediaStatus {
                                     case let .fetchStatus(fetchStatus):
                                         if !voice {
-                                            return .fetchStatus(.Local)
+                                            return FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus)
                                         } else {
-                                            return .fetchStatus(fetchStatus)
+                                            return FileMediaResourceStatus(mediaStatus: .fetchStatus(fetchStatus), fetchStatus: status.fetchStatus)
                                         }
                                     case .playbackStatus:
                                         return status
@@ -289,6 +319,23 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     textConstrainedSize.width -= 80.0
                 }
                 
+                let streamingProgressDiameter: CGFloat = 28.0
+                var hasStreamingProgress = false
+                if isAudio && !isVoice {
+                    if let resourceStatus = currentResourceStatus {
+                        switch resourceStatus.fetchStatus {
+                            case .Fetching, .Remote:
+                                hasStreamingProgress = true
+                            case .Local:
+                                break
+                        }
+                    }
+                    
+                    if hasStreamingProgress {
+                        textConstrainedSize.width -= streamingProgressDiameter + 4.0
+                    }
+                }
+                
                 let (titleLayout, titleApply) = titleAsyncLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
@@ -311,6 +358,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     minLayoutWidth = max(minLayoutWidth, statusSize.width)
                 }
                 
+                var cloudFetchIconImage: UIImage?
+                if hasStreamingProgress {
+                    minLayoutWidth += streamingProgressDiameter + 4.0
+                    cloudFetchIconImage = incoming ? PresentationResourcesChat.chatBubbleFileCloudFetchIncomingIcon(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleFileCloudFetchOutgoingIcon(presentationData.theme.theme)
+                }
+                
                 let fileIconImage: UIImage?
                 if hasThumbnail {
                     fileIconImage = nil
@@ -325,6 +378,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     var iconFrame: CGRect?
                     let progressFrame: CGRect
+                    let streamingCacheStatusFrame: CGRect
                     let controlAreaWidth: CGFloat
                     
                     if hasThumbnail {
@@ -362,7 +416,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         fittedLayoutSize = CGSize(width: minLayoutWidth, height: 27.0)
                     } else {
                         let unionSize = titleFrame.union(descriptionFrame).union(progressFrame).size
-                        fittedLayoutSize = CGSize(width: unionSize.width, height: unionSize.height + 4.0)
+                        fittedLayoutSize = CGSize(width: unionSize.width, height: unionSize.height + 6.0)
                     }
                     
                     var statusFrame: CGRect?
@@ -374,6 +428,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     if let statusFrameValue = statusFrame, descriptionFrame.intersects(statusFrameValue) {
                         fittedLayoutSize.height += 10.0
                         statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 10.0)
+                    }
+                    
+                    if isAudio && !isVoice {
+                        streamingCacheStatusFrame = CGRect(origin: CGPoint(x: fittedLayoutSize.width + 6.0, y: 4.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
+                        if hasStreamingProgress {
+                            fittedLayoutSize.width += streamingProgressDiameter + 6.0
+                        }
+                    } else {
+                        streamingCacheStatusFrame = CGRect()
                     }
                     
                     return (fittedLayoutSize, { [weak self] in
@@ -468,78 +531,27 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
+                                            var previousHadCacheStatus = false
+                                            if let resourceStatus = strongSelf.resourceStatus {
+                                                switch resourceStatus.fetchStatus {
+                                                    case .Fetching, .Remote:
+                                                        previousHadCacheStatus = true
+                                                    case .Local:
+                                                        previousHadCacheStatus = false
+                                                }
+                                            }
+                                            var hasCacheStatus = false
+                                            switch status.fetchStatus {
+                                                case .Fetching, .Remote:
+                                                    hasCacheStatus = true
+                                                case .Local:
+                                                    hasCacheStatus = false
+                                            }
                                             strongSelf.resourceStatus = status
-                                            
-                                            if strongSelf.statusNode == nil {
-                                                let backgroundNodeColor: UIColor
-                                                if strongSelf.iconNode != nil {
-                                                    backgroundNodeColor = bubbleTheme.mediaOverlayControlBackgroundColor
-                                                } else if incoming {
-                                                    backgroundNodeColor = bubbleTheme.incomingMediaActiveControlColor
-                                                } else {
-                                                    backgroundNodeColor = bubbleTheme.outgoingMediaActiveControlColor
-                                                }
-                                                let statusNode = RadialStatusNode(backgroundNodeColor: backgroundNodeColor)
-                                                strongSelf.statusNode = statusNode
-                                                statusNode.frame = progressFrame
-                                                strongSelf.addSubnode(statusNode)
-                                            } else if let _ = updatedTheme {
-                                                //strongSelf.progressNode?.updateTheme(RadialProgressTheme(backgroundColor: incoming ? bubbleTheme.incomingAccentColor : bubbleTheme.outgoingAccentColor, foregroundColor: incoming ? bubbleTheme.incomingFillColor : bubbleTheme.outgoingFillColor, icon: fileIconImage))
-                                            }
-                                            
-                                            let state: RadialStatusNodeState
-                                            let statusForegroundColor: UIColor
-                                            if strongSelf.iconNode != nil {
-                                                statusForegroundColor = bubbleTheme.mediaOverlayControlForegroundColor
-                                            } else if incoming {
-                                                statusForegroundColor = presentationData.theme.wallpaper.isEmpty ? bubbleTheme.incoming.withoutWallpaper.fill : bubbleTheme.incoming.withWallpaper.fill
+                                            if isAudio && !isVoice && previousHadCacheStatus != hasCacheStatus {
+                                                strongSelf.requestUpdateLayout(false)
                                             } else {
-                                                statusForegroundColor = presentationData.theme.wallpaper.isEmpty ? bubbleTheme.outgoing.withoutWallpaper.fill : bubbleTheme.outgoing.withWallpaper.fill
-                                            }
-                                            switch status {
-                                                case let .fetchStatus(fetchStatus):
-                                                    strongSelf.waveformScrubbingNode?.enableScrubbing = false
-                                                    switch fetchStatus {
-                                                        case let .Fetching(isActive, progress):
-                                                            var adjustedProgress = progress
-                                                            if isActive {
-                                                                adjustedProgress = max(adjustedProgress, 0.027)
-                                                            }
-                                                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
-                                                        case .Local:
-                                                            if isAudio {
-                                                                state = .play(statusForegroundColor)
-                                                            } else if let fileIconImage = fileIconImage {
-                                                                state = .customIcon(fileIconImage)
-                                                            } else {
-                                                                state = .none
-                                                            }
-                                                        case .Remote:
-                                                            if isAudio && !isVoice {
-                                                                state = .play(statusForegroundColor)
-                                                            } else {
-                                                                state = .download(statusForegroundColor)
-                                                            }
-                                                    }
-                                                case let .playbackStatus(playbackStatus):
-                                                    strongSelf.waveformScrubbingNode?.enableScrubbing = true
-                                                    switch playbackStatus {
-                                                        case .playing:
-                                                            state = .pause(statusForegroundColor)
-                                                        case .paused:
-                                                            state = .play(statusForegroundColor)
-                                                    }
-                                            }
-                                            
-                                            if let statusNode = strongSelf.statusNode {
-                                                if state == .none {
-                                                    strongSelf.statusNode = nil
-                                                }
-                                                statusNode.transitionToState(state, completion: { [weak statusNode] in
-                                                    if state == .none {
-                                                        statusNode?.removeFromSupernode()
-                                                    }
-                                                })
+                                                strongSelf.updateStatus()
                                             }
                                         }
                                     }
@@ -551,6 +563,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                             
                             strongSelf.statusNode?.frame = progressFrame
+                            strongSelf.progressFrame = progressFrame
+                            strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
+                            strongSelf.fileIconImage = fileIconImage
+                            strongSelf.cloudFetchIconImage = cloudFetchIconImage
                             
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
@@ -558,10 +574,164 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     updatedFetchControls.fetch()
                                 }
                             }
+                            
+                            strongSelf.updateStatus()
                         }
                     })
                 })
             })
+        }
+    }
+    
+    private func updateStatus() {
+        guard let resourceStatus = self.resourceStatus else {
+            return
+        }
+        guard let message = self.message else {
+            return
+        }
+        guard let account = self.account else {
+            return
+        }
+        guard let presentationData = self.themeAndStrings?.0 else {
+            return
+        }
+        guard let progressFrame = self.progressFrame, let streamingCacheStatusFrame = self.streamingCacheStatusFrame else {
+            return
+        }
+        guard let file = self.file else {
+            return
+        }
+        let incoming = message.effectivelyIncoming(account.peerId)
+        let bubbleTheme = presentationData.theme.chat.bubble
+        
+        var isAudio = false
+        var isVoice = false
+        for attribute in file.attributes {
+            if case let .Audio(voice, _, _, _, _) = attribute {
+                isAudio = true
+                
+                if voice {
+                    isVoice = true
+                }
+                break
+            }
+        }
+        
+        let state: RadialStatusNodeState
+        var streamingState: RadialStatusNodeState = .none
+        
+        if isAudio && !isVoice {
+            let streamingStatusForegroundColor: UIColor = incoming ? bubbleTheme.incomingAccentControlColor : bubbleTheme.outgoingAccentControlColor
+            let streamingStatusBackgroundColor: UIColor = incoming ? bubbleTheme.incomingMediaInactiveControlColor : bubbleTheme.outgoingMediaInactiveControlColor
+            switch resourceStatus.fetchStatus {
+                case let .Fetching(isActive, progress):
+                    var adjustedProgress = progress
+                    if isActive {
+                        adjustedProgress = max(adjustedProgress, 0.027)
+                    }
+                    streamingState = .cloudProgress(color: streamingStatusForegroundColor, strokeBackgroundColor: streamingStatusBackgroundColor, lineWidth: 2.0, value: CGFloat(adjustedProgress))
+                case .Local:
+                    streamingState = .none
+                case .Remote:
+                    if let cloudFetchIconImage = self.cloudFetchIconImage {
+                        streamingState = .customIcon(cloudFetchIconImage)
+                    } else {
+                        streamingState = .none
+                    }
+            }
+        } else {
+            streamingState = .none
+        }
+        
+        let statusForegroundColor: UIColor
+        if self.iconNode != nil {
+            statusForegroundColor = bubbleTheme.mediaOverlayControlForegroundColor
+        } else if incoming {
+            statusForegroundColor = presentationData.wallpaper.isEmpty ? bubbleTheme.incoming.withoutWallpaper.fill : bubbleTheme.incoming.withWallpaper.fill
+        } else {
+            statusForegroundColor = presentationData.wallpaper.isEmpty ? bubbleTheme.outgoing.withoutWallpaper.fill : bubbleTheme.outgoing.withWallpaper.fill
+        }
+        switch resourceStatus.mediaStatus {
+            case let .fetchStatus(fetchStatus):
+                self.waveformScrubbingNode?.enableScrubbing = false
+                switch fetchStatus {
+                    case let .Fetching(isActive, progress):
+                        var adjustedProgress = progress
+                        if isActive {
+                            adjustedProgress = max(adjustedProgress, 0.027)
+                        }
+                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                    case .Local:
+                        if isAudio {
+                            state = .play(statusForegroundColor)
+                        } else if let fileIconImage = self.fileIconImage {
+                            state = .customIcon(fileIconImage)
+                        } else {
+                            state = .none
+                        }
+                    case .Remote:
+                        if isAudio && !isVoice {
+                            state = .play(statusForegroundColor)
+                        } else {
+                            state = .download(statusForegroundColor)
+                        }
+                }
+            case let .playbackStatus(playbackStatus):
+                self.waveformScrubbingNode?.enableScrubbing = true
+                switch playbackStatus {
+                    case .playing:
+                        state = .pause(statusForegroundColor)
+                    case .paused:
+                        state = .play(statusForegroundColor)
+                }
+        }
+        
+        if state != .none && self.statusNode == nil {
+            let backgroundNodeColor: UIColor
+            if self.iconNode != nil {
+                backgroundNodeColor = bubbleTheme.mediaOverlayControlBackgroundColor
+            } else if incoming {
+                backgroundNodeColor = bubbleTheme.incomingMediaActiveControlColor
+            } else {
+                backgroundNodeColor = bubbleTheme.outgoingMediaActiveControlColor
+            }
+            let statusNode = RadialStatusNode(backgroundNodeColor: backgroundNodeColor)
+            self.statusNode = statusNode
+            statusNode.frame = progressFrame
+            self.addSubnode(statusNode)
+        }
+        
+        if streamingState != .none && self.streamingStatusNode == nil {
+            let streamingStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
+            self.streamingStatusNode = streamingStatusNode
+            streamingStatusNode.frame = streamingCacheStatusFrame
+            self.addSubnode(streamingStatusNode)
+        }
+        
+        if let statusNode = self.statusNode {
+            if state == .none {
+                self.statusNode = nil
+            }
+            statusNode.transitionToState(state, completion: { [weak statusNode] in
+                if state == .none {
+                    statusNode?.removeFromSupernode()
+                }
+            })
+        }
+        
+        if let streamingStatusNode = self.streamingStatusNode {
+            if streamingState == .none {
+                self.streamingStatusNode = nil
+                streamingStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak streamingStatusNode] _ in
+                    if streamingState == .none {
+                        streamingStatusNode?.removeFromSupernode()
+                    }
+                })
+            } else {
+                streamingStatusNode.transitionToState(streamingState, completion: {
+                })
+            }
         }
     }
     

@@ -44,7 +44,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private let infoBackgroundNode: ASImageNode
     private let muteIconNode: ASImageNode
     
-    private var status: FileMediaResourceStatus?
+    private var status: FileMediaResourceMediaStatus?
     private let playbackStatusDisposable = MetaDisposable()
     
     private var shouldAcquireVideoContext: Bool {
@@ -178,16 +178,16 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             var updatedPlaybackStatus: Signal<FileMediaResourceStatus, NoError>?
             if let updatedFile = updatedFile, updatedMedia {
                 updatedPlaybackStatus = combineLatest(messageFileMediaResourceStatus(account: item.account, file: updatedFile, message: item.message, isRecentActions: item.associatedData.isRecentActions), item.account.pendingMessageManager.pendingMessageStatus(item.message.id))
-                    |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
-                        if let pendingStatus = pendingStatus {
-                            var progress = pendingStatus.progress
-                            if pendingStatus.isRunning {
-                                progress = max(progress, 0.27)
-                            }
-                            return .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: progress))
-                        } else {
-                            return resourceStatus
+                |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
+                    if let pendingStatus = pendingStatus {
+                        var progress = pendingStatus.progress
+                        if pendingStatus.isRunning {
+                            progress = max(progress, 0.27)
                         }
+                        return FileMediaResourceStatus(mediaStatus: .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: progress)), fetchStatus: resourceStatus.fetchStatus)
+                    } else {
+                        return resourceStatus
+                    }
                 }
             }
             
@@ -280,7 +280,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.status = status
+                            strongSelf.status = status.mediaStatus
                             strongSelf.updateStatus()
                         }))
                     }

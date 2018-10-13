@@ -620,7 +620,7 @@ final class ContactListNode: ASDisplayNode {
                 }
                 
                 return combineLatest(foundLocalContacts, foundRemoteContacts, foundDeviceContacts, selectionStateSignal, themeAndStringsPromise.get())
-                |> mapToQueue { localPeers, remotePeers, deviceContacts, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
+                |> mapToQueue { localPeersAndStatuses, remotePeers, deviceContacts, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
                         var existingPeerIds = Set<PeerId>()
                         var disabledPeerIds = Set<PeerId>()
@@ -628,17 +628,17 @@ final class ContactListNode: ASDisplayNode {
                         var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
                         for filter in filters {
                             switch filter {
-                            case .excludeSelf:
-                                existingPeerIds.insert(account.peerId)
-                            case let .exclude(peerIds):
-                                existingPeerIds = existingPeerIds.union(peerIds)
-                            case let .disable(peerIds):
-                                disabledPeerIds = disabledPeerIds.union(peerIds)
+                                case .excludeSelf:
+                                    existingPeerIds.insert(account.peerId)
+                                case let .exclude(peerIds):
+                                    existingPeerIds = existingPeerIds.union(peerIds)
+                                case let .disable(peerIds):
+                                    disabledPeerIds = disabledPeerIds.union(peerIds)
                             }
                         }
                         
                         var peers: [ContactListPeer] = []
-                        for peer in localPeers {
+                        for peer in localPeersAndStatuses.0 {
                             if !existingPeerIds.contains(peer.id) {
                                 existingPeerIds.insert(peer.id)
                                 peers.append(.peer(peer: peer, isGlobal: false))
@@ -680,7 +680,7 @@ final class ContactListNode: ASDisplayNode {
                             peers.append(.deviceContact(stableId, contact))
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: [:], presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
+                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds)
                         let previous = previousEntries.swap(entries)
                         return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
                     }

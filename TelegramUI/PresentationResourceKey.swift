@@ -110,6 +110,9 @@ enum PresentationResourceKey: Int32 {
     case chatBubbleActionButtonOutgoingBottomRightImage
     case chatBubbleActionButtonOutgoingBottomSingleImage
     
+    case chatBubbleFileCloudFetchIncomingIcon
+    case chatBubbleFileCloudFetchOutgoingIcon
+    
     case chatBubbleReplyThumbnailPlayImage
     
     case chatInfoItemBackgroundImageWithWallpaper

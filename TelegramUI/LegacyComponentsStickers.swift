@@ -157,7 +157,7 @@ final class LegacyStickerImageDataSource: TGImageDataSource {
                 attributes.append(.Sticker(displayText: "", packReference: .id(id: stickerPackId, accessHash: stickerPackAccessHash), maskData: nil))
             }
             
-            return LegacyStickerImageDataTask(account: account, file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: datacenterId, fileId: documentId, accessHash: accessHash, size: size, fileReference: nil), previewRepresentations: [], mimeType: "image/webp", size: size, attributes: attributes), small: !highQuality, fitSize: fitSize, completion: { image in
+            return LegacyStickerImageDataTask(account: account, file: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: datacenterId, fileId: documentId, accessHash: accessHash, size: size, fileReference: nil, fileName: fileNameFromFileAttributes(attributes)), previewRepresentations: [], mimeType: "image/webp", size: size, attributes: attributes), small: !highQuality, fitSize: fitSize, completion: { image in
                 if let image = image {
                     sharedImageCache.setImage(image, forKey: uri, attributes: nil)
                     completion?(TGDataResource(image: image, decoded: true))

@@ -7,7 +7,7 @@ import SwiftSignalKit
 import LegacyComponents
 
 enum ChatTitleContent {
-    case peer(PeerView)
+    case peer(peerView: PeerView, onlineMemberCount: Int32?)
     case group([Peer])
 }
 
@@ -207,14 +207,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 self.insertSubview(statusNode.view, belowSubview: self.button.view)
             }
             switch self.networkState {
-            case .waitingForNetwork:
-                statusNode.title = self.strings.State_WaitingForNetwork
-            case .connecting:
-                statusNode.title = self.strings.State_Connecting
-            case .updating:
-                statusNode.title = self.strings.State_Updating
-            case .online:
-                break
+                case .waitingForNetwork:
+                    statusNode.title = self.strings.State_WaitingForNetwork
+                case .connecting:
+                    statusNode.title = self.strings.State_Connecting
+                case .updating:
+                    statusNode.title = self.strings.State_Updating
+                case .online:
+                    break
             }
         }
         
@@ -246,7 +246,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 var titleLeftIcon: ChatTitleIcon = .none
                 var titleRightIcon: ChatTitleIcon = .none
                 switch titleContent {
-                    case let .peer(peerView):
+                    case let .peer(peerView, _):
                         if let peer = peerViewMainPeer(peerView) {
                             if peerView.peerId == self.account.peerId {
                                 string = NSAttributedString(string: self.strings.Conversation_SavedMessages, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
@@ -302,7 +302,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         var shouldUpdateLayout = false
         if let titleContent = self.titleContent {
             switch titleContent {
-                case let .peer(peerView):
+                case let .peer(peerView, onlineMemberCount):
                     if let peer = peerViewMainPeer(peerView) {
                         if peer.id == self.account.peerId {
                             let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
@@ -379,17 +379,27 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             }
                         } else if let channel = peer as? TelegramChannel {
                             if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                                let membersString: String
-                                if case .group = channel.info {
-                                    membersString = strings.Conversation_StatusMembers(memberCount)
+                                if case .group = channel.info, let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
+                                    let string = NSMutableAttributedString()
+                                    
+                                    string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                    string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineMemberCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                    if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
+                                        self.infoNode.attributedText = string
+                                        shouldUpdateLayout = true
+                                    }
                                 } else {
-                                    membersString = strings.Conversation_StatusSubscribers(memberCount)
-                                }
-                                
-                                let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                    self.infoNode.attributedText = string
-                                    shouldUpdateLayout = true
+                                    let membersString: String
+                                    if case .group = channel.info {
+                                        membersString = strings.Conversation_StatusMembers(memberCount)
+                                    } else {
+                                        membersString = strings.Conversation_StatusSubscribers(memberCount)
+                                    }
+                                    let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
+                                        self.infoNode.attributedText = string
+                                        shouldUpdateLayout = true
+                                    }
                                 }
                             } else {
                                 switch channel.info {

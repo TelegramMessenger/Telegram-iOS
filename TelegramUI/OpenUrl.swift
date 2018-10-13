@@ -137,6 +137,47 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
     }
     
     let continueHandling: () -> Void = {
+        let handleInternalUrl: (String) -> Void = { url in
+            let _ = (resolveUrl(account: account, url: url)
+            |> deliverOnMainQueue).start(next: { resolved in
+                if case let .externalUrl(value) = resolved {
+                    applicationContext.applicationBindings.openUrl(value)
+                } else {
+                    openResolvedUrl(resolved, account: account, navigationController: navigationController, openPeer: { peerId, navigation in
+                        switch navigation {
+                        case .info:
+                            let _ = (account.postbox.loadedPeerWithId(peerId)
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    if let infoController = peerInfoController(account: account, peer: peer) {
+                                        if let navigationController = navigationController {
+                                            navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                        }
+                                        navigationController?.pushViewController(infoController)
+                                    }
+                                })
+                        case .chat:
+                            if let navigationController = navigationController {
+                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+                            }
+                        case let .withBotStartPayload(payload):
+                            if let navigationController = navigationController {
+                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
+                            }
+                        }
+                    }, present: { c, a in
+                        if let navigationController = navigationController {
+                            navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                            (navigationController.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
+                        }
+                    }, dismissInput: {
+                        dismissInput()
+                    })
+                }
+            })
+        }
+        
         if parsedUrl.scheme == "tg", let query = parsedUrl.query {
             var convertedUrl: String?
             if parsedUrl.host == "localpeer" {
@@ -418,62 +459,29 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
             }
             
             if let convertedUrl = convertedUrl {
-                let _ = (resolveUrl(account: account, url: convertedUrl)
-                |> deliverOnMainQueue).start(next: { resolved in
-                    if case let .externalUrl(value) = resolved {
-                        applicationContext.applicationBindings.openUrl(value)
-                    } else {
-                        openResolvedUrl(resolved, account: account, navigationController: navigationController, openPeer: { peerId, navigation in
-                            switch navigation {
-                                case .info:
-                                    let _ = (account.postbox.loadedPeerWithId(peerId)
-                                    |> deliverOnMainQueue).start(next: { peer in
-                                        if let infoController = peerInfoController(account: account, peer: peer) {
-                                            if let navigationController = navigationController {
-                                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                            }
-                                            navigationController?.pushViewController(infoController)
-                                        }
-                                    })
-                                case .chat:
-                                    if let navigationController = navigationController {
-                                        navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
-                                    }
-                                case let .withBotStartPayload(payload):
-                                    if let navigationController = navigationController {
-                                        navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
-                                    }
-                            }
-                        }, present: { c, a in
-                            if let navigationController = navigationController {
-                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                (navigationController.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
-                            }
-                        }, dismissInput: {
-                            dismissInput()
-                        })
-                    }
-                })
+                handleInternalUrl(convertedUrl)
             }
             return
         }
         
         if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
-            if #available(iOSApplicationExtension 9.0, *) {
-                if let window = navigationController?.view.window {
-                    let controller = SFSafariViewController(url: parsedUrl)
-                    if #available(iOSApplicationExtension 10.0, *) {
-                        controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.backgroundColor
-                        controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                    }
-                    window.rootViewController?.present(controller, animated: true)
-                } else {
-                    applicationContext.applicationBindings.openUrl(parsedUrl.absoluteString)
-                }
+            if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
+                handleInternalUrl(parsedUrl.absoluteString)
             } else {
-                applicationContext.applicationBindings.openUrl(url)
+                if #available(iOSApplicationExtension 9.0, *) {
+                    if let window = navigationController?.view.window {
+                        let controller = SFSafariViewController(url: parsedUrl)
+                        if #available(iOSApplicationExtension 10.0, *) {
+                            controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.backgroundColor
+                            controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
+                        }
+                        window.rootViewController?.present(controller, animated: true)
+                    } else {
+                        applicationContext.applicationBindings.openUrl(parsedUrl.absoluteString)
+                    }
+                } else {
+                    applicationContext.applicationBindings.openUrl(url)
+                }
             }
         } else {
             applicationContext.applicationBindings.openUrl(url)
@@ -481,11 +489,16 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
     }
     
     if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
-        applicationContext.applicationBindings.openUniversalUrl(url, TelegramApplicationOpenUrlCompletion(completion: { success in
-            if !success {
-                continueHandling()
-            }
-        }))
+        let nativeHosts = ["t.me", "telegram.me"]
+        if let host = parsedUrl.host, nativeHosts.contains(host) {
+            continueHandling()
+        } else {
+            applicationContext.applicationBindings.openUniversalUrl(url, TelegramApplicationOpenUrlCompletion(completion: { success in
+                if !success {
+                    continueHandling()
+                }
+            }))
+        }
     } else {
         continueHandling()
     }

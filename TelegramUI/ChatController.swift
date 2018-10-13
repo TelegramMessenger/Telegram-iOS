@@ -629,7 +629,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
             if strongSelf.resolvePeerByNameDisposable == nil {
                 strongSelf.resolvePeerByNameDisposable = MetaDisposable()
             }
-            let resolveSignal: Signal<Peer?, NoError>
+            var resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
                 resolveSignal = resolvePeerByName(account: strongSelf.account, name: peerName)
                 |> mapToSignal { peerId -> Signal<Peer?, NoError> in
@@ -645,6 +645,32 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                 |> map(Optional.init)
             } else {
                 resolveSignal = .single(nil)
+            }
+            var cancelImpl: (() -> Void)?
+            let presentationData = strongSelf.presentationData
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                self?.present(controller, in: .window(.root))
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.15, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            resolveSignal = resolveSignal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            cancelImpl = {
+                self?.resolvePeerByNameDisposable?.set(nil)
             }
             strongSelf.resolvePeerByNameDisposable?.set((resolveSignal
             |> deliverOnMainQueue).start(next: { peer in
@@ -994,77 +1020,85 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
             case let .peer(peerId):
                 if case let .peer(peerView) = self.chatLocationInfoData {
                     peerView.set(account.viewTracker.peerView(peerId))
-                    self.peerDisposable.set((peerView.get()
-                        |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                            if let strongSelf = self {
-                                if let peer = peerViewMainPeer(peerView) {
-                                    strongSelf.chatTitleView?.titleContent = .peer(peerView)
-                                    (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.account, peer: peer)
-                                }
-                                var wasGroupChannel: Bool?
-                                if let previousPeerView = strongSelf.peerView, let info = (previousPeerView.peers[previousPeerView.peerId] as? TelegramChannel)?.info {
-                                    if case .group = info {
-                                        wasGroupChannel = true
-                                    } else {
-                                        wasGroupChannel = false
-                                    }
-                                }
-                                var isGroupChannel: Bool?
-                                if let info = (peerView.peers[peerView.peerId] as? TelegramChannel)?.info {
-                                    if case .group = info {
-                                        isGroupChannel = true
-                                    } else {
-                                        isGroupChannel = false
-                                    }
-                                }
-                                strongSelf.peerView = peerView
-                                if wasGroupChannel != isGroupChannel {
-                                    if let isGroupChannel = isGroupChannel, isGroupChannel {
-                                        let (recentDisposable, _) = strongSelf.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: strongSelf.account.postbox, network: strongSelf.account.network, peerId: peerView.peerId, updated: { _ in })
-                                        let (adminsDisposable, _) = strongSelf.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: strongSelf.account.postbox, network: strongSelf.account.network, peerId: peerView.peerId, updated: { _ in })
-                                        let disposable = DisposableSet()
-                                        disposable.add(recentDisposable)
-                                        disposable.add(adminsDisposable)
-                                        strongSelf.chatAdditionalDataDisposable.set(disposable)
-                                    } else {
-                                        strongSelf.chatAdditionalDataDisposable.set(nil)
-                                    }
-                                }
-                                if strongSelf.isNodeLoaded {
-                                    strongSelf.chatDisplayNode.peerView = peerView
-                                }
-                                var peerIsMuted = false
-                                if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                                    if case .muted = notificationSettings.muteState {
-                                        peerIsMuted = true
-                                    }
-                                }
-                                var renderedPeer: RenderedPeer?
-                                var isContact: Bool = false
-                                if let peer = peerView.peers[peerView.peerId] {
-                                    isContact = peerView.peerIsContact
-                                    var peers = SimpleDictionary<PeerId, Peer>()
-                                    peers[peer.id] = peer
-                                    if let associatedPeerId = peer.associatedPeerId, let associatedPeer = peerView.peers[associatedPeerId] {
-                                        peers[associatedPeer.id] = associatedPeer
-                                    }
-                                    renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
-                                }
-                                
-                                var animated = false
-                                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, let updated = renderedPeer?.peer as? TelegramSecretChat, peer.embeddedState != updated.embeddedState {
-                                    animated = true
-                                }
-                                strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
-                                    return $0.updatedPeer { _ in return renderedPeer
-                                    }.updatedIsContact(isContact).updatedPeerIsMuted(peerIsMuted)
-                                })
-                                if !strongSelf.didSetChatLocationInfoReady {
-                                    strongSelf.didSetChatLocationInfoReady = true
-                                    strongSelf._chatLocationInfoReady.set(.single(true))
+                    var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
+                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        onlineMemberCount = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: account.postbox, network: account.network, peerId: peerId)
+                        |> map(Optional.init)
+                    }
+                    self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount)
+                    |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount in
+                        if let strongSelf = self {
+                            if let peer = peerViewMainPeer(peerView) {
+                                strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount)
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.account, peer: peer)
+                            }
+                            if strongSelf.peerView === peerView {
+                                return
+                            }
+                            var wasGroupChannel: Bool?
+                            if let previousPeerView = strongSelf.peerView, let info = (previousPeerView.peers[previousPeerView.peerId] as? TelegramChannel)?.info {
+                                if case .group = info {
+                                    wasGroupChannel = true
+                                } else {
+                                    wasGroupChannel = false
                                 }
                             }
-                        }))
+                            var isGroupChannel: Bool?
+                            if let info = (peerView.peers[peerView.peerId] as? TelegramChannel)?.info {
+                                if case .group = info {
+                                    isGroupChannel = true
+                                } else {
+                                    isGroupChannel = false
+                                }
+                            }
+                            strongSelf.peerView = peerView
+                            if wasGroupChannel != isGroupChannel {
+                                if let isGroupChannel = isGroupChannel, isGroupChannel {
+                                    let (recentDisposable, _) = strongSelf.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: strongSelf.account.postbox, network: strongSelf.account.network, peerId: peerView.peerId, updated: { _ in })
+                                    let (adminsDisposable, _) = strongSelf.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: strongSelf.account.postbox, network: strongSelf.account.network, peerId: peerView.peerId, updated: { _ in })
+                                    let disposable = DisposableSet()
+                                    disposable.add(recentDisposable)
+                                    disposable.add(adminsDisposable)
+                                    strongSelf.chatAdditionalDataDisposable.set(disposable)
+                                } else {
+                                    strongSelf.chatAdditionalDataDisposable.set(nil)
+                                }
+                            }
+                            if strongSelf.isNodeLoaded {
+                                strongSelf.chatDisplayNode.peerView = peerView
+                            }
+                            var peerIsMuted = false
+                            if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                if case .muted = notificationSettings.muteState {
+                                    peerIsMuted = true
+                                }
+                            }
+                            var renderedPeer: RenderedPeer?
+                            var isContact: Bool = false
+                            if let peer = peerView.peers[peerView.peerId] {
+                                isContact = peerView.peerIsContact
+                                var peers = SimpleDictionary<PeerId, Peer>()
+                                peers[peer.id] = peer
+                                if let associatedPeerId = peer.associatedPeerId, let associatedPeer = peerView.peers[associatedPeerId] {
+                                    peers[associatedPeer.id] = associatedPeer
+                                }
+                                renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
+                            }
+                            
+                            var animated = false
+                            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, let updated = renderedPeer?.peer as? TelegramSecretChat, peer.embeddedState != updated.embeddedState {
+                                animated = true
+                            }
+                            strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
+                                return $0.updatedPeer { _ in return renderedPeer
+                                }.updatedIsContact(isContact).updatedPeerIsMuted(peerIsMuted)
+                            })
+                            if !strongSelf.didSetChatLocationInfoReady {
+                                strongSelf.didSetChatLocationInfoReady = true
+                                strongSelf._chatLocationInfoReady.set(.single(true))
+                            }
+                        }
+                    }))
                 }
             case let .group(groupId):
                 if case let .group(topPeersView) = self.chatLocationInfoData {
@@ -4288,7 +4322,35 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
             disposable = MetaDisposable()
             self.resolvePeerByNameDisposable = disposable
         }
-        disposable.set((resolvePeerByName(account: self.account, name: name, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peerId in
+        var resolveSignal = resolvePeerByName(account: self.account, name: name, ageLimit: 10)
+        
+        var cancelImpl: (() -> Void)?
+        let presentationData = self.presentationData
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            self?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        resolveSignal = resolveSignal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = { [weak self] in
+            self?.resolvePeerByNameDisposable?.set(nil)
+        }
+        disposable.set((resolveSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peerId in
             if let strongSelf = self {
                 if let peerId = peerId {
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId), messageId: nil))

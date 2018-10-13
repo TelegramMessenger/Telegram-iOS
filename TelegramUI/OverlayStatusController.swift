@@ -4,7 +4,7 @@ import Display
 import LegacyComponents
 
 enum OverlayStatusControllerType {
-    case loading
+    case loading(cancelled: (() -> Void)?)
     case success
     case proxySettingSuccess
 }
@@ -47,12 +47,14 @@ private enum OverlayStatusContentController {
         }
     }
     
-    func dismiss() {
+    func dismiss(completion: @escaping () -> Void) {
         switch self {
             case let .loading(controller):
-                controller.dismiss(true) {}
+                controller.dismiss(true, completion: {
+                    completion()
+                })
             default:
-                break
+                completion()
         }
     }
 }
@@ -64,8 +66,12 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     init(theme: PresentationTheme, type: OverlayStatusControllerType, dismissed: @escaping () -> Void) {
         self.dismissed = dismissed
         switch type {
-            case .loading:
-                self.contentController = .loading(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
+            case let .loading(cancelled):
+                let controller = TGProgressWindowController(light: theme.actionSheet.backgroundType == .light)!
+                controller.cancelled = {
+                    cancelled?()
+                }
+                self.contentController = .loading(controller)
             case .success:
                 self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
             case .proxySettingSuccess:
@@ -92,8 +98,9 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     }
     
     func dismiss() {
-        self.contentController.dismiss()
-        self.dismissed()
+        self.contentController.dismiss(completion: { [weak self] in
+            self?.dismissed()
+        })
     }
 }
 

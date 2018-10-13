@@ -22,6 +22,14 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
         }
+        
+        self.interactiveFileNode.requestUpdateLayout = { [weak self] _ in
+            if let strongSelf = self {
+                if let item = strongSelf.item {
+                    let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+                }
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {

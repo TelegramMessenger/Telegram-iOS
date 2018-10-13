@@ -214,7 +214,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         foundMembers = .single([])
                     }
                     
-                    let foundContacts: Signal<[Peer], NoError>
+                    let foundContacts: Signal<([Peer], [PeerId: PeerPresence]), NoError>
                     let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
                     switch mode {
                         case .inviteActions, .banAndPromoteActions:
@@ -222,7 +222,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             foundRemotePeers = .single(([], [])) |> then(searchPeers(account: account, query: query)
                             |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                         case .searchMembers, .searchBanned, .searchAdmins:
-                            foundContacts = .single([])
+                            foundContacts = .single(([], [:]))
                             foundRemotePeers = .single(([], []))
                     }
                     
@@ -322,7 +322,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 }
                             }
                             
-                            for peer in foundContacts {
+                            for peer in foundContacts.0 {
                                 if !existingPeerIds.contains(peer.id) {
                                     existingPeerIds.insert(peer.id)
                                     entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .contacts))
