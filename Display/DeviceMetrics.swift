@@ -129,9 +129,9 @@ public enum DeviceMetrics {
         } else {
             switch self {
                 case .iPhoneX:
-                    return CGSize(width: screenSize.width, height: screenSize.height - 190.0)
+                    return CGSize(width: screenSize.width, height: screenSize.height - 154.0)
                 case .iPhoneXSMax:
-                    return CGSize(width: screenSize.width, height: screenSize.height - 90.0)
+                    return CGSize(width: screenSize.width, height: screenSize.height - 84.0)
                 default:
                     return CGSize(width: screenSize.width, height: screenSize.height - 50.0)
             }
