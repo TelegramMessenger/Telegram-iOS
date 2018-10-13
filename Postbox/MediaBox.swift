@@ -123,6 +123,7 @@ public final class MediaBox {
     private var fileContexts: [WrappedMediaResourceId: MediaBoxFileContext] = [:]
     
     private var wrappedFetchResource = Promise<(MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>>()
+    public var preFetchedResourcePath: (MediaResource) -> String? = { _ in return nil }
     public var fetchResource: ((MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)? {
         didSet {
             if let fetchResource = self.fetchResource {
@@ -202,16 +203,30 @@ public final class MediaBox {
         }
     }
     
+    private func maybeCopiedPreFetchedResource(completePath: String, resource: MediaResource) {
+        if let path = self.preFetchedResourcePath(resource) {
+            let _ = try? FileManager.default.copyItem(atPath: path, toPath: completePath)
+        }
+    }
+    
     public func resourceStatus(_ resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.concurrentQueue.async {
                 let paths = self.storePathsForId(resource.id)
+                
                 if let _ = fileSize(paths.complete) {
                     subscriber.putNext(.Local)
                     subscriber.putCompletion()
                 } else {
+                    self.maybeCopiedPreFetchedResource(completePath: paths.complete, resource: resource)
+                    if let _ = fileSize(paths.complete) {
+                        subscriber.putNext(.Local)
+                        subscriber.putCompletion()
+                        return
+                    }
+                    
                     self.statusQueue.async {
                         let resourceId = WrappedMediaResourceId(resource.id)
                         let statusContext: ResourceStatusContext
@@ -295,7 +310,7 @@ public final class MediaBox {
             if let pathExtension = pathExtension {
                 let symlinkPath = paths.complete + ".\(pathExtension)"
                 if fileSize(symlinkPath) == nil {
-                    let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                    let _ = try? FileManager.default.linkItem(atPath: paths.complete, toPath: symlinkPath)
                 }
                 return symlinkPath
             } else {
@@ -311,11 +326,19 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             self.concurrentQueue.async {
                 let paths = self.storePathsForId(resource.id)
+                
+                var completeSize = fileSize(paths.complete)
+                if completeSize == nil {
+                    self.maybeCopiedPreFetchedResource(completePath: paths.complete, resource: resource)
+                    
+                    completeSize = fileSize(paths.complete)
+                }
+                
                 if let completeSize = fileSize(paths.complete) {
                     if let pathExtension = pathExtension {
                         let symlinkPath = paths.complete + ".\(pathExtension)"
                         if fileSize(symlinkPath) == nil {
-                            let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                            let _ = try? FileManager.default.linkItem(atPath: paths.complete, toPath: symlinkPath)
                         }
                         subscriber.putNext(MediaResourceData(path: symlinkPath, offset: 0, size: completeSize, complete: true))
                         subscriber.putCompletion()

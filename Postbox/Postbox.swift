@@ -2758,19 +2758,23 @@ public final class Postbox {
         }
     }
     
-    public func searchContacts(query: String) -> Signal<[Peer], NoError> {
-        return self.transaction { transaction -> Signal<[Peer], NoError> in
+    public func searchContacts(query: String) -> Signal<([Peer], [PeerId: PeerPresence]), NoError> {
+        return self.transaction { transaction -> Signal<([Peer], [PeerId: PeerPresence]), NoError> in
             let (_, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable, reverseAssociatedPeerTable: self.reverseAssociatedPeerTable)
             
             var contactPeers: [Peer] = []
+            var presences: [PeerId: PeerPresence] = [:]
             for peerId in contactPeerIds {
                 if let peer = self.peerTable.get(peerId) {
                     contactPeers.append(peer)
+                    if let presence = self.peerPresenceTable.get(peerId) {
+                        presences[peerId] = presence
+                    }
                 }
             }
             
             contactPeers.sort(by: { $0.indexName.indexName(.lastNameFirst) < $1.indexName.indexName(.lastNameFirst) })
-            return .single(contactPeers)
+            return .single((contactPeers, presences))
         } |> switchToLatest
     }
     
