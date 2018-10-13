@@ -4,6 +4,8 @@
 
 @interface TGProgressWindowController : TGOverlayWindowViewController
 
+@property (nonatomic, copy) void (^cancelled)(void);
+
 - (instancetype)init;
 - (instancetype)initWithLight:(bool)light;
 

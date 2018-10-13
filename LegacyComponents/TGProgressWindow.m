@@ -44,6 +44,7 @@ static bool TGProgressWindowIsLight = true;
     _containerView.alpha = 0.0f;
     _containerView.clipsToBounds = true;
     _containerView.layer.cornerRadius = 20.0f;
+    _containerView.userInteractionEnabled = false;
     [self.view addSubview:_containerView];
     
     if (iosMajorVersion() >= 9)
@@ -68,6 +69,17 @@ static bool TGProgressWindowIsLight = true;
     
     _spinner = [[TGProgressSpinnerView alloc] initWithFrame:CGRectMake((_containerView.frame.size.width - 48.0f) / 2.0f, (_containerView.frame.size.height - 48.0f) / 2.0f, 48.0f, 48.0f) light:_light];
     [_containerView addSubview:_spinner];
+    
+    self.view.userInteractionEnabled = true;
+    [self.view addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGesture:)]];
+}
+
+- (void)tapGesture:(UITapGestureRecognizer *)recognizer {
+    if (recognizer.state == UIGestureRecognizerStateEnded) {
+        if (_cancelled) {
+            _cancelled();
+        }
+    }
 }
 
 - (void)updateLayout {
