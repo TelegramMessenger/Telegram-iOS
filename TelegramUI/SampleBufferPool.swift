@@ -7,23 +7,36 @@ private final class SampleBufferLayerImpl: AVSampleBufferDisplayLayer {
     override func action(forKey event: String) -> CAAction? {
         return NSNull()
     }
+    
+    deinit {
+        var bp:Int = 0
+        bp += 1
+    }
 }
 
 final class SampleBufferLayer {
     let layer: AVSampleBufferDisplayLayer
     private let enqueue: (AVSampleBufferDisplayLayer) -> Void
     
+    
+    var isFreed: Bool = false
     fileprivate init(layer: AVSampleBufferDisplayLayer, enqueue: @escaping (AVSampleBufferDisplayLayer) -> Void) {
         self.layer = layer
         self.enqueue = enqueue
     }
     
     deinit {
-        self.enqueue(self.layer)
+        if !isFreed {
+            self.enqueue(self.layer)
+        }
     }
 }
 
 private let pool = Atomic<[AVSampleBufferDisplayLayer]>(value: [])
+
+func clearSampleBufferLayerPoll() {
+    let _ = pool.modify { _ in return [] }
+}
 
 func takeSampleBufferLayer() -> SampleBufferLayer {
     var layer: AVSampleBufferDisplayLayer?
