@@ -148,7 +148,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.contentContainerNode.addSubnode(self.installActionSeparatorNode)
         self.contentContainerNode.addSubnode(self.installActionButtonNode)
         self.wrappingScrollNode.addSubnode(self.contentTitleNode)
-        self.wrappingScrollNode.addSubnode(self.contentShareButtonNode)
+        //self.wrappingScrollNode.addSubnode(self.contentShareButtonNode)
         self.wrappingScrollNode.addSubnode(self.contentSeparatorNode)
         
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
@@ -297,15 +297,15 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             }
         }
         
-        let titleSize = self.contentTitleNode.updateLayout(CGSize(width: contentContainerFrame.size.width - 76.0, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.contentTitleNode.updateLayout(CGSize(width: contentContainerFrame.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
         let titleFrame = CGRect(origin: CGPoint(x: contentContainerFrame.minX + floor((contentContainerFrame.size.width - titleSize.width) / 2.0), y: self.contentBackgroundNode.frame.minY + 15.0), size: titleSize)
         let deltaTitlePosition = CGPoint(x: titleFrame.midX - self.contentTitleNode.frame.midX, y: titleFrame.midY - self.contentTitleNode.frame.midY)
         self.contentTitleNode.frame = titleFrame
         transition.animatePosition(node: self.contentTitleNode, from: CGPoint(x: titleFrame.midX + deltaTitlePosition.x, y: titleFrame.midY + deltaTitlePosition.y))
         
-        let titleButtonSize = CGSize(width: 44.0, height: 44.0)
-        let shareButtonFrame = CGRect(origin: CGPoint(x: contentContainerFrame.minX + contentContainerFrame.size.width - titleButtonSize.width - 4.0, y: titleFrame.minY - 13.0), size: titleButtonSize)
-        transition.updateFrame(node: self.contentShareButtonNode, frame: shareButtonFrame)
+//        let titleButtonSize = CGSize(width: 44.0, height: 44.0)
+//        let shareButtonFrame = CGRect(origin: CGPoint(x: contentContainerFrame.minX + contentContainerFrame.size.width - titleButtonSize.width - 4.0, y: titleFrame.minY - 13.0), size: titleButtonSize)
+//        transition.updateFrame(node: self.contentShareButtonNode, frame: shareButtonFrame)
         
         transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
         transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: contentContainerFrame.minX, y: self.contentBackgroundNode.frame.minY + titleAreaHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))

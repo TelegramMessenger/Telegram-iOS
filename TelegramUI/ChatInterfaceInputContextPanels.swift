@@ -82,14 +82,16 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                 }
             }
         case let .hashtags(results):
-            if let currentPanel = currentPanel as? HashtagChatInputContextPanelNode {
-                currentPanel.updateResults(results)
-                return currentPanel
-            } else {
-                let panel = HashtagChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
-                panel.interfaceInteraction = interfaceInteraction
-                panel.updateResults(results)
-                return panel
+            if !results.isEmpty {
+                if let currentPanel = currentPanel as? HashtagChatInputContextPanelNode {
+                    currentPanel.updateResults(results)
+                    return currentPanel
+                } else {
+                    let panel = HashtagChatInputContextPanelNode(account: account, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.updateResults(results)
+                    return panel
+                }
             }
         case let .emojis(results):
             if !results.isEmpty {

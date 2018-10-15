@@ -262,106 +262,56 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
     }
 }
 
-public struct ExternalMusicAlbumArtResourceId: MediaResourceId {
-    public let title: String
-    public let performer: String
-    public let isThumbnail: Bool
+public struct LocalFileGifMediaResourceId: MediaResourceId {
+    public let randomId: Int64
     
     public var uniqueId: String {
-        return "ext-album-art-\(isThumbnail ? "thump" : "full")-\(self.title.replacingOccurrences(of: "/", with: "_"))-\(self.performer.replacingOccurrences(of: "/", with: "_"))"
+        return "lgi-\(self.randomId)"
     }
     
     public var hashValue: Int {
-        return self.title.hashValue &* 31 &+ self.performer.hashValue
+        return self.randomId.hashValue
     }
     
     public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? ExternalMusicAlbumArtResourceId {
-            return self.title == to.title && self.performer == to.performer && self.isThumbnail == to.isThumbnail
+        if let to = to as? LocalFileGifMediaResourceId {
+            return self.randomId == to.randomId
         } else {
             return false
         }
     }
 }
 
-public class ExternalMusicAlbumArtResource: TelegramMediaResource {
-    public let title: String
-    public let performer: String
-    public let isThumbnail: Bool
+public final class LocalFileGifMediaResource: TelegramMediaResource {
+    public let randomId: Int64
+    public let path: String
     
-    public init(title: String, performer: String, isThumbnail: Bool) {
-        self.title = title
-        self.performer = performer
-        self.isThumbnail = isThumbnail
+    public var headerSize: Int32 {
+        return 32 * 1024
+    }
+    
+    public init(randomId: Int64, path: String) {
+        self.randomId = randomId
+        self.path = path
     }
     
     public required init(decoder: PostboxDecoder) {
-        self.title = decoder.decodeStringForKey("t", orElse: "")
-        self.performer = decoder.decodeStringForKey("p", orElse: "")
-        self.isThumbnail = decoder.decodeInt32ForKey("th", orElse: 1) != 0
+        self.randomId = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.path = decoder.decodeStringForKey("p", orElse: "")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.title, forKey: "t")
-        encoder.encodeString(self.performer, forKey: "p")
-        encoder.encodeInt32(self.isThumbnail ? 1 : 0, forKey: "th")
+        encoder.encodeInt64(self.randomId, forKey: "i")
+        encoder.encodeString(self.path, forKey: "p")
     }
     
     public var id: MediaResourceId {
-        return ExternalMusicAlbumArtResourceId(title: self.title, performer: self.performer, isThumbnail: self.isThumbnail)
+        return LocalFileGifMediaResourceId(randomId: self.randomId)
     }
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
-        if let to = to as? ExternalMusicAlbumArtResource {
-            return self.title == to.title && self.performer == to.performer && self.isThumbnail == to.isThumbnail
-        } else {
-            return false
-        }
-    }
-}
-
-public struct OpenInAppIconResourceId: MediaResourceId {
-    public let appStoreId: Int64
-    
-    public var uniqueId: String {
-        return "app-icon-\(appStoreId)"
-    }
-    
-    public var hashValue: Int {
-        return self.appStoreId.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? OpenInAppIconResourceId {
-            return self.appStoreId == to.appStoreId
-        } else {
-            return false
-        }
-    }
-}
-
-public class OpenInAppIconResource: TelegramMediaResource {
-    public let appStoreId: Int64
-    
-    public init(appStoreId: Int64) {
-        self.appStoreId = appStoreId
-    }
-    
-    public required init(decoder: PostboxDecoder) {
-        self.appStoreId = decoder.decodeInt64ForKey("i", orElse: 0)
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64(self.appStoreId, forKey: "i")
-    }
-    
-    public var id: MediaResourceId {
-        return OpenInAppIconResourceId(appStoreId: self.appStoreId)
-    }
-    
-    public func isEqual(to: TelegramMediaResource) -> Bool {
-        if let to = to as? OpenInAppIconResource {
-            return self.appStoreId == to.appStoreId
+        if let to = to as? LocalFileGifMediaResource {
+            return self.randomId == to.randomId && self.path == to.path
         } else {
             return false
         }

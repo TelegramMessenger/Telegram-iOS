@@ -184,13 +184,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    private func updateNetworkStatusNode(networkState: AccountNetworkState, metrics: LayoutMetrics) {
+    private func updateNetworkStatusNode(networkState: AccountNetworkState, layout: ContainerViewLayout?) {
         var isOnline = false
         if case .online = networkState {
             isOnline = true
         }
         
-        if isOnline || metrics.widthClass == .regular {
+        if isOnline || layout?.metrics.widthClass == .regular {
             self.contentContainer.isHidden = false
             if let networkStatusNode = self.networkStatusNode {
                 self.networkStatusNode = nil
@@ -209,8 +209,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             switch self.networkState {
                 case .waitingForNetwork:
                     statusNode.title = self.strings.State_WaitingForNetwork
-                case .connecting:
-                    statusNode.title = self.strings.State_Connecting
+                case let .connecting(proxy):
+                    if let layout = layout, proxy != nil && layout.size.width > 320.0 {
+                        statusNode.title = self.strings.State_ConnectingToProxy
+                    } else {
+                        statusNode.title = self.strings.State_Connecting
+                    }
                 case .updating:
                     statusNode.title = self.strings.State_Updating
                 case .online:
@@ -224,15 +228,15 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     var networkState: AccountNetworkState = .online(proxy: nil) {
         didSet {
             if self.networkState != oldValue {
-                updateNetworkStatusNode(networkState: self.networkState, metrics: self.layoutMetrics)
+                updateNetworkStatusNode(networkState: self.networkState, layout: self.layout)
             }
         }
     }
     
-    var layoutMetrics: LayoutMetrics = LayoutMetrics() {
+    var layout: ContainerViewLayout? {
         didSet {
-            if self.layoutMetrics != oldValue {
-                updateNetworkStatusNode(networkState: self.networkState, metrics: self.layoutMetrics)
+            if self.layout != oldValue {
+                updateNetworkStatusNode(networkState: self.networkState, layout: self.layout)
             }
         }
     }
@@ -553,8 +557,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             self.titleRightIconNode.removeFromSupernode()
         }
         
+        let titleSideInset: CGFloat = 3.0
         if size.height > 40.0 {
-            let titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - rightIconWidth, height: size.height))
+            let titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height))
             let infoSize = self.infoNode.updateLayout(clearBounds.size)
             let typingSize = self.typingNode.updateLayout(clearBounds.size)
             let titleInfoSpacing: CGFloat = 0.0
@@ -596,7 +601,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.minY + 7.0), size: image.size)
             }
         } else {
-            let titleSize = self.titleNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - rightIconWidth), height: size.height))
+            let titleSize = self.titleNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - rightIconWidth - titleSideInset * 2.0), height: size.height))
             let infoSize = self.infoNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height))
             let typingSize = self.typingNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height))
             

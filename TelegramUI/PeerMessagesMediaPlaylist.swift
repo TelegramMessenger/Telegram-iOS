@@ -416,7 +416,6 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 inputIndex = .single(index)
                             case .random:
                                 inputIndex = self.postbox.transaction { transaction -> MessageIndex in
-                                    
                                     return transaction.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreId: index.id) ?? index
                                 }
                         }

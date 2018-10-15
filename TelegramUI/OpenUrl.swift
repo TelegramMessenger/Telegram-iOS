@@ -145,26 +145,28 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                 } else {
                     openResolvedUrl(resolved, account: account, navigationController: navigationController, openPeer: { peerId, navigation in
                         switch navigation {
-                        case .info:
-                            let _ = (account.postbox.loadedPeerWithId(peerId)
-                                |> deliverOnMainQueue).start(next: { peer in
-                                    if let infoController = peerInfoController(account: account, peer: peer) {
-                                        if let navigationController = navigationController {
-                                            navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                            case .info:
+                                let _ = (account.postbox.loadedPeerWithId(peerId)
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        if let infoController = peerInfoController(account: account, peer: peer) {
+                                            if let navigationController = navigationController {
+                                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                            }
+                                            navigationController?.pushViewController(infoController)
                                         }
-                                        navigationController?.pushViewController(infoController)
-                                    }
-                                })
-                        case .chat:
-                            if let navigationController = navigationController {
-                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
-                            }
-                        case let .withBotStartPayload(payload):
-                            if let navigationController = navigationController {
-                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
-                            }
+                                    })
+                            case .chat:
+                                if let navigationController = navigationController {
+                                    navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                    navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+                                }
+                            case let .withBotStartPayload(payload):
+                                if let navigationController = navigationController {
+                                    navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                    navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
+                                }
+                            default:
+                                break
                         }
                     }, present: { c, a in
                         if let navigationController = navigationController {

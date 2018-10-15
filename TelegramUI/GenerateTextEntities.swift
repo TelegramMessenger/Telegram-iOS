@@ -4,7 +4,11 @@ import TelegramCore
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 private let dataAndPhoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link, .phoneNumber]).rawValue)
 private let phoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.phoneNumber]).rawValue)
-private let alphanumericSet = CharacterSet.alphanumerics
+private let validHashtagSet: CharacterSet = {
+    var set = CharacterSet.alphanumerics
+    set.insert("_")
+    return set
+}()
 private let validIdentifierSet: CharacterSet = {
     var set = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
     set.insert(charactersIn: "A".unicodeScalars.first! ... "Z".unicodeScalars.first!)
@@ -181,7 +185,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                                 currentEntity = nil
                             }
                         case .hashtag:
-                            if alphanumericSet.contains(scalar) {
+                            if validHashtagSet.contains(scalar) {
                                 currentEntity = (type, range.lowerBound ..< utf16.index(after: index))
                             } else if identifierDelimiterSet.contains(scalar) {
                                 if let (type, range) = currentEntity {

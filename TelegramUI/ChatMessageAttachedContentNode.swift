@@ -214,7 +214,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var contentImageNode: ChatMessageInteractiveMediaNode?
     private var contentInstantVideoNode: ChatMessageInteractiveInstantVideoNode?
     private var contentFileNode: ChatMessageInteractiveFileNode?
-    private var buttonBackgroundNode: ASImageNode?
     private var buttonNode: ChatMessageAttachedContentButtonNode?
     
     private let statusNode: ChatMessageDateAndStatusNode

@@ -649,6 +649,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
                                 (.canEditMessages, self.presentationData.strings.Channel_AdminLog_CanEditMessages),
                                 (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
+                                (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                 (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins)
                             ]
                         } else {
@@ -656,8 +657,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
                                 (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
                                 (.canBanUsers, self.presentationData.strings.Channel_AdminLog_CanBanUsers),
+                                (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
+                                (.canChangeInviteLink, self.presentationData.strings.Channel_AdminLog_CanChangeInviteLink),
                                 (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
-                                (.canChangeInviteLink, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
                                 (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins)
                             ]
                         }

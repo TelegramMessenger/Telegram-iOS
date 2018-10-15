@@ -8,6 +8,8 @@ struct NetworkStatusTitle: Equatable {
     let activity: Bool
     let hasProxy: Bool
     let connectsViaProxy: Bool
+    let isPasscodeSet: Bool
+    let isManuallyLocked: Bool
 }
 
 final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBarTitleTransitionNode {
@@ -20,7 +22,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
     
     private var validLayout: (CGSize, CGRect)?
     
-    var title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false) {
+    var title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false) {
         didSet {
             if self.title != oldValue {
                 self.titleNode.attributedText = NSAttributedString(string: title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
@@ -32,7 +34,17 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
                 }
                 self.proxyNode.isHidden = !self.title.hasProxy
                 self.proxyButton.isHidden = !self.title.hasProxy
-
+                
+                if self.title.isPasscodeSet && !self.title.activity {
+                    self.buttonView.isHidden = false
+                    self.lockView.isHidden = false
+                    self.lockView.setIsLocked(self.title.isManuallyLocked, theme: self.theme, animated: !self.bounds.size.width.isZero)
+                } else {
+                    self.buttonView.isHidden = true
+                    self.lockView.isHidden = true
+                    self.lockView.setIsLocked(false, theme: self.theme, animated: false)
+                }
+                
                 self.setNeedsLayout()
             }
         }
@@ -185,25 +197,6 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 3.0, width: 2.0, height: 2.0)
         
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY - 1.0), size: indicatorSize)
-    }
-    
-    func updatePasscode(isPasscodeSet: Bool, isManuallyLocked: Bool) {
-        if self.isPasscodeSet == isPasscodeSet && self.isManuallyLocked == isManuallyLocked {
-            return
-        }
-        
-        self.isPasscodeSet = isPasscodeSet
-        self.isManuallyLocked = isManuallyLocked
-        
-        if isPasscodeSet {
-            self.buttonView.isHidden = false
-            self.lockView.isHidden = false
-            self.lockView.setIsLocked(isManuallyLocked, theme: self.theme, animated: !self.bounds.size.width.isZero)
-        } else {
-            self.buttonView.isHidden = true
-            self.lockView.isHidden = true
-            self.lockView.setIsLocked(false, theme: self.theme, animated: false)
-        }
     }
     
     @objc private func buttonPressed() {

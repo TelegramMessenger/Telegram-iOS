@@ -456,7 +456,8 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             }
             
             if peer.hasAdminRights(.canAddAdmins) {
-                entries.append(.adminsInfo(presentationData.theme, presentationData.strings.Channel_Management_AddModeratorHelp))
+                let info = isGroup ? presentationData.strings.Group_Management_AddModeratorHelp : presentationData.strings.Channel_Management_AddModeratorHelp
+                entries.append(.adminsInfo(presentationData.theme, info))
             }
         }
     }

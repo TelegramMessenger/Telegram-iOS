@@ -374,6 +374,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canChangeInfo,
                     .canDeleteMessages,
                     .canBanUsers,
+                    .canInviteUsers,
                     .canPinMessages,
                     .canAddAdmins
                 ]

@@ -61,20 +61,25 @@ final class StickerPaneSearchStickerSectionNode: ASDisplayNode {
 
 final class StickerPaneSearchStickerItem: GridItem {
     let account: Account
-    let code: String
+    let code: String?
     let stickerItem: FoundStickerItem
     let selected: () -> Void
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     
     let section: GridSection?
     
-    init(account: Account, code: String, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
         self.account = account
-        self.code = code
         self.stickerItem = stickerItem
         self.inputNodeInteraction = inputNodeInteraction
         self.selected = selected
-        self.section = StickerPaneSearchStickerSection(code: self.code, theme: theme)
+        if let code = code {
+            self.code = code
+            self.section = StickerPaneSearchStickerSection(code: code, theme: theme)
+        } else {
+            self.code = nil
+            self.section = nil
+        }
     }
     
     func node(layout: GridNodeLayout) -> GridItemNode {

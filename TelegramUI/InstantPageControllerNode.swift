@@ -752,7 +752,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                             }
                                         }
                                     })
-                                case .withBotStartPayload:
+                                default:
                                     break
                             }
                         }, present: { c, a in

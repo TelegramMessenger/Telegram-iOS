@@ -382,7 +382,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     break
                 case let .text(text):
                     labelAttributedString = NSAttributedString(string: text, font: labelFont, textColor: item.theme.list.itemSecondaryTextColor)
-                    rightInset += 10.0
+                    labelInset += 15.0
                 case let .disclosure(text):
                     if let currentLabelArrowNode = currentLabelArrowNode {
                         updatedLabelArrowNode = currentLabelArrowNode
@@ -394,14 +394,14 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         arrowNode.image = PresentationResourcesItemList.disclosureArrowImage(item.theme)
                         updatedLabelArrowNode = arrowNode
                     }
-                    labelInset += 30.0
+                    labelInset += 40.0
                     labelAttributedString = NSAttributedString(string: text, font: labelDisclosureFont, textColor: item.theme.list.itemSecondaryTextColor)
             }
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - labelLayout.size.width - editingOffset - rightInset - labelInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0) - editingOffset - rightInset - labelInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - labelInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = itemListNeighborsGroupedInsets(neighbors)
             let contentSize = CGSize(width: params.width, height: 48.0)

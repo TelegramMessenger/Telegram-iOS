@@ -228,13 +228,24 @@ public final class ShareController: ViewController {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(messages: messages)
                     })
-                } else if messages.count == 1, let message = messages.first {
-                    if let showInChat = showInChat {
+                } else if let message = messages.first {
+                    let groupingKey: Int64? = message.groupingKey
+                    var sameGroupingKey = groupingKey != nil
+                    if sameGroupingKey {
+                        for message in messages {
+                            if message.groupingKey != groupingKey {
+                                sameGroupingKey = false
+                                break
+                            }
+                        }
+                    }
+                    if let showInChat = showInChat, messages.count == 1 {
                         self.defaultAction = ShareControllerAction(title: self.presentationData.strings.SharedMedia_ViewInChat, action: { [weak self] in
                             self?.controllerNode.cancel?()
                             showInChat(message)
                         })
-                    } else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel {
+                    }
+                    if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
                         if message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
                             self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
                                 UIPasteboard.general.string = "https://t.me/\(addressName)/\(message.id.id)"

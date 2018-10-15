@@ -261,7 +261,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     
                     if let secretVideoPlaceholderBackgroundImage = secretVideoPlaceholderBackgroundImage {
-                    strongSelf.secretVideoPlaceholderBackground.image = secretVideoPlaceholderBackgroundImage
+                        strongSelf.secretVideoPlaceholderBackground.image = secretVideoPlaceholderBackgroundImage
                     }
                     
                     strongSelf.telegramFile = updatedFile
@@ -284,8 +284,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.updateStatus()
                         }))
                     }
-                    
-                    
                     
                     dateAndStatusApply(false)
                     switch layoutData {

@@ -188,7 +188,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
             peerSizes += combinedSize
         }
         
-        let totalSize = Int(peerSizes + stats.otherSize + stats.cacheSize + stats.tempSize)
+        let totalSize = Int64(peerSizes + stats.otherSize + stats.cacheSize + stats.tempSize)
         
         entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, totalSize > 0 ? dataSizeString(totalSize) : presentationData.strings.Cache_ClearEmpty, totalSize > 0))
         
@@ -206,7 +206,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
                         chatPeer = mainPeer
                         mainPeer = associatedPeer
                     }
-                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, mainPeer, chatPeer, dataSizeString(Int(size))))
+                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, mainPeer, chatPeer, dataSizeString(size)))
                     index += 1
                 }
             }
@@ -326,7 +326,7 @@ func storageUsageController(account: Account) -> ViewController {
                         if filteredSize == 0 {
                             title = presentationData.strings.Cache_ClearNone
                         } else {
-                            title = presentationData.strings.Cache_Clear("\(dataSizeString(Int(filteredSize)))").0
+                            title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize))").0
                         }
                         
                         if let item = item as? ActionSheetButtonItem {
@@ -363,7 +363,7 @@ func storageUsageController(account: Account) -> ViewController {
                         let categorySize: Int64 = size
                         totalSize += categorySize
                         let index = itemIndex
-                        items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(Int(categorySize)), value: true, action: { value in
+                        items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize), value: true, action: { value in
                             toggleCheck(categoryId, index)
                         }))
                         itemIndex += 1
@@ -380,7 +380,7 @@ func storageUsageController(account: Account) -> ViewController {
                 }
                 
                 if !items.isEmpty {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(Int(totalSize)))").0, action: {
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize))").0, action: {
                         if let statsPromise = statsPromise {
                             let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                             
@@ -476,7 +476,7 @@ func storageUsageController(account: Account) -> ViewController {
                             if filteredSize == 0 {
                                 title = presentationData.strings.Cache_ClearNone
                             } else {
-                                title = presentationData.strings.Cache_Clear("\(dataSizeString(Int(filteredSize)))").0
+                                title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize))").0
                             }
                             
                             if let item = item as? ActionSheetButtonItem {
@@ -513,7 +513,7 @@ func storageUsageController(account: Account) -> ViewController {
                             sizeIndex[categoryId] = (true, categorySize)
                             totalSize += categorySize
                             let index = itemIndex
-                            items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(Int(categorySize)), value: true, action: { value in
+                            items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize), value: true, action: { value in
                                 toggleCheck(categoryId, index)
                             }))
                             itemIndex += 1
@@ -521,7 +521,7 @@ func storageUsageController(account: Account) -> ViewController {
                     }
                     
                     if !items.isEmpty {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(Int(totalSize)))").0, action: {
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize))").0, action: {
                             if let statsPromise = statsPromise {
                                 var clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                                 //var clearSize: Int64 = 0

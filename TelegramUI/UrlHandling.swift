@@ -24,7 +24,7 @@ private enum ParsedUrl {
 
 enum ResolvedUrl {
     case externalUrl(String)
-    case peer(PeerId)
+    case peer(PeerId?, ChatControllerInteractionNavigateToPeer)
     case botStart(peerId: PeerId, payload: String)
     case groupBotStart(peerId: PeerId, payload: String)
     case channelMessage(peerId: PeerId, messageId: MessageId)
@@ -124,7 +124,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                     return .channelMessage(peerId: peerId, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))
                             }
                         } else {
-                            return .peer(peerId)
+                            return .peer(peerId, .chat(textInputState: nil, messageId: nil))
                         }
                     } else {
                         return nil

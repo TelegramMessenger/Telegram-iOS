@@ -537,7 +537,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         }
                     }
                     if let channel = peer as? TelegramChannel {
-                        if message.flags.contains(.Incoming), channel.adminRights == nil, !channel.flags.contains(.isCreator) {
+                        if message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.report)
                         }
                         if channel.hasAdminRights(.canBanUsers), case .group = channel.info {

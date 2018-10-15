@@ -707,12 +707,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 self?.view.endEditing(true)
                             })
                         }
-                    case let .peer(peerId):
-                        strongSelf.openPeer(peerId: peerId, peer: nil)
-                    case let .botStart(peerId, payload):
+                    case let .peer(peerId, _):
+                        if let peerId = peerId {
+                            strongSelf.openPeer(peerId: peerId, peer: nil)
+                        }
+                    case .botStart:
                         break
                         //strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)), fromMessage: nil)
-                    case let .groupBotStart(peerId, payload):
+                    case .groupBotStart:
                         break
                     case let .channelMessage(peerId, messageId):
                         if let navigationController = strongSelf.getNavigationController() {

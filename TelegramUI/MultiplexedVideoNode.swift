@@ -145,6 +145,10 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
         for(_, disposable) in statusDisposable {
             disposable.dispose()
         }
+        for (_, value) in self.visibleLayers {
+            value.1.isFreed = true
+        }
+        clearSampleBufferLayerPoll()
     }
     
     private func displayLinkEvent() {
