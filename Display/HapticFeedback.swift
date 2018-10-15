@@ -1,9 +1,18 @@
 import Foundation
 import UIKit
 
+public enum ImpactHapticFeedbackStyle: Hashable {
+    case light
+    case medium
+    case heavy
+}
+
 @available(iOSApplicationExtension 10.0, *)
 private final class HapticFeedbackImpl {
-    private lazy var impactGenerator = { UIImpactFeedbackGenerator(style: .medium) }()
+    private lazy var impactGenerator: [ImpactHapticFeedbackStyle : UIImpactFeedbackGenerator] = {
+        [.light: UIImpactFeedbackGenerator(style: .light),
+         .medium: UIImpactFeedbackGenerator(style: .medium),
+         .heavy: UIImpactFeedbackGenerator(style: .heavy)] }()
     private lazy var selectionGenerator = { UISelectionFeedbackGenerator() }()
     private lazy var notificationGenerator = { UINotificationFeedbackGenerator() }()
     
@@ -15,12 +24,12 @@ private final class HapticFeedbackImpl {
         self.selectionGenerator.selectionChanged()
     }
     
-    func prepareImpact() {
-        self.impactGenerator.prepare()
+    func prepareImpact(_ style: ImpactHapticFeedbackStyle) {
+        self.impactGenerator[style]?.prepare()
     }
     
-    func impact() {
-        self.impactGenerator.impactOccurred()
+    func impact(_ style: ImpactHapticFeedbackStyle) {
+        self.impactGenerator[style]?.impactOccurred()
     }
     
     func success() {
@@ -80,18 +89,18 @@ public final class HapticFeedback {
         }
     }
     
-    public func prepareImpact() {
+    public func prepareImpact(style: ImpactHapticFeedbackStyle = .medium) {
         if #available(iOSApplicationExtension 10.0, *) {
             self.withImpl { impl in
-                impl.prepareImpact()
+                impl.prepareImpact(style)
             }
         }
     }
     
-    public func impact() {
+    public func impact(_ style: ImpactHapticFeedbackStyle = .medium) {
         if #available(iOSApplicationExtension 10.0, *) {
             self.withImpl { impl in
-                impl.impact()
+                impl.impact(style)
             }
         }
     }
