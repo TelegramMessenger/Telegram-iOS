@@ -1004,15 +1004,4 @@ open class NavigationBar: ASDisplayNode {
             }
         }
     }
-    
-    override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.frame.contains(point) {
-            if !self.rightButtonNode.isHidden {
-                if let result = self.rightButtonNode.hitTest(self.view.convert(point, to: self.rightButtonNode.view), with: event) {
-                    return result
-                }
-            }
-        }
-        return super.hitTest(point, with: event)
-    }
 }
