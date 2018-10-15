@@ -451,7 +451,7 @@ public final class PostboxEncoder {
         self.buffer.write(&length, offset: 0, length: 4)
         
         for object in value {
-            let data = object.data(using: .utf8, allowLossyConversion: true) ?? (String("").data(using: utf8)!)
+            let data = object.data(using: .utf8, allowLossyConversion: true) ?? (String("").data(using: .utf8)!)
             var length: Int32 = Int32(data.count)
             self.buffer.write(&length, offset: 0, length: 4)
             self.buffer.write(data)
