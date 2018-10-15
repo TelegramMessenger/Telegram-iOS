@@ -37,6 +37,19 @@ final class ActivityIndicator: ASDisplayNode {
                 case let .custom(color, diameter, lineWidth):
                     self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
             }
+            
+            switch self.type {
+                case let .navigationAccent(theme):
+                    self.indicatorView?.color = theme.rootController.navigationBar.controlColor
+                case let .custom(color, diameter, lineWidth):
+                    if color.isEqual(UIColor(rgb: 0x007ee5)) {
+                        self.indicatorView?.color = .gray
+                    } else if color.isEqual(UIColor(rgb: 0x000000)) {
+                        self.indicatorView?.color = .gray
+                    } else {
+                        self.indicatorView?.color = color
+                    }
+            }
         }
     }
     
@@ -51,6 +64,7 @@ final class ActivityIndicator: ASDisplayNode {
     private let speed: ActivityIndicatorSpeed
     
     private let indicatorNode: ASImageNode
+    private var indicatorView: UIActivityIndicatorView?
     
     init(type: ActivityIndicatorType, speed: ActivityIndicatorSpeed = .regular) {
         self.type = type
@@ -70,15 +84,38 @@ final class ActivityIndicator: ASDisplayNode {
         
         super.init()
         
-        self.isLayerBacked = true
+        //self.isLayerBacked = true
         
-        self.addSubnode(self.indicatorNode)
+        //self.addSubnode(self.indicatorNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let indicatorView = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
+        switch self.type {
+            case let .navigationAccent(theme):
+                indicatorView.color = theme.rootController.navigationBar.controlColor
+            case let .custom(color, diameter, lineWidth):
+                if color.isEqual(UIColor(rgb: 0x007ee5)) {
+                    indicatorView.color = .gray
+                } else {
+                    indicatorView.color = color
+                }
+        }
+        self.indicatorView = indicatorView
+        self.view.addSubview(indicatorView)
+        let size = self.bounds.size
+        if !size.width.isZero {
+            self.layoutContents(size: size)
+        }
     }
     
     private var isAnimating = false {
         didSet {
             if self.isAnimating != oldValue {
                 if self.isAnimating {
+                    self.indicatorView?.startAnimating()
                     let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
                     basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
                     switch self.speed {
@@ -95,6 +132,7 @@ final class ActivityIndicator: ASDisplayNode {
                     
                     self.indicatorNode.layer.add(basicAnimation, forKey: "progressRotation")
                 } else {
+                    self.indicatorView?.stopAnimating()
                     self.indicatorNode.layer.removeAnimation(forKey: "progressRotation")
                 }
             }
@@ -133,6 +171,10 @@ final class ActivityIndicator: ASDisplayNode {
         
         let size = self.bounds.size
         
+        self.layoutContents(size: size)
+    }
+    
+    private func layoutContents(size: CGSize) {
         let indicatorSize: CGSize
         switch self.type {
             case .navigationAccent:
@@ -141,5 +183,11 @@ final class ActivityIndicator: ASDisplayNode {
                 indicatorSize = CGSize(width: diameter, height: diameter)
         }
         self.indicatorNode.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
+        if let indicatorView = self.indicatorView {
+            let intrinsicSize = indicatorView.bounds.size
+            self.subnodeTransform = CATransform3DMakeScale(indicatorSize.width / intrinsicSize.width, indicatorSize.height / intrinsicSize.height, 1.0)
+            //indicatorView.transform = CGAffineTransform(scaleX: indicatorSize.width / intrinsicSize.width, y: indicatorSize.height / intrinsicSize.height)
+            indicatorView.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        }
     }
 }

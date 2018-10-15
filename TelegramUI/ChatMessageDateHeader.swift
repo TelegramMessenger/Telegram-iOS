@@ -180,13 +180,16 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         //let labelLayout = TextNode.asyncLayout(self.labelNode)
         
-        let labelSize = self.labelNode.bounds.size
-        let backgroundSize = CGSize(width: labelSize.width + 8.0 + 8.0, height: 26.0)
+        let chatDateSize: CGFloat = 20.0
+        let chatDateInset: CGFloat = 6.0
         
-        let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: (34.0 - 26.0) / 2.0), size: backgroundSize)
+        let labelSize = self.labelNode.bounds.size
+        let backgroundSize = CGSize(width: labelSize.width + chatDateInset * 2.0, height: chatDateSize)
+        
+        let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: (34.0 - chatDateSize) / 2.0), size: backgroundSize)
         self.stickBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
         self.backgroundNode.frame = backgroundFrame
-        self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + 8.0, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
+        self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
     }
     
     override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {

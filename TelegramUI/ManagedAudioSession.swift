@@ -663,7 +663,10 @@ public final class ManagedAudioSession {
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
                         for route in routes {
                             if route.portType == AVAudioSessionPortBuiltInMic {
-                                let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                if type == .record && self.isHeadsetPluggedInValue {
+                                } else {
+                                    let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                }
                                 break
                             }
                         }

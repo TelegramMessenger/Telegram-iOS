@@ -3033,11 +3033,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     linkPreviews = .single(true)
                 }
             }
-            self.urlPreviewQueryState = (updatedUrlPreviewUrl, (combineLatest(updatedUrlPreviewSignal, linkPreviews) |> deliverOnMainQueue).start(next: { [weak self] (result, enabled) in
-                var result = result
-                if !enabled {
-                    result = { _ in return nil }
+            let filteredPreviewSignal = linkPreviews
+            |> take(1)
+            |> mapToSignal { value -> Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError> in
+                if value {
+                    return updatedUrlPreviewSignal
+                } else {
+                    return .single({ _ in return nil })
                 }
+            }
+            
+            self.urlPreviewQueryState = (updatedUrlPreviewUrl, (filteredPreviewSignal |> deliverOnMainQueue).start(next: { [weak self] (result) in
                 if let strongSelf = self {
                     if Thread.isMainThread && inScope {
                         inScope = false
