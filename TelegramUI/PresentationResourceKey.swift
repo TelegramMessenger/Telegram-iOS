@@ -112,6 +112,8 @@ enum PresentationResourceKey: Int32 {
     
     case chatBubbleFileCloudFetchIncomingIcon
     case chatBubbleFileCloudFetchOutgoingIcon
+    case chatBubbleFileCloudFetchedIncomingIcon
+    case chatBubbleFileCloudFetchedOutgoingIcon
     
     case chatBubbleReplyThumbnailPlayImage
     
