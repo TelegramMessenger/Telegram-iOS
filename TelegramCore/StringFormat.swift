@@ -1,5 +1,8 @@
-
 public func dataSizeString(_ size: Int) -> String {
+    return dataSizeString(Int64(size))
+}
+
+public func dataSizeString(_ size: Int64) -> String {
     if size >= 1024 * 1024 * 1024 {
         let remainder = (size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102)
         if remainder != 0 {
