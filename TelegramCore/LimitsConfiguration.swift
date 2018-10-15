@@ -12,18 +12,20 @@ public final class LimitsConfiguration: PreferencesEntry {
     public let maxSavedGifCount: Int32
     public let maxRecentStickerCount: Int32
     public let maxMessageEditingInterval: Int32
+    public let maxMediaCaptionLength: Int32
     
     public static var defaultValue: LimitsConfiguration {
-        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 5000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60)
+        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 5000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000)
     }
     
-    init(maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32) {
+    init(maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32, maxMediaCaptionLength: Int32) {
         self.maxGroupMemberCount = maxGroupMemberCount
         self.maxSupergroupMemberCount = maxSupergroupMemberCount
         self.maxMessageForwardBatchSize = maxMessageForwardBatchSize
         self.maxSavedGifCount = maxSavedGifCount
         self.maxRecentStickerCount = maxRecentStickerCount
         self.maxMessageEditingInterval = maxMessageEditingInterval
+        self.maxMediaCaptionLength = maxMediaCaptionLength
     }
     
     public init(decoder: PostboxDecoder) {
@@ -33,6 +35,7 @@ public final class LimitsConfiguration: PreferencesEntry {
         self.maxSavedGifCount = decoder.decodeInt32ForKey("maxSavedGifCount", orElse: 200)
         self.maxRecentStickerCount = decoder.decodeInt32ForKey("maxRecentStickerCount", orElse: 20)
         self.maxMessageEditingInterval = decoder.decodeInt32ForKey("maxMessageEditingInterval", orElse: 2 * 24 * 60 * 60)
+        self.maxMediaCaptionLength = decoder.decodeInt32ForKey("maxMediaCaptionLength", orElse: 1000)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -42,6 +45,7 @@ public final class LimitsConfiguration: PreferencesEntry {
         encoder.encodeInt32(self.maxSavedGifCount, forKey: "maxSavedGifCount")
         encoder.encodeInt32(self.maxRecentStickerCount, forKey: "maxRecentStickerCount")
         encoder.encodeInt32(self.maxMessageEditingInterval, forKey: "maxMessageEditingInterval")
+        encoder.encodeInt32(self.maxMediaCaptionLength, forKey: "maxMediaCaptionLength")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
@@ -64,6 +68,9 @@ public final class LimitsConfiguration: PreferencesEntry {
             return false
         }
         if self.maxMessageEditingInterval != to.maxMessageEditingInterval {
+            return false
+        }
+        if self.maxMediaCaptionLength != to.maxMediaCaptionLength {
             return false
         }
         return true
