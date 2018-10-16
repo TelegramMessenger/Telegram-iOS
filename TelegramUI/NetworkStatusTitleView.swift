@@ -196,7 +196,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         
         self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 3.0, width: 2.0, height: 2.0)
         
-        self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY - 1.0), size: indicatorSize)
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize)
     }
     
     @objc private func buttonPressed() {

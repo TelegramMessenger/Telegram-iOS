@@ -150,6 +150,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 }
             }
             
+            var storeToDownloads: Bool = false
+            for media in message.media {
+                if media is TelegramMediaImage {
+                    storeToDownloads = true
+                }
+            }
+            
             var isInlinePlayableVideo = false
             
             var unboundSize: CGSize
@@ -257,9 +264,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if !manual {
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: .message(message: MessageReference(message), media: image)).start())
+                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: .message(message: MessageReference(message), media: image), storeToDownloads: storeToDownloads).start())
                                     } else if let resource = largestRepresentationForPhoto(image)?.resource {
-                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(account: account, message: message, image: image, resource: resource).start())
+                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(account: account, message: message, image: image, resource: resource, storeToDownloads: storeToDownloads).start())
                                     }
                                 }
                             }, cancel: {

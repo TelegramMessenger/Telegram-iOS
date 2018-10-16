@@ -132,7 +132,7 @@ public final class TelegramApplicationContext {
         }
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
-        self.fetchManager = FetchManager(postbox: postbox)
+        self.fetchManager = FetchManager(postbox: postbox, storeManager: self.mediaManager?.downloadedMediaStoreManager)
         self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)

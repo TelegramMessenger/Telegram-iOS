@@ -3680,7 +3680,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     
     private func enqueueMediaMessages(signals: [Any]?) {
         if case .peer = self.chatLocation {
-            self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.account, signals: signals!) |> deliverOnMainQueue).start(next: { [weak self] messages in
+            self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.account, signals: signals!)
+            |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self {
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({

@@ -30,10 +30,12 @@ private struct FetchManagerLocationEntryId: Hashable {
 private final class FetchManagerLocationEntry {
     let id: FetchManagerLocationEntryId
     let episode: Int32
+    let mediaReference: AnyMediaReference?
     let resourceReference: MediaResourceReference
     let statsCategory: MediaResourceStatsCategory
     
     var userInitiated: Bool = false
+    var storeToDownloads: Bool = false
     var referenceCount: Int32 = 0
     var elevatedPriorityReferenceCount: Int32 = 0
     var userInitiatedPriorityIndices: [Int32] = []
@@ -46,9 +48,10 @@ private final class FetchManagerLocationEntry {
         }
     }
     
-    init(id: FetchManagerLocationEntryId, episode: Int32, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory) {
+    init(id: FetchManagerLocationEntryId, episode: Int32, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory) {
         self.id = id
         self.episode = episode
+        self.mediaReference = mediaReference
         self.resourceReference = resourceReference
         self.statsCategory = statsCategory
     }
@@ -84,6 +87,7 @@ private final class FetchManagerStatusContext {
 
 private final class FetchManagerCategoryContext {
     private let postbox: Postbox
+    private let storeManager: DownloadedMediaStoreManager?
     private let entryCompleted: (FetchManagerLocationEntryId) -> Void
     
     private var topEntryIdAndPriority: (FetchManagerLocationEntryId, FetchManagerPriorityKey)?
@@ -92,12 +96,13 @@ private final class FetchManagerCategoryContext {
     private var activeContexts: [FetchManagerLocationEntryId: FetchManagerActiveContext] = [:]
     private var statusContexts: [FetchManagerLocationEntryId: FetchManagerStatusContext] = [:]
     
-    init(postbox: Postbox, entryCompleted: @escaping (FetchManagerLocationEntryId) -> Void) {
+    init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?, entryCompleted: @escaping (FetchManagerLocationEntryId) -> Void) {
         self.postbox = postbox
+        self.storeManager = storeManager
         self.entryCompleted = entryCompleted
     }
     
-    func withEntry(id: FetchManagerLocationEntryId, takeNew: (() -> (MediaResourceReference, MediaResourceStatsCategory, Int32))?, _ f: (FetchManagerLocationEntry) -> Void) {
+    func withEntry(id: FetchManagerLocationEntryId, takeNew: (() -> (AnyMediaReference?, MediaResourceReference, MediaResourceStatsCategory, Int32))?, _ f: (FetchManagerLocationEntry) -> Void) {
         let entry: FetchManagerLocationEntry
         let previousPriorityKey: FetchManagerPriorityKey?
         
@@ -106,8 +111,8 @@ private final class FetchManagerCategoryContext {
             previousPriorityKey = entry.priorityKey
         } else if let takeNew = takeNew {
             previousPriorityKey = nil
-            let (resourceReference, statsCategory, episode) = takeNew()
-            entry = FetchManagerLocationEntry(id: id, episode: episode, resourceReference: resourceReference, statsCategory: statsCategory)
+            let (mediaReference, resourceReference, statsCategory, episode) = takeNew()
+            entry = FetchManagerLocationEntry(id: id, episode: episode, mediaReference: mediaReference, resourceReference: resourceReference, statsCategory: statsCategory)
             self.entries[id] = entry
         } else {
             return
@@ -157,7 +162,18 @@ private final class FetchManagerCategoryContext {
             if activeContext.disposable == nil {
                 if let entry = self.entries[id] {
                     let entryCompleted = self.entryCompleted
-                    activeContext.disposable = fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, statsCategory: entry.statsCategory, reportResultStatus: true).start(next: { value in
+                    let storeManager = self.storeManager
+                    activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, statsCategory: entry.statsCategory, reportResultStatus: true)
+                    |> mapToSignal { type -> Signal<FetchResourceSourceType, NoError> in
+                        if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, entry.storeToDownloads {
+                            return storeDownloadedMedia(storeManager: storeManager, media: mediaReference)
+                            |> mapToSignal { _ -> Signal<FetchResourceSourceType, NoError> in
+                                return .complete()
+                            }
+                            |> then(.single(type))
+                        }
+                        return .single(type)
+                    }).start(next: { value in
                         entryCompleted(id)
                     })
                 } else {
@@ -222,7 +238,18 @@ private final class FetchManagerCategoryContext {
                 let activeContext = FetchManagerActiveContext()
                 self.activeContexts[topEntryId] = activeContext
                 let entryCompleted = self.entryCompleted
-                activeContext.disposable = fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, statsCategory: entry.statsCategory, reportResultStatus: true).start(next: { value in
+                let storeManager = self.storeManager
+                activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, statsCategory: entry.statsCategory, reportResultStatus: true)
+                |> mapToSignal { type -> Signal<FetchResourceSourceType, NoError> in
+                    if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, entry.storeToDownloads {
+                        return storeDownloadedMedia(storeManager: storeManager, media: mediaReference)
+                        |> mapToSignal { _ -> Signal<FetchResourceSourceType, NoError> in
+                            return .complete()
+                        }
+                        |> then(.single(type))
+                    }
+                    return .single(type)
+                }).start(next: { value in
                     entryCompleted(topEntryId)
                 })
             } else {
@@ -301,13 +328,15 @@ private final class FetchManagerCategoryContext {
 final class FetchManager {
     private let queue = Queue()
     private let postbox: Postbox
+    private let storeManager: DownloadedMediaStoreManager?
     private var nextEpisodeId: Int32 = 0
     private var nextUserInitiatedIndex: Int32 = 0
     
     private var categoryContexts: [FetchManagerCategory: FetchManagerCategoryContext] = [:]
     
-    init(postbox: Postbox) {
+    init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?) {
         self.postbox = postbox
+        self.storeManager = storeManager
     }
     
     private func takeNextEpisodeId() -> Int32 {
@@ -329,7 +358,7 @@ final class FetchManager {
             context = current
         } else {
             let queue = self.queue
-            context = FetchManagerCategoryContext(postbox: self.postbox, entryCompleted: { [weak self] id in
+            context = FetchManagerCategoryContext(postbox: self.postbox, storeManager: self.storeManager, entryCompleted: { [weak self] id in
                 queue.async {
                     if let strongSelf = self {
                         strongSelf.withCategoryContext(key, { context in
@@ -348,7 +377,7 @@ final class FetchManager {
         }
     }
     
-    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool) -> Signal<Void, NoError> {
+    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, storeToDownloads: Bool = false) -> Signal<Void, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
@@ -356,10 +385,13 @@ final class FetchManager {
                 var assignedUserInitiatedIndex: Int32?
                 
                 strongSelf.withCategoryContext(category, { context in
-                    context.withEntry(id: FetchManagerLocationEntryId(location: location, resourceId: resourceReference.resource.id, locationKey: locationKey), takeNew: { return (resourceReference, statsCategory, strongSelf.takeNextEpisodeId()) }, { entry in
+                    context.withEntry(id: FetchManagerLocationEntryId(location: location, resourceId: resourceReference.resource.id, locationKey: locationKey), takeNew: { return (mediaReference, resourceReference, statsCategory, strongSelf.takeNextEpisodeId()) }, { entry in
                         assignedEpisode = entry.episode
                         if userInitiated {
                             entry.userInitiated = true
+                        }
+                        if storeToDownloads {
+                            entry.storeToDownloads = true
                         }
                         entry.referenceCount += 1
                         if elevatedPriority {

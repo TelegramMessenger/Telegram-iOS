@@ -3,39 +3,18 @@ import AsyncDisplayKit
 import Display
 
 final class ProgressNavigationButtonNode: ASDisplayNode {
-    private var indicatorNode: ASImageNode
+    private var indicatorNode: ActivityIndicator
     
     convenience init(theme: PresentationTheme) {
         self.init(color: theme.rootController.navigationBar.accentTextColor)
     }
     
     init(color: UIColor) {
-        self.indicatorNode = ASImageNode()
-        self.indicatorNode.isLayerBacked = true
-        self.indicatorNode.displayWithoutProcessing = true
-        self.indicatorNode.displaysAsynchronously = false
-        
-        self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color)
+        self.indicatorNode = ActivityIndicator(type: .custom(color, 22.0, 1.0))
         
         super.init()
         
-        self.isLayerBacked = true
-        
         self.addSubnode(self.indicatorNode)
-    }
-    
-    override func willEnterHierarchy() {
-        super.willEnterHierarchy()
-        
-        let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
-        basicAnimation.duration = 0.5
-        basicAnimation.fromValue = NSNumber(value: Float(0.0))
-        basicAnimation.toValue = NSNumber(value: Float.pi * 2.0)
-        basicAnimation.repeatCount = Float.infinity
-        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
-        
-        self.indicatorNode.layer.add(basicAnimation, forKey: "progressRotation")
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
