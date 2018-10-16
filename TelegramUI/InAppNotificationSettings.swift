@@ -37,8 +37,8 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.playSounds = decoder.decodeInt32ForKey("s", orElse: 0) != 0
         self.vibrate = decoder.decodeInt32ForKey("v", orElse: 0) != 0
         self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
-        self.totalUnreadCountDisplayStyle = TotalUnreadCountDisplayStyle(rawValue: decoder.decodeInt32ForKey("tds", orElse: 0)) ?? .filtered
-        self.totalUnreadCountDisplayCategory = TotalUnreadCountDisplayCategory(rawValue: decoder.decodeInt32ForKey("totalUnreadCountDisplayCategory", orElse: 0)) ?? .messages
+        self.totalUnreadCountDisplayStyle = TotalUnreadCountDisplayStyle(rawValue: decoder.decodeInt32ForKey("tds", orElse: 1)) ?? .raw
+        self.totalUnreadCountDisplayCategory = TotalUnreadCountDisplayCategory(rawValue: decoder.decodeInt32ForKey("totalUnreadCountDisplayCategory", orElse: 1)) ?? .messages
         self.displayNameOnLockscreen = decoder.decodeInt32ForKey("displayNameOnLockscreen", orElse: 1) != 0
     }
     

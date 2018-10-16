@@ -158,17 +158,18 @@ public final class PrincipalThemeEssentialGraphics {
         self.mediaImpressionIcon = generateTintedImage(image: impressionCountImage, color: .white)!
         self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
         
-        self.dateStaticBackground = generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context -> Void in
+        let chatDateSize: CGFloat = 20.0
+        self.dateStaticBackground = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(theme.serviceMessage.dateFillStaticColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        })!.stretchableImage(withLeftCapWidth: 13, topCapHeight: 13)
+        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
         
-        self.dateFloatingBackground = generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context -> Void in
+        self.dateFloatingBackground = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(theme.serviceMessage.dateFillFloatingColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        })!.stretchableImage(withLeftCapWidth: 13, topCapHeight: 13)
+        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
         
         self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: incoming.fill)!
         self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: outgoing.fill)!
