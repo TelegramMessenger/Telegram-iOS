@@ -19,7 +19,7 @@ public:
         Stroke,
     };
     typedef vFlag<DirtyState> DirtyFlag;
-    VDrawable() = default;
+    virtual ~VDrawable() = default;
     void setPath(const VPath &path);
     void setFillRule(FillRule rule) { mFillRule = rule; }
     void setBrush(const VBrush &brush) { mBrush = brush; }
