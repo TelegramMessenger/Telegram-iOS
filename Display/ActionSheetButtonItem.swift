@@ -7,15 +7,23 @@ public enum ActionSheetButtonColor {
     case disabled
 }
 
+
+public enum ActionSheetButtonFont {
+    case `default`
+    case bold
+}
+
 public class ActionSheetButtonItem: ActionSheetItem {
     public let title: String
     public let color: ActionSheetButtonColor
+    public let font: ActionSheetButtonFont
     public let enabled: Bool
     public let action: () -> Void
     
-    public init(title: String, color: ActionSheetButtonColor = .accent, enabled: Bool = true, action: @escaping () -> Void) {
+    public init(title: String, color: ActionSheetButtonColor = .accent, font: ActionSheetButtonFont = .default, enabled: Bool = true, action: @escaping () -> Void) {
         self.title = title
         self.color = color
+        self.font = font
         self.enabled = enabled
         self.action = action
     }
@@ -40,6 +48,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
     private let theme: ActionSheetControllerTheme
     
     public static let defaultFont: UIFont = Font.regular(20.0)
+    public static let boldFont: UIFont = Font.medium(20.0)
     
     private var item: ActionSheetButtonItem?
     
@@ -83,6 +92,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         self.item = item
         
         let textColor: UIColor
+        let textFont: UIFont
         switch item.color {
             case .accent:
                 textColor = self.theme.standardActionTextColor
@@ -91,7 +101,13 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
             case .disabled:
                 textColor = self.theme.disabledActionTextColor
         }
-        self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: textColor)
+        switch item.font {
+            case .default:
+                textFont = ActionSheetButtonNode.defaultFont
+            case .bold:
+                textFont = ActionSheetButtonNode.boldFont
+        }
+        self.label.attributedText = NSAttributedString(string: item.title, font: textFont, textColor: textColor)
         
         self.button.isEnabled = item.enabled
         

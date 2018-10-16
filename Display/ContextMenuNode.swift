@@ -160,7 +160,7 @@ final class ContextMenuNode: ASDisplayNode {
         
         if hasHapticFeedback {
             self.feedback = HapticFeedback()
-            self.feedback?.prepareImpact()
+            self.feedback?.prepareImpact(.light)
         } else {
             self.feedback = nil
         }
@@ -230,7 +230,7 @@ final class ContextMenuNode: ASDisplayNode {
         self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
         
         if let feedback = self.feedback {
-            feedback.impact()
+            feedback.impact(.light)
         }
     }
     

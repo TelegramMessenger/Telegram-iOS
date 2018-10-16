@@ -62,7 +62,7 @@ final class PeekControllerMenuItemNode: HighlightTrackingButtonNode {
             case .default:
                 textFont = Font.regular(20.0)
             case .bold:
-                textFont = Font.semibold(20.0)
+                textFont = Font.medium(20.0)
         }
         self.textNode.attributedText = NSAttributedString(string: item.title, font: textFont, textColor: textColor)
         

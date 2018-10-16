@@ -89,7 +89,7 @@ public final class HapticFeedback {
         }
     }
     
-    public func prepareImpact(style: ImpactHapticFeedbackStyle = .medium) {
+    public func prepareImpact(_ style: ImpactHapticFeedbackStyle = .medium) {
         if #available(iOSApplicationExtension 10.0, *) {
             self.withImpl { impl in
                 impl.prepareImpact(style)
