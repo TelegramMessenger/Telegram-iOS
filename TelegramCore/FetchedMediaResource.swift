@@ -10,9 +10,36 @@ import SwiftSignalKit
 public struct MessageReference: PostboxCoding, Hashable, Equatable {
     let content: MessageReferenceContent
     
+    public var peer: PeerReference? {
+        switch content {
+            case .none:
+                return nil
+            case let .message(peer, _, _, _):
+                return peer
+        }
+    }
+    
+    public var timestamp: Int32? {
+        switch content {
+            case .none:
+                return nil
+            case let .message(_, _, timestamp, _):
+                return timestamp
+        }
+    }
+    
+    public var isIncoming: Bool? {
+        switch content {
+            case .none:
+                return nil
+            case let .message(_, _, _, incoming):
+                return incoming
+        }
+    }
+    
     public init(_ message: Message) {
         if let peer = message.peers[message.id.peerId], let inputPeer = PeerReference(peer) {
-            self.content = .message(peer: inputPeer, id: message.id)
+            self.content = .message(peer: inputPeer, id: message.id, timestamp: message.timestamp, incoming: message.flags.contains(.Incoming))
         } else {
             self.content = .none
         }
@@ -29,14 +56,14 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
 
 enum MessageReferenceContent: PostboxCoding, Hashable, Equatable {
     case none
-    case message(peer: PeerReference, id: MessageId)
+    case message(peer: PeerReference, id: MessageId, timestamp: Int32, incoming: Bool)
     
     init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_r", orElse: 0) {
             case 0:
                 self = .none
             case 1:
-                self = .message(peer: decoder.decodeObjectForKey("p", decoder: { PeerReference(decoder: $0) }) as! PeerReference, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0)))
+                self = .message(peer: decoder.decodeObjectForKey("p", decoder: { PeerReference(decoder: $0) }) as! PeerReference, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0)), timestamp: 0, incoming: false)
             default:
                 assertionFailure()
                 self = .none
@@ -47,7 +74,7 @@ enum MessageReferenceContent: PostboxCoding, Hashable, Equatable {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "_r")
-            case let .message(peer, id):
+            case let .message(peer, id, _, _):
                 encoder.encodeInt32(1, forKey: "_r")
                 encoder.encodeObject(peer, forKey: "p")
                 encoder.encodeInt64(id.peerId.toInt64(), forKey: "i.p")

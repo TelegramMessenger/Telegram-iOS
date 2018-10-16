@@ -62,7 +62,7 @@ func managedAutoremoveMessageOperations(postbox: Postbox) -> Signal<Void, NoErro
             for (entry, disposable) in beginOperations {
                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                 let signal = Signal<Void, NoError>.complete()
-                |> delay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
+                |> suspendAwareDelay(max(0.0, Double(entry.timestamp) - timestamp), queue: Queue.concurrentDefaultQueue())
                 |> then(postbox.transaction { transaction -> Void in
                     if let message = transaction.getMessage(entry.messageId) {
                         if message.id.peerId.namespace == Namespaces.Peer.SecretChat {

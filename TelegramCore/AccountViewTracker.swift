@@ -748,7 +748,10 @@ public final class AccountViewTracker {
                     
                     if begin {
                         if let account = strongSelf.account {
-                            let signal = (fetchAndUpdateCachedParticipants(peerId: peerId, network: account.network, postbox: account.postbox) |> then(Signal<Void, NoError>.complete() |> delay(10 * 60, queue: Queue.concurrentDefaultQueue()))) |> restart
+                            let signal = (fetchAndUpdateCachedParticipants(peerId: peerId, network: account.network, postbox: account.postbox)
+                            |> then(Signal<Void, NoError>.complete()
+                            |> suspendAwareDelay(10 * 60, queue: Queue.concurrentDefaultQueue())))
+                            |> restart
                             context.disposable.set(signal.start())
                         }
                     }

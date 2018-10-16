@@ -77,5 +77,5 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
         }).start()
     }
     
-    return (poll |> then(.complete() |> delay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+    return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }

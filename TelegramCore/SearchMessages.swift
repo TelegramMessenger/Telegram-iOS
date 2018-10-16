@@ -273,7 +273,7 @@ public func downloadMessage(postbox: Postbox, network: Network, messageId: Messa
 }
 
 func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource, message: MessageReference) -> Signal<Message?, NoError> {
-    guard case let .message(peer, id) = message.content else {
+    guard case let .message(peer, id, _, _) = message.content else {
         return .single(nil)
     }
     let signal: Signal<Api.messages.Messages, MTRpcError>

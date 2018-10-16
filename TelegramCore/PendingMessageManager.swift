@@ -899,6 +899,9 @@ public final class PendingMessageManager {
                     case let .chatContextResult(chatContextResult):
                         sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id))
                         |> map(NetworkRequestResult.result)
+                    case .messageScreenshot:
+                        sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyToMsgId: replyMessageId ?? 0, randomId: uniqueId))
+                        |> map(NetworkRequestResult.result)
                     case .secretMedia:
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))

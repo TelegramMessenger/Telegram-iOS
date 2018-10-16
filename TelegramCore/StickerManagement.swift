@@ -27,7 +27,7 @@ func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoEr
         addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync)
         addSynchronizeSavedGifsOperation(transaction: transaction, operation: .sync)
         addSynchronizeSavedStickersOperation(transaction: transaction, operation: .sync)
-    } |> then(.complete() |> delay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+    } |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
 func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {

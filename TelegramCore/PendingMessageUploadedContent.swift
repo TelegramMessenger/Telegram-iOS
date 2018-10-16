@@ -15,6 +15,7 @@ enum PendingMessageUploadedContent {
     case forward(ForwardSourceInfoAttribute)
     case chatContextResult(OutgoingChatContextResultMessageAttribute)
     case secretMedia(Api.InputEncryptedFile, Int32, SecretFileEncryptionKey)
+    case messageScreenshot
 }
 
 enum PendingMessageReuploadInfo {
@@ -32,6 +33,7 @@ enum PendingMessageUploadedContentResult {
 }
 
 enum PendingMessageUploadedContentType {
+    case none
     case text
     case media
 }
@@ -66,7 +68,9 @@ func messageContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods
         }
     }
     
-    if let forwardInfo = forwardInfo {
+    if let media = media.first as? TelegramMediaAction, media.action == .historyScreenshot {
+        return (.single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .messageScreenshot, reuploadInfo: nil))), .none)
+    } else if let forwardInfo = forwardInfo {
         return (.single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .forward(forwardInfo), reuploadInfo: nil))), .text)
     } else if let contextResult = contextResult {
         return (.single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .chatContextResult(contextResult), reuploadInfo: nil))), .text)

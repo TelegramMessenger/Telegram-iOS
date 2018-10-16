@@ -56,8 +56,8 @@ private final class ContactSyncManagerImpl {
                 return
             }
             strongSelf.addOperation(.waitForUpdatedState)
-            strongSelf.addOperation(.sync(importableContacts: importableContacts))
             strongSelf.addOperation(.updatePresences)
+            strongSelf.addOperation(.sync(importableContacts: importableContacts))
         }))
     }
     
