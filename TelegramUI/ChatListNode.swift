@@ -402,26 +402,18 @@ final class ChatListNode: ListView {
             guard let account = account else {
                 return
             }
-            
-            if false && animated {
-                self?.updateState {
-                    return $0.withUpdatedPeerIdWithRevealedOptions(nil)
-                }
-            }
-            
+                        
             let _ = (togglePeerUnreadMarkInteractively(postbox: account.postbox, viewTracker: account.viewTracker, peerId: peerId)
             |> deliverOnMainQueue).start(completed: {
-                if true || animated {
-                    self?.updateState {
-                        return $0.withUpdatedPeerIdWithRevealedOptions(nil)
-                    }
+                self?.updateState {
+                    return $0.withUpdatedPeerIdWithRevealedOptions(nil)
                 }
             })
         })
         
         let viewProcessingQueue = self.viewProcessingQueue
         
-        let chastListViewUpdate = self.chatListLocation.get()
+        let chatListViewUpdate = self.chatListLocation.get()
             |> distinctUntilChanged
             |> mapToSignal { location in
                 return chatListViewForLocation(groupId: groupId, location: location, account: account)
@@ -436,7 +428,7 @@ final class ChatListNode: ListView {
             savedMessagesPeer = .single(nil)
         }
         
-        let chatListNodeViewTransition = combineLatest(savedMessagesPeer, chastListViewUpdate, self.statePromise.get()) |> mapToQueue { (savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
+        let chatListNodeViewTransition = combineLatest(savedMessagesPeer, chatListViewUpdate, self.statePromise.get()) |> mapToQueue { (savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             let processedView = ChatListNodeView(originalView: update.view, filteredEntries: chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, mode: mode))
             let previous = previousView.swap(processedView)
             

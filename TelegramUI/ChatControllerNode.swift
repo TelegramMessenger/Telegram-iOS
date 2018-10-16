@@ -627,9 +627,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var dismissedInputContextPanelNode: ChatInputContextPanelNode?
         var dismissedOverlayContextPanelNode: ChatInputContextPanelNode?
         
+        let previewing: Bool
+        if case .standard(true) = self.chatPresentationInterfaceState.mode {
+            previewing = true
+        } else {
+            previewing = false
+        }
+        
         var inputPanelSize: CGSize?
         var immediatelyLayoutInputPanelAndAnimateAppearance = false
-        if let inputPanelNode = inputPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.inputPanelNode, textInputPanelNode: self.textInputPanelNode, interfaceInteraction: self.interfaceInteraction) {
+        if let inputPanelNode = inputPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, account: self.account, currentPanel: self.inputPanelNode, textInputPanelNode: self.textInputPanelNode, interfaceInteraction: self.interfaceInteraction), !previewing {
             if inputPanelNode !== self.inputPanelNode {
                 if let inputTextPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
                     inputTextPanelNode.ensureUnfocused()
@@ -649,12 +656,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             dismissedInputPanelNode = self.inputPanelNode
             self.inputPanelNode = nil
         }
-        
-        if case .standard(true) = self.chatPresentationInterfaceState.mode {
-            self.inputPanelNode = nil
-            inputPanelSize = CGSize(width: layout.size.width, height: 0.0)
-        }
-        
+                
         if let inputMediaNode = self.inputMediaNode, inputMediaNode != self.inputNode {
             let _ = inputMediaNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelSize?.height ?? 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
         }

@@ -12,7 +12,7 @@ private enum ResourceFileData {
     case file(path: String, size: Int)
 }
 
-func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> TelegramMediaImageRepresentation? {
+public func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> TelegramMediaImageRepresentation? {
     return photo.representationForDisplayAtSize(CGSize(width: 1280.0, height: 1280.0))
 }
 
@@ -710,7 +710,7 @@ private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: Im
     }
 }
 
-func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoThumbnailDatas(account: account, photoReference: photoReference)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -797,7 +797,7 @@ func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMediaRefer
     }
 }
 
-func chatMessageVideoThumbnail(account: Account, fileReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessageVideoThumbnail(account: Account, fileReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageVideoDatas(postbox: account.postbox, fileReference: fileReference, thumbnailSize: true)
     
     return signal
@@ -1506,7 +1506,7 @@ func chatWebpageSnippetPhotoData(account: Account, photoReference: ImageMediaRef
     }
 }
 
-func chatWebpageSnippetFile(account: Account, fileReference: FileMediaReference, representation: TelegramMediaImageRepresentation) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatWebpageSnippetFile(account: Account, fileReference: FileMediaReference, representation: TelegramMediaImageRepresentation) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatWebpageSnippetFileData(account: account, fileReference: fileReference, resource: representation.resource)
     
     return signal |> map { fullSizeData in
@@ -2551,4 +2551,18 @@ func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(Transfor
                 return context
             })
     }
+}
+
+func callDefaultBackground() -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return .single({ arguments in
+        let context = DrawingContext(size: arguments.drawingSize, clear: true)
+        context.withFlippedContext { c in
+            let colors = [UIColor(rgb: 0x466f92).cgColor, UIColor(rgb: 0x244f74).cgColor]
+            var locations: [CGFloat] = [1.0, 0.0]
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+            c.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: CGGradientDrawingOptions())
+        }
+        return context
+    })
 }

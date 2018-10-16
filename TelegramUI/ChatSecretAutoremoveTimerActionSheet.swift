@@ -22,22 +22,17 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
         
         self._ready.set(.single(true))
         
-        var updatedValue = currentValue
+        var updatedValue = currentValue > 0 ? currentValue : 7
         self.setItemGroups([
             ActionSheetItemGroup(items: [
-                AutoremoveTimeoutSelectorItem(strings: strings, currentValue: currentValue, valueChanged: { value in
+                AutoremoveTimeoutSelectorItem(strings: strings, currentValue: updatedValue, valueChanged: { value in
                     updatedValue = value
                 }),
-                ActionSheetButtonItem(title: strings.Wallpaper_Set, action: { [weak self] in
+                ActionSheetButtonItem(title: strings.Common_Done, font: .bold, action: { [weak self] in
                     self?.dismissAnimated()
                     applyValue(updatedValue)
                 })
             ]),
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: strings.Common_Cancel, action: { [weak self] in
-                    self?.dismissAnimated()
-                }),
-            ])
         ])
     }
     

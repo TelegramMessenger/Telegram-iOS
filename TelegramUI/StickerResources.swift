@@ -142,7 +142,7 @@ func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, small: 
     }
 }
 
-func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageStickerDatas(account: account, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in

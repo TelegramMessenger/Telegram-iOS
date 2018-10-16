@@ -38,6 +38,8 @@ final class CallControllerNode: ASDisplayNode {
         }
     }
     
+    private var shouldStayHiddenUntilConnection: Bool = false
+    
     private var audioOutputState: ([AudioSessionOutput], currentOutput: AudioSessionOutput?)?
     private var callState: PresentationCallState?
     
@@ -49,12 +51,16 @@ final class CallControllerNode: ASDisplayNode {
     var back: (() -> Void)?
     var dismissedInteractively: (() -> Void)?
     
-    init(account: Account, presentationData: PresentationData, statusBar: StatusBar) {
+    init(account: Account, presentationData: PresentationData, statusBar: StatusBar, shouldStayHiddenUntilConnection: Bool = false) {
         self.account = account
         self.presentationData = presentationData
         self.statusBar = statusBar
+        self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
         
         self.containerNode = ASDisplayNode()
+        if self.shouldStayHiddenUntilConnection {
+            self.containerNode.alpha = 0.0
+        }
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -142,13 +148,14 @@ final class CallControllerNode: ASDisplayNode {
     func updatePeer(peer: Peer) {
         if !arePeersEqual(self.peer, peer) {
             self.peer = peer
-            let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]
-            if let peerReference = PeerReference(peer) {
-                representations = peer.profileImageRepresentations.map({ ($0, .avatar(peer: peerReference, resource: $0.resource)) })
+            if let peerReference = PeerReference(peer), !peer.profileImageRepresentations.isEmpty {
+                let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)] = peer.profileImageRepresentations.map({ ($0, .avatar(peer: peerReference, resource: $0.resource)) })
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
+                self.dimNode.isHidden = false
             } else {
-                representations = []
+                self.imageNode.setSignal(callDefaultBackground())
+                self.dimNode.isHidden = true
             }
-            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
             
             self.statusNode.title = peer.displayTitle
             
@@ -240,6 +247,14 @@ final class CallControllerNode: ASDisplayNode {
                     self.backButtonNode.alpha = 1.0
                 }
         }
+        if self.shouldStayHiddenUntilConnection {
+            switch callState {
+                case .connecting, .active:
+                    self.containerNode.alpha = 1.0
+                default:
+                    break
+            }
+        }
         self.statusNode.status = statusValue
         
         self.updateButtonsMode()
@@ -283,16 +298,20 @@ final class CallControllerNode: ASDisplayNode {
         self.containerNode.layer.removeAnimation(forKey: "opacity")
         self.containerNode.layer.removeAnimation(forKey: "scale")
         self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.containerNode.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        if !self.shouldStayHiddenUntilConnection {
+            self.containerNode.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
     }
     
     func animateOut(completion: @escaping () -> Void) {
         self.statusBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.containerNode.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3, removeOnCompletion: false, completion: { _ in
-            completion()
-        })
+        if !self.shouldStayHiddenUntilConnection || self.containerNode.alpha > 0.0 {
+            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            self.containerNode.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -342,7 +361,7 @@ final class CallControllerNode: ASDisplayNode {
         let buttonsOffset: CGFloat
         if layout.size.width.isEqual(to: 320.0) {
             if layout.size.height.isEqual(to: 480.0) {
-                buttonsOffset = 53.0
+                buttonsOffset = 60.0
             } else {
                 buttonsOffset = 73.0
             }
@@ -354,7 +373,7 @@ final class CallControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
         
         self.buttonsNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
-        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.safeInsets.bottom), size: CGSize(width: layout.size.width, height: buttonsHeight)))
+        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: buttonsHeight)))
         
         let keyTextSize = self.keyButtonNode.frame.size
         transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: navigationOffset + 8.0), size: keyTextSize))
