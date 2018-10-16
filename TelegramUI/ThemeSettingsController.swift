@@ -239,11 +239,10 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeDay, theme.name == .builtin(.day), 1))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNight, theme.name == .builtin(.nightGrayscale), 2))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNightBlue, theme.name == .builtin(.nightAccent), 3))
-    if !UIAccessibility.isReduceMotionEnabled {
-        entries.append(.animationsHeader(presentationData.theme, strings.Appearance_Animations))
-        entries.append(.animationsItem(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
-        entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
-    }
+    
+    entries.append(.animationsHeader(presentationData.theme, strings.Appearance_Animations))
+    entries.append(.animationsItem(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
+    entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
     
     return entries
 }

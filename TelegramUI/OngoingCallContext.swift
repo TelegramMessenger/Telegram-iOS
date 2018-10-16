@@ -64,6 +64,25 @@ private func ongoingNetworkTypeForType(_ type: NetworkType) -> OngoingCallNetwor
     }
 }
 
+private enum UsageCalculationConnection: Int32 {
+    case cellular = 0
+    case wifi = 1
+}
+
+private enum UsageCalculationDirection: Int32 {
+    case incoming = 0
+    case outgoing = 1
+}
+
+private struct UsageCalculationTag {
+    let connection: UsageCalculationConnection
+    let direction: UsageCalculationDirection
+    
+    var key: Int32 {
+        return 5 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+    }
+}
+
 final class OngoingCallContext {
     let internalId: CallSessionInternalId
     
@@ -92,7 +111,7 @@ final class OngoingCallContext {
     private let audioSessionDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
     
-    init(callSessionManager: CallSessionManager, internalId: CallSessionInternalId, allowP2P: Bool, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
+    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, allowP2P: Bool, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
         let _ = setupLogs
         
         self.internalId = internalId
@@ -113,6 +132,25 @@ final class OngoingCallContext {
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
+            }
+            context.callEnded = { [weak self] debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
+                if let strongSelf = self {
+                    var update: [Int32 : Int64] = [:]
+                    update[UsageCalculationTag(connection: .cellular, direction: .incoming).key] = bytesReceivedMobile
+                    update[UsageCalculationTag(connection: .cellular, direction: .outgoing).key] = bytesSentMobile
+                    
+                    update[UsageCalculationTag(connection: .wifi, direction: .incoming).key] = bytesReceivedWifi
+                    update[UsageCalculationTag(connection: .wifi, direction: .outgoing).key] = bytesSentWifi
+                    
+                    let delta = NetworkUsageStatsConnectionsEntry(
+                        cellular: NetworkUsageStatsDirectionsEntry(
+                            incoming: bytesReceivedMobile,
+                            outgoing: bytesSentMobile),
+                        wifi: NetworkUsageStatsDirectionsEntry(
+                            incoming: bytesReceivedWifi,
+                            outgoing: bytesSentWifi))
+                    let _ = updateAccountNetworkUsageStats(account: account, category: .call, delta: delta)
+                }
             }
         }
         

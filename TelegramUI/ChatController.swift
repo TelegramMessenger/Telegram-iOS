@@ -131,8 +131,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     private var searchState: (String, SearchMessagesLocation)?
     
     private var recordingModeFeedback: HapticFeedback?
+    private var recorderFeedback: HapticFeedback?
     private var audioRecorderValue: ManagedAudioRecorder?
-    private var audioRecorderFeedback: HapticFeedback?
     private var audioRecorder = Promise<ManagedAudioRecorder?>()
     private var audioRecorderDisposable: Disposable?
     
@@ -1193,7 +1193,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     
                     if let audioRecorder = audioRecorder {
                         if !audioRecorder.beginWithTone {
-                            strongSelf.audioRecorderFeedback?.tap()
+                            strongSelf.recorderFeedback?.impact(.light)
                         }
                         audioRecorder.start()
                     }
@@ -1222,6 +1222,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     })
                     
                     if let videoRecorder = videoRecorder {
+                        strongSelf.recorderFeedback?.impact(.light)
+                        
                         videoRecorder.onDismiss = {
                             if let strongSelf = self {
                                 strongSelf.videoRecorder.set(.single(nil))
@@ -3756,9 +3758,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     private func requestAudioRecorder(beginWithTone: Bool) {
         if self.audioRecorderValue == nil {
             if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
-                if self.audioRecorderFeedback == nil {
-                    self.audioRecorderFeedback = HapticFeedback()
-                    self.audioRecorderFeedback?.prepareTap()
+                if self.recorderFeedback == nil {
+                    self.recorderFeedback = HapticFeedback()
+                    self.recorderFeedback?.prepareImpact(.light)
                 }
                 
                 if let mediaManager = applicationContext.mediaManager {
@@ -3776,6 +3778,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
         
         if self.videoRecorderValue == nil {
             if let currentInputPanelFrame = self.chatDisplayNode.currentInputPanelFrame() {
+                if self.recorderFeedback == nil {
+                    self.recorderFeedback = HapticFeedback()
+                    self.recorderFeedback?.prepareImpact(.light)
+                }
+                
                 self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, panelFrame: currentInputPanelFrame, account: self.account, peerId: peerId, send: { [weak self] message in
                     if let strongSelf = self {
                         let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
@@ -3804,8 +3811,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     let _ = (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self] data in
                         if let strongSelf = self, let data = data {
                             if data.duration < 0.5 {
-                                strongSelf.audioRecorderFeedback?.error()
-                                strongSelf.audioRecorderFeedback = nil
+                                strongSelf.recorderFeedback?.error()
+                                strongSelf.recorderFeedback = nil
                             } else if let waveform = data.waveform {
                                 var randomId: Int64 = 0
                                 arc4random_buf(&randomId, 8)
@@ -3817,7 +3824,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                     $0.updatedRecordedMediaPreview(ChatRecordedMediaPreview(resource: resource, duration: Int32(data.duration), fileSize: Int32(data.compressedData.count), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5)))
                                 })
-                                strongSelf.audioRecorderFeedback = nil
+                                strongSelf.recorderFeedback = nil
                             }
                         }
                     })
@@ -3825,8 +3832,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     let _ = (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self] data in
                         if let strongSelf = self, let data = data {
                             if data.duration < 0.5 {
-                                strongSelf.audioRecorderFeedback?.error()
-                                strongSelf.audioRecorderFeedback = nil
+                                strongSelf.recorderFeedback?.error()
+                                strongSelf.recorderFeedback = nil
                             } else {
                                 var randomId: Int64 = 0
                                 arc4random_buf(&randomId, 8)
@@ -3850,8 +3857,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                                 
                                 strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], mimeType: "audio/ogg", size: data.compressedData.count, attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
                                 
-                                strongSelf.audioRecorderFeedback?.tap()
-                                strongSelf.audioRecorderFeedback = nil
+                                strongSelf.recorderFeedback?.tap()
+                                strongSelf.recorderFeedback = nil
                             }
                         }
                     })

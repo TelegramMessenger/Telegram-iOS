@@ -12,7 +12,7 @@ private enum ResourceFileData {
     case file(path: String, size: Int)
 }
 
-func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> TelegramMediaImageRepresentation? {
+public func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> TelegramMediaImageRepresentation? {
     return photo.representationForDisplayAtSize(CGSize(width: 1280.0, height: 1280.0))
 }
 
@@ -710,7 +710,7 @@ private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: Im
     }
 }
 
-func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoThumbnailDatas(account: account, photoReference: photoReference)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -797,7 +797,7 @@ func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMediaRefer
     }
 }
 
-func chatMessageVideoThumbnail(account: Account, fileReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessageVideoThumbnail(account: Account, fileReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageVideoDatas(postbox: account.postbox, fileReference: fileReference, thumbnailSize: true)
     
     return signal
@@ -1496,7 +1496,7 @@ func chatWebpageSnippetPhotoData(account: Account, photoReference: ImageMediaRef
     }
 }
 
-func chatWebpageSnippetFile(account: Account, fileReference: FileMediaReference, representation: TelegramMediaImageRepresentation) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatWebpageSnippetFile(account: Account, fileReference: FileMediaReference, representation: TelegramMediaImageRepresentation) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatWebpageSnippetFileData(account: account, fileReference: fileReference, resource: representation.resource)
     
     return signal |> map { fullSizeData in

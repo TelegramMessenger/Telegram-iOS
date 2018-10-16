@@ -280,17 +280,11 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
         _controller->GetStats(&stats);
         delete _controller;
         _controller = NULL;
+        
+        if (_callEnded) {
+            _callEnded(debugLog, stats.bytesSentWifi, stats.bytesRecvdWifi, stats.bytesSentMobile, stats.bytesRecvdMobile);
+        }
     }
-    
-    /*MTNetworkUsageManager *usageManager = [[MTNetworkUsageManager alloc] initWithInfo:[[TGTelegramNetworking instance] mediaUsageInfoForType:TGNetworkMediaTypeTagCall]];
-    [usageManager addIncomingBytes:stats.bytesRecvdMobile interface:MTNetworkUsageManagerInterfaceWWAN];
-    [usageManager addIncomingBytes:stats.bytesRecvdWifi interface:MTNetworkUsageManagerInterfaceOther];
-    
-    [usageManager addOutgoingBytes:stats.bytesSentMobile interface:MTNetworkUsageManagerInterfaceWWAN];
-    [usageManager addOutgoingBytes:stats.bytesSentWifi interface:MTNetworkUsageManagerInterfaceOther];*/
-    
-    //if (sendDebugLog && self.peerId != 0 && self.accessHash != 0)
-    //    [[TGCallSignals saveCallDebug:self.peerId accessHash:self.accessHash data:debugLog] startWithNext:nil];
 }
 
 - (void)controllerStateChanged:(int)state {

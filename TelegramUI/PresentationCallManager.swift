@@ -45,7 +45,7 @@ public enum RequestCallResult {
 }
 
 public final class PresentationCallManager {
-    private let postbox: Postbox
+    private let account: Account
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     private let networkType: Signal<NetworkType, NoError>
     private let audioSession: ManagedAudioSession
@@ -75,8 +75,8 @@ public final class PresentationCallManager {
     private var callSettings: (VoiceCallSettings, VoipConfiguration)?
     private var callSettingsDisposable: Disposable?
     
-    public init(postbox: Postbox, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), networkType: Signal<NetworkType, NoError>, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager) {
-        self.postbox = postbox
+    public init(account: Account, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), networkType: Signal<NetworkType, NoError>, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager) {
+        self.account = account
         self.getDeviceAccessData = getDeviceAccessData
         self.networkType = networkType
         self.audioSession = audioSession
@@ -105,6 +105,7 @@ public final class PresentationCallManager {
             audioSessionActivationChangedImpl?(value)
         })
         
+        let postbox = account.postbox
         let enableCallKit = postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings])
         |> map { preferences -> Bool in
             let settings = preferences.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
@@ -212,7 +213,7 @@ public final class PresentationCallManager {
     private func ringingStatesUpdated(_ ringingStates: [(Peer, CallSessionRingingState, Bool)], currentNetworkType: NetworkType, enableCallKit: Bool) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil {
-                let call = PresentationCall(audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: enableCallKit ? self.callKitIntegration : nil, getDeviceAccessData: self.getDeviceAccessData, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, allowP2P: p2pAllowed(settings: self.callSettings, isContact: firstState.2), proxyServer: self.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: self.networkType)
+                let call = PresentationCall(account: self.account, audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: enableCallKit ? self.callKitIntegration : nil, getDeviceAccessData: self.getDeviceAccessData, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, allowP2P: p2pAllowed(settings: self.callSettings, isContact: firstState.2), proxyServer: self.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: self.networkType)
                 self.currentCall = call
                 self.currentCallPromise.set(.single(call))
                 self.hasActiveCallsPromise.set(true)
@@ -255,7 +256,7 @@ public final class PresentationCallManager {
                 return EmptyDisposable
             }
             |> runOn(Queue.mainQueue())
-            let postbox = self.postbox
+            let postbox = self.account.postbox
             self.startCallDisposable.set((accessEnabledSignal
             |> mapToSignal { accessEnabled -> Signal<Peer?, NoError> in
                 if !accessEnabled {
@@ -293,7 +294,7 @@ public final class PresentationCallManager {
         }
         |> runOn(Queue.mainQueue())
         
-        let postbox = self.postbox
+        let postbox = self.account.postbox
         let callSessionManager = self.callSessionManager
         let networkType = self.networkType
         return accessEnabledSignal
@@ -311,7 +312,7 @@ public final class PresentationCallManager {
                         currentCall.rejectBusy()
                     }
                  
-                    let call = PresentationCall(audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings?.0), getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, allowP2P: p2pAllowed(settings: strongSelf.callSettings, isContact: isContact), proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: strongSelf.networkType)
+                    let call = PresentationCall(account: strongSelf.account, audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings?.0), getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, allowP2P: p2pAllowed(settings: strongSelf.callSettings, isContact: isContact), proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: strongSelf.networkType)
                     strongSelf.currentCall = call
                     strongSelf.currentCallPromise.set(.single(call))
                     strongSelf.hasActiveCallsPromise.set(true)

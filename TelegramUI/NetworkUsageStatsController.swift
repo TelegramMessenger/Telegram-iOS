@@ -323,8 +323,8 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
             entries.append(.fileReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.file.cellular.incoming)))
             
             entries.append(.callHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_CallDataSection))
-            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(0)))
-            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(0)))
+            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.call.cellular.outgoing)))
+            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.call.cellular.incoming)))
             
             entries.append(.reset(presentationData.theme, section, presentationData.strings.NetworkUsageSettings_ResetStats))
         
@@ -357,8 +357,8 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
             entries.append(.fileReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.file.wifi.incoming)))
             
             entries.append(.callHeader(presentationData.theme, presentationData.strings.NetworkUsageSettings_CallDataSection))
-            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(0)))
-            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(0)))
+            entries.append(.callSent(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesSent, dataSizeString(stats.call.wifi.outgoing)))
+            entries.append(.callReceived(presentationData.theme, presentationData.strings.NetworkUsageSettings_BytesReceived, dataSizeString(stats.call.wifi.incoming)))
             
             entries.append(.reset(presentationData.theme, section, presentationData.strings.NetworkUsageSettings_ResetStats))
             if stats.resetWifiTimestamp != 0 {

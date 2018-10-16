@@ -1025,7 +1025,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions))
-                    strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: animated)
+                    strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: true)
                 }
             })
         }

@@ -122,7 +122,7 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
             actionNode.addTarget(self, action: #selector(actionPressed(_:)), forControlEvents: .touchUpInside)
         }
         
-        self.feedback.prepareImpact()
+        self.feedback.prepareImpact(.light)
     }
     
     override func didLoad() {
@@ -143,7 +143,7 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
         transition.animatePositionAdditive(node: self.itemsContainerNode, offset: CGPoint(x: 0.0, y: self.bounds.size.height))
         transition.animatePositionAdditive(node: self.itemsShadowNode, offset: CGPoint(x: 0.0, y: self.bounds.size.height))
         
-        self.feedback.impact()
+        self.feedback.impact(.light)
     }
     
     func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {

@@ -38,6 +38,8 @@ final class CallControllerNode: ASDisplayNode {
         }
     }
     
+    private var shouldStayHiddenUntilConnection: Bool = false
+    
     private var audioOutputState: ([AudioSessionOutput], currentOutput: AudioSessionOutput?)?
     private var callState: PresentationCallState?
     
@@ -49,12 +51,16 @@ final class CallControllerNode: ASDisplayNode {
     var back: (() -> Void)?
     var dismissedInteractively: (() -> Void)?
     
-    init(account: Account, presentationData: PresentationData, statusBar: StatusBar) {
+    init(account: Account, presentationData: PresentationData, statusBar: StatusBar, shouldStayHiddenUntilConnection: Bool = false) {
         self.account = account
         self.presentationData = presentationData
         self.statusBar = statusBar
+        self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
         
         self.containerNode = ASDisplayNode()
+        if self.shouldStayHiddenUntilConnection {
+            self.containerNode.alpha = 0.0
+        }
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -241,6 +247,14 @@ final class CallControllerNode: ASDisplayNode {
                     self.backButtonNode.alpha = 1.0
                 }
         }
+        if self.shouldStayHiddenUntilConnection {
+            switch callState {
+                case .connecting, .active:
+                    self.containerNode.alpha = 1.0
+                default:
+                    break
+            }
+        }
         self.statusNode.status = statusValue
         
         self.updateButtonsMode()
@@ -284,16 +298,20 @@ final class CallControllerNode: ASDisplayNode {
         self.containerNode.layer.removeAnimation(forKey: "opacity")
         self.containerNode.layer.removeAnimation(forKey: "scale")
         self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.containerNode.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        if !self.shouldStayHiddenUntilConnection {
+            self.containerNode.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
     }
     
     func animateOut(completion: @escaping () -> Void) {
         self.statusBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.containerNode.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3, removeOnCompletion: false, completion: { _ in
-            completion()
-        })
+        if !self.shouldStayHiddenUntilConnection || self.containerNode.alpha > 0.0 {
+            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            self.containerNode.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

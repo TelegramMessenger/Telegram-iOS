@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 
-func legacyImageLocationUri(resource: MediaResource) -> String? {
+public func legacyImageLocationUri(resource: MediaResource) -> String? {
     if let resource = resource as? CloudFileMediaResource {
         return "\(resource.datacenterId)_\(resource.volumeId)_\(resource.localId)_\(resource.secret)"
     }
@@ -11,7 +11,7 @@ func legacyImageLocationUri(resource: MediaResource) -> String? {
 
 private let legacyImageUriExpr = try? NSRegularExpression(pattern: "([-\\d]+)_([-\\d]+)_([-\\d]+)_([-\\d]+)", options: [])
 
-func resourceFromLegacyImageUri(_ uri: String) -> MediaResource? {
+public func resourceFromLegacyImageUri(_ uri: String) -> MediaResource? {
     guard let legacyImageUriExpr = legacyImageUriExpr else {
         return nil
     }
