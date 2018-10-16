@@ -1257,6 +1257,10 @@ public func accountNetworkUsageStats(account: Account, reset: ResetNetworkUsageS
     return networkUsageStats(basePath: account.basePath, reset: reset)
 }
 
+public func updateAccountNetworkUsageStats(account: Account, category: MediaResourceStatsCategory, delta: NetworkUsageStatsConnectionsEntry) {
+    updateNetworkUsageStats(basePath: account.basePath, category: category, delta: delta)
+}
+
 public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
 public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: AnyMediaReference, _ userInteractive: Bool) -> Signal<AnyMediaReference?, NoError>
 

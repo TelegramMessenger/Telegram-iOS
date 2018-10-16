@@ -159,6 +159,8 @@ private struct UsageCalculationTag {
                 return 3 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
             case .file:
                 return 4 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .call:
+                return 5 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
         }
     }
 }
@@ -182,6 +184,11 @@ public struct NetworkUsageStatsDirectionsEntry: Equatable {
     public let incoming: Int64
     public let outgoing: Int64
     
+    public init(incoming: Int64, outgoing: Int64) {
+        self.incoming = incoming
+        self.outgoing = outgoing
+    }
+    
     public static func ==(lhs: NetworkUsageStatsDirectionsEntry, rhs: NetworkUsageStatsDirectionsEntry) -> Bool {
         return lhs.incoming == rhs.incoming && lhs.outgoing == rhs.outgoing
     }
@@ -190,6 +197,11 @@ public struct NetworkUsageStatsDirectionsEntry: Equatable {
 public struct NetworkUsageStatsConnectionsEntry: Equatable {
     public let cellular: NetworkUsageStatsDirectionsEntry
     public let wifi: NetworkUsageStatsDirectionsEntry
+    
+    public init(cellular: NetworkUsageStatsDirectionsEntry, wifi: NetworkUsageStatsDirectionsEntry) {
+        self.cellular = cellular
+        self.wifi = wifi
+    }
     
     public static func ==(lhs: NetworkUsageStatsConnectionsEntry, rhs: NetworkUsageStatsConnectionsEntry) -> Bool {
         return lhs.cellular == rhs.cellular && lhs.wifi == rhs.wifi
@@ -202,12 +214,13 @@ public struct NetworkUsageStats: Equatable {
     public let video: NetworkUsageStatsConnectionsEntry
     public let audio: NetworkUsageStatsConnectionsEntry
     public let file: NetworkUsageStatsConnectionsEntry
+    public let call: NetworkUsageStatsConnectionsEntry
     
     public let resetWifiTimestamp: Int32
     public let resetCellularTimestamp: Int32
     
     public static func ==(lhs: NetworkUsageStats, rhs: NetworkUsageStats) -> Bool {
-        return lhs.generic == rhs.generic && lhs.image == rhs.image && lhs.video == rhs.video && lhs.audio == rhs.audio && lhs.file == rhs.file && lhs.resetWifiTimestamp == rhs.resetWifiTimestamp && lhs.resetCellularTimestamp == rhs.resetCellularTimestamp
+        return lhs.generic == rhs.generic && lhs.image == rhs.image && lhs.video == rhs.video && lhs.audio == rhs.audio && lhs.file == rhs.file && lhs.call == rhs.call && lhs.resetWifiTimestamp == rhs.resetWifiTimestamp && lhs.resetCellularTimestamp == rhs.resetCellularTimestamp
     }
 }
 
@@ -224,6 +237,21 @@ public struct ResetNetworkUsageStats: OptionSet {
     
     public static let wifi = ResetNetworkUsageStats(rawValue: 1 << 0)
     public static let cellular = ResetNetworkUsageStats(rawValue: 1 << 1)
+}
+
+private func interfaceForConnection(_ connection: UsageCalculationConnection) -> MTNetworkUsageManagerInterface {
+    return MTNetworkUsageManagerInterface(rawValue: UInt32(connection.rawValue))
+}
+
+func updateNetworkUsageStats(basePath: String, category: MediaResourceStatsCategory, delta: NetworkUsageStatsConnectionsEntry) {
+    let info = usageCalculationInfo(basePath: basePath, category: category)
+    let manager = MTNetworkUsageManager(info: info)!
+    
+    manager.addIncomingBytes(UInt(clamping: delta.wifi.incoming), interface: interfaceForConnection(.wifi))
+    manager.addOutgoingBytes(UInt(clamping: delta.wifi.outgoing), interface: interfaceForConnection(.wifi))
+    
+    manager.addIncomingBytes(UInt(clamping: delta.cellular.incoming), interface: interfaceForConnection(.cellular))
+    manager.addOutgoingBytes(UInt(clamping: delta.cellular.outgoing), interface: interfaceForConnection(.cellular))
 }
 
 func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signal<NetworkUsageStats, NoError> {
@@ -255,7 +283,12 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
             UsageCalculationTag(connection: .cellular, direction: .incoming, category: .file),
             UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .file),
             UsageCalculationTag(connection: .wifi, direction: .incoming, category: .file),
-            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .file)
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .file),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .call),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .call),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .call),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call)
         ]
         
         var keys: [NSNumber] = rawKeys.map { $0.key as NSNumber }
@@ -321,6 +354,13 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
                     wifi: NetworkUsageStatsDirectionsEntry(
                         incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .file).key]!,
                         outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .file).key]!)),
+                call: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .call).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .call).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .call).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call).key]!)),
                 resetWifiTimestamp: Int32(dict[UsageCalculationResetKey.wifi.rawValue]!),
                 resetCellularTimestamp: Int32(dict[UsageCalculationResetKey.cellular.rawValue]!)
             ))
