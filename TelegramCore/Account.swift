@@ -1052,14 +1052,14 @@ public class Account {
             
             return masterNotificationsKey(account: self, ignoreDisabled: false)
             |> mapToSignal { secret -> Signal<Void, NoError> in
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(/*data: secret.data*/), otherUids: []))
                 |> retryRequest
                 |> mapToSignal { _ -> Signal<Void, NoError> in
                     return .complete()
                 }
             }
         }
-        //self.notificationTokenDisposable.set(appliedNotificationToken.start())
+        self.notificationTokenDisposable.set(appliedNotificationToken.start())
         
         let appliedVoipToken = combineLatest(self.voipToken.get(), self.notificationTokensVersionPromise.get())
         |> distinctUntilChanged(isEqual: { $0 == $1 })

@@ -60,7 +60,7 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                             return entry
                         })
                         
-                        updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxGroupMemberCount: config.chatSizeMax, maxSupergroupMemberCount: config.megagroupSizeMax, maxMessageForwardBatchSize: config.forwardedCountMax, maxSavedGifCount: config.savedGifsLimit, maxRecentStickerCount: config.stickersRecentLimit, maxMessageEditingInterval: config.editTimeLimit))
+                        updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxGroupMemberCount: config.chatSizeMax, maxSupergroupMemberCount: config.megagroupSizeMax, maxMessageForwardBatchSize: config.forwardedCountMax, maxSavedGifCount: config.savedGifsLimit, maxRecentStickerCount: config.stickersRecentLimit, maxMessageEditingInterval: config.editTimeLimit, maxMediaCaptionLength: config.captionLengthMax))
                         updateVoipConfiguration(transaction: transaction, { configuration in
                             var configuration = configuration
                             let contacts = config.flags & (1 << 3) != 0
