@@ -10,6 +10,7 @@ public enum MediaResourceStatsCategory {
     case video
     case audio
     case file
+    case call
 }
 
 public final class TelegramMediaResourceFetchTag: MediaResourceFetchTag {
