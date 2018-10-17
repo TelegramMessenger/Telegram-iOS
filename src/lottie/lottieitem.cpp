@@ -80,7 +80,7 @@ bool LOTCompItem::update(int frameNo)
     float ty = (viewPort.height() - viewBox.height() * scale) * 0.5;
 
     VMatrix m;
-    m.scale(scale, scale).translate(tx, ty);
+    m.translate(tx, ty).scale(scale, scale);
     mRootLayer->update(frameNo, m, 1.0);
 
     mCurFrameNo = frameNo;
