@@ -10,7 +10,7 @@ final class ProgressNavigationButtonNode: ASDisplayNode {
     }
     
     init(color: UIColor) {
-        self.indicatorNode = ActivityIndicator(type: .custom(color, 22.0, 1.0))
+        self.indicatorNode = ActivityIndicator(type: .custom(color, 22.0, 1.0, false))
         
         super.init()
         

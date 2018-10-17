@@ -206,7 +206,7 @@ final class DownloadedMediaStoreManager {
 }
 
 func storeDownloadedMedia(storeManager: DownloadedMediaStoreManager?, media: AnyMediaReference) -> Signal<Never, NoError> {
-    guard case let .message(message, _) = media, let peer = message.peer, case .user = peer, let timestamp = message.timestamp, let incoming = message.isIncoming, incoming else {
+    guard case let .message(message, _) = media, let peer = message.peer, case .user = peer, let timestamp = message.timestamp, let incoming = message.isIncoming, incoming, let secret = message.isSecret, !secret else {
         return .complete()
     }
     

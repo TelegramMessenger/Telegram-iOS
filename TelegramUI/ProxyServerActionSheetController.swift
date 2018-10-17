@@ -227,7 +227,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: theme.controlAccentColor)
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.controlAccentColor, 24.0, 1.5))
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.controlAccentColor, 24.0, 1.5, false))
         self.activityIndicator.isHidden = true
         
         self.buttonNode = HighlightableButtonNode()

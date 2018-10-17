@@ -151,7 +151,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
         self.statusNode.contentMode = .left
         self.statusNode.contentsScale = UIScreen.main.scale
         
-        self.activityNode = ActivityIndicator(type: .custom(.blue, activitySize.width, 2.0))
+        self.activityNode = ActivityIndicator(type: .custom(.blue, activitySize.width, 2.0, false))
         self.activityNode.isHidden = true
         
         self.infoButtonNode = HighlightableButtonNode()
@@ -270,7 +270,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                         
-                        strongSelf.activityNode.type = .custom(item.theme.list.itemAccentColor, activitySize.width, 2.0)
+                        strongSelf.activityNode.type = .custom(item.theme.list.itemAccentColor, activitySize.width, 2.0, false)
                     }
                     
                     let revealOffset = strongSelf.revealOffset

@@ -274,7 +274,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             switch stickerPack {
                 case .fetching, .none:
                     if self.activityIndicator == nil {
-                        let activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(self.presentationData.theme.actionSheet.controlAccentColor, 22.0, 2.0))
+                        let activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(self.presentationData.theme.actionSheet.controlAccentColor, 22.0, 2.0, false))
                         self.activityIndicator = activityIndicator
                         self.addSubnode(activityIndicator)
                     }

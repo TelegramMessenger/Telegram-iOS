@@ -66,7 +66,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
                 self.lockView.setIsLocked(false, theme: self.theme, animated: false)
             }
             
-            self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5)
+            self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false)
             self.proxyNode.theme = self.theme
         }
     }
@@ -81,7 +81,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         self.titleNode.isOpaque = false
         self.titleNode.isUserInteractionEnabled = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5), speed: .slow)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false), speed: .slow)
         let activityIndicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(), size: activityIndicatorSize)
         
