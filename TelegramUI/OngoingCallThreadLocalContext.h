@@ -58,6 +58,9 @@ typedef NS_ENUM(int32_t, OngoingCallNetworkType) {
 - (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer;
 - (void)stop;
 
+- (NSString * _Nullable)debugInfo;
+- (NSString * _Nullable)version;
+
 - (void)setIsMuted:(bool)isMuted;
 - (void)setNetworkType:(OngoingCallNetworkType)networkType;
 

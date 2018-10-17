@@ -81,9 +81,9 @@ private enum LegacyAssetVideoData {
 }
 
 private enum LegacyAssetItem {
-    case image(data: LegacyAssetImageData, caption: String?)
-    case file(data: LegacyAssetImageData, mimeType: String, name: String, caption: String?)
-    case video(data: LegacyAssetVideoData, previewImage: UIImage?, adjustments: TGVideoEditAdjustments?, caption: String?, asFile: Bool, asAnimation: Bool)
+    case image(data: LegacyAssetImageData, thumbnail: UIImage?, caption: String?)
+    case file(data: LegacyAssetImageData, thumbnail: UIImage?, mimeType: String, name: String, caption: String?)
+    case video(data: LegacyAssetVideoData, thumbnail: UIImage?, adjustments: TGVideoEditAdjustments?, caption: String?, asFile: Bool, asAnimation: Bool)
 }
 
 private final class LegacyAssetItemWrapper: NSObject {
@@ -105,11 +105,13 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [A
         let dict = anyDict as! NSDictionary
         if (dict["type"] as! NSString) == "editedPhoto" || (dict["type"] as! NSString) == "capturedPhoto" {
             let image = dict["image"] as! UIImage
+            let thumbnail = dict["previewImage"] as? UIImage
             var result: [AnyHashable : Any] = [:]
-            result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .image(image), caption: caption), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
+            result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .image(image), thumbnail: thumbnail, caption: caption), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
             return result
         } else if (dict["type"] as! NSString) == "cloudPhoto" {
             let asset = dict["asset"] as! TGMediaAsset
+            let thumbnail = dict["previewImage"] as? UIImage
             var asFile = false
             if let document = dict["document"] as? NSNumber, document.boolValue {
                 asFile = true
@@ -125,13 +127,14 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [A
                     name = customName
                 }
                 
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .file(data: .asset(asset.backingAsset), mimeType: mimeType, name: name, caption: caption), timer: nil, groupedId: nil)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .file(data: .asset(asset.backingAsset), thumbnail: thumbnail, mimeType: mimeType, name: name, caption: caption), timer: nil, groupedId: nil)
             } else {
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .asset(asset.backingAsset), caption: caption), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .asset(asset.backingAsset), thumbnail: thumbnail, caption: caption), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
             }
             return result
         } else if (dict["type"] as! NSString) == "file" {
             if let tempFileUrl = dict["tempFileUrl"] as? URL {
+                let thumbnail = dict["previewImage"] as? UIImage
                 var mimeType = "application/binary"
                 if let customMimeType = dict["mimeType"] as? String {
                     mimeType = customMimeType
@@ -147,15 +150,16 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [A
                     let dimensions = (dict["dimensions"]! as AnyObject).cgSizeValue!
                     let duration = (dict["duration"]! as AnyObject).doubleValue!
                     
-                    result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: tempFileUrl.path, dimensions: dimensions, duration: duration), previewImage: dict["previewImage"] as? UIImage, adjustments: nil, caption: caption, asFile: false, asAnimation: true), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
+                    result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: tempFileUrl.path, dimensions: dimensions, duration: duration), thumbnail: thumbnail, adjustments: nil, caption: caption, asFile: false, asAnimation: true), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
                     return result
                 }
                 
                 var result: [AnyHashable: Any] = [:]
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .file(data: .tempFile(tempFileUrl.path), mimeType: mimeType, name: name, caption: caption), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .file(data: .tempFile(tempFileUrl.path), thumbnail: thumbnail, mimeType: mimeType, name: name, caption: caption), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
                 return result
             }
         } else if (dict["type"] as! NSString) == "video" {
+            var thumbnail = dict["previewImage"] as? UIImage
             var asFile = false
             if let document = dict["document"] as? NSNumber, document.boolValue {
                 asFile = true
@@ -163,16 +167,17 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [A
             
             if let asset = dict["asset"] as? TGMediaAsset {
                 var result: [AnyHashable: Any] = [:]
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .asset(asset), previewImage: dict["previewImage"] as? UIImage, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .asset(asset), thumbnail: thumbnail, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
                 return result
             } else if let url = (dict["url"] as? String) ?? (dict["url"] as? URL)?.absoluteString {
                 let dimensions = (dict["dimensions"]! as AnyObject).cgSizeValue!
                 let duration = (dict["duration"]! as AnyObject).doubleValue!
                 var result: [AnyHashable: Any] = [:]
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: duration), previewImage: dict["previewImage"] as? UIImage, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: duration), thumbnail: thumbnail, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
                 return result
             }
         } else if (dict["type"] as! NSString) == "cameraVideo" {
+            let thumbnail = dict["previewImage"] as? UIImage
             var asFile = false
             if let document = dict["document"] as? NSNumber, document.boolValue {
                 asFile = true
@@ -184,7 +189,7 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [A
                 let dimensions = previewImage.pixelSize()
                 let duration = (dict["duration"]! as AnyObject).doubleValue!
                 var result: [AnyHashable: Any] = [:]
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: duration), previewImage: dict["previewImage"] as? UIImage, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: duration), thumbnail: thumbnail, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false), timer: (dict["timer"] as? NSNumber)?.intValue, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value)
                 return result
             }
         }
@@ -242,7 +247,17 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
             outer: for item in (anyValues as! NSArray) {
                 if let item = (item as? NSDictionary)?.object(forKey: "item") as? LegacyAssetItemWrapper {
                     switch item.item {
-                        case let .image(data, caption):
+                        case let .image(data, thumbnail, caption):
+                            var representations: [TelegramMediaImageRepresentation] = []
+                            if let thumbnail = thumbnail {
+                                let resource = LocalFileMediaResource(fileId: arc4random64())
+                                let thumbnailSize = thumbnail.size.aspectFitted(CGSize(width: 90.0, height: 90.0))
+                                let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
+                                if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
+                                    account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
+                                    representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
+                                }
+                            }
                             switch data {
                                 case let .image(image):
                                     var randomId: Int64 = 0
@@ -268,9 +283,11 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                                     }
                                                 }
                                             #endif
-                                            
+
                                             let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
-                                            let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)], reference: nil, partialReference: nil)
+                                            representations.append(TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource))
+
+                                            let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, reference: nil, partialReference: nil)
                                             var attributes: [MessageAttribute] = []
                                             if let timer = item.timer, timer > 0 && timer <= 60 {
                                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
@@ -284,8 +301,9 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                     let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
                                     let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
                                     let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64())
+                                    representations.append(TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource))
                                     
-                                    let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)], reference: nil, partialReference: nil)
+                                    let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, reference: nil, partialReference: nil)
                                     var attributes: [MessageAttribute] = []
                                     if let timer = item.timer, timer > 0 && timer <= 60 {
                                         attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
@@ -294,7 +312,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                 case .tempFile:
                                     break
                             }
-                        case let .file(data, mimeType, name, caption):
+                        case let .file(data, thumbnail, mimeType, name, caption):
                             switch data {
                                 case let .tempFile(path):
                                     var randomId: Int64 = 0
@@ -311,7 +329,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                 default:
                                     break
                             }
-                        case let .video(data, previewImage, adjustments, caption, asFile, asAnimation):
+                        case let .video(data, thumbnail, adjustments, caption, asFile, asAnimation):
                             var finalDimensions: CGSize
                             var finalDuration: Double
                             switch data {
@@ -328,10 +346,10 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                             }
                             
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
-                            if let previewImage = previewImage {
+                            if let thumbnail = thumbnail {
                                 let resource = LocalFileMediaResource(fileId: arc4random64())
                                 let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 90.0, height: 90.0))
-                                let thumbnailImage = TGScaleImageToPixelSize(previewImage, thumbnailSize)!
+                                let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
                                     previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
@@ -409,59 +427,3 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
         }
     }
 }
-
-func legacyAssetPickerDataSignals(account: Account, signals: [Any]) -> Signal<[TelegramMediaResource], Void> {
-    return Signal { subscriber in
-        let disposable = SSignal.combineSignals(signals).start(next: { anyValues in
-            var datas: [TelegramMediaResource] = []
-            
-            outer: for item in (anyValues as! NSArray) {
-                if let item = (item as? NSDictionary)?.object(forKey: "item") as? LegacyAssetItemWrapper {
-                    switch item.item {
-                        case let .image(data, _):
-                            switch data {
-                                case let .image(image):
-                                    var randomId: Int64 = 0
-                                    arc4random_buf(&randomId, 8)
-                                    let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
-                                    let scaledSize = image.size.aspectFitted(CGSize(width: 2048.0, height: 2048.0))
-                                    if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
-                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.84) {
-                                            let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
-                                            let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
-                                            datas.append(resource)
-                                        }
-                                    }
-                                case let .asset(asset):
-                                    break
-                                case .tempFile:
-                                    break
-                            }
-                        case let .file(data, mimeType, name, caption):
-                            switch data {
-                                case let .tempFile(path):
-                                    var randomId: Int64 = 0
-                                    arc4random_buf(&randomId, 8)
-                                    let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: randomId)
-                                    datas.append(resource)
-                                default:
-                                    break
-                            }
-                        case .video:
-                            break
-                    }
-                }
-            }
-            
-            subscriber.putNext(datas)
-            subscriber.putCompletion()
-        }, error: { _ in
-            subscriber.putError(Void())
-        }, completed: nil)
-        
-        return ActionDisposable {
-            disposable?.dispose()
-        }
-    }
-}
-

@@ -375,12 +375,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             if let (media, flags) = mediaAndFlags {
                 if let file = media as? TelegramMediaFile {
                     if file.isInstantVideo {
-                        let (videoLayout, apply) = contentInstantVideoLayout(ChatMessageBubbleContentItem(account: account, controllerInteraction: controllerInteraction, message: message, read: messageRead, presentationData: presentationData, associatedData: associatedData), constrainedSize.width - horizontalInsets.left - horizontalInsets.right, CGSize(width: 180.0, height: 180.0), .bubble)
+                        let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file)
+                        let (videoLayout, apply) = contentInstantVideoLayout(ChatMessageBubbleContentItem(account: account, controllerInteraction: controllerInteraction, message: message, read: messageRead, presentationData: presentationData, associatedData: associatedData), constrainedSize.width - horizontalInsets.left - horizontalInsets.right, CGSize(width: 180.0, height: 180.0), .bubble, automaticDownload)
                         initialWidth = videoLayout.contentSize.width + videoLayout.overflowLeft + videoLayout.overflowRight
                         contentInstantVideoSizeAndApply = (videoLayout, apply)
                     } else if file.isVideo {
-                        var automaticDownload = false
-                        automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file)
+                        let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file)
                         let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme.theme, presentationData.strings, message, file, automaticDownload, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
@@ -390,8 +390,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else {
-                        var automaticDownload = false
-                        automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file)
+                        let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file)
                         
                         let statusType: ChatMessageDateAndStatusType
                         if message.effectivelyIncoming(account.peerId) {

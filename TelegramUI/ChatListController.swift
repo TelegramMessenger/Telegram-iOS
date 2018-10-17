@@ -140,7 +140,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 var checkProxy = false
                 switch state {
                     case .waitingForNetwork:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
                     case let .connecting(proxy):
                         var text = strongSelf.presentationData.strings.State_Connecting
                         if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {

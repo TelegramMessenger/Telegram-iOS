@@ -586,4 +586,8 @@ public final class PresentationCall {
             audioSessionControl.setOutputMode(.custom(output))
         }
     }
+    
+    func debugInfo() -> Signal<(String, String), NoError> {
+        return self.ongoingContext.debugInfo()
+    }
 }

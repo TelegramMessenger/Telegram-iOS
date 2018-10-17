@@ -55,14 +55,18 @@ func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (V
         if let signal = signal {
             let _ = (processedLegacySecureIdAttachmentItems(postbox: account.postbox, signal: signal)
             |> mapToSignal { resources -> Signal<([TelegramMediaResource], SecureIdRecognizedDocumentData?), NoError> in
-                if case .generic = type, recognizeDocumentData {
-                    return recognizedResources(postbox: account.postbox, resources: resources)
-                    |> map { data -> ([TelegramMediaResource], SecureIdRecognizedDocumentData?) in
-                        return (resources, data)
-                    }
-                } else {
-                    return .single((resources, nil))
+                switch type {
+                    case .generic, .idCard:
+                        if recognizeDocumentData {
+                            return recognizedResources(postbox: account.postbox, resources: resources, shouldBeDriversLicense: false)
+                                |> map { data -> ([TelegramMediaResource], SecureIdRecognizedDocumentData?) in
+                                    return (resources, data)
+                            }
+                        }
+                    default:
+                        break
                 }
+                return .single((resources, nil))
             }
             |> deliverOnMainQueue).start(next: { resourcesAndData in
                 completion(resourcesAndData.0, resourcesAndData.1)
@@ -152,7 +156,7 @@ private func processedLegacySecureIdAttachmentItems(postbox: Postbox, signal: SS
     return collectedItems
 }
 
-private func recognizedResources(postbox: Postbox, resources: [TelegramMediaResource]) -> Signal<SecureIdRecognizedDocumentData?, NoError> {
+private func recognizedResources(postbox: Postbox, resources: [TelegramMediaResource], shouldBeDriversLicense: Bool) -> Signal<SecureIdRecognizedDocumentData?, NoError> {
     var signals: [Signal<SecureIdRecognizedDocumentData?, NoError>] = []
     for resource in resources {
         let image = Signal<UIImage?, NoError> { subscriber in
@@ -178,7 +182,7 @@ private func recognizedResources(postbox: Postbox, resources: [TelegramMediaReso
         |> mapToSignal { image -> Signal<SecureIdRecognizedDocumentData?, NoError> in
             if let image = image {
                 return Signal { subscriber in
-                    let disposable = TGPassportOCR.recognizeMRZ(in: image)?.start(next: { value in
+                    let disposable = TGPassportOCR.recognizeData(in: image, shouldBeDriversLicense: shouldBeDriversLicense)?.start(next: { value in
                         if let value = value as? TGPassportMRZ {
                             var issuingCountry: String? = nil
                             if let issuingCountryValue = value.issuingCountry {

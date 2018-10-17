@@ -818,7 +818,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                                         doneEnabled = false
                                 }
                             } else {
-                                doneEnabled = false
+                                doneEnabled = !(peer.addressName?.isEmpty ?? true)
                             }
                     }
                 }

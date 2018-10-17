@@ -71,27 +71,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             case .initial:
                 let _ = options.insert(.LowLatency)
                 let _ = options.insert(.Synchronous)
-            case .interactiveChanges:
-                var previousPinnedCount = 0
-                var updatedPinnedCount = 0
-                
-                if let fromView = fromView {
-                    for entry in fromView.filteredEntries {
-                        if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _) = entry {
-                            if index.pinningIndex != nil {
-                                previousPinnedCount += 1
-                            }
-                        }
-                    }
-                }
-                for entry in toView.filteredEntries {
-                    if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _) = entry {
-                        if index.pinningIndex != nil {
-                            updatedPinnedCount += 1
-                        }
-                    }
-                }
-                
+            case .interactiveChanges:                
                 for (index, _, _) in indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
                     let adjustedIndex = updatedCount - 1 - index
                     if adjustedIndex == maxAnimatedInsertionIndex + 1 {
@@ -118,7 +98,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                     let _ = options.insert(.AnimateCrossfade)
                 } else {
                     let _ = options.insert(.AnimateAlpha)
-                    if !disableAnimations || previousPinnedCount != updatedPinnedCount {
+                    if !disableAnimations {
                         let _ = options.insert(.AnimateInsertion)
                     }
                 }
