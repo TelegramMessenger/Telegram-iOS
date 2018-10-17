@@ -57,7 +57,8 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     }
     
     public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 57.0)
+        let labelSize = self.label.measure(CGSize(width: max(1.0, constrainedSize.width - 20.0), height: constrainedSize.height))
+        return CGSize(width: constrainedSize.width, height: max(57.0, labelSize.height + 32.0))
     }
     
     public override func layout() {
