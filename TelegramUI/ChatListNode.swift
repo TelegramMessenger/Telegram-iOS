@@ -419,6 +419,7 @@ final class ChatListNode: ListView {
                 return chatListViewForLocation(groupId: groupId, location: location, account: account)
             }
         
+        let previousState = Atomic<ChatListNodeState>(value: self.currentState)
         let previousView = Atomic<ChatListNodeView?>(value: nil)
         
         let savedMessagesPeer: Signal<Peer?, NoError>
@@ -430,13 +431,14 @@ final class ChatListNode: ListView {
         
         let chatListNodeViewTransition = combineLatest(savedMessagesPeer, chatListViewUpdate, self.statePromise.get()) |> mapToQueue { (savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             let processedView = ChatListNodeView(originalView: update.view, filteredEntries: chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, mode: mode))
-            let previous = previousView.swap(processedView)
+            let previousView = previousView.swap(processedView)
+            let previousState = previousState.swap(state)
             
             let reason: ChatListNodeViewTransitionReason
             var prepareOnMainQueue = false
             
             var previousWasEmptyOrSingleHole = false
-            if let previous = previous {
+            if let previous = previousView {
                 if previous.filteredEntries.count == 1 {
                     if case .HoleEntry = previous.filteredEntries[0] {
                         previousWasEmptyOrSingleHole = true
@@ -450,11 +452,11 @@ final class ChatListNode: ListView {
             
             if previousWasEmptyOrSingleHole {
                 reason = .initial
-                if previous == nil {
+                if previousView == nil {
                     prepareOnMainQueue = true
                 }
             } else {
-                if previous?.originalView === update.view {
+                if previousView?.originalView === update.view {
                     reason = .interactiveChanges
                     updatedScrollPosition = nil
                 } else {
@@ -472,7 +474,34 @@ final class ChatListNode: ListView {
                 }
             }
             
-            return preparedChatListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: state.presentationData.disableAnimations, account: account, scrollPosition: updatedScrollPosition)
+            var disableAnimations = state.presentationData.disableAnimations
+            if previousState.editing != state.editing {
+                disableAnimations = false
+            } else {
+                var previousPinnedCount = 0
+                var updatedPinnedCount = 0
+                if let previous = previousView {
+                    for entry in previous.filteredEntries {
+                        if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _) = entry {
+                            if index.pinningIndex != nil {
+                                previousPinnedCount += 1
+                            }
+                        }
+                    }
+                }
+                for entry in processedView.filteredEntries {
+                    if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _) = entry {
+                        if index.pinningIndex != nil {
+                            updatedPinnedCount += 1
+                        }
+                    }
+                }
+                if previousPinnedCount != updatedPinnedCount {
+                    disableAnimations = false
+                }
+            }
+            
+            return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, disableAnimations: disableAnimations, account: account, scrollPosition: updatedScrollPosition)
                 |> map({ mappedChatListNodeViewListTransition(account: account, nodeInteraction: nodeInteraction, peerGroupId: groupId, mode: mode, transition: $0) })
                 |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }

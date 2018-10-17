@@ -22,6 +22,7 @@
 		0941A9A0210B057200EBE194 /* OpenInActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */; };
 		0941A9A4210B0E2E00EBE194 /* OpenInAppIconResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */; };
 		0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A5210B822D00EBE194 /* OpenInOptions.swift */; };
+		0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */; };
 		09797873210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */; };
 		0979787C210642CB0077D77F /* WebEmbedPlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */; };
 		0979787E210646C00077D77F /* YoutubeEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */; };
@@ -1042,6 +1043,7 @@
 		0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInActionSheetController.swift; sourceTree = "<group>"; };
 		0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInAppIconResources.swift; sourceTree = "<group>"; };
 		0941A9A5210B822D00EBE194 /* OpenInOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInOptions.swift; sourceTree = "<group>"; };
+		0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationMuteSettingsController.swift; sourceTree = "<group>"; };
 		09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsButtonItemNode.swift; sourceTree = "<group>"; };
 		0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebEmbedPlayerNode.swift; sourceTree = "<group>"; };
 		0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YoutubeEmbedImplementation.swift; sourceTree = "<group>"; };
@@ -3301,6 +3303,7 @@
 				D0C50E3D1E93D09200F62E39 /* NotificationItemContainerNode.swift */,
 				D0C50E3B1E93CC2600F62E39 /* NotificationItem.swift */,
 				D0C50E3F1E93D3B000F62E39 /* ChatMessageNotificationItem.swift */,
+				0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */,
 			);
 			name = Notifications;
 			sourceTree = "<group>";
@@ -5537,6 +5540,7 @@
 				D0EC6E811EB9F58900EBF1C3 /* NotificationContainerController.swift in Sources */,
 				D0754D271EEE10C800884F6E /* BotCheckoutController.swift in Sources */,
 				D053DADA201A4C4400993D32 /* ChatTextInputAttributes.swift in Sources */,
+				0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */,
 				D0EC6E821EB9F58900EBF1C3 /* NotificationContainerControllerNode.swift in Sources */,
 				D0EC6E831EB9F58900EBF1C3 /* NotificationItemContainerNode.swift in Sources */,
 				D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */,

@@ -287,6 +287,23 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     }
 }
 
+- (NSString *)debugInfo {
+    if (_controller != nil) {
+        auto rawDebugString = _controller->GetDebugString();
+        return [NSString stringWithUTF8String:rawDebugString.c_str()];
+    } else {
+        return nil;
+    }
+}
+
+- (NSString *)version {
+    if (_controller != nil) {
+        return [NSString stringWithUTF8String:_controller->GetVersion()];
+    } else {
+        return nil;
+    }
+}
+
 - (void)controllerStateChanged:(int)state {
     OngoingCallState callState = OngoingCallStateInitializing;
     switch (state) {

@@ -86,7 +86,7 @@ final class InstantVideoController: LegacyController {
 
 func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, account: Account, peerId: PeerId, send: @escaping (EnqueueMessage) -> Void) -> InstantVideoController {
     let legacyController = InstantVideoController(presentation: .custom, theme: theme)
-    legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
+    legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
     legacyController.statusBar.statusBarStyle = .Hide
     let baseController = TGViewController(context: legacyController.context)!
     legacyController.bind(controller: baseController)

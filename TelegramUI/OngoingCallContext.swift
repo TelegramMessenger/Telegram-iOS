@@ -9,6 +9,39 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
     return OngoingCallConnectionDescription(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
 }
 
+private let callLogsLimit = 20
+
+private func callLogsPath(account: Account) -> String {
+    let path = account.basePath + "/calls"
+    let fileManager = FileManager.default
+    if !fileManager.fileExists(atPath: path, isDirectory: nil) {
+        try? fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+    }
+    
+    var oldest: (URL, Date)? = nil
+    var count = 0
+    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+        for url in enumerator {
+            if let url = url as? URL {
+                if let date = (try? url.resourceValues(forKeys: Set([.contentModificationDateKey])))?.contentModificationDate {
+                    if let currentOldest = oldest {
+                        if date < currentOldest.1 {
+                            oldest = (url, date)
+                        }
+                    } else {
+                        oldest = (url, date)
+                    }
+                    count += 1
+                }
+            }
+        }
+    }
+    if count > callLogsLimit, let oldest = oldest {
+        try? fileManager.removeItem(atPath: oldest.0.path)
+    }
+    return path
+}
+
 private let setupLogs: Bool = {
     OngoingCallThreadLocalContext.setupLoggingFunction({ value in
         if let value = value {
@@ -64,25 +97,6 @@ private func ongoingNetworkTypeForType(_ type: NetworkType) -> OngoingCallNetwor
     }
 }
 
-private enum UsageCalculationConnection: Int32 {
-    case cellular = 0
-    case wifi = 1
-}
-
-private enum UsageCalculationDirection: Int32 {
-    case incoming = 0
-    case outgoing = 1
-}
-
-private struct UsageCalculationTag {
-    let connection: UsageCalculationConnection
-    let direction: UsageCalculationDirection
-    
-    var key: Int32 {
-        return 5 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
-    }
-}
-
 final class OngoingCallContext {
     let internalId: CallSessionInternalId
     
@@ -133,24 +147,15 @@ final class OngoingCallContext {
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
             }
-            context.callEnded = { [weak self] debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
-                if let strongSelf = self {
-                    var update: [Int32 : Int64] = [:]
-                    update[UsageCalculationTag(connection: .cellular, direction: .incoming).key] = bytesReceivedMobile
-                    update[UsageCalculationTag(connection: .cellular, direction: .outgoing).key] = bytesSentMobile
-                    
-                    update[UsageCalculationTag(connection: .wifi, direction: .incoming).key] = bytesReceivedWifi
-                    update[UsageCalculationTag(connection: .wifi, direction: .outgoing).key] = bytesSentWifi
-                    
-                    let delta = NetworkUsageStatsConnectionsEntry(
-                        cellular: NetworkUsageStatsDirectionsEntry(
-                            incoming: bytesReceivedMobile,
-                            outgoing: bytesSentMobile),
-                        wifi: NetworkUsageStatsDirectionsEntry(
-                            incoming: bytesReceivedWifi,
-                            outgoing: bytesSentWifi))
-                    let _ = updateAccountNetworkUsageStats(account: account, category: .call, delta: delta)
-                }
+            context.callEnded = { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
+                let delta = NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: bytesReceivedMobile,
+                        outgoing: bytesSentMobile),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: bytesReceivedWifi,
+                        outgoing: bytesSentWifi))
+                let _ = updateAccountNetworkUsageStats(account: account, category: .call, delta: delta)
             }
         }
         
@@ -203,5 +208,21 @@ final class OngoingCallContext {
         self.withContext { context in
             context.setIsMuted(value)
         }
+    }
+    
+    func debugInfo() -> Signal<(String, String), NoError> {
+        let poll = Signal<(String, String), NoError> { subscriber in
+            self.withContext { context in
+                let version = context.version()
+                let debugInfo = context.debugInfo()
+                if let version = version, let debugInfo = debugInfo {
+                    subscriber.putNext((version, debugInfo))
+                }
+                subscriber.putCompletion()
+            }
+            
+            return EmptyDisposable
+        }
+        return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
 }

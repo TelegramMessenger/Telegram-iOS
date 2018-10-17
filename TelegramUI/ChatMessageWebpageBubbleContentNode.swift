@@ -237,7 +237,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         mediaAndFlags = (image, flags)
                     } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
-                        mediaAndFlags = (image, [.preferMediaInline])
+                        var flags = ChatMessageAttachedContentNodeMediaFlags()
+                        if webpage.instantPage == nil {
+                            flags.insert(.preferMediaInline)
+                        }
+                        mediaAndFlags = (image, flags)
                     }
                 }
                 
