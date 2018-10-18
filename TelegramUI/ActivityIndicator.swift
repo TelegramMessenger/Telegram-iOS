@@ -1,9 +1,21 @@
 import Foundation
 import AsyncDisplayKit
 
+private func convertIndicatorColor(_ color: UIColor) -> UIColor {
+    if color.isEqual(UIColor(rgb: 0x007ee5)) {
+        return .gray
+    } else if color.isEqual(UIColor(rgb: 0x2ea6ff)) {
+        return .white
+    } else if color.isEqual(UIColor(rgb: 0x000000)) || color.isEqual(UIColor.black) {
+        return .gray
+    } else {
+        return color
+    }
+}
+
 enum ActivityIndicatorType: Equatable {
     case navigationAccent(PresentationTheme)
-    case custom(UIColor, CGFloat, CGFloat)
+    case custom(UIColor, CGFloat, CGFloat, Bool)
     
     static func ==(lhs: ActivityIndicatorType, rhs: ActivityIndicatorType) -> Bool {
         switch lhs {
@@ -13,8 +25,8 @@ enum ActivityIndicatorType: Equatable {
                 } else {
                     return false
                 }
-            case let .custom(lhsColor, lhsDiameter, lhsWidth):
-                if case let .custom(rhsColor, rhsDiameter, rhsWidth) = rhs, lhsColor.isEqual(rhsColor), lhsDiameter == rhsDiameter, lhsWidth == rhsWidth {
+            case let .custom(lhsColor, lhsDiameter, lhsWidth, lhsForceCustom):
+                if case let .custom(rhsColor, rhsDiameter, rhsWidth, rhsForceCustom) = rhs, lhsColor.isEqual(rhsColor), lhsDiameter == rhsDiameter, lhsWidth == rhsWidth, lhsForceCustom == rhsForceCustom {
                     return true
                 } else {
                     return false
@@ -34,21 +46,15 @@ final class ActivityIndicator: ASDisplayNode {
             switch self.type {
                 case let .navigationAccent(theme):
                     self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
-                case let .custom(color, diameter, lineWidth):
+                case let .custom(color, diameter, lineWidth, forceCustom):
                     self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
             }
             
             switch self.type {
                 case let .navigationAccent(theme):
                     self.indicatorView?.color = theme.rootController.navigationBar.controlColor
-                case let .custom(color, diameter, lineWidth):
-                    if color.isEqual(UIColor(rgb: 0x007ee5)) {
-                        self.indicatorView?.color = .gray
-                    } else if color.isEqual(UIColor(rgb: 0x000000)) {
-                        self.indicatorView?.color = .gray
-                    } else {
-                        self.indicatorView?.color = color
-                    }
+                case let .custom(color, diameter, lineWidth, forceCustom):
+                    self.indicatorView?.color = convertIndicatorColor(color)
             }
         }
     }
@@ -75,18 +81,17 @@ final class ActivityIndicator: ASDisplayNode {
         self.indicatorNode.displayWithoutProcessing = true
         self.indicatorNode.displaysAsynchronously = false
         
+        super.init()
+        
         switch type {
             case let .navigationAccent(theme):
                 self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
-            case let .custom(color, diameter, lineWidth):
+            case let .custom(color, diameter, lineWidth, forceCustom):
                 self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
+                if forceCustom {
+                    self.addSubnode(self.indicatorNode)
+                }
         }
-        
-        super.init()
-        
-        //self.isLayerBacked = true
-        
-        //self.addSubnode(self.indicatorNode)
     }
     
     override func didLoad() {
@@ -96,15 +101,13 @@ final class ActivityIndicator: ASDisplayNode {
         switch self.type {
             case let .navigationAccent(theme):
                 indicatorView.color = theme.rootController.navigationBar.controlColor
-            case let .custom(color, diameter, lineWidth):
-                if color.isEqual(UIColor(rgb: 0x007ee5)) {
-                    indicatorView.color = .gray
-                } else {
-                    indicatorView.color = color
+            case let .custom(color, diameter, lineWidth, forceCustom):
+                indicatorView.color = convertIndicatorColor(color)
+                if !forceCustom {
+                    self.view.addSubview(indicatorView)
                 }
         }
         self.indicatorView = indicatorView
-        self.view.addSubview(indicatorView)
         let size = self.bounds.size
         if !size.width.isZero {
             self.layoutContents(size: size)
@@ -161,7 +164,7 @@ final class ActivityIndicator: ASDisplayNode {
         switch self.type {
             case .navigationAccent:
                 return CGSize(width: 22.0, height: 22.0)
-            case let .custom(_, diameter, _):
+            case let .custom(_, diameter, _, _):
                 return CGSize(width: diameter, height: diameter)
         }
     }
@@ -179,14 +182,13 @@ final class ActivityIndicator: ASDisplayNode {
         switch self.type {
             case .navigationAccent:
                 indicatorSize = CGSize(width: 22.0, height: 22.0)
-            case let .custom(_, diameter, _):
+            case let .custom(_, diameter, _, _):
                 indicatorSize = CGSize(width: diameter, height: diameter)
         }
         self.indicatorNode.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
         if let indicatorView = self.indicatorView {
             let intrinsicSize = indicatorView.bounds.size
-            self.subnodeTransform = CATransform3DMakeScale(indicatorSize.width / intrinsicSize.width, indicatorSize.height / intrinsicSize.height, 1.0)
-            //indicatorView.transform = CGAffineTransform(scaleX: indicatorSize.width / intrinsicSize.width, y: indicatorSize.height / intrinsicSize.height)
+            self.subnodeTransform = CATransform3DMakeScale(min(1.0, indicatorSize.width / intrinsicSize.width), min(1.0, indicatorSize.height / intrinsicSize.height), 1.0)
             indicatorView.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
         }
     }

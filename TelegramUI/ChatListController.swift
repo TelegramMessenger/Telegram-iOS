@@ -483,6 +483,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        #if DEBUG
+        DispatchQueue.main.async {
+            let count = ChatControllerCount.with({ $0 })
+            if count != 0 {
+                self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: "", text: "ChatControllerCount \(count)", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+            }
+        }
+        #endif
+        
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
             if #available(iOSApplicationExtension 9.0, *) {

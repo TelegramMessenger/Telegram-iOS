@@ -274,7 +274,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             switch stickerPack {
                 case .fetching, .none:
                     if self.activityIndicator == nil {
-                        let activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(self.presentationData.theme.actionSheet.controlAccentColor, 50.0, 2.0))
+                        let activityIndicator = ActivityIndicator(type: ActivityIndicatorType.custom(self.presentationData.theme.actionSheet.controlAccentColor, 22.0, 2.0, false))
                         self.activityIndicator = activityIndicator
                         self.addSubnode(activityIndicator)
                     }
@@ -325,7 +325,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         if let activityIndicator = self.activityIndicator {
             let indicatorSize = activityIndicator.calculateSizeThatFits(layout.size)
             
-            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - indicatorSize.width) / 2.0), y: contentFrame.maxY - indicatorSize.height - 20.0), size: indicatorSize))
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - indicatorSize.width) / 2.0), y: contentFrame.maxY - indicatorSize.height - 30.0), size: indicatorSize))
         }
         
         transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))

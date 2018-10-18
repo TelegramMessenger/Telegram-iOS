@@ -26,7 +26,7 @@ final class ItemListLoadingIndicatorEmptyStateItem: ItemListControllerEmptyState
 final class ItemListLoadingIndicatorEmptyStateItemNode: ItemListControllerEmptyStateItemNode {
     var theme: PresentationTheme {
         didSet {
-            self.indicator.type = .custom(self.theme.list.itemAccentColor, 40.0, 2.0)
+            self.indicator.type = .custom(self.theme.list.itemAccentColor, 40.0, 2.0, false)
         }
     }
     private let indicator: ActivityIndicator
@@ -35,7 +35,7 @@ final class ItemListLoadingIndicatorEmptyStateItemNode: ItemListControllerEmptyS
     
     init(theme: PresentationTheme) {
         self.theme = theme
-        self.indicator = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 40.0, 2.0))
+        self.indicator = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 40.0, 2.0, false))
         
         super.init()
         

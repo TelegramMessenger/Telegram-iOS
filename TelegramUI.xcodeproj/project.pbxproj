@@ -49,6 +49,7 @@
 		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
 		09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304172173C15700C00567 /* WatchSettingsController.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
+		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
 		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
 		D00701A12029F6D0006B9E34 /* TGMimeTypeMap.h in Headers */ = {isa = PBXBuildFile; fileRef = D007019F2029F6D0006B9E34 /* TGMimeTypeMap.h */; };
@@ -1093,6 +1094,7 @@
 		D003702D1DA43052004308D3 /* ItemListAvatarAndNameItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListAvatarAndNameItem.swift; sourceTree = "<group>"; };
 		D003702F1DA43077004308D3 /* ItemListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListItem.swift; sourceTree = "<group>"; };
 		D00370311DA46C06004308D3 /* ItemListTextWithLabelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextWithLabelItem.swift; sourceTree = "<group>"; };
+		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
 		D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegqacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
 		D007019F2029F6D0006B9E34 /* TGMimeTypeMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMimeTypeMap.h; sourceTree = "<group>"; };
@@ -4375,6 +4377,7 @@
 				D0EC55A2210231D600D1992C /* SearchPeerMembers.swift */,
 				D0192D45210F4F940005FA10 /* FixSearchableListNodeScrolling.swift */,
 				09C3466C2167D63A00B76780 /* Accessibility.swift */,
+				D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5091,6 +5094,7 @@
 				D0B85C211FF70BEC00E795B4 /* AuthorizationSequenceAwaitingAccountResetControllerNode.swift in Sources */,
 				D0EC6D6F1EB9F58800EBF1C3 /* AuthorizationSequenceCodeEntryController.swift in Sources */,
 				D0C26D5E1FDF49E7004ABF18 /* DateFormat.swift in Sources */,
+				D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */,
 				D0EC6D701EB9F58800EBF1C3 /* AuthorizationSequenceCodeEntryControllerNode.swift in Sources */,
 				D0E9BA4D1F0559C700F079A4 /* NSString+Stripe_CardBrands.m in Sources */,
 				D099D7511EEFF91E00A3128C /* GameControllerTitleView.swift in Sources */,

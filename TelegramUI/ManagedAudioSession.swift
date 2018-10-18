@@ -10,12 +10,18 @@ enum ManagedAudioSessionType {
     case voiceCall
 }
 
-private func nativeCategoryForType(_ type: ManagedAudioSessionType) -> String {
+private func nativeCategoryForType(_ type: ManagedAudioSessionType, headphones: Bool) -> String {
     switch type {
         case .play:
             return AVAudioSessionCategoryPlayback
-        case .playWithPossiblePortOverride, .record, .voiceCall:
+        case .record, .voiceCall:
             return AVAudioSessionCategoryPlayAndRecord
+        case .playWithPossiblePortOverride:
+            if headphones {
+                return AVAudioSessionCategoryPlayback
+            } else {
+                return AVAudioSessionCategoryPlayAndRecord
+            }
     }
 }
 
@@ -594,7 +600,7 @@ public final class ManagedAudioSession {
                     case .record, .voiceCall:
                         options.insert(.allowBluetooth)
                 }
-                try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type), with: options)
+                try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type, headphones: self.isHeadsetPluggedInValue), with: options)
                 print("ManagedAudioSession setting active \(type != .none)")
                 try AVAudioSession.sharedInstance().setMode(type == .voiceCall ? AVAudioSessionModeVoiceChat : AVAudioSessionModeDefault)
             } catch let error {

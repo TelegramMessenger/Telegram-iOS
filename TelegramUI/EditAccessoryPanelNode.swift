@@ -82,7 +82,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.imageNode.isHidden = true
         self.imageNode.isUserInteractionEnabled = true
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.chat.inputPanel.panelControlAccentColor, 22.0, 2.0))
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.chat.inputPanel.panelControlAccentColor, 22.0, 2.0, false))
         self.activityIndicator.isHidden = true
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
