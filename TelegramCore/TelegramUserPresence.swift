@@ -175,7 +175,7 @@ extension TelegramUserPresence {
                 if let status = status {
                     self.init(apiStatus: status)
                 } else {
-                    return nil
+                    self.init(status: .none)
                 }
             case .userEmpty:
                 return nil

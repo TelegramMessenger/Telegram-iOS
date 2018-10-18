@@ -128,7 +128,7 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
     return postbox.loadedPeerWithId(hole.maxIndex.id.peerId)
     |> take(1)
     |> mapToSignal { peer in
-        if let inputPeer = apiInputPeer(peer) {
+        if let inputPeer = forceApiInputPeer(peer) {
             print("fetchMessageHistoryHole for \(peer.displayTitle) \(direction)")
             let request: Signal<Api.messages.Messages, MTRpcError>
             var maxIndexRequest: Signal<Api.messages.Messages?, MTRpcError> = .single(nil)

@@ -100,6 +100,23 @@ public enum PeerReference: PostboxCoding, Hashable, Equatable {
     }
 }
 
+func forceApiInputPeer(_ peer: Peer) -> Api.InputPeer? {
+    switch peer {
+        case let user as TelegramUser:
+            return Api.InputPeer.inputPeerUser(userId: user.id.id, accessHash: user.accessHash ?? 0)
+        case let group as TelegramGroup:
+            return Api.InputPeer.inputPeerChat(chatId: group.id.id)
+        case let channel as TelegramChannel:
+            if let accessHash = channel.accessHash {
+                return Api.InputPeer.inputPeerChannel(channelId: channel.id.id, accessHash: accessHash)
+            } else {
+                return nil
+            }
+        default:
+            return nil
+    }
+}
+
 func apiInputPeer(_ peer: Peer) -> Api.InputPeer? {
     switch peer {
         case let user as TelegramUser where user.accessHash != nil:

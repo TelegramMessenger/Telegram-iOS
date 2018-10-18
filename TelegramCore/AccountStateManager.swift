@@ -113,6 +113,10 @@ public final class AccountStateManager {
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
     
     private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
+    private let appliedMaxMessageIdPromise = Promise<Int32?>(nil)
+    private let appliedMaxMessageIdDisposable = MetaDisposable()
+    private let appliedQtsPromise = Promise<Int32?>(nil)
+    private let appliedQtsDisposable = MetaDisposable()
     
     init(account: Account, peerInputActivityManager: PeerInputActivityManager, auxiliaryMethods: AccountAuxiliaryMethods) {
         self.account = account
@@ -123,6 +127,8 @@ public final class AccountStateManager {
     deinit {
         self.updateServiceDisposable.dispose()
         self.operationDisposable.dispose()
+        self.appliedMaxMessageIdDisposable.dispose()
+        self.appliedQtsDisposable.dispose()
     }
     
     func reset() {
@@ -139,6 +145,41 @@ public final class AccountStateManager {
             self.operationDisposable.set(nil)
             self.replaceOperations(with: .pollDifference(AccountFinalStateEvents()))
             self.startFirstOperation()
+            
+            let appliedValues: [(MetaDisposable, Signal<Int32?, NoError>, Bool)] = [
+                (self.appliedMaxMessageIdDisposable, self.appliedMaxMessageIdPromise.get(), true),
+                (self.appliedQtsDisposable, self.appliedQtsPromise.get(), false)
+            ]
+            
+            for (disposable, value, isMaxMessageId) in appliedValues {
+                let network = self.account.network
+                disposable.set((combineLatest(queue: self.queue, self.account.shouldKeepOnlinePresence.get(), value)
+                |> mapToSignal { shouldKeepOnlinePresence, value -> Signal<Int32, NoError> in
+                    guard let value = value else {
+                        return .complete()
+                    }
+                    if !shouldKeepOnlinePresence {
+                        return .complete()
+                    }
+                    return .single(value)
+                }
+                |> distinctUntilChanged
+                |> mapToSignal { value -> Signal<Never, NoError> in
+                    if isMaxMessageId {
+                        return network.request(Api.functions.messages.receivedMessages(maxId: value))
+                        |> ignoreValues
+                        |> `catch` { _ -> Signal<Never, NoError> in
+                            return .complete()
+                        }
+                    } else {
+                        return network.request(Api.functions.messages.receivedQueue(maxQts: value))
+                        |> ignoreValues
+                        |> `catch` { _ -> Signal<Never, NoError> in
+                            return .complete()
+                        }
+                    }
+                }).start())
+            }
         }
     }
     
@@ -509,6 +550,12 @@ public final class AccountStateManager {
                             if !events.isContactUpdates.isEmpty {
                                 strongSelf.account.contactSyncManager.addIsContactUpdates(events.isContactUpdates)
                             }
+                            if let updatedMaxMessageId = events.updatedMaxMessageId {
+                                strongSelf.appliedMaxMessageIdPromise.set(.single(updatedMaxMessageId))
+                            }
+                            if let updatedQts = events.updatedQts {
+                                strongSelf.appliedQtsPromise.set(.single(updatedQts))
+                            }
                             var pollCount = 0
                             for i in 0 ..< strongSelf.operations.count {
                                 if case let .pollCompletion(pollId, messageIds, subscribers) = strongSelf.operations[i].content {
@@ -604,8 +651,8 @@ public final class AccountStateManager {
                 let signal = self.account.postbox.transaction { transaction -> AccountReplayedFinalState? in
                     return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
                     }
-                    |> map({ ($0, finalState) })
-                    |> deliverOn(self.queue)
+                |> map({ ($0, finalState) })
+                |> deliverOn(self.queue)
                 
                 let _ = signal.start(next: { [weak self] replayedState, finalState in
                     if let strongSelf = self {

@@ -112,6 +112,9 @@ struct AccountMutableState {
     
     var preCachedResources: [(MediaResource, Data)] = []
     
+    var updatedMaxMessageId: Int32?
+    var updatedQts: Int32?
+    
     init(initialState: AccountInitialState, initialPeers: [PeerId: Peer], initialReferencedMessageIds: Set<MessageId>, initialStoredMessages: Set<MessageId>, initialReadInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]) {
         self.initialState = initialState
         self.state = initialState.state
@@ -219,6 +222,9 @@ struct AccountMutableState {
     }
     
     mutating func updateState(_ state: AuthorizedAccountState.State) {
+        if self.initialState.state.seq != state.qts {
+            self.updatedQts = state.qts
+        }
         self.addOperation(.UpdateState(state))
     }
     
@@ -337,10 +343,21 @@ struct AccountMutableState {
         switch operation {
             case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact:
                 break
-            case let .AddMessages(messages, _):
+            case let .AddMessages(messages, location):
                 for message in messages {
                     if case let .Id(id) = message.id {
                         self.storedMessages.insert(id)
+                        if case .UpperHistoryBlock = location {
+                            if (id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup) && id.namespace == Namespaces.Message.Cloud {
+                                if let updatedMaxMessageId = self.updatedMaxMessageId {
+                                    if updatedMaxMessageId < id.id {
+                                        self.updatedMaxMessageId = id.id
+                                    }
+                                } else {
+                                    self.updatedMaxMessageId = id.id
+                                }
+                            }
+                        }
                     }
                     inner: for attribute in message.attributes {
                         if let attribute = attribute as? ReplyMessageAttribute {
@@ -348,6 +365,7 @@ struct AccountMutableState {
                             break inner
                         }
                     }
+                    
                 }
             case let .UpdateState(state):
                 self.state = state
@@ -424,9 +442,11 @@ struct AccountFinalStateEvents {
     let isContactUpdates: [(PeerId, Bool)]
     let displayAlerts: [String]
     let delayNotificatonsUntil: Int32?
+    let updatedMaxMessageId: Int32?
+    let updatedQts: Int32?
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil
+        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil
     }
     
     init() {
@@ -437,9 +457,11 @@ struct AccountFinalStateEvents {
         self.isContactUpdates = []
         self.displayAlerts = []
         self.delayNotificatonsUntil = nil
+        self.updatedMaxMessageId = nil
+        self.updatedQts = nil
     }
     
-    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall], isContactUpdates: [(PeerId, Bool)], displayAlerts: [String], delayNotificatonsUntil: Int32?) {
+    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall], isContactUpdates: [(PeerId, Bool)], displayAlerts: [String], delayNotificatonsUntil: Int32?, updatedMaxMessageId: Int32?, updatedQts: Int32?) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = updatedTypingActivities
         self.updatedWebpages = updatedWebpages
@@ -447,6 +469,8 @@ struct AccountFinalStateEvents {
         self.isContactUpdates = isContactUpdates
         self.displayAlerts = displayAlerts
         self.delayNotificatonsUntil = delayNotificatonsUntil
+        self.updatedMaxMessageId = updatedMaxMessageId
+        self.updatedQts = updatedQts
     }
     
     init(state: AccountReplayedFinalState) {
@@ -457,6 +481,8 @@ struct AccountFinalStateEvents {
         self.isContactUpdates = state.isContactUpdates
         self.displayAlerts = state.state.state.displayAlerts
         self.delayNotificatonsUntil = state.delayNotificatonsUntil
+        self.updatedMaxMessageId = state.state.state.updatedMaxMessageId
+        self.updatedQts = state.state.state.updatedQts
     }
     
     func union(with other: AccountFinalStateEvents) -> AccountFinalStateEvents {
@@ -466,6 +492,19 @@ struct AccountFinalStateEvents {
                 delayNotificatonsUntil = other
             }
         }
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil)
+        var updatedMaxMessageId: Int32?
+        var updatedQts: Int32?
+        if let lhsMaxMessageId = self.updatedMaxMessageId, let rhsMaxMessageId = other.updatedMaxMessageId {
+            updatedMaxMessageId = max(lhsMaxMessageId, rhsMaxMessageId)
+        } else {
+            updatedMaxMessageId = self.updatedMaxMessageId ?? other.updatedMaxMessageId
+        }
+        if let lhsQts = self.updatedQts, let rhsQts = other.updatedQts {
+            updatedQts = max(lhsQts, rhsQts)
+        } else {
+            updatedQts = self.updatedQts ?? other.updatedQts
+        }
+        
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil, updatedMaxMessageId: updatedMaxMessageId, updatedQts: updatedQts)
     }
 }
