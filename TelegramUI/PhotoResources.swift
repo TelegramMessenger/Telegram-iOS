@@ -663,7 +663,7 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
     }
 }
 
-private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: ImageMediaReference) -> Signal<(Data?, Data?, Bool), NoError> {
+private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: ImageMediaReference, onlyFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     let fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0)
     if let smallestRepresentation = smallestImageRepresentation(photoReference.media.representations), let largestRepresentation = photoReference.media.representationForDisplayAtSize(fullRepresentationSize) {
         

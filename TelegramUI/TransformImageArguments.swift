@@ -13,9 +13,9 @@ public struct TransformImageArguments: Equatable {
     public let boundingSize: CGSize
     public let intrinsicInsets: UIEdgeInsets
     public let resizeMode: TransformImageResizeMode
-    public let emptyColor: UIColor
+    public let emptyColor: UIColor?
     
-    public init(corners: ImageCorners, imageSize: CGSize, boundingSize: CGSize, intrinsicInsets: UIEdgeInsets, resizeMode: TransformImageResizeMode = .fill(.black), emptyColor: UIColor = .white) {
+    public init(corners: ImageCorners, imageSize: CGSize, boundingSize: CGSize, intrinsicInsets: UIEdgeInsets, resizeMode: TransformImageResizeMode = .fill(.black), emptyColor: UIColor? = nil) {
         self.corners = corners
         self.imageSize = imageSize
         self.boundingSize = boundingSize

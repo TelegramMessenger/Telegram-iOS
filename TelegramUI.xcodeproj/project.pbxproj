@@ -23,6 +23,12 @@
 		0941A9A4210B0E2E00EBE194 /* OpenInAppIconResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */; };
 		0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A5210B822D00EBE194 /* OpenInOptions.swift */; };
 		0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */; };
+		0952D1772177FB5400194860 /* WatchPresetSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1762177FB5400194860 /* WatchPresetSettings.swift */; };
+		096C98BA21787A5C00C211FF /* LegacyBridgeAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */; };
+		096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */; };
+		096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */; };
+		096C98C121787C6700C211FF /* TGBridgeAudioDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BD21787C6700C211FF /* TGBridgeAudioDecoder.h */; };
+		096C98C221787C6700C211FF /* TGBridgeAudioDecoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */; };
 		09797873210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */; };
 		0979787C210642CB0077D77F /* WebEmbedPlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */; };
 		0979787E210646C00077D77F /* YoutubeEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */; };
@@ -40,6 +46,8 @@
 		09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */; };
 		09C3466D2167D63A00B76780 /* Accessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C3466C2167D63A00B76780 /* Accessibility.swift */; };
 		09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */; };
+		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
+		09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304172173C15700C00567 /* WatchSettingsController.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
@@ -1044,6 +1052,12 @@
 		0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInAppIconResources.swift; sourceTree = "<group>"; };
 		0941A9A5210B822D00EBE194 /* OpenInOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInOptions.swift; sourceTree = "<group>"; };
 		0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationMuteSettingsController.swift; sourceTree = "<group>"; };
+		0952D1762177FB5400194860 /* WatchPresetSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchPresetSettings.swift; sourceTree = "<group>"; };
+		096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBridgeAudio.swift; sourceTree = "<group>"; };
+		096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeAudioEncoder.m; sourceTree = "<group>"; };
+		096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
+		096C98BD21787C6700C211FF /* TGBridgeAudioDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioDecoder.h; sourceTree = "<group>"; };
+		096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGBridgeAudioDecoder.mm; sourceTree = "<group>"; };
 		09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsButtonItemNode.swift; sourceTree = "<group>"; };
 		0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebEmbedPlayerNode.swift; sourceTree = "<group>"; };
 		0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YoutubeEmbedImplementation.swift; sourceTree = "<group>"; };
@@ -1065,6 +1079,8 @@
 		09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySecureIdScanController.swift; sourceTree = "<group>"; };
 		09C3466C2167D63A00B76780 /* Accessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accessibility.swift; sourceTree = "<group>"; };
 		09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
+		09D304142173C0E900C00567 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
+		09D304172173C15700C00567 /* WatchSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSettingsController.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		D00219051DDD1C9E00BE708A /* ImageContainingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageContainingNode.swift; sourceTree = "<group>"; };
 		D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVideoSource.swift; sourceTree = "<group>"; };
@@ -2213,6 +2229,18 @@
 			name = "Open In";
 			sourceTree = "<group>";
 		};
+		0965C7152178738A007C94D0 /* Bridge Audio */ = {
+			isa = PBXGroup;
+			children = (
+				096C98BD21787C6700C211FF /* TGBridgeAudioDecoder.h */,
+				096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */,
+				096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */,
+				096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */,
+				096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */,
+			);
+			name = "Bridge Audio";
+			sourceTree = "<group>";
+		};
 		0979787F21065EAA0077D77F /* Web Embed */ = {
 			isa = PBXGroup;
 			children = (
@@ -2243,6 +2271,14 @@
 				09874E4421075C3F00E190B8 /* StreamableEmbedImplementation.swift */,
 			);
 			name = "Web Embed";
+			sourceTree = "<group>";
+		};
+		09D304162173C13500C00567 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				09D304172173C15700C00567 /* WatchSettingsController.swift */,
+			);
+			name = Watch;
 			sourceTree = "<group>";
 		};
 		D00C7CDA1E3776CA0080C3D5 /* Secret Preview */ = {
@@ -2884,6 +2920,7 @@
 		D07551891DDA4C7C0073E051 /* Legacy Components */ = {
 			isa = PBXGroup;
 			children = (
+				0965C7152178738A007C94D0 /* Bridge Audio */,
 				D04BB2C61E48797500650E93 /* RMIntro */,
 				D067B4AE211C916D00796039 /* Channel Intro */,
 				D075518A1DDA4D7D0073E051 /* LegacyController.swift */,
@@ -2999,6 +3036,7 @@
 				D048B33A203C777500038D05 /* RenderedTotalUnreadCount.swift */,
 				D06ECFCA20B8448E00C576C2 /* ContactSynchronizationSettings.swift */,
 				D08A10BA211DF7A80077488B /* StickerSettings.swift */,
+				0952D1762177FB5400194860 /* WatchPresetSettings.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -4229,6 +4267,7 @@
 				D0C9323A1E0B4AD40074F044 /* Data and Storage */,
 				D0FA0AC31E7742EE005BB9B7 /* Stickers */,
 				D05BFB4F1EA96EC100909D38 /* Themes */,
+				09D304162173C13500C00567 /* Watch */,
 				D0AF7C441ED84BB000CD8E0F /* Language Selection */,
 				D0CB27D020C17A6D001ACF93 /* Terms of Service */,
 				D01B279A1E39386C0022A4C0 /* SettingsController.swift */,
@@ -4284,6 +4323,7 @@
 				D0383ED5207D19BC00C45548 /* Emoji */,
 				D0B69C3A20EBD8B3003632C7 /* Device Access */,
 				D01C7EFE1EF9D434008305F1 /* Device Contacts */,
+				09D304142173C0E900C00567 /* WatchManager.swift */,
 				D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */,
 				D08775081E3E59DE00A97350 /* PeerNotificationSoundStrings.swift */,
 				D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */,
@@ -4465,6 +4505,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0E9BA221F05577700F079A4 /* STPCard.h in Headers */,
+				096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */,
 				D0E9BA591F055A2200F079A4 /* STPWeakStrongMacros.h in Headers */,
 				D0E9BADE1F0574D800F079A4 /* STPBackendAPIAdapter.h in Headers */,
 				D0E9BAD11F0573C000F079A4 /* STPToken.h in Headers */,
@@ -4495,6 +4536,7 @@
 				D06F31E22135829B001A0F12 /* EDSunriseSet.h in Headers */,
 				D0E9BA531F0559DA00F079A4 /* STPImageLibrary+Private.h in Headers */,
 				D0E9BA601F055A4300F079A4 /* STPDelegateProxy.h in Headers */,
+				096C98C121787C6700C211FF /* TGBridgeAudioDecoder.h in Headers */,
 				D0E9BADF1F0574D800F079A4 /* STPDispatchFunctions.h in Headers */,
 				D0E9BACB1F05738600F079A4 /* STPAPIPostRequest.h in Headers */,
 				D0E9BA561F055A0B00F079A4 /* STPFormTextField.h in Headers */,
@@ -4717,6 +4759,7 @@
 				D0208ADC1FA346A4001F0D5F /* RaiseToListen.swift in Sources */,
 				D0EB41F91F30E5B700838FE6 /* LegacyPeerAvatarPlaceholderDataSource.swift in Sources */,
 				D0EC6CBB1EB9F58800EBF1C3 /* texture_helper.m in Sources */,
+				09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */,
 				D0EC6CBC1EB9F58800EBF1C3 /* LegacyController.swift in Sources */,
 				D0EC6CBD1EB9F58800EBF1C3 /* LegacyControllerNode.swift in Sources */,
 				D079FCE91F06A76C0038FADE /* Notices.swift in Sources */,
@@ -4841,6 +4884,7 @@
 				D0ACCB1A1EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift in Sources */,
 				D0E9BA611F055A4300F079A4 /* STPDelegateProxy.m in Sources */,
 				D0EC6CF91EB9F58800EBF1C3 /* MediaManager.swift in Sources */,
+				096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */,
 				D01776B81F1D6FB30044446D /* RadialProgressContentNode.swift in Sources */,
 				D0EC6CFA1EB9F58800EBF1C3 /* ManagedAudioSession.swift in Sources */,
 				D0EB5ADF1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift in Sources */,
@@ -4977,6 +5021,7 @@
 				D0EC6D3F1EB9F58800EBF1C3 /* MediaNavigationAccessoryPanel.swift in Sources */,
 				D0E9BA3B1F0558E800F079A4 /* NSString+Stripe.m in Sources */,
 				D0CE8CE51F6F354400AA2DB0 /* ChatTextInputAccessoryItem.swift in Sources */,
+				096C98BA21787A5C00C211FF /* LegacyBridgeAudio.swift in Sources */,
 				D0EC6D401EB9F58800EBF1C3 /* MediaNavigationAccessoryContainerNode.swift in Sources */,
 				D0E266FD1F66706500BFC79F /* ChatBubbleVideoDecoration.swift in Sources */,
 				D0EC6D411EB9F58800EBF1C3 /* MediaNavigationAccessoryHeaderNode.swift in Sources */,
@@ -5002,6 +5047,7 @@
 				D0208ADA1FA34017001F0D5F /* DeviceProximityManager.m in Sources */,
 				D04281FC200E61BC009DDE36 /* ChatRecentActionsInteraction.swift in Sources */,
 				D0EC6D561EB9F58800EBF1C3 /* ChatHistoryNode.swift in Sources */,
+				096C98C221787C6700C211FF /* TGBridgeAudioDecoder.mm in Sources */,
 				D0EC6D571EB9F58800EBF1C3 /* ChatHistoryListNode.swift in Sources */,
 				D0EC6D581EB9F58800EBF1C3 /* ChatHistoryGridNode.swift in Sources */,
 				D0B2F76E2052B59F00D3BFB9 /* InviteContactsController.swift in Sources */,
@@ -5131,6 +5177,7 @@
 				D0147BA7206E8B4F00E40378 /* SecureIdAuthAcceptNode.swift in Sources */,
 				D0E8174E2011FC3800B82BBB /* ChatMessageEventLogPreviousDescriptionContentNode.swift in Sources */,
 				D0EC6D981EB9F58900EBF1C3 /* ChatMessageItemView.swift in Sources */,
+				09D304152173C0E900C00567 /* WatchManager.swift in Sources */,
 				D039FB1921711B5D00BD1BAD /* PlatformVideoContent.swift in Sources */,
 				D0CAD8FD20AE467D00ACD96E /* PeerChannelMemberCategoriesContextsManager.swift in Sources */,
 				D073D2DB1FB61DA9009E1DA2 /* CallListSettings.swift in Sources */,
@@ -5360,6 +5407,7 @@
 				D0EC6E171EB9F58900EBF1C3 /* InstantPageTextStyleStack.swift in Sources */,
 				D0EC6E181EB9F58900EBF1C3 /* InstantPageTextItem.swift in Sources */,
 				D01C06B51FBB7720001561AB /* ChatMediaInputSettingsItem.swift in Sources */,
+				0952D1772177FB5400194860 /* WatchPresetSettings.swift in Sources */,
 				D091C7A61F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift in Sources */,
 				D0EC6E191EB9F58900EBF1C3 /* InstantPageAnchorItem.swift in Sources */,
 				D05677531F4CA0D0001B723E /* InstantPagePeerReferenceNode.swift in Sources */,
