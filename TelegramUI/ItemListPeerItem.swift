@@ -354,7 +354,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: item.dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
                         statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
                     } else {
-                        statusAttributedString = NSAttributedString(string: item.strings.LastSeen_ALongTimeAgo, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        statusAttributedString = NSAttributedString(string: item.strings.LastSeen_Offline, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                     }
                 case let .text(text):
                     statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)

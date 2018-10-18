@@ -253,7 +253,7 @@ func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationStrings, 
 func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: TelegramUserPresence, relativeTo timestamp: Int32) -> (String, Bool) {
     switch presence.status {
         case .none:
-            return (strings.LastSeen_ALongTimeAgo, false)
+            return (strings.LastSeen_Offline, false)
         case let .present(statusTimestamp):
             if statusTimestamp >= timestamp {
                 return (strings.Presence_online, true)

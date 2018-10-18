@@ -140,14 +140,14 @@ private final class DownloadedMediaStoreManagerImpl {
     private var nextId: Int32 = 1
     private var storeContexts: [MediaId: DownloadedMediaStoreContext] = [:]
     
-    private let appSpecificAssetCollectionValue = Promise<PHAssetCollection>()
+    private let appSpecificAssetCollectionValue: Promise<PHAssetCollection>
     private let storeSettings = Promise<Bool>()
     
     init(queue: Queue, postbox: Postbox) {
         self.queue = queue
         self.postbox = postbox
         
-        self.appSpecificAssetCollectionValue.set(appSpecificAssetCollection())
+        self.appSpecificAssetCollectionValue = Promise(initializeOnFirstAccess: appSpecificAssetCollection())
         self.storeSettings.set(postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])
         |> map { view -> Bool in
             if let settings = view.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
@@ -174,7 +174,8 @@ private final class DownloadedMediaStoreManagerImpl {
         if self.storeContexts[id] == nil {
             let context = DownloadedMediaStoreContext(queue: self.queue)
             self.storeContexts[id] = context
-            context.start(postbox: self.postbox, collection: self.appSpecificAssetCollectionValue.get(), storeSettings: self.storeSettings.get(), timestamp: timestamp, media: media, completed: { [weak self, weak context] in
+            let appSpecificAssetCollectionValue = self.appSpecificAssetCollectionValue
+            context.start(postbox: self.postbox, collection: deferred { appSpecificAssetCollectionValue.get() }, storeSettings: self.storeSettings.get(), timestamp: timestamp, media: media, completed: { [weak self, weak context] in
                 guard let strongSelf = self, let context = context else {
                     return
                 }

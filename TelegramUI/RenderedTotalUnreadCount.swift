@@ -34,8 +34,8 @@ public func renderedTotalUnreadCount(postbox: Postbox) -> Signal<(Int32, Rendere
     return postbox.combinedView(keys: [unreadCountsKey, inAppSettingsKey])
     |> map { view -> (Int32, RenderedTotalUnreadCountType) in
         var value: Int32 = 0
-        var style: TotalUnreadCountDisplayStyle = .filtered
-        var categoryType: TotalUnreadCountDisplayCategory = .chats
+        var style: TotalUnreadCountDisplayStyle = .raw
+        var categoryType: TotalUnreadCountDisplayCategory = .messages
         if let preferences = view.views[inAppSettingsKey] as? PreferencesView, let inAppSettings = preferences.values[ApplicationSpecificPreferencesKeys.inAppNotificationSettings] as? InAppNotificationSettings {
             style = inAppSettings.totalUnreadCountDisplayStyle
             categoryType = inAppSettings.totalUnreadCountDisplayCategory

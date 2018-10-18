@@ -21,7 +21,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     public var displayNameOnLockscreen: Bool
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .chats, displayNameOnLockscreen: true)
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .raw, totalUnreadCountDisplayCategory: .messages, displayNameOnLockscreen: true)
     }
     
     init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, displayNameOnLockscreen: Bool) {

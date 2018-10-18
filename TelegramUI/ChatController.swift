@@ -66,6 +66,8 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
     return true
 }
 
+let ChatControllerCount = Atomic<Int32>(value: 0)
+
 public final class ChatController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -190,6 +192,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     var purposefulAction: (() -> Void)?
     
     public init(account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
+        let _ = ChatControllerCount.modify { value in
+            return value + 1
+        }
+        
         self.account = account
         self.chatLocation = chatLocation
         self.messageId = messageId
@@ -1344,6 +1350,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     }
     
     deinit {
+        let _ = ChatControllerCount.modify { value in
+            return value - 1
+        }
         self.historyStateDisposable?.dispose()
         self.messageIndexDisposable.dispose()
         self.navigationActionDisposable.dispose()
