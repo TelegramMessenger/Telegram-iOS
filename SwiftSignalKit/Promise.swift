@@ -1,12 +1,18 @@
 import Foundation
 
 public final class Promise<T> {
+    private var initializeOnFirstAccess: Signal<T, NoError>?
     private var value: T?
     private var lock = pthread_mutex_t()
     private let disposable = MetaDisposable()
     private let subscribers = Bag<(T) -> Void>()
     
     public var onDeinit: (() -> Void)?
+    
+    public init(initializeOnFirstAccess: Signal<T, NoError>?) {
+        self.initializeOnFirstAccess = initializeOnFirstAccess
+        pthread_mutex_init(&self.lock, nil)
+    }
     
     public init(_ value: T) {
         self.value = value
@@ -45,15 +51,23 @@ public final class Promise<T> {
     public func get() -> Signal<T, NoError> {
         return Signal { subscriber in
             pthread_mutex_lock(&self.lock)
+            var initializeOnFirstAccessNow: Signal<T, NoError>?
+            if let initializeOnFirstAccess = self.initializeOnFirstAccess {
+                initializeOnFirstAccessNow = initializeOnFirstAccess
+                self.initializeOnFirstAccess = nil
+            }
             let currentValue = self.value
             let index = self.subscribers.add({ next in
                 subscriber.putNext(next)
             })
             pthread_mutex_unlock(&self.lock)
-            
 
             if let currentValue = currentValue {
                 subscriber.putNext(currentValue)
+            }
+            
+            if let initializeOnFirstAccessNow = initializeOnFirstAccessNow {
+                self.set(initializeOnFirstAccessNow)
             }
 
             return ActionDisposable {
