@@ -3,7 +3,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-func freeMediaFileInteractiveFetched(account: Account, fileReference: FileMediaReference) -> Signal<FetchResourceSourceType, NoError> {
+public func freeMediaFileInteractiveFetched(account: Account, fileReference: FileMediaReference) -> Signal<FetchResourceSourceType, NoError> {
     return fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource))
 }
 
@@ -25,7 +25,7 @@ private func fetchCategoryForFile(_ file: TelegramMediaFile) -> FetchManagerCate
     }
 }
 
-func messageMediaFileInteractiveFetched(account: Account, message: Message, file: TelegramMediaFile, userInitiated: Bool) -> Signal<Void, NoError> {
+public func messageMediaFileInteractiveFetched(account: Account, message: Message, file: TelegramMediaFile, userInitiated: Bool) -> Signal<Void, NoError> {
     let mediaReference = AnyMediaReference.message(message: MessageReference(message), media: file)
     return account.telegramApplicationContext.fetchManager.interactivelyFetched(category: fetchCategoryForFile(file), location: .chat(message.id.peerId), locationKey: .messageId(message.id), mediaReference: mediaReference, resourceReference: mediaReference.resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes), elevatedPriority: false, userInitiated: userInitiated)
 }
@@ -34,7 +34,7 @@ func messageMediaFileCancelInteractiveFetch(account: Account, messageId: Message
     account.telegramApplicationContext.fetchManager.cancelInteractiveFetches(category: fetchCategoryForFile(file), location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
 }
 
-func messageMediaImageInteractiveFetched(account: Account, message: Message, image: TelegramMediaImage, resource: MediaResource, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<Void, NoError> {
+public func messageMediaImageInteractiveFetched(account: Account, message: Message, image: TelegramMediaImage, resource: MediaResource, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<Void, NoError> {
     let mediaReference = AnyMediaReference.message(message: MessageReference(message), media: image)
     return account.telegramApplicationContext.fetchManager.interactivelyFetched(category: .image, location: .chat(message.id.peerId), locationKey: .messageId(message.id), mediaReference: mediaReference, resourceReference: mediaReference.resourceReference(resource), statsCategory: .image, elevatedPriority: false, userInitiated: true, storeToDownloadsPeerType: storeToDownloadsPeerType)
 }

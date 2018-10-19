@@ -318,8 +318,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 if let strongSelf = self {
                                     if file.isAnimated {
                                         strongSelf.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
-                                   } else {
-                                    strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: manual).start())
+                                    } else {
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: manual).start())
                                     }
                                 }
                             }, cancel: {

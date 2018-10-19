@@ -220,11 +220,24 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
     if view.laterIndex == nil && savedMessagesPeer == nil {
         pinnedIndexOffset = UInt16(view.additionalItemEntries.count)
     }
+    
+    
+    
     loop: for entry in view.entries {
         switch entry {
             case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                 if let savedMessagesPeer = savedMessagesPeer, savedMessagesPeer.id == index.messageIndex.id.peerId {
                     continue loop
+                }
+                switch mode {
+                case let .peers(filter):
+                    if filter.contains(.withoutSecretChats) {
+                        if index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                            continue
+                        }
+                    }
+                default:
+                    break
                 }
                 result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: message, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false))
             case let .HoleEntry(hole):

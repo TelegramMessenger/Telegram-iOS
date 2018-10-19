@@ -99,6 +99,8 @@ public final class TelegramApplicationContext {
     }
     private var hasOngoingCallDisposable: Disposable?
     
+    public var watchManager: WatchManager?
+    
     private var immediateExperimentalUISettingsValue = Atomic<ExperimentalUISettings>(value: ExperimentalUISettings.defaultSettings)
     public var immediateExperimentalUISettings: ExperimentalUISettings {
         return self.immediateExperimentalUISettingsValue.with { $0 }

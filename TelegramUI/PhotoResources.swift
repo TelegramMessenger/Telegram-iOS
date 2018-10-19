@@ -663,11 +663,11 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
     }
 }
 
-private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: ImageMediaReference) -> Signal<(Data?, Data?, Bool), NoError> {
+private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: ImageMediaReference, onlyFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     let fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0)
     if let smallestRepresentation = smallestImageRepresentation(photoReference.media.representations), let largestRepresentation = photoReference.media.representationForDisplayAtSize(fullRepresentationSize) {
         
-        let maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 180.0, height: 180.0), mode: .aspectFit), complete: false)
+        let maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 180.0, height: 180.0), mode: .aspectFit), complete: onlyFullSize)
         
         let signal = maybeFullSize
         |> take(1)
@@ -710,12 +710,12 @@ private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: Im
     }
 }
 
-public func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessagePhotoThumbnailDatas(account: account, photoReference: photoReference)
+public func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMediaReference, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMessagePhotoThumbnailDatas(account: account, photoReference: photoReference, onlyFullSize: onlyFullSize)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
             
             let drawingRect = arguments.drawingRect
             var fittedSize = arguments.imageSize
@@ -803,7 +803,7 @@ public func chatMessageVideoThumbnail(account: Account, fileReference: FileMedia
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
             
             let drawingRect = arguments.drawingRect
             var fittedSize = arguments.imageSize
@@ -1565,7 +1565,7 @@ func chatWebpageSnippetPhoto(account: Account, photoReference: ImageMediaReferen
             }
             
             if let fullSizeImage = fullSizeImage {
-                let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
                 
                 let fittedSize = CGSize(width: fullSizeImage.width, height: fullSizeImage.height).aspectFilled(arguments.boundingSize)
                 let drawingRect = arguments.drawingRect

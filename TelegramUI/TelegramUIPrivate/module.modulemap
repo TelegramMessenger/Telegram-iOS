@@ -28,4 +28,6 @@ module TelegramUIPrivateModule {
     header "../TGEmojiSuggestions.h"
     header "../TGChannelIntroController.h"
     header "../EDSunriseSet.h"
+    header "../TGBridgeAudioDecoder.h"
+    header "../TGBridgeAudioEncoder.h"
 }

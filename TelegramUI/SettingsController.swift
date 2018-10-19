@@ -17,7 +17,8 @@ private final class SettingsItemIcons {
     static let appearance = UIImage(bundleImageName: "Settings/MenuIcons/Appearance")?.precomposed()
     static let language = UIImage(bundleImageName: "Settings/MenuIcons/Language")?.precomposed()
     
-    static let secureId = UIImage(bundleImageName: "Settings/MenuIcons/Passport")?.precomposed()
+    static let passport = UIImage(bundleImageName: "Settings/MenuIcons/Passport")?.precomposed()
+    static let watch = UIImage(bundleImageName: "Settings/MenuIcons/Watch")?.precomposed()
     
     static let support = UIImage(bundleImageName: "Settings/MenuIcons/Support")?.precomposed()
     static let faq = UIImage(bundleImageName: "Settings/MenuIcons/Faq")?.precomposed()
@@ -42,6 +43,7 @@ private struct SettingsItemArguments {
     let presentController: (ViewController) -> Void
     let openLanguage: () -> Void
     let openPassport: () -> Void
+    let openWatch: () -> Void
     let openSupport: () -> Void
     let openFaq: () -> Void
     let openEditing: () -> Void
@@ -54,7 +56,7 @@ private enum SettingsSection: Int32 {
     case proxy
     case media
     case generalSettings
-    case passport
+    case advanced
     case help
 }
 
@@ -75,6 +77,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case themes(PresentationTheme, UIImage?, String)
     case language(PresentationTheme, UIImage?, String, String)
     case passport(PresentationTheme, UIImage?, String, String)
+    case watch(PresentationTheme, UIImage?, String, String)
     
     case askAQuestion(PresentationTheme, UIImage?, String)
     case faq(PresentationTheme, UIImage?, String)
@@ -89,8 +92,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return SettingsSection.media.rawValue
             case .notificationsAndSounds, .privacyAndSecurity, .dataAndStorage, .themes, .language:
                 return SettingsSection.generalSettings.rawValue
-            case .passport:
-                return SettingsSection.passport.rawValue
+            case .passport, .watch :
+                return SettingsSection.advanced.rawValue
             case .askAQuestion, .faq:
                 return SettingsSection.help.rawValue
         }
@@ -124,10 +127,12 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return 11
             case .passport:
                 return 12
-            case .askAQuestion:
+            case .watch:
                 return 13
-            case .faq:
+            case .askAQuestion:
                 return 14
+            case .faq:
+                return 15
         }
     }
     
@@ -240,6 +245,12 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .watch(lhsTheme, lhsImage, lhsText, lhsValue):
+                if case let .watch(rhsTheme, rhsImage, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .askAQuestion(lhsTheme, lhsImage, lhsText):
                 if case let .askAQuestion(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
                     return true
@@ -320,6 +331,10 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openPassport()
                 })
+            case let .watch(theme, image, text, value):
+                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.openWatch()
+                })
             case let .askAQuestion(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openSupport()
@@ -351,7 +366,7 @@ private struct SettingsState: Equatable {
     }
 }
 
-private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool) -> [SettingsEntry] {
+private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -390,7 +405,10 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         entries.append(.language(presentationData.theme, SettingsItemIcons.language, presentationData.strings.Settings_AppLanguage, presentationData.strings.Localization_LanguageName))
         
         if hasPassport {
-            entries.append(.passport(presentationData.theme, SettingsItemIcons.secureId, presentationData.strings.Settings_Passport, ""))
+            entries.append(.passport(presentationData.theme, SettingsItemIcons.passport, presentationData.strings.Settings_Passport, ""))
+        }
+        if hasWatchApp {
+            entries.append(.watch(presentationData.theme, SettingsItemIcons.watch, presentationData.strings.Settings_AppleWatch, ""))
         }
         
         entries.append(.askAQuestion(presentationData.theme, SettingsItemIcons.support, presentationData.strings.Settings_Support))
@@ -516,6 +534,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }, openPassport: {
         let controller = SecureIdAuthController(account: account, mode: .list)
         presentControllerImpl?(controller, nil)
+    }, openWatch: {
+        let controller = watchSettingsController(account: account)
+        pushControllerImpl?(controller)
     }, openSupport: {
         let supportPeer = Promise<PeerId?>()
         supportPeer.set(supportPeerId(account: account))
@@ -654,8 +675,13 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }
     updatePassport()
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), hasPassport.get())
-        |> map { presentationData, state, view, preferences, featuredAndArchived, hasPassport -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    let hasWatchApp = Promise<Bool>(false)
+    if let context = account.applicationContext as? TelegramApplicationContext, let watchManager = context.watchManager {
+        hasWatchApp.set(watchManager.watchAppInstalled)
+    }
+    
+    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()))
+        |> map { presentationData, state, view, preferences, featuredAndArchived, hasPassportAndWatch -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let proxySettings: ProxySettings
             if let value = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
                 proxySettings = value
@@ -679,7 +705,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
                 }
             }
             
-            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport), style: .blocks)
+            let (hasPassport, hasWatchApp) = hasPassportAndWatch
+            
+            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp), style: .blocks)
             
             return (controllerState, (listState, arguments))
     } |> afterDisposed {
