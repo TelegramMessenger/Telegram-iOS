@@ -162,7 +162,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                     var menuItems: [PeekControllerMenuItem] = []
                                     menuItems = [
                                         PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
-                                            controllerInteraction.sendSticker(.standalone(media: item.file))
+                                            controllerInteraction.sendSticker(.standalone(media: item.file), true)
                                         }),
                                         PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
                                             if let strongSelf = self {
@@ -182,7 +182,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                                             let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference, parentNavigationController: controllerInteraction.navigationController())
                                                             controller.sendSticker = { file in
                                                                 if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                                                    controllerInteraction.sendSticker(file)
+                                                                    controllerInteraction.sendSticker(file, true)
                                                                 }
                                                             }
                                                             

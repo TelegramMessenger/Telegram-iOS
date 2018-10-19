@@ -163,7 +163,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
                 controller.sendSticker = { fileReference in
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction.sendSticker(fileReference)
+                        strongSelf.controllerInteraction.sendSticker(fileReference, false)
                     }
                 }
                 strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

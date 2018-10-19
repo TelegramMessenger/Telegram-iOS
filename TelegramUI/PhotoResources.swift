@@ -1430,12 +1430,12 @@ func chatMessagePhotoStatus(account: Account, messageId: MessageId, photoReferen
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference, storeToDownloads: Bool) -> Signal<FetchResourceSourceType, NoError> {
+public func chatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<FetchResourceSourceType, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return fetchedMediaResource(postbox: account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, NoError> in
-            if case .remote = type, storeToDownloads {
-                return storeDownloadedMedia(storeManager: account.telegramApplicationContext.mediaManager?.downloadedMediaStoreManager, media: photoReference.abstract)
+            if case .remote = type, let peerType = storeToDownloadsPeerType {
+                return storeDownloadedMedia(storeManager: account.telegramApplicationContext.mediaManager?.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, NoError> in
                     return .complete()
                 }

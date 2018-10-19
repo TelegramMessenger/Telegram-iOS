@@ -68,7 +68,27 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
-public final class ChatController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate, UIDropInteractionDelegate {
+@available(iOSApplicationExtension 9.0, *)
+private final class ChatControllerPreviewingDelegate: NSObject, UIViewControllerPreviewingDelegate {
+    private weak var target: (NSObject & UIViewControllerPreviewingDelegate)?
+    
+    init(target: NSObject & UIViewControllerPreviewingDelegate) {
+        self.target = target
+        
+        super.init()
+    }
+    
+    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
+        return self.target?.previewingContext(previewingContext, viewControllerForLocation: location)
+    }
+    
+    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
+        self.target?.previewingContext(previewingContext, commit: viewControllerToCommit)
+    }
+}
+
+public final class ChatController: TelegramController, KeyShortcutResponder, UIDropInteractionDelegate, UIViewControllerPreviewingDelegate {
+    private var previewingDelegate: AnyObject?
     private var validLayout: ContainerViewLayout?
     
     public var peekActions: ChatControllerPeekActions = .standard
@@ -316,7 +336,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
             }, enqueueMessage: { message in
                 self?.sendMessages([message])
             }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference in
-                self?.controllerInteraction?.sendSticker(fileReference)
+                self?.controllerInteraction?.sendSticker(fileReference, false)
             } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
                 if let strongSelf = self {
                     strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
@@ -451,19 +471,27 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
             }
             strongSelf.sendMessages([.message(text: text, attributes: attributes, mediaReference: nil, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
-        }, sendSticker: { [weak self] fileReference in
+        }, sendSticker: { [weak self] fileReference, clearInput in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState {
-                                $0.withUpdatedReplyMessageId(nil)
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                            var current = current
+                            current = current.updatedInterfaceState { interfaceState in
+                                var interfaceState = interfaceState
+                                interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
+                                if clearInput {
+                                    interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString()))
+                                }
+                                return interfaceState
                             }.updatedInputMode { current in
                                 if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil {
                                     return .media(mode: mode, expanded: nil)
                                 }
                                 return current
                             }
+                            
+                            return current
                         })
                     }
                 })
@@ -2811,11 +2839,19 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
             if #available(iOSApplicationExtension 9.0, *) {
-                self.registerForPreviewing(with: self, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
-                if case .peer = self.chatLocation, let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view {
-                    self.registerForPreviewing(with: self, sourceView: buttonView, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
+                let previewingDelegate: ChatControllerPreviewingDelegate
+                if let current = self.previewingDelegate as? ChatControllerPreviewingDelegate {
+                    previewingDelegate = current
+                } else {
+                    previewingDelegate = ChatControllerPreviewingDelegate(target: self)
+                    self.previewingDelegate = previewingDelegate
                 }
-                self.registerForPreviewing(with: self, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
+                
+                //self.registerForPreviewing(with: previewingDelegate, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
+                if case .peer = self.chatLocation, let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view {
+                    //self.registerForPreviewing(with: previewingDelegate, sourceView: buttonView, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
+                }
+                //self.registerForPreviewing(with: previewingDelegate, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
             }
             
             if #available(iOSApplicationExtension 11.0, *) {

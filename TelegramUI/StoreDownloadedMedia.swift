@@ -55,21 +55,43 @@ private final class DownloadedMediaStoreContext {
         self.disposable?.dispose()
     }
     
-    func start(postbox: Postbox, collection: Signal<PHAssetCollection, NoError>, storeSettings: Signal<Bool, NoError>, timestamp: Int32, media: AnyMediaReference, completed: @escaping () -> Void) {
+    func start(postbox: Postbox, collection: Signal<PHAssetCollection, NoError>, storeSettings: Signal<AutomaticMediaDownloadSettings, NoError>, peerType: AutomaticMediaDownloadPeerType, timestamp: Int32, media: AnyMediaReference, completed: @escaping () -> Void) {
         var resource: TelegramMediaResource?
         if let image = media.media as? TelegramMediaImage {
             resource = largestImageRepresentation(image.representations)?.resource
         }
         if let resource = resource {
-            self.disposable = (combineLatest(collection |> take(1), storeSettings |> take(1))
-            |> mapToSignal { collection, storeSettings -> Signal<(PHAssetCollection, Bool, MediaResourceData), NoError> in
-                return postbox.mediaBox.resourceData(resource)
-                |> map { (collection, storeSettings, $0) }
-            }
-            |> deliverOn(queue)).start(next: { collection, storeSettings, data in
-                if !storeSettings {
-                    return
+            self.disposable = (storeSettings
+            |> map { storeSettings -> Bool in
+                switch peerType {
+                    case .contact:
+                        if !storeSettings.peers.contacts.saveDownloadedPhotos {
+                            return false
+                        }
+                    case .otherPrivate:
+                        if !storeSettings.peers.otherPrivate.saveDownloadedPhotos {
+                            return false
+                        }
+                    case .group:
+                        if !storeSettings.peers.groups.saveDownloadedPhotos {
+                            return false
+                        }
+                    case .channel:
+                        if !storeSettings.peers.channels.saveDownloadedPhotos {
+                            return false
+                        }
                 }
+                return true
+            }
+            |> take(1)
+            |> mapToSignal { store -> Signal<(PHAssetCollection, MediaResourceData), NoError> in
+                if !store {
+                    return .complete()
+                } else {
+                    return combineLatest(collection |> take(1), postbox.mediaBox.resourceData(resource))
+                }
+            }
+            |> deliverOn(queue)).start(next: { collection, data in
                 if !data.complete {
                     return
                 }
@@ -141,7 +163,7 @@ private final class DownloadedMediaStoreManagerImpl {
     private var storeContexts: [MediaId: DownloadedMediaStoreContext] = [:]
     
     private let appSpecificAssetCollectionValue: Promise<PHAssetCollection>
-    private let storeSettings = Promise<Bool>()
+    private let storeSettings = Promise<AutomaticMediaDownloadSettings>()
     
     init(queue: Queue, postbox: Postbox) {
         self.queue = queue
@@ -149,11 +171,12 @@ private final class DownloadedMediaStoreManagerImpl {
         
         self.appSpecificAssetCollectionValue = Promise(initializeOnFirstAccess: appSpecificAssetCollection())
         self.storeSettings.set(postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])
-        |> map { view -> Bool in
+        |> map { view -> AutomaticMediaDownloadSettings in
             if let settings = view.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
-                return settings.saveIncomingPhotos
+                return settings
+            } else {
+                return .defaultSettings
             }
-            return false
         })
     }
     
@@ -167,7 +190,7 @@ private final class DownloadedMediaStoreManagerImpl {
         return nextId
     }
     
-    func store(_ media: AnyMediaReference, timestamp: Int32) {
+    func store(_ media: AnyMediaReference, timestamp: Int32, peerType: AutomaticMediaDownloadPeerType) {
         guard let id = media.media.id else {
             return
         }
@@ -175,7 +198,7 @@ private final class DownloadedMediaStoreManagerImpl {
             let context = DownloadedMediaStoreContext(queue: self.queue)
             self.storeContexts[id] = context
             let appSpecificAssetCollectionValue = self.appSpecificAssetCollectionValue
-            context.start(postbox: self.postbox, collection: deferred { appSpecificAssetCollectionValue.get() }, storeSettings: self.storeSettings.get(), timestamp: timestamp, media: media, completed: { [weak self, weak context] in
+            context.start(postbox: self.postbox, collection: deferred { appSpecificAssetCollectionValue.get() }, storeSettings: self.storeSettings.get(), peerType: peerType, timestamp: timestamp, media: media, completed: { [weak self, weak context] in
                 guard let strongSelf = self, let context = context else {
                     return
                 }
@@ -199,20 +222,20 @@ final class DownloadedMediaStoreManager {
         })
     }
     
-    func store(_ media: AnyMediaReference, timestamp: Int32) {
+    func store(_ media: AnyMediaReference, timestamp: Int32, peerType: AutomaticMediaDownloadPeerType) {
         self.impl.with { impl in
-            impl.store(media, timestamp: timestamp)
+            impl.store(media, timestamp: timestamp, peerType: peerType)
         }
     }
 }
 
-func storeDownloadedMedia(storeManager: DownloadedMediaStoreManager?, media: AnyMediaReference) -> Signal<Never, NoError> {
-    guard case let .message(message, _) = media, let peer = message.peer, case .user = peer, let timestamp = message.timestamp, let incoming = message.isIncoming, incoming, let secret = message.isSecret, !secret else {
+func storeDownloadedMedia(storeManager: DownloadedMediaStoreManager?, media: AnyMediaReference, peerType: AutomaticMediaDownloadPeerType) -> Signal<Never, NoError> {
+    guard case let .message(message, _) = media, let timestamp = message.timestamp, let incoming = message.isIncoming, incoming, let secret = message.isSecret, !secret else {
         return .complete()
     }
     
     return Signal { [weak storeManager] subscriber in
-        storeManager?.store(media, timestamp: timestamp)
+        storeManager?.store(media, timestamp: timestamp, peerType: peerType)
         subscriber.putCompletion()
         return EmptyDisposable
     }

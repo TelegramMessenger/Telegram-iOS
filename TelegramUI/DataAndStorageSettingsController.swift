@@ -13,11 +13,11 @@ private final class DataAndStorageControllerArguments {
     let openAutomaticDownloadCategory: (AutomaticDownloadCategory) -> Void
     let resetAutomaticDownload: () -> Void
     let openVoiceUseLessData: () -> Void
-    let toggleSaveIncomingPhotos: (Bool) -> Void
+    let openSaveIncomingPhotos: () -> Void
     let toggleSaveEditedPhotos: (Bool) -> Void
     let toggleAutoplayGifs: (Bool) -> Void
     
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void, toggleAutomaticDownloadMaster: @escaping (Bool) -> Void, openAutomaticDownloadCategory: @escaping (AutomaticDownloadCategory) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, toggleSaveIncomingPhotos: @escaping (Bool) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void, toggleAutomaticDownloadMaster: @escaping (Bool) -> Void, openAutomaticDownloadCategory: @escaping (AutomaticDownloadCategory) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -25,7 +25,7 @@ private final class DataAndStorageControllerArguments {
         self.openAutomaticDownloadCategory = openAutomaticDownloadCategory
         self.resetAutomaticDownload = resetAutomaticDownload
         self.openVoiceUseLessData = openVoiceUseLessData
-        self.toggleSaveIncomingPhotos = toggleSaveIncomingPhotos
+        self.openSaveIncomingPhotos = openSaveIncomingPhotos
         self.toggleSaveEditedPhotos = toggleSaveEditedPhotos
         self.toggleAutoplayGifs = toggleAutoplayGifs
     }
@@ -53,7 +53,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case voiceCallsHeader(PresentationTheme, String)
     case useLessVoiceData(PresentationTheme, String, String)
     case otherHeader(PresentationTheme, String)
-    case saveIncomingPhotos(PresentationTheme, String, Bool)
+    case saveIncomingPhotos(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
     case autoplayGifs(PresentationTheme, String, Bool)
     case connectionHeader(PresentationTheme, String)
@@ -195,8 +195,8 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .saveIncomingPhotos(lhsTheme, lhsText, lhsValue):
-                if case let .saveIncomingPhotos(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .saveIncomingPhotos(lhsTheme, lhsText):
+                if case let .saveIncomingPhotos(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -292,9 +292,9 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 })
             case let .otherHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .saveIncomingPhotos(theme, text, value):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleSaveIncomingPhotos(value)
+            case let .saveIncomingPhotos(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                    arguments.openSaveIncomingPhotos()
                 })
             case let .saveEditedPhotos(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -368,7 +368,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.CallSettings_UseLessData, stringForUseLessDataSetting(strings: presentationData.strings, settings: data.voiceCallSettings)))
     
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
-    entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos, data.automaticMediaDownloadSettings.saveIncomingPhotos))
+    entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayAnimations, data.automaticMediaDownloadSettings.autoplayGifs))
     
@@ -469,12 +469,8 @@ func dataAndStorageController(account: Account) -> ViewController {
         presentControllerImpl?(actionSheet, nil)
     }, openVoiceUseLessData: {
         pushControllerImpl?(voiceCallDataSavingController(account: account))
-    }, toggleSaveIncomingPhotos: { value in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
-            var settings = settings
-            settings.saveIncomingPhotos = value
-            return settings
-        }).start()
+    }, openSaveIncomingPhotos: {
+        pushControllerImpl?(saveIncomingMediaController(account: account))
     }, toggleSaveEditedPhotos: { value in
         let _ = updateGeneratedMediaStoreSettingsInteractively(postbox: account.postbox, { current in
             return current.withUpdatedStoreEditedPhotos(value)

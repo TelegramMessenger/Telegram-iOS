@@ -178,7 +178,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, node, frame in
             self?.openMessageContextMenu(message: message, node: node, frame: frame)
-        }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
+        }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
             self?.openUrl(url)
             }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message in
                 if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {

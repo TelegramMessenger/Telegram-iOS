@@ -596,7 +596,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme)
                         badgeTextColor = theme.unreadBadgeActiveTextColor
                     }
-                    badgeAttributedString = NSAttributedString(string: unreadCount.count > 0 ? "\(unreadCount.count)" : " ", font: badgeFont, textColor: badgeTextColor)
+                    let unreadCountText: String
+                    if unreadCount.count > 1000 {
+                        unreadCountText = "\(unreadCount.count / 1000)K"
+                    } else {
+                        unreadCountText = "\(unreadCount.count)"
+                    }
+                    
+                    badgeAttributedString = NSAttributedString(string: unreadCount.count > 0 ? unreadCountText : " ", font: badgeFont, textColor: badgeTextColor)
                 }
             }
             

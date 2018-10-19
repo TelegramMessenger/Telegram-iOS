@@ -7,6 +7,10 @@ func freeMediaFileInteractiveFetched(account: Account, fileReference: FileMediaR
     return fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource))
 }
 
+func freeMediaFileResourceInteractiveFetched(account: Account, fileReference: FileMediaReference, resource: MediaResource) -> Signal<FetchResourceSourceType, NoError> {
+    return fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(resource))
+}
+
 func cancelFreeMediaFileInteractiveFetch(account: Account, file: TelegramMediaFile) {
     account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
 }
@@ -30,9 +34,9 @@ func messageMediaFileCancelInteractiveFetch(account: Account, messageId: Message
     account.telegramApplicationContext.fetchManager.cancelInteractiveFetches(category: fetchCategoryForFile(file), location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
 }
 
-func messageMediaImageInteractiveFetched(account: Account, message: Message, image: TelegramMediaImage, resource: MediaResource, storeToDownloads: Bool) -> Signal<Void, NoError> {
+func messageMediaImageInteractiveFetched(account: Account, message: Message, image: TelegramMediaImage, resource: MediaResource, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<Void, NoError> {
     let mediaReference = AnyMediaReference.message(message: MessageReference(message), media: image)
-    return account.telegramApplicationContext.fetchManager.interactivelyFetched(category: .image, location: .chat(message.id.peerId), locationKey: .messageId(message.id), mediaReference: mediaReference, resourceReference: mediaReference.resourceReference(resource), statsCategory: .image, elevatedPriority: false, userInitiated: true, storeToDownloads: storeToDownloads)
+    return account.telegramApplicationContext.fetchManager.interactivelyFetched(category: .image, location: .chat(message.id.peerId), locationKey: .messageId(message.id), mediaReference: mediaReference, resourceReference: mediaReference.resourceReference(resource), statsCategory: .image, elevatedPriority: false, userInitiated: true, storeToDownloadsPeerType: storeToDownloadsPeerType)
 }
 
 func messageMediaImageCancelInteractiveFetch(account: Account, messageId: MessageId, image: TelegramMediaImage, resource: MediaResource) {

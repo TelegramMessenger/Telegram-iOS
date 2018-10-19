@@ -237,7 +237,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
             }
         }, sendSticker: { [weak self] file in
             if let strongSelf = self {
-                strongSelf.controllerInteraction.sendSticker(file)
+                strongSelf.controllerInteraction.sendSticker(file, false)
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItem == .pack(item)
