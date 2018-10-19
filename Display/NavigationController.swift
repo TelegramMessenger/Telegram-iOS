@@ -139,11 +139,19 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.currentPresentDisposable.dispose()
     }
     
-    public func combinedSupportedOrientations() -> ViewControllerSupportedOrientations {
+    public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
         if let controller = self.viewControllers.last {
             if let controller = controller as? ViewController {
-                supportedOrientations = supportedOrientations.intersection(controller.supportedOrientations)
+                if controller.lockOrientation {
+                    if let lockedOrientation = controller.lockedOrientation {
+                        supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: lockedOrientation, compactSize: lockedOrientation))
+                    } else {
+                        supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: currentOrientationToLock, compactSize: currentOrientationToLock))
+                    }
+                } else {
+                    supportedOrientations = supportedOrientations.intersection(controller.supportedOrientations)
+                }
             }
         }
         return supportedOrientations

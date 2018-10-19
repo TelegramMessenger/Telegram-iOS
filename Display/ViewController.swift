@@ -52,9 +52,18 @@ open class ViewControllerPresentationArguments {
     private let presentationContext: PresentationContext
     
     public final var supportedOrientations: ViewControllerSupportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
-    public final var lockOrientation: Bool = false
+    public final var lockedOrientation: UIInterfaceOrientationMask?
+    public final var lockOrientation: Bool = false {
+        didSet {
+            if self.lockOrientation != oldValue {
+                if !self.lockOrientation {
+                    self.lockedOrientation = nil
+                }
+            }
+        }
+    }
     
-    public func combinedSupportedOrientations() -> ViewControllerSupportedOrientations {
+    public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         return self.supportedOrientations
     }
     

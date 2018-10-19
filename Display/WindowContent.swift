@@ -723,7 +723,14 @@ public class Window1 {
             
             var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
             if let _rootController = self._rootController {
-                supportedOrientations = supportedOrientations.intersection(_rootController.combinedSupportedOrientations())
+                let orientationToLock: UIInterfaceOrientationMask
+                if self.windowLayout.size.width < self.windowLayout.size.height {
+                    orientationToLock = .portrait
+                } else {
+                    orientationToLock = .landscape
+                }
+                
+                supportedOrientations = supportedOrientations.intersection(_rootController.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
             }
             supportedOrientations = supportedOrientations.intersection(self.presentationContext.combinedSupportedOrientations())
             supportedOrientations = supportedOrientations.intersection(self.overlayPresentationContext.combinedSupportedOrientations())
