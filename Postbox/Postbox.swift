@@ -257,6 +257,11 @@ public final class Transaction {
         return self.postbox?.peerNotificationSettingsTable.getEffective(id)
     }
     
+    public func getAllPeerNotificationSettings() -> [PeerId : PeerNotificationSettings]? {
+        assert(!self.disposed)
+        return self.postbox?.peerNotificationSettingsTable.getAll()
+    }
+    
     public func getPendingPeerNotificationSettings(_ id: PeerId) -> PeerNotificationSettings? {
         assert(!self.disposed)
         return self.postbox?.peerNotificationSettingsTable.getPending(id)

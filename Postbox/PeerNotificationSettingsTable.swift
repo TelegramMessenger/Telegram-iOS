@@ -73,10 +73,10 @@ final class PeerNotificationSettingsTable: Table {
         return self.sharedKey
     }
     
-    private func getEntry(_ id: PeerId) -> PeerNotificationSettingsTableEntry {
+    private func getEntry(_ id: PeerId, _ value: ReadBuffer? = nil) -> PeerNotificationSettingsTableEntry {
         if let entry = self.cachedSettings[id] {
             return entry
-        } else if let value = self.valueBox.get(self.table, key: self.key(id)) {
+        } else if let value = value ?? self.valueBox.get(self.table, key: self.key(id)) {
             var flagsValue: Int32 = 0
             value.read(&flagsValue, offset: 0, length: 4)
             let flags = PeerNotificationSettingsTableEntryFlags(rawValue: flagsValue)
@@ -158,6 +158,20 @@ final class PeerNotificationSettingsTable: Table {
     
     func getPending(_ id: PeerId) -> PeerNotificationSettings? {
         return self.getEntry(id).pending
+    }
+    
+    func getAll() -> [PeerId : PeerNotificationSettings] {
+        var allSettings: [PeerId : PeerNotificationSettings] = [:]
+        valueBox.scanInt64(self.table, values: { key, value in
+            let peerId = PeerId(key)
+            let entry = self.getEntry(peerId, value)
+            if let settings = entry.effective {
+                allSettings[peerId] = settings
+            }
+            return true
+        })
+        
+        return allSettings
     }
     
     override func clearMemoryCache() {
