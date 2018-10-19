@@ -15,8 +15,8 @@
 
 #import "TGModernConversationAssociatedInputPanel.h"
 
-const NSInteger TGMediaPickerCaptionInputPanelCaptionLimit = 200;
-const NSInteger TGMediaPickerCaptionInputPanelCaptionCounterThreshold = 100;
+const NSInteger TGMediaPickerCaptionInputPanelCaptionLimit = 1024;
+const NSInteger TGMediaPickerCaptionInputPanelCaptionCounterThreshold = 924;
 
 static void setViewFrame(UIView *view, CGRect frame)
 {
