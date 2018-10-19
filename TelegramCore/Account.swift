@@ -875,6 +875,7 @@ public class Account {
     private var peerInputActivityManager: PeerInputActivityManager!
     private var localInputActivityManager: PeerInputActivityManager!
     private var accountPresenceManager: AccountPresenceManager!
+    private var notificationAutolockReportManager: NotificationAutolockReportManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
     fileprivate let managedStickerPacksDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
@@ -904,6 +905,7 @@ public class Account {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
+    public let autolockReportDeadline = Promise<Int32?>()
     public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
     
     private let networkStateValue = Promise<AccountNetworkState>(.waitingForNetwork)
@@ -949,6 +951,20 @@ public class Account {
         })
         self.localInputActivityManager = PeerInputActivityManager()
         self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
+        self.notificationAutolockReportManager = NotificationAutolockReportManager(deadline: self.autolockReportDeadline.get(), network: network)
+        self.autolockReportDeadline.set(
+            postbox.combinedView(keys: [.accessChallengeData])
+            |> map { view -> Int32? in
+                guard let dataView = view.views[.accessChallengeData] as? AccessChallengeDataView else {
+                    return nil
+                }
+                guard let autolockDeadline = dataView.data.autolockDeadline else {
+                    return nil
+                }
+                return autolockDeadline
+            }
+            |> distinctUntilChanged
+        )
         
         self.viewTracker = AccountViewTracker(account: self)
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
@@ -1151,7 +1167,8 @@ public class Account {
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
             self.pendingMessageManager.hasPendingMessages |> map { $0 ? AccountRunningImportantTasks.pendingMessages : [] },
-            self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
+            self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] },
+            self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
         ]
         let importantBackgroundOperationsRunning = combineLatest(importantBackgroundOperations)
         |> deliverOn(Queue())

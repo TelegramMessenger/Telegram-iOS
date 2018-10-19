@@ -454,6 +454,8 @@
 		D0A3E448214802C7008ACEF6 /* VoipConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A3E446214802C7008ACEF6 /* VoipConfiguration.swift */; };
 		D0A472B61F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */; };
 		D0A472B71F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */; };
+		D0A8998F217A37A000759EE6 /* NotificationAutolockReportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8998E217A37A000759EE6 /* NotificationAutolockReportManager.swift */; };
+		D0A89990217A37A000759EE6 /* NotificationAutolockReportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8998E217A37A000759EE6 /* NotificationAutolockReportManager.swift */; };
 		D0AAD1A81E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1A71E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift */; };
 		D0AAD1AA1E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1A91E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift */; };
 		D0AAD1B81E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAD1B71E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift */; };
@@ -1004,6 +1006,7 @@
 		D09F9DC720767D2C00DB4DE1 /* Api2.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Api2.swift; sourceTree = "<group>"; };
 		D0A3E446214802C7008ACEF6 /* VoipConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoipConfiguration.swift; sourceTree = "<group>"; };
 		D0A472B51F4CBE8B00E0EEDA /* LoadedPeer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadedPeer.swift; sourceTree = "<group>"; };
+		D0A8998E217A37A000759EE6 /* NotificationAutolockReportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationAutolockReportManager.swift; sourceTree = "<group>"; };
 		D0AAD1A71E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoremoveTimeoutMessageAttribute.swift; sourceTree = "<group>"; };
 		D0AAD1A91E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplyMaxReadIndexInteractively.swift; sourceTree = "<group>"; };
 		D0AAD1B71E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedAutoremoveMessageOperations.swift; sourceTree = "<group>"; };
@@ -1471,6 +1474,7 @@
 				D0467D0A20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift */,
 				D0467D1420D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift */,
 				D00422D221677F4500719B67 /* ManagedAccountPresence.swift */,
+				D0A8998E217A37A000759EE6 /* NotificationAutolockReportManager.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -2187,6 +2191,7 @@
 				C2E064681ECEEF0A00387BB8 /* TelegramMediaInvoice.swift in Sources */,
 				D0448C9F1E27F5EB005A61A7 /* Random.swift in Sources */,
 				D0C27B3F1F4B51D000A4E170 /* CachedStickerPack.swift in Sources */,
+				D0A8998F217A37A000759EE6 /* NotificationAutolockReportManager.swift in Sources */,
 				D0B843B21DA7FF30005F29E1 /* NBAsYouTypeFormatter.m in Sources */,
 				D07047B71F3DF2CD00F6A8D4 /* ManagedConsumePersonalMessagesActions.swift in Sources */,
 				D03B0CDB1D62245F00955575 /* ApiUtils.swift in Sources */,
@@ -2734,6 +2739,7 @@
 				D0B418AD1D7E0597004562A4 /* Serialization.swift in Sources */,
 				D0ADF912212B00DD00310BBC /* SecureIdConfiguration.swift in Sources */,
 				C28725431EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */,
+				D0A89990217A37A000759EE6 /* NotificationAutolockReportManager.swift in Sources */,
 				D054648C2073854A002ECC1E /* SecureIdPersonalDetailsValue.swift in Sources */,
 				D0F8C3A12017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift in Sources */,
 				D09F9DC920767D2C00DB4DE1 /* Api3.swift in Sources */,
