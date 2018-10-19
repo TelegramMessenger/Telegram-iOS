@@ -15,6 +15,9 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let onlyWriteable = ChatListNodePeersFilter(rawValue: 1 << 0)
     public static let onlyUsers = ChatListNodePeersFilter(rawValue: 1 << 1)
     public static let onlyGroups = ChatListNodePeersFilter(rawValue: 1 << 2)
+    public static let withoutSecretChats = ChatListNodePeersFilter(rawValue: 1 << 3)
+
+
 }
 
 enum ChatListNodeMode {

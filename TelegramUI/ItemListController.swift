@@ -20,6 +20,7 @@ enum ItemListNavigationButtonStyle {
 
 enum ItemListNavigationButtonContentIcon {
     case search
+    case add
 }
 
 enum ItemListNavigationButtonContent: Equatable {
@@ -271,6 +272,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                                     switch icon {
                                         case .search:
                                             image = PresentationResourcesRootController.navigationCompactSearchIcon(controllerState.theme)
+                                        case .add:
+                                            image = PresentationResourcesRootController.navigationAddIcon(controllerState.theme)
                                     }
                                     item = UIBarButtonItem(image: image, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
                             }
@@ -324,6 +327,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                                         switch icon {
                                             case .search:
                                                 image = PresentationResourcesRootController.navigationCompactSearchIcon(controllerState.theme)
+                                            case .add:
+                                                image = PresentationResourcesRootController.navigationAddIcon(controllerState.theme)
                                         }
                                         item = UIBarButtonItem(image: image, style: style.barButtonItemStyle, target: strongSelf, action: action)
                                 }

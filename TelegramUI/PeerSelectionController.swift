@@ -40,7 +40,7 @@ public final class PeerSelectionController: ViewController {
         return self._ready
     }
     
-    public init(account: Account, filter: ChatListNodePeersFilter = [.onlyWriteable]) {
+    public init(account: Account, filter: ChatListNodePeersFilter = [.onlyWriteable], title: String? = nil) {
         self.account = account
         self.filter = filter
         
@@ -49,7 +49,7 @@ public final class PeerSelectionController: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        self.title = self.presentationData.strings.Conversation_ForwardTitle
+        self.title = title ?? self.presentationData.strings.Conversation_ForwardTitle
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         

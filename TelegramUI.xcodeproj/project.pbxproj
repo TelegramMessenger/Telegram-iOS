@@ -109,6 +109,8 @@
 		D02660941F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02660931F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift */; };
 		D02B2B9820810DA00062476B /* StickerPaneSearchStickerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02B2B9720810DA00062476B /* StickerPaneSearchStickerItem.swift */; };
 		D02B676320800A00001A864A /* StickerPaneSearchBarPlaceholderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02B676220800A00001A864A /* StickerPaneSearchBarPlaceholderItem.swift */; };
+		D02C81712177729000CD1006 /* NotificationExceptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02C81702177729000CD1006 /* NotificationExceptions.swift */; };
+		D02C81732177AC5900CD1006 /* NotificationSearchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02C81722177AC5900CD1006 /* NotificationSearchItem.swift */; };
 		D02D60AE206BD47300FEFE1E /* SecureIdDocumentTypeSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60AD206BD47300FEFE1E /* SecureIdDocumentTypeSelectionController.swift */; };
 		D02D60B1206C189900FEFE1E /* SecureIdPlaintextFormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60B0206C189900FEFE1E /* SecureIdPlaintextFormController.swift */; };
 		D02D60B3206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60B2206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift */; };
@@ -1233,6 +1235,8 @@
 		D02B676220800A00001A864A /* StickerPaneSearchBarPlaceholderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerPaneSearchBarPlaceholderItem.swift; sourceTree = "<group>"; };
 		D02BE0701D91814C000889C2 /* ChatHistoryGridNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryGridNode.swift; sourceTree = "<group>"; };
 		D02BE0761D9190EF000889C2 /* GridMessageItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridMessageItem.swift; sourceTree = "<group>"; };
+		D02C81702177729000CD1006 /* NotificationExceptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationExceptions.swift; sourceTree = "<group>"; };
+		D02C81722177AC5900CD1006 /* NotificationSearchItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSearchItem.swift; sourceTree = "<group>"; };
 		D02D60AD206BD47300FEFE1E /* SecureIdDocumentTypeSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentTypeSelectionController.swift; sourceTree = "<group>"; };
 		D02D60B0206C189900FEFE1E /* SecureIdPlaintextFormController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPlaintextFormController.swift; sourceTree = "<group>"; };
 		D02D60B2206C18A600FEFE1E /* SecureIdPlaintextFormControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPlaintextFormControllerNode.swift; sourceTree = "<group>"; };
@@ -2431,6 +2435,17 @@
 			name = "Grid Items";
 			sourceTree = "<group>";
 		};
+		D02C816F2177715A00CD1006 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				D0579E6D2179178700495DC7 /* exceptions */,
+				D01B279C1E394A500022A4C0 /* NotificationsAndSounds.swift */,
+				D0A749961E3AA25200AD786E /* NotificationSoundSelection.swift */,
+				D02C81722177AC5900CD1006 /* NotificationSearchItem.swift */,
+			);
+			name = Notifications;
+			sourceTree = "<group>";
+		};
 		D02D60AF206C188000FEFE1E /* Plaintext Fields */ = {
 			isa = PBXGroup;
 			children = (
@@ -2777,6 +2792,14 @@
 				D083491B209361DC008CFD52 /* AvatarGalleryItemFooterContentNode.swift */,
 			);
 			name = "Avatar Gallery";
+			sourceTree = "<group>";
+		};
+		D0579E6D2179178700495DC7 /* exceptions */ = {
+			isa = PBXGroup;
+			children = (
+				D02C81702177729000CD1006 /* NotificationExceptions.swift */,
+			);
+			name = exceptions;
 			sourceTree = "<group>";
 		};
 		D05BFB4F1EA96EC100909D38 /* Themes */ = {
@@ -4222,6 +4245,7 @@
 		D0F69E791D6B8C3B0046BCD6 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				D02C816F2177715A00CD1006 /* Notifications */,
 				D0FA0AC21E7742CE005BB9B7 /* Privacy and Security */,
 				D0C9323A1E0B4AD40074F044 /* Data and Storage */,
 				D0FA0AC31E7742EE005BB9B7 /* Stickers */,
@@ -4230,8 +4254,6 @@
 				D0CB27D020C17A6D001ACF93 /* Terms of Service */,
 				D01B279A1E39386C0022A4C0 /* SettingsController.swift */,
 				D08BDF651FA8CB10009D08E1 /* EditSettingsController.swift */,
-				D01B279C1E394A500022A4C0 /* NotificationsAndSounds.swift */,
-				D0A749961E3AA25200AD786E /* NotificationSoundSelection.swift */,
 				D0CE1BD21E51BC6100404327 /* DebugController.swift */,
 				D03E5E081E55C49C0029569A /* DebugAccountsController.swift */,
 				D0528E671E65CB2C00E2FEF5 /* UsernameSetupController.swift */,
@@ -4847,6 +4869,7 @@
 				D0EC6CFD1EB9F58800EBF1C3 /* AudioWaveform.swift in Sources */,
 				D0EC6CFF1EB9F58800EBF1C3 /* OverlayMediaController.swift in Sources */,
 				D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */,
+				D02C81712177729000CD1006 /* NotificationExceptions.swift in Sources */,
 				D0EC6D021EB9F58800EBF1C3 /* diag_range.c in Sources */,
 				D0E9BA1A1F05574500F079A4 /* STPPaymentCardTextField.m in Sources */,
 				D0EC6D031EB9F58800EBF1C3 /* opus_header.c in Sources */,
@@ -5031,6 +5054,7 @@
 				D0EC6D671EB9F58800EBF1C3 /* ContactListNameIndexHeader.swift in Sources */,
 				D0CE6F6E213EDF8800BCD44B /* SecureIdAuthPasswordSetupContentNode.swift in Sources */,
 				D07E413D208A494D00FCA8F0 /* ProxyServerActionSheetController.swift in Sources */,
+				D02C81732177AC5900CD1006 /* NotificationSearchItem.swift in Sources */,
 				D0EC6D681EB9F58800EBF1C3 /* AuthorizationSequenceController.swift in Sources */,
 				D0EC6D691EB9F58800EBF1C3 /* AuthorizationSequenceSplashController.swift in Sources */,
 				D0EC6D6A1EB9F58800EBF1C3 /* AuthorizationSequenceSplashControllerNode.swift in Sources */,
