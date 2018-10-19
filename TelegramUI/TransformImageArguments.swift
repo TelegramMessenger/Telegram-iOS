@@ -14,14 +14,16 @@ public struct TransformImageArguments: Equatable {
     public let intrinsicInsets: UIEdgeInsets
     public let resizeMode: TransformImageResizeMode
     public let emptyColor: UIColor?
+    public let scale: CGFloat?
     
-    public init(corners: ImageCorners, imageSize: CGSize, boundingSize: CGSize, intrinsicInsets: UIEdgeInsets, resizeMode: TransformImageResizeMode = .fill(.black), emptyColor: UIColor? = nil) {
+    public init(corners: ImageCorners, imageSize: CGSize, boundingSize: CGSize, intrinsicInsets: UIEdgeInsets, resizeMode: TransformImageResizeMode = .fill(.black), emptyColor: UIColor? = nil, scale: CGFloat? = nil) {
         self.corners = corners
         self.imageSize = imageSize
         self.boundingSize = boundingSize
         self.intrinsicInsets = intrinsicInsets
         self.resizeMode = resizeMode
         self.emptyColor = emptyColor
+        self.scale = scale
     }
     
     public var drawingSize: CGSize {
