@@ -57,7 +57,7 @@ public func suspendAwareDelay<T, E>(_ timeout: Double, granularity: Double = 4.0
                 var invalidateImpl: (() -> Void)?
                 let timer = Timer(timeout: granularity, repeat: true, completion: {
                     let currentTimestamp = CFAbsoluteTimeGetCurrent()
-                    if beginTimestamp + timeout >= currentTimestamp - granularity * 1.1 {
+                    if beginTimestamp + timeout - granularity * 1.1 <= currentTimestamp {
                         invalidateImpl?()
                         startFinalTimer()
                     }
