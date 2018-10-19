@@ -523,7 +523,7 @@ func storageUsageController(account: Account) -> ViewController {
                     if !items.isEmpty {
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize))").0, action: {
                             if let statsPromise = statsPromise {
-                                var clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
+                                let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                                 //var clearSize: Int64 = 0
                                 
                                 var clearMediaIds = Set<MediaId>()

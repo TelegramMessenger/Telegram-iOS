@@ -142,12 +142,12 @@ func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, small: 
     }
 }
 
-func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageStickerDatas(account: account, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
             
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize
@@ -178,7 +178,12 @@ func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool, 
             }
             
             context.withFlippedContext { c in
+                if let color = arguments.emptyColor {
+                    c.setBlendMode(.normal)
+                    c.fill(drawingRect)
+                }
                 c.setBlendMode(.copy)
+                
                 if let blurredThumbnailImage = blurredThumbnailImage {
                     c.interpolationQuality = .low
                     c.draw(blurredThumbnailImage.cgImage!, in: fittedRect)

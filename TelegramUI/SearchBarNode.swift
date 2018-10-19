@@ -197,7 +197,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             if self.activity != oldValue {
                 if self.activity {
                     if self.activityIndicator == nil {
-                        let activityIndicator = ActivityIndicator(type: .custom(self.theme.inputIcon, 13.0, 1.0))
+                        let activityIndicator = ActivityIndicator(type: .custom(self.theme.inputIcon, 13.0, 1.0, false))
                         self.activityIndicator = activityIndicator
                         self.addSubnode(activityIndicator)
                         if let (boundingSize, leftInset, rightInset) = self.validLayout {

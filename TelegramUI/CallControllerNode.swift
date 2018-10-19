@@ -14,6 +14,7 @@ final class CallControllerNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     private var peer: Peer?
+    private let debugInfo: Signal<(String, String), NoError>
     
     private let containerNode: ASDisplayNode
     
@@ -38,6 +39,8 @@ final class CallControllerNode: ASDisplayNode {
         }
     }
     
+    private var shouldStayHiddenUntilConnection: Bool = false
+    
     private var audioOutputState: ([AudioSessionOutput], currentOutput: AudioSessionOutput?)?
     private var callState: PresentationCallState?
     
@@ -49,12 +52,17 @@ final class CallControllerNode: ASDisplayNode {
     var back: (() -> Void)?
     var dismissedInteractively: (() -> Void)?
     
-    init(account: Account, presentationData: PresentationData, statusBar: StatusBar) {
+    init(account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false) {
         self.account = account
         self.presentationData = presentationData
         self.statusBar = statusBar
+        self.debugInfo = debugInfo
+        self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
         
         self.containerNode = ASDisplayNode()
+        if self.shouldStayHiddenUntilConnection {
+            self.containerNode.alpha = 0.0
+        }
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -142,13 +150,14 @@ final class CallControllerNode: ASDisplayNode {
     func updatePeer(peer: Peer) {
         if !arePeersEqual(self.peer, peer) {
             self.peer = peer
-            let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]
-            if let peerReference = PeerReference(peer) {
-                representations = peer.profileImageRepresentations.map({ ($0, .avatar(peer: peerReference, resource: $0.resource)) })
+            if let peerReference = PeerReference(peer), !peer.profileImageRepresentations.isEmpty {
+                let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)] = peer.profileImageRepresentations.map({ ($0, .avatar(peer: peerReference, resource: $0.resource)) })
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
+                self.dimNode.isHidden = false
             } else {
-                representations = []
+                self.imageNode.setSignal(callDefaultBackground())
+                self.dimNode.isHidden = true
             }
-            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
             
             self.statusNode.title = peer.displayTitle
             
@@ -240,6 +249,14 @@ final class CallControllerNode: ASDisplayNode {
                     self.backButtonNode.alpha = 1.0
                 }
         }
+        if self.shouldStayHiddenUntilConnection {
+            switch callState {
+                case .connecting, .active:
+                    self.containerNode.alpha = 1.0
+                default:
+                    break
+            }
+        }
         self.statusNode.status = statusValue
         
         self.updateButtonsMode()
@@ -283,16 +300,20 @@ final class CallControllerNode: ASDisplayNode {
         self.containerNode.layer.removeAnimation(forKey: "opacity")
         self.containerNode.layer.removeAnimation(forKey: "scale")
         self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.containerNode.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        if !self.shouldStayHiddenUntilConnection {
+            self.containerNode.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
     }
     
     func animateOut(completion: @escaping () -> Void) {
         self.statusBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.containerNode.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3, removeOnCompletion: false, completion: { _ in
-            completion()
-        })
+        if !self.shouldStayHiddenUntilConnection || self.containerNode.alpha > 0.0 {
+            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            self.containerNode.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -342,7 +363,7 @@ final class CallControllerNode: ASDisplayNode {
         let buttonsOffset: CGFloat
         if layout.size.width.isEqual(to: 320.0) {
             if layout.size.height.isEqual(to: 480.0) {
-                buttonsOffset = 53.0
+                buttonsOffset = 60.0
             } else {
                 buttonsOffset = 73.0
             }
@@ -354,10 +375,14 @@ final class CallControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
         
         self.buttonsNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
-        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.safeInsets.bottom), size: CGSize(width: layout.size.width, height: buttonsHeight)))
+        transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: buttonsHeight)))
         
         let keyTextSize = self.keyButtonNode.frame.size
         transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: navigationOffset + 8.0), size: keyTextSize))
+        
+        if let debugNode = self.debugNode {
+            transition.updateFrame(node: debugNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        }
     }
     
     @objc func keyPressed() {
@@ -391,11 +416,53 @@ final class CallControllerNode: ASDisplayNode {
         }
     }
     
+    private var debugTapCounter: (Double, Int) = (0.0, 0)
+    
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let _ = self.keyPreviewNode {
                 self.backPressed()
+            } else {
+                let point = recognizer.location(in: recognizer.view)
+                if self.statusNode.frame.contains(point) {
+                    let timestamp = CACurrentMediaTime()
+                    if self.debugTapCounter.0 < timestamp - 0.4 {
+                        self.debugTapCounter.0 = timestamp
+                        self.debugTapCounter.1 = 0
+                    }
+                    
+                    if self.debugTapCounter.0 >= timestamp - 0.4 {
+                        self.debugTapCounter.0 = timestamp
+                        self.debugTapCounter.1 += 1
+                    }
+                    
+                    if self.debugTapCounter.1 >= 10 {
+                        self.debugTapCounter.1 = 0
+                        
+                        self.presentDebugNode()
+                    }
+                }
             }
+        }
+    }
+    
+    private func presentDebugNode() {
+        guard self.debugNode == nil else {
+            return
+        }
+        
+        let debugNode = CallDebugNode(signal: self.debugInfo)
+        debugNode.dismiss = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.debugNode?.removeFromSupernode()
+                strongSelf.debugNode = nil
+            }
+        }
+        self.addSubnode(debugNode)
+        self.debugNode = debugNode
+        
+        if let (layout, navigationBarHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         }
     }
     
@@ -435,25 +502,96 @@ final class CallControllerNode: ASDisplayNode {
     }
 }
 
+private func attributedStringForDebugInfo(_ info: String, version: String) -> NSAttributedString {
+    guard !info.isEmpty else {
+        return NSAttributedString(string: "")
+    }
+    
+    var string = info
+    string = "libtgvoip v\(version)\n" + string
+    string = string.replacingOccurrences(of: "Remote endpoints: \n", with: "")
+    string = string.replacingOccurrences(of: "Jitter ", with: "\nJitter ")
+    string = string.replacingOccurrences(of: "Key fingerprint:\n", with: "Key fingerprint: ")
+    
+    let attributedString = NSMutableAttributedString(string: string, attributes: [NSAttributedStringKey.font: Font.monospace(15), NSAttributedStringKey.foregroundColor: UIColor.white])
+    
+    let titleStyle = NSMutableParagraphStyle()
+    titleStyle.alignment = .center
+    titleStyle.lineSpacing = 7.0
+
+    let style = NSMutableParagraphStyle()
+    style.lineHeightMultiple = 1.15
+    
+    let secondaryColor = UIColor(rgb: 0xa6a9a8)
+    let activeColor = UIColor(rgb: 0xa0d875)
+    
+    let titleAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(17), NSAttributedStringKey.paragraphStyle: titleStyle]
+    let nameAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(15), NSAttributedStringKey.foregroundColor: secondaryColor]
+    let styleAttributes = [NSAttributedStringKey.paragraphStyle: style]
+    let typeAttributes = [NSAttributedStringKey.foregroundColor: secondaryColor]
+    let activeAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(15), NSAttributedStringKey.foregroundColor: activeColor]
+    
+    let range = string.startIndex ..< string.endIndex
+    string.enumerateSubstrings(in: range, options: NSString.EnumerationOptions.byLines) { (line, range, _, _) in
+        guard let line = line else {
+            return
+        }
+        if range.lowerBound == string.startIndex {
+            attributedString.addAttributes(titleAttributes, range: NSRange(range, in: string))
+        }
+        else {
+            if let semicolonRange = line.range(of: ":") {
+                if let bracketRange = line.range(of: "[") {
+                    if let _ = line.range(of: "IN_USE") {
+                        attributedString.addAttributes(activeAttributes, range: NSRange(range, in: string))
+                    } else {
+                        let offset = line.distance(from: line.startIndex, to: bracketRange.lowerBound)
+                        let distance = line.distance(from: line.startIndex, to: line.endIndex)
+                        attributedString.addAttributes(typeAttributes, range: NSRange(string.index(range.lowerBound, offsetBy: offset) ..< string.index(range.lowerBound, offsetBy: distance), in: string))
+                    }
+                } else {
+                    attributedString.addAttributes(styleAttributes, range: NSRange(range, in: string))
+                    
+                    let offset = line.distance(from: line.startIndex, to: semicolonRange.upperBound)
+                    attributedString.addAttributes(nameAttributes, range: NSRange(range.lowerBound ..< string.index(range.lowerBound, offsetBy: offset), in: string))
+                }
+            }
+        }
+    }
+    
+    return attributedString
+}
+
 final private class CallDebugNode: ASDisplayNode {
     private let disposable = MetaDisposable()
     
     private let dimNode: ASDisplayNode
     private let textNode: ASTextNode
     
-    override init() {
+    public var dismiss: (() -> Void)?
+    
+    init(signal: Signal<(String, String), NoError>) {
         self.dimNode = ASDisplayNode()
         self.dimNode.isLayerBacked = true
-        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+        self.dimNode.backgroundColor = UIColor(rgb: 0x26282c, alpha: 0.95)
+        self.dimNode.isUserInteractionEnabled = false
         
         self.textNode = ASTextNode()
         self.textNode.isUserInteractionEnabled = false
         
         super.init()
+        
+        self.addSubnode(self.dimNode)
+        self.addSubnode(self.textNode)
+        
+        self.disposable.set((signal
+        |> deliverOnMainQueue).start(next: { [weak self] (version, info) in
+            self?.update(info, version: version)
+        }))
     }
     
     deinit {
-        disposable.dispose()
+        self.disposable.dispose()
     }
     
     override func didLoad() {
@@ -463,19 +601,22 @@ final private class CallDebugNode: ASDisplayNode {
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
+    private func update(_ info: String, version: String) {
+        self.textNode.attributedText = attributedStringForDebugInfo(info, version: version)
+        self.setNeedsLayout()
+    }
+    
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        
+        self.dismiss?()
     }
     
     override func layout() {
         super.layout()
         
         let size = self.bounds.size
+        self.dimNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height))
         
-        self.dimNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width))
-        
-        
-        //let labelSize = labelNode.measure(CGSize(width: , height: 100.0))
-        //textNode.frame = CGRect(origin: CGPoint(x: floor(size.width, y: 81.0), size: labelSize)
+        let textSize = textNode.measure(CGSize(width: size.width - 20.0, height: size.height))
+        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
     }
 }

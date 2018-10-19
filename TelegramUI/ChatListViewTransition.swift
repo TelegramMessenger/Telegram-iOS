@@ -71,7 +71,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             case .initial:
                 let _ = options.insert(.LowLatency)
                 let _ = options.insert(.Synchronous)
-            case .interactiveChanges:
+            case .interactiveChanges:                
                 for (index, _, _) in indicesAndItems.sorted(by: { $0.0 > $1.0 }) {
                     let adjustedIndex = updatedCount - 1 - index
                     if adjustedIndex == maxAnimatedInsertionIndex + 1 {

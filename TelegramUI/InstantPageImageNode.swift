@@ -36,7 +36,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         if let image = media.media as? TelegramMediaImage {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
-            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference).start())
+            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloads: false).start())
         } else if let file = media.media as? TelegramMediaFile {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             self.imageNode.setSignal(chatMessageVideo(postbox: account.postbox, videoReference: fileReference))

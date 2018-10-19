@@ -46,7 +46,7 @@ final class PeerMediaCollectionEmptyNode: ASDisplayNode {
         self.textNode.displaysAsynchronously = false
         self.textNode.isHidden = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemSecondaryTextColor, 22.0, 2.0), speed: .regular)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemSecondaryTextColor, 22.0, 2.0, false), speed: .regular)
         
         let icon: UIImage?
         let text: NSAttributedString
@@ -109,7 +109,7 @@ final class PeerMediaCollectionEmptyNode: ASDisplayNode {
             }
             self.iconNode.image = icon
             self.textNode.attributedText = text
-            activityIndicator.type = .custom(theme.list.itemSecondaryTextColor, 22.0, 2.0)
+            activityIndicator.type = .custom(theme.list.itemSecondaryTextColor, 22.0, 2.0, false)
         }
         
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - 20.0, height: size.height))

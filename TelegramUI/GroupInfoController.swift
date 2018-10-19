@@ -1278,55 +1278,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         presentControllerImpl?(controller, presentationArguments)
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        let notificationAction: (Int32?) -> Void = { muteUntil in
-            let muteInterval: Int32?
-            if let muteUntil = muteUntil {
-                if muteUntil <= 0 {
-                    muteInterval = 0
-                } else if muteUntil == Int32.max {
-                    muteInterval = Int32.max
-                } else {
-                    muteInterval = muteUntil
-                }
-            } else {
-                muteInterval = nil
-            }
-            
-            changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval).start())
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDefault, action: {
-                    dismissAction()
-                    notificationAction(nil)
-                }),
-                ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, action: {
-                    dismissAction()
-                    notificationAction(0)
-                }),
-                ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: 1 * 60 * 60), action: {
-                    dismissAction()
-                    notificationAction(1 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: 8 * 60 * 60), action: {
-                    dismissAction()
-                    notificationAction(8 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: 2 * 24 * 60 * 60), action: {
-                    dismissAction()
-                    notificationAction(2 * 24 * 60 * 60)
-                }),
-                ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDisable, action: {
-                    dismissAction()
-                    notificationAction(Int32.max)
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
+        let controller = notificationMuteSettingsController(presentationData: presentationData, updateSettings: { value in
+            changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
+        })
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, changeNotificationSoundSettings: {
         let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in

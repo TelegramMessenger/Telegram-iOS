@@ -33,6 +33,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private var videoFrame: CGRect?
     
     private var item: ChatMessageBubbleContentItem?
+    private var automaticDownload: Bool?
     var telegramFile: TelegramMediaFile?
     private var secretProgressIcon: UIImage?
     
@@ -108,14 +109,15 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    func asyncLayout() -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void) {
+    func asyncLayout() -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void) {
         let previousFile = self.telegramFile
         
         let currentItem = self.item
+        let previousAutomaticDownload = self.automaticDownload
         
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         
-        return { item, width, displaySize, statusDisplayType in
+        return { item, width, displaySize, statusDisplayType, automaticDownload in
             var updatedTheme: ChatPresentationThemeData?
             
             var secretVideoPlaceholderBackgroundImage: UIImage?
@@ -251,6 +253,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     strongSelf.item = item
                     strongSelf.videoFrame = videoFrame
                     strongSelf.secretProgressIcon = secretProgressIcon
+                    strongSelf.automaticDownload = automaticDownload
                     
                     if let updatedInfoBackgroundImage = updatedInfoBackgroundImage {
                         strongSelf.infoBackgroundNode.image = updatedInfoBackgroundImage
@@ -337,7 +340,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         }
                                     }
                                 }
-                            }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: false, enableSound: false), priority: .embedded, autoplay: true)
+                            }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: false, enableSound: false, fetchAutomatically: false), priority: .embedded, autoplay: true)
                             let previousVideoNode = strongSelf.videoNode
                             strongSelf.videoNode = videoNode
                             strongSelf.insertSubnode(videoNode, belowSubnode: previousVideoNode ?? strongSelf.dateAndStatusNode)
@@ -375,6 +378,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     applySecretPlaceholder()
                     
                     strongSelf.updateStatus()
+                    
+                    if let telegramFile = updatedFile, previousAutomaticDownload != automaticDownload, automaticDownload {
+                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: item.account, message: item.message, file: telegramFile, userInitiated: false).start())
+                    }
                 }
             })
         }
@@ -628,16 +635,16 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         return nil
     }
 
-    static func asyncLayout(_ node: ChatMessageInteractiveInstantVideoNode?) -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> ChatMessageInteractiveInstantVideoNode) {
+    static func asyncLayout(_ node: ChatMessageInteractiveInstantVideoNode?) -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> ChatMessageInteractiveInstantVideoNode) {
         let makeLayout = node?.asyncLayout()
-        return { item, width, displaySize, statusType in
+        return { item, width, displaySize, statusType, automaticDownload in
             var createdNode: ChatMessageInteractiveInstantVideoNode?
             let sizeAndApplyLayout: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void)
             if let makeLayout = makeLayout {
-                sizeAndApplyLayout = makeLayout(item, width, displaySize, statusType)
+                sizeAndApplyLayout = makeLayout(item, width, displaySize, statusType, automaticDownload)
             } else {
                 let node = ChatMessageInteractiveInstantVideoNode()
-                sizeAndApplyLayout = node.asyncLayout()(item, width, displaySize, statusType)
+                sizeAndApplyLayout = node.asyncLayout()(item, width, displaySize, statusType, automaticDownload)
                 createdNode = node
             }
             return (sizeAndApplyLayout.0, { [weak node] layoutData, transition in

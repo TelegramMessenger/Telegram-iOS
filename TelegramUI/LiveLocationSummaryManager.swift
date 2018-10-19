@@ -82,12 +82,12 @@ private final class LiveLocationPeerSummaryContext {
     private let peerId: PeerId
     private let becameEmpty: () -> Void
     
-    private var peers: [Peer]? = nil {
+    private var peersAndMessages: [(Peer, Message)]? = nil {
         didSet {
             assert(self.queue.isCurrent())
             
             for f in self.subscribers.copyItems() {
-                f(self.peers)
+                f(self.peersAndMessages)
             }
         }
     }
@@ -106,7 +106,7 @@ private final class LiveLocationPeerSummaryContext {
             }
         }
     }
-    private var subscribers = Bag<([Peer]?) -> Void>()
+    private var subscribers = Bag<([(Peer, Message)]?) -> Void>()
     
     var isEmpty: Bool {
         return !self.isActive && self.subscribers.isEmpty
@@ -126,13 +126,13 @@ private final class LiveLocationPeerSummaryContext {
         self.peerDisposable.dispose()
     }
     
-    func subscribe(_ f: @escaping ([Peer]?) -> Void) -> Disposable {
+    func subscribe(_ f: @escaping ([(Peer, Message)]?) -> Void) -> Disposable {
         let wasEmpty = self.subscribers.isEmpty
         let index = self.subscribers.add({ next in
             f(next)
         })
         
-        f(self.peers)
+        f(self.peersAndMessages)
         
         if self.subscribers.isEmpty != wasEmpty {
             self.updateSubscription()
@@ -161,27 +161,27 @@ private final class LiveLocationPeerSummaryContext {
             self.peerDisposable.set((topPeerActiveLiveLocationMessages(viewTracker: self.viewTracker, accountPeerId: self.accountPeerId, peerId: self.peerId)
                 |> deliverOn(self.queue)).start(next: { [weak self] accountPeer, messages in
                     if let strongSelf = self {
-                        var peers: [Peer] = []
+                        var peersAndMessages: [(Peer, Message)] = []
                         for message in messages {
                             if let author = message.author {
                                 if author.id != strongSelf.accountPeerId && message.flags.contains(.Incoming) {
-                                    peers.append(author)
+                                    peersAndMessages.append((author, message))
                                 }
                             }
                         }
                         if let accountPeer = accountPeer, strongSelf.isActive {
-                            peers.append(accountPeer)
+                            //peers.append(accountPeer)
                         }
-                        if peers.isEmpty {
-                            strongSelf.peers = nil
+                        if peersAndMessages.isEmpty {
+                            strongSelf.peersAndMessages = nil
                         } else {
-                            strongSelf.peers = peers
+                            strongSelf.peersAndMessages = peersAndMessages
                         }
                     }
                 }))
         } else {
             self.peerDisposable.set(nil)
-            self.peers = nil
+            self.peersAndMessages = nil
         }
     }
 }
@@ -233,7 +233,7 @@ final class LiveLocationSummaryManager {
         return self.globalContext.subscribe()
     }
     
-    func peersBroadcastingTo(peerId: PeerId) -> Signal<[Peer]?, NoError> {
+    func peersBroadcastingTo(peerId: PeerId) -> Signal<[(Peer, Message)]?, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()

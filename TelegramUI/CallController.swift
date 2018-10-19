@@ -89,7 +89,7 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallControllerNode(account: self.account, presentationData: self.presentationData, statusBar: self.statusBar)
+        self.displayNode = CallControllerNode(account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit)
         self.displayNodeDidLoad()
         
         self.controllerNode.toggleMute = { [weak self] in

@@ -99,6 +99,8 @@ public final class TelegramApplicationContext {
     }
     private var hasOngoingCallDisposable: Disposable?
     
+    public var watchManager: WatchManager?
+    
     private var immediateExperimentalUISettingsValue = Atomic<ExperimentalUISettings>(value: ExperimentalUISettings.defaultSettings)
     public var immediateExperimentalUISettings: ExperimentalUISettings {
         return self.immediateExperimentalUISettingsValue.with { $0 }
@@ -132,7 +134,7 @@ public final class TelegramApplicationContext {
         }
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
-        self.fetchManager = FetchManager(postbox: postbox)
+        self.fetchManager = FetchManager(postbox: postbox, storeManager: self.mediaManager?.downloadedMediaStoreManager)
         self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)

@@ -172,7 +172,11 @@ public final class SecretMediaPreviewController: ViewController {
         self.screenCaptureEventsDisposable = (screenCaptureEvents()
         |> deliverOnMainQueue).start(next: { [weak self] _ in
             if let strongSelf = self, strongSelf.traceVisibility() {
-                let _ = addSecretChatMessageScreenshot(account: account, peerId: messageId.peerId).start()
+                if messageId.peerId.namespace == Namespaces.Peer.CloudUser {
+                    let _ = enqueueMessages(account: account, peerId: messageId.peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil)]).start()
+                } else if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
+                    let _ = addSecretChatMessageScreenshot(account: account, peerId: messageId.peerId).start()
+                }
             }
         })
     }

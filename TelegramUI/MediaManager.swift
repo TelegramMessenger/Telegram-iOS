@@ -132,11 +132,15 @@ public final class MediaManager: NSObject {
     
     let galleryHiddenMediaManager = GalleryHiddenMediaManager()
     
+    let downloadedMediaStoreManager: DownloadedMediaStoreManager
+    
     init(postbox: Postbox, inForeground: Signal<Bool, NoError>) {
         self.postbox = postbox
         self.inForeground = inForeground
         
         self.audioSession = sharedAudioSession
+        
+        self.downloadedMediaStoreManager = DownloadedMediaStoreManager(postbox: postbox)
         
         super.init()
        

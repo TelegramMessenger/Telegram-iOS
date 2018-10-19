@@ -66,7 +66,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
                 self.lockView.setIsLocked(false, theme: self.theme, animated: false)
             }
             
-            self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5)
+            self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false)
             self.proxyNode.theme = self.theme
         }
     }
@@ -81,7 +81,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         self.titleNode.isOpaque = false
         self.titleNode.isUserInteractionEnabled = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5), speed: .slow)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false), speed: .slow)
         let activityIndicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(), size: activityIndicatorSize)
         
@@ -196,7 +196,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         
         self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 3.0, width: 2.0, height: 2.0)
         
-        self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY - 1.0), size: indicatorSize)
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize)
     }
     
     @objc private func buttonPressed() {

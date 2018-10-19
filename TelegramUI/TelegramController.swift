@@ -17,25 +17,31 @@ enum LocationBroadcastPanelSource {
 }
 
 private func presentLiveLocationController(account: Account, peerId: PeerId, controller: ViewController) {
+    let presentImpl: (Message?) -> Void = { [weak controller] message in
+        if let message = message, let strongController = controller {
+            let _ = openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
+                controller?.view.endEditing(true)
+            }, present: { c, a in
+                controller?.present(c, in: .window(.root), with: a)
+            }, transitionNode: { _, _ in
+                return nil
+            }, addToTransitionSurface: { _ in
+            }, openUrl: { _ in
+            }, openPeer: { peer, navigation in
+            }, callPeer: { _ in
+            }, enqueueMessage: { _ in
+            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
+        }
+    }
     if let id = account.telegramApplicationContext.liveLocationManager?.internalMessageForPeerId(peerId) {
         let _ = (account.postbox.transaction { transaction -> Message? in
             return transaction.getMessage(id)
-        } |> deliverOnMainQueue).start(next: { [weak controller] message in
-            if let message = message, let strongController = controller {
-                let _ = openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
-                    controller?.view.endEditing(true)
-                }, present: { c, a in
-                    controller?.present(c, in: .window(.root), with: a)
-                }, transitionNode: { _, _ in
-                    return nil
-                }, addToTransitionSurface: { _ in
-                }, openUrl: { _ in
-                }, openPeer: { peer, navigation in
-                }, callPeer: { _ in
-                }, enqueueMessage: { _ in 
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
-            }
-        })
+        } |> deliverOnMainQueue).start(next: presentImpl)
+    } else if let liveLocationManager = account.telegramApplicationContext.liveLocationManager {
+        let _ = (liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
+        |> map { peersAndMessages -> Message? in
+            return peersAndMessages?.first?.1
+        } |> deliverOnMainQueue).start(next: presentImpl)
     }
 }
 
@@ -133,7 +139,10 @@ public class TelegramController: ViewController {
                         case let .peer(peerId):
                             self.locationBroadcastMode = .peer
                             signal = liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
-                            |> map { ($0, nil) }
+                            |> map { peersAndMessages in
+                                let peers = peersAndMessages?.map { $0.0 }
+                                return (peers, nil)
+                            }
                         default:
                             self.locationBroadcastMode = .summary
                             signal = liveLocationManager.summaryManager.broadcastingToMessages()

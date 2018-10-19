@@ -135,7 +135,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
         self.statusNode.contentMode = .left
         self.statusNode.contentsScale = UIScreen.main.scale
         
-        self.activityIndicator = ActivityIndicator(type: .custom(.blue, 22.0, 1.0))
+        self.activityIndicator = ActivityIndicator(type: .custom(.blue, 22.0, 1.0, false))
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -243,7 +243,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
-                        strongSelf.activityIndicator.type = .custom(item.theme.list.itemAccentColor, 22.0, 1.0)
+                        strongSelf.activityIndicator.type = .custom(item.theme.list.itemAccentColor, 22.0, 1.0, false)
                     }
                     
                     if case .notFound = item.content {

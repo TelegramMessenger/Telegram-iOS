@@ -13,7 +13,7 @@ final class ChatLoadingNode: ASDisplayNode {
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.image = PresentationResourcesChat.chatLoadingIndicatorBackgroundImage(theme)
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.chat.serviceMessage.serviceMessagePrimaryTextColor, 22.0, 2.0), speed: .regular)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.chat.serviceMessage.serviceMessagePrimaryTextColor, 22.0, 2.0, false), speed: .regular)
         
         super.init()
         

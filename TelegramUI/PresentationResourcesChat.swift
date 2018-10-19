@@ -1023,4 +1023,16 @@ struct PresentationResourcesChat {
             generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: theme.chat.bubble.outgoingAccentControlColor)
         })
     }
+    
+    static func chatBubbleFileCloudFetchedIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleFileCloudFetchedIncomingIcon.rawValue, { theme in
+            generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetched"), color: theme.chat.bubble.incomingAccentControlColor)
+        })
+    }
+    
+    static func chatBubbleFileCloudFetchedOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleFileCloudFetchedOutgoingIcon.rawValue, { theme in
+            generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetched"), color: theme.chat.bubble.outgoingAccentControlColor)
+        })
+    }
 }

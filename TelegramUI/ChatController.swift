@@ -66,6 +66,8 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
     return true
 }
 
+let ChatControllerCount = Atomic<Int32>(value: 0)
+
 public final class ChatController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -131,8 +133,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     private var searchState: (String, SearchMessagesLocation)?
     
     private var recordingModeFeedback: HapticFeedback?
+    private var recorderFeedback: HapticFeedback?
     private var audioRecorderValue: ManagedAudioRecorder?
-    private var audioRecorderFeedback: HapticFeedback?
     private var audioRecorder = Promise<ManagedAudioRecorder?>()
     private var audioRecorderDisposable: Disposable?
     
@@ -190,6 +192,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     var purposefulAction: (() -> Void)?
     
     public init(account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false)) {
+        let _ = ChatControllerCount.modify { value in
+            return value + 1
+        }
+        
         self.account = account
         self.chatLocation = chatLocation
         self.messageId = messageId
@@ -1193,7 +1199,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     
                     if let audioRecorder = audioRecorder {
                         if !audioRecorder.beginWithTone {
-                            strongSelf.audioRecorderFeedback?.tap()
+                            strongSelf.recorderFeedback?.impact(.light)
                         }
                         audioRecorder.start()
                     }
@@ -1222,6 +1228,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     })
                     
                     if let videoRecorder = videoRecorder {
+                        strongSelf.recorderFeedback?.impact(.light)
+                        
                         videoRecorder.onDismiss = {
                             if let strongSelf = self {
                                 strongSelf.videoRecorder.set(.single(nil))
@@ -1342,6 +1350,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     }
     
     deinit {
+        let _ = ChatControllerCount.modify { value in
+            return value - 1
+        }
         self.historyStateDisposable?.dispose()
         self.messageIndexDisposable.dispose()
         self.navigationActionDisposable.dispose()
@@ -1765,7 +1776,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
             })
         }
         self.chatDisplayNode.sendGif = { [weak self] data in
-            
+            if let strongSelf = self {
+                strongSelf.enqueueGifData(data)
+            }
         }
         self.chatDisplayNode.updateTypingActivity = { [weak self] value in
             if let strongSelf = self, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil {
@@ -3035,11 +3048,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     linkPreviews = .single(true)
                 }
             }
-            self.urlPreviewQueryState = (updatedUrlPreviewUrl, (combineLatest(updatedUrlPreviewSignal, linkPreviews) |> deliverOnMainQueue).start(next: { [weak self] (result, enabled) in
-                var result = result
-                if !enabled {
-                    result = { _ in return nil }
+            let filteredPreviewSignal = linkPreviews
+            |> take(1)
+            |> mapToSignal { value -> Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError> in
+                if value {
+                    return updatedUrlPreviewSignal
+                } else {
+                    return .single({ _ in return nil })
                 }
+            }
+            
+            self.urlPreviewQueryState = (updatedUrlPreviewUrl, (filteredPreviewSignal |> deliverOnMainQueue).start(next: { [weak self] (result) in
                 if let strongSelf = self {
                     if Thread.isMainThread && inScope {
                         inScope = false
@@ -3674,7 +3693,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     
     private func enqueueMediaMessages(signals: [Any]?) {
         if case .peer = self.chatLocation {
-            self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.account, signals: signals!) |> deliverOnMainQueue).start(next: { [weak self] messages in
+            self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.account, signals: signals!)
+            |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self {
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
@@ -3688,6 +3708,22 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                 }
             }))
         }
+    }
+    
+    private func enqueueGifData(_ data: Data) {
+        self.enqueueMediaMessageDisposable.set((legacyEnqueueGifMessage(account: self.account, data: data) |> deliverOnMainQueue).start(next: { [weak self] message in
+            if let strongSelf = self {
+                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                        })
+                    }
+                })
+                strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageId) })
+            }
+        }))
     }
     
     private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult) {
@@ -3738,9 +3774,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
     private func requestAudioRecorder(beginWithTone: Bool) {
         if self.audioRecorderValue == nil {
             if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
-                if self.audioRecorderFeedback == nil {
-                    self.audioRecorderFeedback = HapticFeedback()
-                    self.audioRecorderFeedback?.prepareTap()
+                if self.recorderFeedback == nil {
+                    self.recorderFeedback = HapticFeedback()
+                    self.recorderFeedback?.prepareImpact(.light)
                 }
                 
                 if let mediaManager = applicationContext.mediaManager {
@@ -3758,6 +3794,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
         
         if self.videoRecorderValue == nil {
             if let currentInputPanelFrame = self.chatDisplayNode.currentInputPanelFrame() {
+                if self.recorderFeedback == nil {
+                    self.recorderFeedback = HapticFeedback()
+                    self.recorderFeedback?.prepareImpact(.light)
+                }
+                
                 self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, panelFrame: currentInputPanelFrame, account: self.account, peerId: peerId, send: { [weak self] message in
                     if let strongSelf = self {
                         let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
@@ -3786,8 +3827,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     let _ = (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self] data in
                         if let strongSelf = self, let data = data {
                             if data.duration < 0.5 {
-                                strongSelf.audioRecorderFeedback?.error()
-                                strongSelf.audioRecorderFeedback = nil
+                                strongSelf.recorderFeedback?.error()
+                                strongSelf.recorderFeedback = nil
                             } else if let waveform = data.waveform {
                                 var randomId: Int64 = 0
                                 arc4random_buf(&randomId, 8)
@@ -3799,7 +3840,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                     $0.updatedRecordedMediaPreview(ChatRecordedMediaPreview(resource: resource, duration: Int32(data.duration), fileSize: Int32(data.compressedData.count), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5)))
                                 })
-                                strongSelf.audioRecorderFeedback = nil
+                                strongSelf.recorderFeedback = nil
                             }
                         }
                     })
@@ -3807,8 +3848,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     let _ = (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self] data in
                         if let strongSelf = self, let data = data {
                             if data.duration < 0.5 {
-                                strongSelf.audioRecorderFeedback?.error()
-                                strongSelf.audioRecorderFeedback = nil
+                                strongSelf.recorderFeedback?.error()
+                                strongSelf.recorderFeedback = nil
                             } else {
                                 var randomId: Int64 = 0
                                 arc4random_buf(&randomId, 8)
@@ -3832,8 +3873,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                                 
                                 strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], mimeType: "audio/ogg", size: data.compressedData.count, attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
                                 
-                                strongSelf.audioRecorderFeedback?.tap()
-                                strongSelf.audioRecorderFeedback = nil
+                                strongSelf.recorderFeedback?.tap()
+                                strongSelf.recorderFeedback = nil
                             }
                         }
                     })
@@ -4873,6 +4914,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                             actionSheet?.dismissAnimated()
                         })
                     ])])
+                    strongSelf.chatDisplayNode.dismissInput()
                     strongSelf.present(actionSheet, in: .window(.root))
                 }
             }))
@@ -5091,12 +5133,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
         let otherShortcuts: [KeyShortcut] = [
             KeyShortcut(title: strings.KeyCommand_ScrollUp, input: UIKeyInputUpArrow, modifiers: [.shift], action: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.chatDisplayNode.historyNode.scrollWithDeltaOffset(-75)
+                    strongSelf.chatDisplayNode.historyNode.scrollWithDeltaOffset(75)
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_ScrollDown, input: UIKeyInputDownArrow, modifiers: [.shift], action: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.chatDisplayNode.historyNode.scrollWithDeltaOffset(75)
+                    strongSelf.chatDisplayNode.historyNode.scrollWithDeltaOffset(-75)
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_ChatInfo, input: "I", modifiers: [.command, .control], action: { [weak self] in
@@ -5113,51 +5155,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UIV
                     })
                 }
             }),
-            KeyShortcut(input: "W", modifiers: [.command], action: {
-                
+            KeyShortcut(input: "W", modifiers: [.command], action: { [weak self] in
+                if let strongSelf = self {
+                }
             })
         ]
         
         return inputShortcuts + otherShortcuts
     }
-    
-    
-//    NSMutableArray *commands = [[NSMutableArray alloc] init];
-//
-//    if (!_inputTextPanel.maybeInputField.isFirstResponder)
-//    {
-//    TGKeyCommand *focusKeyCommand = [TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.FocusOnInputField") input:@"\r" modifierFlags:0];
-//
-//    if ([self canEditLastMessage])
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputUpArrow modifierFlags:0]];
-//    }
-//    else
-//    {
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.SendMessage") input:@"\r" modifierFlags:0]];
-//
-//    if ([_inputTextPanel associatedPanel] != nil)
-//    {
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputUpArrow modifierFlags:0]];
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputDownArrow modifierFlags:0]];
-//    }
-//    else if ([self canEditLastMessage])
-//    {
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputUpArrow modifierFlags:0]];
-//    }
-//
-//    if (_inputTextPanel.messageEditingContext != nil)
-//    {
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:UIKeyInputEscape modifierFlags:0]];
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:@"\t" modifierFlags:0]];
-//    }
-//    }
-//
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:@"/" modifierFlags:UIKeyModifierCommand]];
-//
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.ScrollUp") input:UIKeyInputUpArrow modifierFlags:UIKeyModifierShift]];
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.ScrollDown") input:UIKeyInputDownArrow modifierFlags:UIKeyModifierShift]];
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:TGLocalized(@"KeyCommand.ChatInfo") input:@"I" modifierFlags:UIKeyModifierControl | UIKeyModifierCommand]];
-//    [commands addObject:[TGKeyCommand keyCommandWithTitle:nil input:@"W" modifierFlags:UIKeyModifierCommand]];
-//
-//    return commands;
 }

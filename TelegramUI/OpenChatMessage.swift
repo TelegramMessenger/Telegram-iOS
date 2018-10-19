@@ -219,7 +219,9 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 return true
             case let .document(file):
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                navigationController?.view.window?.rootViewController?.present(DocumentPreviewController(theme: presentationData.theme, strings: presentationData.strings, postbox: account.postbox, file: file), animated: true, completion: nil)
+                if let rootController = navigationController?.view.window?.rootViewController {
+                    presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: account.postbox, file: file)
+                }
                 //present(ShareController(account: account, subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
                 return true
             case let .audio(file):

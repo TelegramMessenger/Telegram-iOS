@@ -9,6 +9,39 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
     return OngoingCallConnectionDescription(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
 }
 
+private let callLogsLimit = 20
+
+private func callLogsPath(account: Account) -> String {
+    let path = account.basePath + "/calls"
+    let fileManager = FileManager.default
+    if !fileManager.fileExists(atPath: path, isDirectory: nil) {
+        try? fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+    }
+    
+    var oldest: (URL, Date)? = nil
+    var count = 0
+    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+        for url in enumerator {
+            if let url = url as? URL {
+                if let date = (try? url.resourceValues(forKeys: Set([.contentModificationDateKey])))?.contentModificationDate {
+                    if let currentOldest = oldest {
+                        if date < currentOldest.1 {
+                            oldest = (url, date)
+                        }
+                    } else {
+                        oldest = (url, date)
+                    }
+                    count += 1
+                }
+            }
+        }
+    }
+    if count > callLogsLimit, let oldest = oldest {
+        try? fileManager.removeItem(atPath: oldest.0.path)
+    }
+    return path
+}
+
 private let setupLogs: Bool = {
     OngoingCallThreadLocalContext.setupLoggingFunction({ value in
         if let value = value {
@@ -92,7 +125,7 @@ final class OngoingCallContext {
     private let audioSessionDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
     
-    init(callSessionManager: CallSessionManager, internalId: CallSessionInternalId, allowP2P: Bool, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
+    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, allowP2P: Bool, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
         let _ = setupLogs
         
         self.internalId = internalId
@@ -113,6 +146,16 @@ final class OngoingCallContext {
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
+            }
+            context.callEnded = { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
+                let delta = NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: bytesReceivedMobile,
+                        outgoing: bytesSentMobile),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: bytesReceivedWifi,
+                        outgoing: bytesSentWifi))
+                let _ = updateAccountNetworkUsageStats(account: account, category: .call, delta: delta)
             }
         }
         
@@ -165,5 +208,21 @@ final class OngoingCallContext {
         self.withContext { context in
             context.setIsMuted(value)
         }
+    }
+    
+    func debugInfo() -> Signal<(String, String), NoError> {
+        let poll = Signal<(String, String), NoError> { subscriber in
+            self.withContext { context in
+                let version = context.version()
+                let debugInfo = context.debugInfo()
+                if let version = version, let debugInfo = debugInfo {
+                    subscriber.putNext((version, debugInfo))
+                }
+                subscriber.putCompletion()
+            }
+            
+            return EmptyDisposable
+        }
+        return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
 }

@@ -226,7 +226,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (file, [])
                     }
                 } else if let image = mainMedia as? TelegramMediaImage {
-                    if let type = webpage.type, ["photo", "video", "embed", "article", "gif", "telegram_album"].contains(type) {
+                    if let type = webpage.type, ["photo", "video", "embed", "gif", "telegram_album"].contains(type) {
                         var flags = ChatMessageAttachedContentNodeMediaFlags()
                         if webpage.instantPage != nil, let largest = largestImageRepresentation(image.representations) {
                             if largest.dimensions.width >= 256.0 {
@@ -237,7 +237,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         mediaAndFlags = (image, flags)
                     } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
-                        mediaAndFlags = (image, [.preferMediaInline])
+                        var flags = ChatMessageAttachedContentNodeMediaFlags()
+                        if webpage.instantPage == nil {
+                            flags.insert(.preferMediaInline)
+                        }
+                        mediaAndFlags = (image, flags)
                     }
                 }
                 

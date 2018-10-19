@@ -46,6 +46,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var streamingCacheStatusFrame: CGRect?
     private var fileIconImage: UIImage?
     private var cloudFetchIconImage: UIImage?
+    private var cloudFetchedIconImage: UIImage?
     
     override init() {
         self.titleNode = TextNode()
@@ -322,14 +323,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let streamingProgressDiameter: CGFloat = 28.0
                 var hasStreamingProgress = false
                 if isAudio && !isVoice {
-                    if let resourceStatus = currentResourceStatus {
-                        switch resourceStatus.fetchStatus {
-                            case .Fetching, .Remote:
-                                hasStreamingProgress = true
-                            case .Local:
-                                break
-                        }
-                    }
+                    hasStreamingProgress = true
                     
                     if hasStreamingProgress {
                         textConstrainedSize.width -= streamingProgressDiameter + 4.0
@@ -359,9 +353,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
                 
                 var cloudFetchIconImage: UIImage?
+                var cloudFetchedIconImage: UIImage?
                 if hasStreamingProgress {
                     minLayoutWidth += streamingProgressDiameter + 4.0
                     cloudFetchIconImage = incoming ? PresentationResourcesChat.chatBubbleFileCloudFetchIncomingIcon(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleFileCloudFetchOutgoingIcon(presentationData.theme.theme)
+                    cloudFetchedIconImage = incoming ? PresentationResourcesChat.chatBubbleFileCloudFetchedIncomingIcon(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleFileCloudFetchedOutgoingIcon(presentationData.theme.theme)
                 }
                 
                 let fileIconImage: UIImage?
@@ -431,7 +427,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     
                     if isAudio && !isVoice {
-                        streamingCacheStatusFrame = CGRect(origin: CGPoint(x: fittedLayoutSize.width + 6.0, y: 4.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
+                        streamingCacheStatusFrame = CGRect(origin: CGPoint(x: fittedLayoutSize.width + 6.0, y: 8.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
                         if hasStreamingProgress {
                             fittedLayoutSize.width += streamingProgressDiameter + 6.0
                         }
@@ -531,7 +527,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
-                                            var previousHadCacheStatus = false
+                                            /*var previousHadCacheStatus = false
                                             if let resourceStatus = strongSelf.resourceStatus {
                                                 switch resourceStatus.fetchStatus {
                                                     case .Fetching, .Remote:
@@ -546,13 +542,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                                     hasCacheStatus = true
                                                 case .Local:
                                                     hasCacheStatus = false
-                                            }
+                                            }*/
                                             strongSelf.resourceStatus = status
-                                            if isAudio && !isVoice && previousHadCacheStatus != hasCacheStatus {
+                                            /*if isAudio && !isVoice && previousHadCacheStatus != hasCacheStatus {
                                                 strongSelf.requestUpdateLayout(false)
-                                            } else {
+                                            } else {*/
                                                 strongSelf.updateStatus()
-                                            }
+                                            //}
                                         }
                                     }
                                 }))
@@ -567,6 +563,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
                             strongSelf.fileIconImage = fileIconImage
                             strongSelf.cloudFetchIconImage = cloudFetchIconImage
+                            strongSelf.cloudFetchedIconImage = cloudFetchedIconImage
                             
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
@@ -632,7 +629,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     streamingState = .cloudProgress(color: streamingStatusForegroundColor, strokeBackgroundColor: streamingStatusBackgroundColor, lineWidth: 2.0, value: CGFloat(adjustedProgress))
                 case .Local:
-                    streamingState = .none
+                    if let cloudFetchedIconImage = self.cloudFetchedIconImage {
+                        streamingState = .customIcon(cloudFetchedIconImage)
+                    } else {
+                        streamingState = .none
+                    }
                 case .Remote:
                     if let cloudFetchIconImage = self.cloudFetchIconImage {
                         streamingState = .customIcon(cloudFetchIconImage)

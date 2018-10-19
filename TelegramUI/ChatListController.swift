@@ -140,7 +140,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 var checkProxy = false
                 switch state {
                     case .waitingForNetwork:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
                     case let .connecting(proxy):
                         var text = strongSelf.presentationData.strings.State_Connecting
                         if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
@@ -483,6 +483,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        #if DEBUG
+        DispatchQueue.main.async {
+            let count = ChatControllerCount.with({ $0 })
+            if count != 0 {
+                self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: "", text: "ChatControllerCount \(count)", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+            }
+        }
+        #endif
+        
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
             if #available(iOSApplicationExtension 9.0, *) {
@@ -618,13 +627,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     }
                     
                     let chatController = ChatController(account: self.account, chatLocation: .peer(peerId), mode: .standard(previewing: true))
-                    chatController.peekActions = .remove({ [weak self] in
-                        if let strongSelf = self {
-                            let _ = removeRecentPeer(account: strongSelf.account, peerId: peerId).start()
-                            let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
-                            searchContainer?.removePeerFromTopPeers(peerId)
-                        }
-                    })
+//                    chatController.peekActions = .remove({ [weak self] in
+//                        if let strongSelf = self {
+//                            let _ = removeRecentPeer(account: strongSelf.account, peerId: peerId).start()
+//                            let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
+//                            searchContainer?.removePeerFromTopPeers(peerId)
+//                        }
+//                    })
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return chatController

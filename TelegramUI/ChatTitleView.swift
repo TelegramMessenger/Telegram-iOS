@@ -35,7 +35,7 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
         self.titleNode.isOpaque = false
         self.titleNode.isUserInteractionEnabled = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5), speed: .slow)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false), speed: .slow)
         let activityIndicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(), size: activityIndicatorSize)
         
@@ -49,7 +49,7 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
         self.theme = theme
         
         self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-        self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5)
+        self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false)
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -62,7 +62,7 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
         let titleFrame = CGRect(origin: CGPoint(x: indicatorPadding + floor((size.width - titleSize.width - indicatorPadding) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 6.0, y: titleFrame.minY - 1.0), size: indicatorSize))
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize))
     }
 }
 

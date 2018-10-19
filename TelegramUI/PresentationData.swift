@@ -278,7 +278,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         let dateTimeFormat = currentDateTimeFormat()
         let nameDisplayOrder = currentPersonNameDisplayOrder()
         let nameSortOrder = currentPersonNameSortOrder()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: currentReduceMotionEnabled() || themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -349,8 +349,8 @@ private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting,
 
 public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData, NoError> {
     let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.presentationThemeSettings, PreferencesKeys.localizationSettings]))
-    return combineLatest(postbox.combinedView(keys: [preferencesKey]), reduceMotionEnabled())
-    |> mapToSignal { view, disableAnimations -> Signal<PresentationData, NoError> in
+    return postbox.combinedView(keys: [preferencesKey])
+    |> mapToSignal { view -> Signal<PresentationData, NoError> in
         let themeSettings: PresentationThemeSettings
         if let current = (view.views[preferencesKey] as! PreferencesView).values[ApplicationSpecificPreferencesKeys.presentationThemeSettings] as? PresentationThemeSettings {
             themeSettings = current
@@ -414,7 +414,7 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
             let nameDisplayOrder = currentPersonNameDisplayOrder()
             let nameSortOrder = currentPersonNameSortOrder()
             
-            return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: disableAnimations || themeSettings.disableAnimations)
+            return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
         }
     }
 }
