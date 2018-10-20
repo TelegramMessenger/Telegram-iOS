@@ -268,7 +268,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                         if file.fileId != node.file?.fileId {
                             node.file = file
                             node.setSignal(chatMessageSticker(account: item.account, file: file, small: true))
-                            node.loadDisposable.set(freeMediaFileInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(file)).start())
+                            node.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: true)).start())
                         }
                         if let dimensions = file.dimensions {
                             let imageSize = dimensions.aspectFitted(itemSize)

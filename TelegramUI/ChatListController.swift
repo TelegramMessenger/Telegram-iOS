@@ -187,7 +187,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 if count.0 == 0 {
                     strongSelf.tabBarItem.badgeValue = ""
                 } else {
-                    if count.0 > 1000 && false {
+                    if count.0 > 1000 {
                         strongSelf.tabBarItem.badgeValue = "\(count.0 / 1000)K"
                     } else {
                         strongSelf.tabBarItem.badgeValue = "\(count.0)"

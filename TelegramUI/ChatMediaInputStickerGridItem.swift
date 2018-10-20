@@ -168,7 +168,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
             if let dimensions = stickerItem.file.dimensions {
                 self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file)).start())
+                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
                 
                 self.currentState = (account, stickerItem, dimensions)
                 self.setNeedsLayout()
@@ -183,7 +183,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         super.layout()
         
         let bounds = self.bounds
-        let sideSize: CGFloat = min(75.0 - 6.0, bounds.width)
+        let sideSize: CGFloat = min(75.0 - 10.0, bounds.width)
         let boundingSize = CGSize(width: sideSize, height: sideSize)
         
         if let (_, _, mediaDimensions) = self.currentState {
@@ -198,7 +198,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             return
         }
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(.standalone(media: item.file))
+            interfaceInteraction.sendSticker(.standalone(media: item.file), false)
             self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
         }
     }

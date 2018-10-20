@@ -35,7 +35,7 @@ private final class FetchManagerLocationEntry {
     let statsCategory: MediaResourceStatsCategory
     
     var userInitiated: Bool = false
-    var storeToDownloads: Bool = false
+    var storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?
     var referenceCount: Int32 = 0
     var elevatedPriorityReferenceCount: Int32 = 0
     var userInitiatedPriorityIndices: [Int32] = []
@@ -165,8 +165,8 @@ private final class FetchManagerCategoryContext {
                     let storeManager = self.storeManager
                     activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, statsCategory: entry.statsCategory, reportResultStatus: true)
                     |> mapToSignal { type -> Signal<FetchResourceSourceType, NoError> in
-                        if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, entry.storeToDownloads {
-                            return storeDownloadedMedia(storeManager: storeManager, media: mediaReference)
+                        if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
+                            return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                             |> mapToSignal { _ -> Signal<FetchResourceSourceType, NoError> in
                                 return .complete()
                             }
@@ -241,8 +241,8 @@ private final class FetchManagerCategoryContext {
                 let storeManager = self.storeManager
                 activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, statsCategory: entry.statsCategory, reportResultStatus: true)
                 |> mapToSignal { type -> Signal<FetchResourceSourceType, NoError> in
-                    if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, entry.storeToDownloads {
-                        return storeDownloadedMedia(storeManager: storeManager, media: mediaReference)
+                    if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
+                        return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                         |> mapToSignal { _ -> Signal<FetchResourceSourceType, NoError> in
                             return .complete()
                         }
@@ -377,7 +377,7 @@ final class FetchManager {
         }
     }
     
-    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, storeToDownloads: Bool = false) -> Signal<Void, NoError> {
+    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType? = nil) -> Signal<Void, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
@@ -390,8 +390,8 @@ final class FetchManager {
                         if userInitiated {
                             entry.userInitiated = true
                         }
-                        if storeToDownloads {
-                            entry.storeToDownloads = true
+                        if let peerType = storeToDownloadsPeerType {
+                            entry.storeToDownloadsPeerType = peerType
                         }
                         entry.referenceCount += 1
                         if elevatedPriority {

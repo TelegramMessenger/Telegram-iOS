@@ -165,7 +165,7 @@ public class PeerMediaCollectionController: TelegramController {
                     strongSelf.updateInterfaceState(animated: true, { $0.withToggledSelectedMessages(ids, value: value) })
                 }
             }, sendMessage: { _ in
-            },sendSticker: { _ in
+            },sendSticker: { _, _ in
             }, sendGif: { _ in
             }, requestMessageActionCallback: { _, _, _ in
             }, activateSwitchInline: { _, _ in

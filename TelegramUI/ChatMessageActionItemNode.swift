@@ -574,7 +574,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     apply()
                                     
                                 }
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image), storeToDownloads: false).start())
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image), storeToDownloadsPeerType: nil).start())
                                 let updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image))
 
                                 imageNode.setSignal(updateImageSignal)

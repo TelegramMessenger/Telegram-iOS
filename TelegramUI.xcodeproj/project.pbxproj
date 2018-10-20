@@ -303,6 +303,7 @@
 		D09F9DCF20768DAF00DB4DE1 /* SecureIdLocalResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09F9DCE20768DAF00DB4DE1 /* SecureIdLocalResource.swift */; };
 		D0A24D281F92C27100584D24 /* DefaultDarkAccentPresentationTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A24D271F92C27100584D24 /* DefaultDarkAccentPresentationTheme.swift */; };
 		D0A723541FC3B40E0094D167 /* RadialCheckContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A723531FC3B40E0094D167 /* RadialCheckContentNode.swift */; };
+		D0A8998D217A294100759EE6 /* SaveIncomingMediaController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8998C217A294100759EE6 /* SaveIncomingMediaController.swift */; };
 		D0A8BBA11F61EE83000F03FD /* UniversalVideoCalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8BBA01F61EE83000F03FD /* UniversalVideoCalleryItem.swift */; };
 		D0AA29AE1F72770D00C050AC /* ChatListItemStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA29AD1F72770D00C050AC /* ChatListItemStrings.swift */; };
 		D0AA840C1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA840B1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift */; };
@@ -1637,6 +1638,7 @@
 		D0A24D271F92C27100584D24 /* DefaultDarkAccentPresentationTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultDarkAccentPresentationTheme.swift; sourceTree = "<group>"; };
 		D0A723531FC3B40E0094D167 /* RadialCheckContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialCheckContentNode.swift; sourceTree = "<group>"; };
 		D0A749961E3AA25200AD786E /* NotificationSoundSelection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationSoundSelection.swift; sourceTree = "<group>"; };
+		D0A8998C217A294100759EE6 /* SaveIncomingMediaController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveIncomingMediaController.swift; sourceTree = "<group>"; };
 		D0A8BBA01F61EE83000F03FD /* UniversalVideoCalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalVideoCalleryItem.swift; sourceTree = "<group>"; };
 		D0AA29AD1F72770D00C050AC /* ChatListItemStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListItemStrings.swift; sourceTree = "<group>"; };
 		D0AA840B1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPlayerControlsNode.swift; sourceTree = "<group>"; };
@@ -3394,6 +3396,7 @@
 				D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */,
 				D0185E8B208A025A005E1A6C /* ProxySettingsServerItem.swift */,
 				D07E413C208A494D00FCA8F0 /* ProxyServerActionSheetController.swift */,
+				D0A8998C217A294100759EE6 /* SaveIncomingMediaController.swift */,
 			);
 			name = "Data and Storage";
 			sourceTree = "<group>";
@@ -4927,6 +4930,7 @@
 				D0E9BA371F05585000F079A4 /* STPPhoneNumberValidator.m in Sources */,
 				D069F5D0212700B90000565A /* StickerPanePeerSpecificSetupGridItem.swift in Sources */,
 				D0EC6D041EB9F58800EBF1C3 /* opusenc.m in Sources */,
+				D0A8998D217A294100759EE6 /* SaveIncomingMediaController.swift in Sources */,
 				D0185E8A208A01AF005E1A6C /* ProxySettingsActionItem.swift in Sources */,
 				D0EC6D051EB9F58800EBF1C3 /* picture.c in Sources */,
 				D0EC6D061EB9F58800EBF1C3 /* wav_io.c in Sources */,

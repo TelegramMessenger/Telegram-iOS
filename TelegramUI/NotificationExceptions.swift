@@ -864,10 +864,7 @@ private final class NotificationExceptionsControllerNode: ASDisplayNode {
     
 }
 
-
-
-
-final class NotificationExceptionsSearchControllerContentNode: SearchDisplayControllerContentNode {
+private final class NotificationExceptionsSearchControllerContentNode: SearchDisplayControllerContentNode {
     private let account: Account
     
     private let listNode: ItemListControllerNode<NotificationExceptionEntry>
