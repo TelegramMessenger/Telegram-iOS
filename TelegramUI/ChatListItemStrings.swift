@@ -111,12 +111,12 @@ public func chatListItemStrings(strings: PresentationStrings, message: Message?,
                     let incoming = message.flags.contains(.Incoming)
                     if let discardReason = discardReason {
                         switch discardReason {
-                        case .busy, .disconnect:
-                            messageText = strings.Notification_CallCanceled
-                        case .missed:
-                            messageText = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
-                        case .hangup:
-                            break
+                            case .busy, .disconnect:
+                                messageText = strings.Notification_CallCanceled
+                            case .missed:
+                                messageText = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
+                            case .hangup:
+                                break
                         }
                     }
                     
