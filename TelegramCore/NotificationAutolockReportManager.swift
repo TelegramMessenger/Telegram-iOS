@@ -48,7 +48,7 @@ private final class NotificationAutolockReportManagerImpl {
         if let deadline = deadline {
             value = max(0, deadline - Int32(CFAbsoluteTimeGetCurrent()))
         } else {
-            value = Int32.max
+            value = -1
         }
         self.currentRequestDisposable.set((self.network.request(Api.functions.account.updateDeviceLocked(period: value))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
