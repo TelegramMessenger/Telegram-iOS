@@ -857,7 +857,7 @@ private final class NotificationExceptionsControllerNode: ASDisplayNode {
     
     func scrollToTop() {
         if self.contentNode.supernode != nil {
-           // self.contentNode.scrollToPosition(.top)
+            self.contentNode.scrollToTop()
         }
     }
 
@@ -979,17 +979,69 @@ private final class NotificationExceptionsSearchControllerContentNode: SearchDis
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
+        let hadValidLayout = self.validLayout != nil
         self.validLayout = layout
         
-        var insets = layout.insets(options: [.input])
-        insets.top += layout.insets(options: [.statusBar]).top
-
-
-        let topInset = navigationBarHeight
-        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
-
+        var duration: Double = 0.0
+        var curve: UInt = 0
+        switch transition {
+        case .immediate:
+            break
+        case let .animated(animationDuration, animationCurve):
+            duration = animationDuration
+            switch animationCurve {
+            case .easeInOut:
+                break
+            case .spring:
+                curve = 7
+            }
+        }
+        
+        
+        let listViewCurve: ListViewAnimationCurve
+        if curve == 7 {
+            listViewCurve = .Spring(duration: duration)
+        } else {
+            listViewCurve = .Default
+        }
+        
+        self.listNode.containerLayoutUpdated(layout, navigationBarHeight: 0, transition: transition)
+        
+        let insets = UIEdgeInsets(top: navigationBarHeight - 30, left: layout.safeInsets.left, bottom: layout.insets(options: [.input]).bottom, right: layout.safeInsets.right)
+        
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top)))
+        
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.containerLayoutUpdated(layout, navigationBarHeight: insets.top, transition: transition)
+        self.listNode.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight - 30, left: layout.safeInsets.left, bottom: layout.insets(options: [.input]).bottom, right: layout.safeInsets.right), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
+    
+//    override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+//        super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+//
+//        self.validLayout = layout
+//
+//
+//        let cleanInsets = layout.insets(options: [])
+//
+////        var insets = layout.insets(options: [.input])
+////        insets.top += layout.insets(options: [.statusBar]).top
+//        let toolbarHeight: CGFloat = 44.0 + cleanInsets.bottom
+//
+//
+//        var insets = layout.insets(options: [.input])
+//        insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
+//        insets.bottom = max(insets.bottom, cleanInsets.bottom)
+//        insets.left += layout.safeInsets.left
+//        insets.right += layout.safeInsets.right
+//
+//        self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
+//        self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+//
+//        let topInset = layout.insets(options: [.statusBar]).bottom
+//        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
+//
+//        transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
+//        self.listNode.containerLayoutUpdated(layout, navigationBarHeight: topInset, transition: transition)
+//    }
     
 }
