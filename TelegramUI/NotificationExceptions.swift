@@ -984,12 +984,15 @@ final class NotificationExceptionsSearchControllerContentNode: SearchDisplayCont
         
         self.validLayout = layout
         
+        var insets = layout.insets(options: [.input])
+        insets.top += layout.insets(options: [.statusBar]).top
+
 
         let topInset = navigationBarHeight
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
 
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.containerLayoutUpdated(layout, navigationBarHeight: 28, transition: transition)
+        self.listNode.containerLayoutUpdated(layout, navigationBarHeight: insets.top, transition: transition)
     }
     
 }
