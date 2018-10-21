@@ -107,6 +107,7 @@
 		D01C06C01FBF118A001561AB /* MessageUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06BF1FBF118A001561AB /* MessageUtils.swift */; };
 		D01C99781F4F382C00DCFAF6 /* InstantPageSettingsItemTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C99771F4F382C00DCFAF6 /* InstantPageSettingsItemTheme.swift */; };
 		D01DBA9B209CC6AD00C64E64 /* ChatLinkPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01DBA9A209CC6AD00C64E64 /* ChatLinkPreview.swift */; };
+		D01FB437217CEC62009C6134 /* FetchVideoThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01FB436217CEC62009C6134 /* FetchVideoThumbnail.swift */; };
 		D0208AD51FA33D14001F0D5F /* RaiseToListenActivator.h in Headers */ = {isa = PBXBuildFile; fileRef = D0208AD31FA33D14001F0D5F /* RaiseToListenActivator.h */; };
 		D0208AD61FA33D14001F0D5F /* RaiseToListenActivator.m in Sources */ = {isa = PBXBuildFile; fileRef = D0208AD41FA33D14001F0D5F /* RaiseToListenActivator.m */; };
 		D0208AD91FA34017001F0D5F /* DeviceProximityManager.h in Headers */ = {isa = PBXBuildFile; fileRef = D0208AD71FA34017001F0D5F /* DeviceProximityManager.h */; };
@@ -1200,6 +1201,7 @@
 		D01D6BFB1E42AB3C006151C6 /* EmojiUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EmojiUtils.swift; sourceTree = "<group>"; };
 		D01DBA9A209CC6AD00C64E64 /* ChatLinkPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLinkPreview.swift; sourceTree = "<group>"; };
 		D01F66121DE8903300345CBE /* ChatTextInputMediaRecordingButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputMediaRecordingButton.swift; sourceTree = "<group>"; };
+		D01FB436217CEC62009C6134 /* FetchVideoThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchVideoThumbnail.swift; sourceTree = "<group>"; };
 		D0208AD31FA33D14001F0D5F /* RaiseToListenActivator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RaiseToListenActivator.h; sourceTree = "<group>"; };
 		D0208AD41FA33D14001F0D5F /* RaiseToListenActivator.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RaiseToListenActivator.m; sourceTree = "<group>"; };
 		D0208AD71FA34017001F0D5F /* DeviceProximityManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DeviceProximityManager.h; sourceTree = "<group>"; };
@@ -4426,6 +4428,7 @@
 				D007019D2029EFDD006B9E34 /* ICloudResources.swift */,
 				D09F9DCE20768DAF00DB4DE1 /* SecureIdLocalResource.swift */,
 				0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */,
+				D01FB436217CEC62009C6134 /* FetchVideoThumbnail.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -5572,6 +5575,7 @@
 				D0DFD5E21FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift in Sources */,
 				D0EC6E631EB9F58900EBF1C3 /* TwoStepVerificationUnlockController.swift in Sources */,
 				D0EC6E641EB9F58900EBF1C3 /* TwoStepVerificationPasswordEntryController.swift in Sources */,
+				D01FB437217CEC62009C6134 /* FetchVideoThumbnail.swift in Sources */,
 				D0EC6E651EB9F58900EBF1C3 /* TwoStepVerificationResetController.swift in Sources */,
 				D0EC6E661EB9F58900EBF1C3 /* PasscodeOptionsController.swift in Sources */,
 				D0383EDE207D1A1600C45548 /* emoji_suggestions.cpp in Sources */,
