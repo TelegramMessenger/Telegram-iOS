@@ -58,6 +58,7 @@ final class StickerPreviewPeekContent: PeekControllerContent {
 private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerContentNode {
     private let account: Account
     private let item: StickerPreviewPeekItem
+    private let stickerFetchedDisposable = MetaDisposable()
     
     private var textNode: ASTextNode
     private var imageNode: TransformImageNode
@@ -75,13 +76,18 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
             break
         }
-        self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: false))
+        self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: false, fetched: false))
+        self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: false)).start())
         
         super.init()
         
         self.isUserInteractionEnabled = false
         
         self.addSubnode(self.imageNode)
+    }
+    
+    deinit {
+        self.stickerFetchedDisposable.dispose()
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
