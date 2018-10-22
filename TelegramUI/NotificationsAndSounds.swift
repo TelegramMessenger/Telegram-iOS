@@ -584,7 +584,8 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
         var groups: [PeerId : NotificationExceptionWrapper] = [:]
         
         for (key, value) in allSettings {
-            if let value = value as? TelegramPeerNotificationSettings {
+            let peer = transaction.getPeer(key)
+            if let value = value as? TelegramPeerNotificationSettings, let peer = peer, !peer.displayTitle.isEmpty {
                 switch value.muteState {
                 case .default:
                     switch value.messageSound {

@@ -439,6 +439,12 @@ public func notificationExceptionsController(account: Account, mode: Notificatio
                 })
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 actionSheet?.dismissAnimated()
+            }),
+            ActionSheetButtonItem(title: presentationData.strings.Notifications_ExceptionsResetToDefaults, color: .destructive, action: { [weak actionSheet] in
+                
+                updatePeerNotificationInterval(peerId, nil)
+                updatePeerSound(peerId, .default)
+                actionSheet?.dismissAnimated()
             })
             ]), ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
@@ -505,6 +511,15 @@ public func notificationExceptionsController(account: Account, mode: Notificatio
                         actionSheet?.dismissAnimated()
                     }))
                     
+                    if settings.muteState != .default || settings.messageSound != .default {
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Notifications_ExceptionsResetToDefaults, color: .destructive, action: { [weak actionSheet] in
+                            
+                            updatePeerNotificationInterval(peerId, nil)
+                            updatePeerSound(peerId, .default)
+                            actionSheet?.dismissAnimated()
+                        }))
+                    }
+                    
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -544,7 +559,7 @@ public func notificationExceptionsController(account: Account, mode: Notificatio
 
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Notifications_ExceptionsTitle), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: nil)
-            let listState = ItemListNodeState(entries: notificationsExceptionEntries(presentationData: presentationData, peers: peers, state: state), style: .plain, searchItem: nil)
+            let listState = ItemListNodeState(entries: notificationsExceptionEntries(presentationData: presentationData, peers: peers, state: state), style: .blocks, searchItem: nil)
             
             return (controllerState, (listState, arguments))
         }

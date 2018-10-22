@@ -1537,6 +1537,7 @@ public final class PresentationStrings {
     }
     public let Conversation_ClearPrivateHistory: String
     public let Conversation_ContextMenuShare: String
+    public let Notifications_ExceptionsResetToDefaults: String
     public let Notifications_ExceptionsNone: String
     private let _Time_MonthOfYear_m6: String
     private let _Time_MonthOfYear_m6_r: [(Int, NSRange)]
@@ -6588,6 +6589,7 @@ public final class PresentationStrings {
         self._LOCKED_MESSAGE_r = extractArgumentRanges(self._LOCKED_MESSAGE)
         self.Conversation_ClearPrivateHistory = getValue(dict, "Conversation.ClearPrivateHistory")
         self.Conversation_ContextMenuShare = getValue(dict, "Conversation.ContextMenuShare")
+        self.Notifications_ExceptionsResetToDefaults = getValue(dict, "Notifications.ExceptionsResetToDefaults")
         self.Notifications_ExceptionsNone = getValue(dict, "Notifications.ExceptionsNone")
         self._Time_MonthOfYear_m6 = getValue(dict, "Time.MonthOfYear_m6")
         self._Time_MonthOfYear_m6_r = extractArgumentRanges(self._Time_MonthOfYear_m6)
