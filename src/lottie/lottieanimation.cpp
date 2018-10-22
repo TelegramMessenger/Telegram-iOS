@@ -40,12 +40,7 @@ size_t AnimationImpl::totalFrame() const
 
 size_t AnimationImpl::frameAtPos(double pos) const
 {
-    if (pos < 0) pos = 0;
-    if (pos > 1) pos = 1;
-
-    if (mModel->isStatic()) return 0;
-
-    return mModel->startFrame() + pos * mModel->frameDuration();
+    return mModel->frameAtPos(pos);
 }
 
 VSize AnimationImpl::size() const
@@ -63,8 +58,7 @@ const std::vector<LOTNode *> &AnimationImpl::renderList(size_t frameNo, const VS
 
 double AnimationImpl::duration() const
 {
-    if (mModel->isStatic()) return 0;
-    return double(mModel->frameDuration()) / double(mModel->frameRate());
+    return mModel->duration();
 }
 
 bool AnimationImpl::update(size_t frameNo, const VSize &size)

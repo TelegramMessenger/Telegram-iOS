@@ -324,6 +324,16 @@ class LOTCompositionData : public LOTData
 {
 public:
     LOTCompositionData():LOTData(LOTData::Type::Composition){}
+    double duration() const {
+        return isStatic() ? startFrame() :
+                            frameDuration() / frameRate(); // in second
+    }
+    size_t frameAtPos(double pos) const {
+        if (pos < 0) pos = 0;
+        if (pos > 1) pos = 1;
+        return isStatic() ? startFrame() :
+                            startFrame() + pos * frameDuration();
+    }
     long frameDuration() const {return mEndFrame - mStartFrame -1;}
     float frameRate() const {return mFrameRate;}
     long startFrame() const {return mStartFrame;}
@@ -624,10 +634,12 @@ public:
 class LOTModel
 {
 public:
-   bool  isStatic() const{return mRoot->isStatic();}
-   size_t frameDuration() {return mRoot->frameDuration();}
-   size_t frameRate() {return mRoot->frameRate();}
-   size_t startFrame() {return mRoot->startFrame();}
+   bool  isStatic() const {return mRoot->isStatic();}
+   double duration() const {return mRoot->duration();}
+   size_t frameDuration() const {return mRoot->frameDuration();}
+   size_t frameRate() const {return mRoot->frameRate();}
+   size_t startFrame() const {return mRoot->startFrame();}
+   size_t frameAtPos(double pos) const {return mRoot->frameAtPos(pos);}
 public:
     std::shared_ptr<LOTCompositionData> mRoot;
 };
