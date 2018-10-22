@@ -323,7 +323,7 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             }
             
-            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: state.disableAnimations, account: account, scrollPosition: update.scrollPosition)
+            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: false, account: account, scrollPosition: update.scrollPosition)
                 |> map({ mappedCallListNodeViewListTransition(account: account, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
                 |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }

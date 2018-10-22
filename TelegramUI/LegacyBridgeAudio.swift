@@ -14,11 +14,11 @@ public func legacyDecodeOpusAudio(path: String, outputPath: String) -> Signal<St
     }
 }
 
-public func legacyEncodeOpusAudio(path: String) -> Signal<(Data?, Int32), NoError> {
+public func legacyEncodeOpusAudio(path: String) -> Signal<(String?, Int32), NoError> {
     return Signal { subscriber in
         let encoder = TGBridgeAudioEncoder(url: URL(fileURLWithPath: path))
-        encoder?.start(completion: { (dataItem, duration) in
-            subscriber.putNext((dataItem?.data(), duration))
+        encoder?.start(completion: { (path, duration) in
+            subscriber.putNext((path, duration))
             subscriber.putCompletion()
         })
         return EmptyDisposable

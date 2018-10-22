@@ -226,9 +226,11 @@ public func chatMessageSticker(account: Account, file: TelegramMediaFile, small:
             context.withFlippedContext { c in
                 if let color = arguments.emptyColor {
                     c.setBlendMode(.normal)
+                    c.setFillColor(color.cgColor)
                     c.fill(drawingRect)
+                } else {
+                    c.setBlendMode(.copy)
                 }
-                c.setBlendMode(.copy)
                 
                 if let blurredThumbnailImage = blurredThumbnailImage {
                     c.interpolationQuality = .low
