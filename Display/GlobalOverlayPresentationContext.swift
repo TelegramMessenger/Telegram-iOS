@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import SwiftSignalKit
 
-private func isViewVisibleInHierarchy(_ view: UIView) -> Bool {
+private func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) -> Bool {
     guard let window = view.window else {
         return false
     }
@@ -12,7 +12,11 @@ private func isViewVisibleInHierarchy(_ view: UIView) -> Bool {
     if view.superview === window {
         return true
     } else if let superview = view.superview {
-        return isViewVisibleInHierarchy(superview)
+        if initial && view.frame.minY >= superview.frame.height {
+            return false
+        } else {
+            return isViewVisibleInHierarchy(superview, false)
+        }
     } else {
         return false
     }
