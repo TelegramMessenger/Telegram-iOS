@@ -121,7 +121,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             let displaySize = CGSize(width: 212.0, height: 212.0)
             
-            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(account: item.account, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, true)
+            var automaticDownload = true
+            for media in item.message.media {
+                if let file = media as? TelegramMediaFile {
+                    automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: file)
+                }
+            }
+            
+            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(account: item.account, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
             
             let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: 0.0), size: videoLayout.contentSize)
             
