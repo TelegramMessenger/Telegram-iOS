@@ -254,21 +254,21 @@ void LOTLayerItem::updateStaticProperty()
     mStatic = mPrecompLayer ? (mStatic & mPrecompLayer->isStatic()) : mStatic;
 }
 
-void LOTLayerItem::update(int frameNo, const VMatrix &parentMatrix,
+void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
                           float parentAlpha)
 {
-    mFrameNo = frameNo;
+    mFrameNo = mLayerData->timeRemap(frameNumber);
     // 1. check if the layer is part of the current frame
     if (!visible()) return;
 
     // 2. calculate the parent matrix and alpha
-    VMatrix m = matrix(frameNo);
+    VMatrix m = matrix(frameNo());
     m *= parentMatrix;
-    float alpha = parentAlpha * opacity(frameNo);
+    float alpha = parentAlpha * opacity(frameNo());
 
     // 6. update the mask
     if (hasMask()) {
-        for (auto &i : mMasks) i->update(frameNo, m, alpha, mDirtyFlag);
+        for (auto &i : mMasks) i->update(frameNo(), m, alpha, mDirtyFlag);
     }
 
     // 3. update the dirty flag based on the change

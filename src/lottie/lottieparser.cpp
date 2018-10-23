@@ -810,7 +810,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
 
     layer->setStatic(staticFlag && layer->mTransform->isStatic() &&
                      !hasLayerRef);
-
+    layer->mCompRef = compRef;
     return sharedLayer;
 }
 

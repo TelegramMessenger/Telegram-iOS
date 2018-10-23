@@ -292,6 +292,7 @@ public:
     int solidWidth() const noexcept{return mSolidLayer.mWidth;}
     int solidHeight() const noexcept{return mSolidLayer.mHeight;}
     LottieColor solidColor() const noexcept{return mSolidLayer.mColor;}
+    int timeRemap(int frameNo) const;
 public:
     struct SolidLayer {
         int            mWidth{0};
@@ -318,6 +319,7 @@ public:
     bool                 mHasGradient{false};
     bool                 mRoot{false};
     std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
+    LOTCompositionData   *mCompRef;
 };
 
 class LOTCompositionData : public LOTData
@@ -333,6 +335,9 @@ public:
         if (pos > 1) pos = 1;
         return isStatic() ? startFrame() :
                             startFrame() + pos * frameDuration();
+    }
+    long frameAtTime(double timeInSec) const {
+        return isStatic() ? startFrame() : frameAtPos(timeInSec / duration());
     }
     long frameDuration() const {return mEndFrame - mStartFrame -1;}
     float frameRate() const {return mFrameRate;}
@@ -354,6 +359,19 @@ public:
                        std::shared_ptr<LOTAsset>>    mAssets;
 
 };
+
+/**
+ * TimeRemap has the value in time domain(in sec)
+ * To get the proper mapping first we get the mapped time at the current frame Number
+ * then we need to convert mapped time to frame number using the composition time line
+ * Ex: at frame 10 the mappend time is 0.5(500 ms) which will be convert to frame number
+ * 30 if the frame rate is 60. or will result to frame number 15 if the frame rate is 30.
+ */
+inline int LOTLayerData::timeRemap(int frameNo) const
+{
+    return mTimeRemap.isStatic() ? frameNo :
+           mCompRef->frameAtTime(mTimeRemap.value(frameNo));
+}
 
 class LOTTransformData : public LOTData
 {
