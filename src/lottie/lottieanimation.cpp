@@ -11,16 +11,17 @@ using namespace lottie;
 class AnimationImpl {
 
 public:
-    void                          init(const std::shared_ptr<LOTModel> &model);
-    bool                          update(size_t frameNo, const VSize &size);
-    VSize                         size() const;
-    double                        duration() const;
-    double                        frameRate() const;
-    size_t                        totalFrame() const;
-    size_t                        frameAtPos(double pos) const;
-    const std::vector<LOTNode *> &renderList(size_t frameNo, const VSize &size);
-    Surface                       render(size_t frameNo, const Surface &surface);
+    void    init(const std::shared_ptr<LOTModel> &model);
+    bool    update(size_t frameNo, const VSize &size);
+    VSize   size() const {return mCompItem->size();}
+    double  duration() const {return mModel->duration();}
+    double  frameRate() const {return mModel->frameRate();}
+    size_t  totalFrame() const {return mModel->frameDuration();}
+    size_t  frameAtPos(double pos) const {return mModel->frameAtPos(pos);}
+    Surface render(size_t frameNo, const Surface &surface);
 
+    const std::vector<LOTNode *> &
+                 renderList(size_t frameNo, const VSize &size);
 private:
     std::string                  mFilePath;
     std::shared_ptr<LOTModel>    mModel;
@@ -28,37 +29,12 @@ private:
     std::atomic<bool>            mRenderInProgress;
 };
 
-double AnimationImpl::frameRate() const
-{
-   return mModel->frameRate();
-}
-
-size_t AnimationImpl::totalFrame() const
-{
-   return mModel->frameDuration();
-}
-
-size_t AnimationImpl::frameAtPos(double pos) const
-{
-    return mModel->frameAtPos(pos);
-}
-
-VSize AnimationImpl::size() const
-{
-    return mCompItem->size();
-}
-
 const std::vector<LOTNode *> &AnimationImpl::renderList(size_t frameNo, const VSize &size)
 {
     if (update(frameNo, size)) {
        mCompItem->buildRenderList();
     }
     return mCompItem->renderList();
-}
-
-double AnimationImpl::duration() const
-{
-    return mModel->duration();
 }
 
 bool AnimationImpl::update(size_t frameNo, const VSize &size)
