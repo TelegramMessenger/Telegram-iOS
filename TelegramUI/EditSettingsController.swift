@@ -385,9 +385,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal, tabBarItem: (account.applicationContext as! TelegramApplicationContext).presentationData |> map { presentationData in
-        return ItemListControllerTabBarItem(title: presentationData.strings.EditProfile_Title, image: PresentationResourcesRootController.tabSettingsIcon(presentationData.theme), selectedImage: PresentationResourcesRootController.tabSettingsSelectedIcon(presentationData.theme))
-        })
+    let controller = ItemListController(account: account, state: signal, tabBarItem: nil)
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }

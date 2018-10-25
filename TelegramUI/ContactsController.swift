@@ -34,8 +34,16 @@ public class ContactsController: ViewController {
         
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
-        self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
-        self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
+        
+        let icon: UIImage?
+        if (useSpecialTabBarIcons()) {
+            icon = UIImage(bundleImageName: "Chat List/Tabs/IconContactsHW")
+        } else {
+            icon = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
+        }
+        
+        self.tabBarItem.image = icon
+        self.tabBarItem.selectedImage = icon
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))

@@ -34,43 +34,7 @@ struct PresentationResourcesRootController {
             generateIndefiniteActivityIndicatorImage(color: theme.rootController.navigationBar.accentTextColor)
         })
     }
-    
-    static func tabContactsIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.rootTabContactsIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: theme.rootController.tabBar.iconColor)
-        })
-    }
-    
-    static func tabContactsSelectedIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.rootTabContactsSelectedIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: theme.rootController.tabBar.selectedIconColor)
-        })
-    }
-    
-    static func tabChatsIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.rootTabChatsIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconChats"), color: theme.rootController.tabBar.iconColor)
-        })
-    }
-    
-    static func tabChatsSelectedIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.rootTabChatsSelectedIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconChats"), color: theme.rootController.tabBar.selectedIconColor)
-        })
-    }
-    
-    static func tabSettingsIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.rootTabSettingsIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconSettings"), color: theme.rootController.tabBar.iconColor)
-        })
-    }
-    
-    static func tabSettingsSelectedIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.rootTabSettingsSelectedIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconSettings"), color: theme.rootController.tabBar.selectedIconColor)
-        })
-    }
-    
+        
     static func navigationComposeIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationComposeIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/ComposeIcon"), color: theme.rootController.navigationBar.accentTextColor)
