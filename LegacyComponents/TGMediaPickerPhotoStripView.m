@@ -303,31 +303,37 @@
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    id item = _selectedItemsModel.items[indexPath.row];
-    
     __weak TGMediaPickerPhotoStripView *weakSelf = self;
     TGMediaPickerPhotoStripCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:TGMediaPickerPhotoStripCellKind forIndexPath:indexPath];
     cell.selectionContext = self.selectionContext;
     cell.editingContext = self.editingContext;
-    cell.itemSelected = ^(id<TGMediaSelectableItem> item, bool selected, __unused id sender)
-    {
-        __strong TGMediaPickerPhotoStripView *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        [strongSelf.selectionContext setItem:item selected:selected animated:true sender:strongSelf.selectedItemsModel];
-    };
-    cell.itemRemoved = ^
-    {
-        __strong TGMediaPickerPhotoStripView *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        if (strongSelf.itemRemoved != nil)
-            strongSelf.itemRemoved([strongSelf->_selectedItemsModel.items indexOfObject:item]);
-    };
-    [cell setItem:item signal:self.thumbnailSignalForItem(item) removable:self.removable];
-
+ 
+    id item = nil;
+    if (indexPath.row < _selectedItemsModel.items.count) {
+        item = _selectedItemsModel.items[indexPath.row];
+    }
+    
+    if (item != nil) {
+        cell.itemSelected = ^(id<TGMediaSelectableItem> item, bool selected, __unused id sender)
+        {
+            __strong TGMediaPickerPhotoStripView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            [strongSelf.selectionContext setItem:item selected:selected animated:true sender:strongSelf.selectedItemsModel];
+        };
+        cell.itemRemoved = ^
+        {
+            __strong TGMediaPickerPhotoStripView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            if (strongSelf.itemRemoved != nil)
+                strongSelf.itemRemoved([strongSelf->_selectedItemsModel.items indexOfObject:item]);
+        };
+        [cell setItem:item signal:self.thumbnailSignalForItem(item) removable:self.removable];
+    }
+    
     return cell;
 }
 
