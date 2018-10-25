@@ -200,6 +200,13 @@ public enum NotificationExceptionMode : Equatable {
         }
     }
     
+    var isEmpty: Bool {
+        switch self {
+        case let .users(value), let .groups(value):
+            return value.isEmpty
+        }
+    }
+    
     case users([PeerId : NotificationExceptionWrapper])
     case groups([PeerId : NotificationExceptionWrapper])
     
@@ -785,8 +792,6 @@ private final class NotificationExceptionsControllerNode: ASDisplayNode {
                     }
                 }
             })
-        
-        
         
         self.readyValue.set(contentNode.ready)
     }
