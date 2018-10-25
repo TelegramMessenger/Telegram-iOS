@@ -311,7 +311,7 @@ public final class AvatarNode: ASDisplayNode {
                     if peerId.namespace == -1 {
                         colorIndex = -1
                     } else {
-                        colorIndex = abs(Int(accountPeerId.id + peerId.id))
+                        colorIndex = abs(Int(clamping: accountPeerId.id + peerId.id))
                     }
                 } else {
                     colorIndex = -1

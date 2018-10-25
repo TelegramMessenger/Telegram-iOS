@@ -814,6 +814,11 @@ public func chatMessageVideoThumbnail(account: Account, fileReference: FileMedia
                 fittedSize.height = arguments.boundingSize.height
             }
             
+            if arguments.intrinsicInsets != UIEdgeInsets.zero {
+                fittedSize.width -= arguments.intrinsicInsets.left + arguments.intrinsicInsets.right
+                fittedSize.height -= arguments.intrinsicInsets.top + arguments.intrinsicInsets.bottom
+            }
+            
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?

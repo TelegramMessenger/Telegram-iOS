@@ -344,7 +344,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
         }
         var updateBioSignal: Signal<Void, NoError> = .complete()
         if let updateBio = updateBio {
-            updateBioSignal = updateAbout(account: account, about: updateBio.isEmpty ? nil : updateBio)
+            updateBioSignal = updateAbout(account: account, about: updateBio)
             |> `catch` { _ -> Signal<Void, NoError> in
                 return .complete()
             }
