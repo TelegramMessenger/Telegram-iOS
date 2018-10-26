@@ -85,7 +85,7 @@ private enum WatchSettingsControllerEntry: ItemListNodeEntry {
 private func watchSettingsControllerEntries(presentationData: PresentationData, customPresets: [String : String]) -> [WatchSettingsControllerEntry] {
     var entries: [WatchSettingsControllerEntry] = []
     
-    let defaultSuggestions : [(Int32, String, String)] = [
+    let defaultSuggestions: [(Int32, String, String)] = [
         (0, "OK", presentationData.strings.Watch_Suggestion_OK),
         (1, "Thanks", presentationData.strings.Watch_Suggestion_Thanks),
         (2, "WhatsUp", presentationData.strings.Watch_Suggestion_WhatsUp),

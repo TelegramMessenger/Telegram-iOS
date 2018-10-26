@@ -373,7 +373,7 @@ func storageUsageController(account: Account) -> ViewController {
                 if otherSize.1 != 0 {
                     totalSize += otherSize.1
                     let index = itemIndex
-                    items.append(ActionSheetCheckboxItem(title: presentationData.strings.Localization_LanguageOther, label: dataSizeString(Int(otherSize.1)), value: true, action: { value in
+                    items.append(ActionSheetCheckboxItem(title: presentationData.strings.Localization_LanguageOther, label: dataSizeString(otherSize.1), value: true, action: { value in
                         toggleCheck(nil, index)
                     }))
                     itemIndex += 1
@@ -524,17 +524,14 @@ func storageUsageController(account: Account) -> ViewController {
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize))").0, action: {
                             if let statsPromise = statsPromise {
                                 let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
-                                //var clearSize: Int64 = 0
-                                
                                 var clearMediaIds = Set<MediaId>()
                                 
                                 var media = stats.media
                                 if var categories = media[peerId] {
                                     for category in clearCategories {
                                         if let contents = categories[category] {
-                                            for (mediaId, size) in contents {
+                                            for (mediaId, _) in contents {
                                                 clearMediaIds.insert(mediaId)
-                                                //clearSize += size
                                             }
                                         }
                                         categories.removeValue(forKey: category)

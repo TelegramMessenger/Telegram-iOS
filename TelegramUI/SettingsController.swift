@@ -714,8 +714,15 @@ public func settingsController(account: Account, accountManager: AccountManager)
         actionsDisposable.dispose()
     }
     
+    let icon: UIImage?
+    if (useSpecialTabBarIcons()) {
+        icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettingsHW")
+    } else {
+        icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
+    }
+    
     let controller = ItemListController(account: account, state: signal, tabBarItem: (account.applicationContext as! TelegramApplicationContext).presentationData |> map { presentationData in
-        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: PresentationResourcesRootController.tabSettingsIcon(presentationData.theme), selectedImage: PresentationResourcesRootController.tabSettingsSelectedIcon(presentationData.theme))
+        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon)
     })
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
