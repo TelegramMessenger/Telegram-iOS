@@ -707,7 +707,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         var accessoryPanelSize: CGSize?

@@ -14,6 +14,7 @@ private enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case stickerPack(String)
     case join(String)
+    case localization(String)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
 }
 
@@ -32,6 +33,7 @@ enum ResolvedUrl {
     case instantView(TelegramMediaWebpage, String?)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case join(String)
+    case localization(String)
 }
 
 private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -94,6 +96,8 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .stickerPack(pathComponents[1])
                 } else if pathComponents[0] == "joinchat" || pathComponents[0] == "joinchannel" {
                     return .join(pathComponents[1])
+                } else if pathComponents[0] == "setlanguage" {
+                    return .localization(pathComponents[1])
                 } else if let value = Int(pathComponents[1]) {
                     return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
@@ -111,29 +115,31 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
     switch url {
         case let .peerName(name, parameter):
             return resolvePeerByName(account: account, name: name)
-                |> take(1)
-                |> map { peerId -> ResolvedUrl? in
-                    if let peerId = peerId {
-                        if let parameter = parameter {
-                            switch parameter {
-                                case let .botStart(payload):
-                                    return .botStart(peerId: peerId, payload: payload)
-                                case let .groupBotStart(payload):
-                                    return .groupBotStart(peerId: peerId, payload: payload)
-                                case let .channelMessage(id):
-                                    return .channelMessage(peerId: peerId, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))
-                            }
-                        } else {
-                            return .peer(peerId, .chat(textInputState: nil, messageId: nil))
+            |> take(1)
+            |> map { peerId -> ResolvedUrl? in
+                if let peerId = peerId {
+                    if let parameter = parameter {
+                        switch parameter {
+                            case let .botStart(payload):
+                                return .botStart(peerId: peerId, payload: payload)
+                            case let .groupBotStart(payload):
+                                return .groupBotStart(peerId: peerId, payload: payload)
+                            case let .channelMessage(id):
+                                return .channelMessage(peerId: peerId, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))
                         }
                     } else {
-                        return nil
+                        return .peer(peerId, .chat(textInputState: nil, messageId: nil))
                     }
+                } else {
+                    return nil
                 }
+            }
         case let .stickerPack(name):
             return .single(.stickerPack(name: name))
         case let .join(link):
             return .single(.join(link))
+        case let .localization(identifier):
+            return .single(.localization(identifier))
         case let .proxy(host, port, username, password, secret):
             return .single(.proxy(host: host, port: port, username: username, password: password, secret: secret))
     }

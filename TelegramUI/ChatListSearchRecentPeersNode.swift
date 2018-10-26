@@ -264,7 +264,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 92.0, height: size.width)
         self.listView.position = CGPoint(x: size.width / 2.0, y: 92.0 / 2.0 + 29.0)
-        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: size.width), insets: insets, duration: 0.0, curve: .Default), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: size.width), insets: insets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         itemCustomWidthValuePromise.set(itemCustomWidth)
     }
     

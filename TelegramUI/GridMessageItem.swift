@@ -393,13 +393,13 @@ final class GridMessageItemNode: GridItemNode {
                                         case .Fetching:
                                             messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
                                         case .Local:
-                                            let _ = controllerInteraction.openMessage(message)
+                                            let _ = controllerInteraction.openMessage(message, .default)
                                         case .Remote:
                                             self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: true).start())
                                         }
                                     }
                                 } else {
-                                    let _ = controllerInteraction.openMessage(message)
+                                    let _ = controllerInteraction.openMessage(message, .default)
                                 }
                             }
                         case .longTap:

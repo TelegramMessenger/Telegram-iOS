@@ -270,18 +270,18 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
                             switch update {
                             case .none:
                                 break
-                            case let .password(password, pendingEmailPattern):
-                                if let pendingEmailPattern = pendingEmailPattern {
+                            case let .password(password, pendingEmail):
+                                if let pendingEmail = pendingEmail {
                                     if processPasswordEmailConfirmation {
                                         updateState { state in
                                             var state = state
                                             state.saving = false
-                                            state.state = .pendingVerification(emailPattern: pendingEmailPattern)
+                                            state.state = .pendingVerification(emailPattern: pendingEmail.pattern)
                                             
                                             return state
                                         }
                                     }
-                                    updatePasswordEmailConfirmation(pendingEmailPattern)
+                                    updatePasswordEmailConfirmation(pendingEmail.pattern)
                                 } else {
                                     completion(password, state.hintText, !state.emailText.isEmpty)
                                 }

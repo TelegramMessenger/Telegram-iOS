@@ -775,7 +775,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     }
                 case .Local:
                     if let item = self.item, let controllerInteraction = self.controllerInteraction {
-                        let _ = controllerInteraction.openMessage(item.message)
+                        let _ = controllerInteraction.openMessage(item.message, .default)
                     }
                 }
             case .playbackStatus:

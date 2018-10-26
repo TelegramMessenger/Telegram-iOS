@@ -478,14 +478,14 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         if let item = self.item, let currentPrimaryUrl = self.currentPrimaryUrl {
             if let webpage = self.currentMedia as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
                 if websiteType(of: content) == .instagram {
-                    if !item.controllerInteraction.openMessage(item.message) {
+                    if !item.controllerInteraction.openMessage(item.message, .default) {
                         item.controllerInteraction.openInstantPage(item.message)
                     }
                 } else {
                     item.controllerInteraction.openInstantPage(item.message)
                 }
             } else {
-                if !item.controllerInteraction.openMessage(item.message) {
+                if !item.controllerInteraction.openMessage(item.message, .default) {
                     item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
                 }
             }
@@ -535,7 +535,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                 if case .longTap = gesture {
                                     item.controllerInteraction.longTap(ChatControllerInteractionLongTapAction.url(url))
                                 } else if url == self.currentPrimaryUrl {
-                                    if !item.controllerInteraction.openMessage(item.message) {
+                                    if !item.controllerInteraction.openMessage(item.message, .default) {
                                         item.controllerInteraction.openUrl(url, false, false)
                                     }
                                 } else {

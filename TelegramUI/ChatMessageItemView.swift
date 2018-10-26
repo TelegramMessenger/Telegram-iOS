@@ -132,7 +132,7 @@ public class ChatMessageItemView: ListViewItemNode {
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         if short {
-            self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height, to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            //self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height, to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         } else {
             self.transitionOffset = -self.bounds.size.height * 1.6
             self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)

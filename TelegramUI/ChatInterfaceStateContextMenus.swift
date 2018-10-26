@@ -149,7 +149,7 @@ func updatedChatEditInterfaceMessagetState(state: ChatPresentationInterfaceState
     return updated
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, debugStreamSingleVideo: @escaping (MessageId) -> Void) -> Signal<[ChatMessageContextMenuAction], NoError> {
+func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ChatMessageContextMenuAction], NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
@@ -418,10 +418,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                                 actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, action: {
                                     let _ = addSavedGif(postbox: account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
                                 })))
-                            } else if !GlobalExperimentalSettings.isAppStoreBuild {
-                                actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: "Stream", action: {
-                                    debugStreamSingleVideo(message.id)
-                                })))
                             }
                             break
                         }
@@ -442,7 +438,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if data.messageActions.options.contains(.viewStickerPack) {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.StickerPack_ViewPack, action: {
-                let _ = controllerInteraction.openMessage(message)
+                let _ = controllerInteraction.openMessage(message, .default)
             })))
         }
         

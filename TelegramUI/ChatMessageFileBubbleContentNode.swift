@@ -18,7 +18,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveFileNode.activateLocalContent = { [weak self] in
             if let strongSelf = self {
                 if let item = strongSelf.item {
-                    let _ = item.controllerInteraction.openMessage(item.message)
+                    let _ = item.controllerInteraction.openMessage(item.message, .default)
                 }
             }
         }

@@ -1002,7 +1002,7 @@ private final class NotificationExceptionsSearchControllerContentNode: SearchDis
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         self.listNode.containerLayoutUpdated(layout, navigationBarHeight: 0, transition: transition)

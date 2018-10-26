@@ -78,7 +78,7 @@ public class PeerMediaCollectionController: TelegramController {
                 }
             })
         
-        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
+        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message, _ in
             if let strongSelf = self, strongSelf.isNodeLoaded, let galleryMessage = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id) {
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
                     return false

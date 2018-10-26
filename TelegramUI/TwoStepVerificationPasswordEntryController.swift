@@ -328,8 +328,8 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                             $0.withUpdatedUpdating(false)
                         }
                         switch update {
-                            case let .password(password, pendingEmailPattern):
-                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmailPattern: pendingEmailPattern)))
+                            case let .password(password, pendingEmail):
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmailPattern: pendingEmail?.pattern)))
                             case .none:
                                 break
                         }
@@ -353,8 +353,8 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                             $0.withUpdatedUpdating(false)
                         }
                         switch update {
-                            case let .password(password, pendingEmailPattern):
-                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmailPattern: pendingEmailPattern)))
+                            case let .password(password, pendingEmail):
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmailPattern: pendingEmail?.pattern)))
                             case .none:
                                 break
                         }

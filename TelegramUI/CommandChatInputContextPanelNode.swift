@@ -164,7 +164,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             insets.left = validLayout.1
             insets.right = validLayout.2
             
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default(duration: nil))
             
             self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
@@ -220,7 +220,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: listViewCurve)

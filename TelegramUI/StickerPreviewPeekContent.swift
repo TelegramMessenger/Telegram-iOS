@@ -75,7 +75,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
             break
         }
-        self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: false))
+        self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: false, fetched: true))
         
         super.init()
         

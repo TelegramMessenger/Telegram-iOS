@@ -984,7 +984,7 @@ final class ChatMediaInputNode: ChatInputNode {
             let firstVisibleIndex = currentView.collectionInfos.index(where: { id, _, _ in return id == firstVisibleCollectionId })
             if let targetIndex = targetIndex, let firstVisibleIndex = firstVisibleIndex {
                 let toRight = targetIndex > firstVisibleIndex
-                self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [], scrollToItem: ListViewScrollToItem(index: targetIndex, position: toRight ? .bottom(0.0) : .top(0.0), animated: true, curve: .Default, directionHint: toRight ? .Down : .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil)
+                self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [], scrollToItem: ListViewScrollToItem(index: targetIndex, position: toRight ? .bottom(0.0) : .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: toRight ? .Down : .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil)
             }
         }
     }
@@ -1126,7 +1126,7 @@ final class ChatMediaInputNode: ChatInputNode {
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: 41.0, height: width), insets: UIEdgeInsets(top: 4.0 + leftInset, left: 0.0, bottom: 4.0 + rightInset, right: 0.0), duration: duration, curve: listViewCurve)

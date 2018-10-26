@@ -452,7 +452,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                let _ = item.controllerInteraction.openMessage(item.message)
+                let _ = item.controllerInteraction.openMessage(item.message, .default)
             }
         }
     }

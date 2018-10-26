@@ -20,7 +20,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     }
 }
 
-func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, present: (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)? = nil, present: (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
     switch resolvedUrl {
         case let .externalUrl(url):
             openExternalUrl(account: account, context: context, url: url, presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: account.telegramApplicationContext, navigationController: navigationController, dismissInput: dismissInput)
@@ -58,7 +58,9 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             openPeer(peerId, .chat(textInputState: nil, messageId: messageId))
         case let .stickerPack(name):
             dismissInput()
-            present(StickerPackPreviewController(account: account, stickerPack: .name(name), parentNavigationController: navigationController), nil)
+            let controller = StickerPackPreviewController(account: account, stickerPack: .name(name), parentNavigationController: navigationController)
+            controller.sendSticker = sendFile
+            present(controller, nil)
         case let .instantView(webpage, anchor):
             navigationController?.pushViewController(InstantPageController(account: account, webPage: webpage, anchor: anchor))
         case let .join(link):
@@ -66,6 +68,9 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             present(JoinLinkPreviewController(account: account, link: link, navigateToPeer: { peerId in
                 openPeer(peerId, .chat(textInputState: nil, messageId: nil))
             }), nil)
+        case let .localization(identifier):
+            dismissInput()
+            present(LanguageLinkPreviewController(account: account, identifier: identifier), nil)
         case let .proxy(host, port, username, password, secret):
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             let server: ProxyServerSettings

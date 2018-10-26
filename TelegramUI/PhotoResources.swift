@@ -165,9 +165,12 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
     
     let fullSizeResource: MediaResource = fileReference.media.resource
     
-    let maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: CachedScaledImageRepresentation(size: CGSize(width: 180.0, height: 180.0), mode: .aspectFit), complete: false)
+    let maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: CachedScaledImageRepresentation(size: CGSize(width: 180.0, height: 180.0), mode: .aspectFit), complete: false, fetch: false)
+    let fetchedFullSize = account.postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: CachedScaledImageRepresentation(size: CGSize(width: 180.0, height: 180.0), mode: .aspectFit), complete: false, fetch: true)
     
-    let signal = maybeFullSize |> take(1) |> mapToSignal { maybeData -> Signal<(Data?, String?, Bool), NoError> in
+    let signal = maybeFullSize
+    |> take(1)
+    |> mapToSignal { maybeData -> Signal<(Data?, String?, Bool), NoError> in
         if maybeData.complete {
             return .single((nil, maybeData.path, true))
         } else {
@@ -195,17 +198,20 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
                 thumbnail = .single(nil)
             }
             
-            let fullSizeDataAndPath = maybeFullSize |> map { next -> (String?, Bool) in
+            let fullSizeDataAndPath = fetchedFullSize
+            |> map { next -> (String?, Bool) in
                 return (next.size == 0 ? nil : next.path, next.complete)
             }
             
-            return thumbnail |> mapToSignal { thumbnailData in
-                return fullSizeDataAndPath |> map { (dataPath, complete) in
+            return thumbnail
+            |> mapToSignal { thumbnailData in
+                return fullSizeDataAndPath
+                |> map { (dataPath, complete) in
                     return (thumbnailData, dataPath, complete)
                 }
             }
         }
-        } |> filter({ $0.0 != nil || $0.1 != nil })
+    } |> filter({ $0.0 != nil || $0.1 != nil })
     
     return signal
 }
@@ -215,7 +221,8 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
         let thumbnailResource = smallestRepresentation.resource
         let fullSizeResource = fileReference.media.resource
         
-        let maybeFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false)
+        let maybeFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false, fetch: false)
+        let fetchedFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false, fetch: true)
         
         let signal = maybeFullSize
         |> take(1)
@@ -239,14 +246,27 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
                     }
                 }
                 
-                
-                let fullSizeDataAndPath = maybeFullSize |> map { next -> ((Data, String)?, Bool) in
+                let fullSizeDataAndPath = Signal<MediaResourceData, NoError> { subscriber in
+                    let dataDisposable = fetchedFullSize.start(next: { next in
+                        subscriber.putNext(next)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    //let fetchedDisposable = fetchedPartialVideoThumbnailData(postbox: postbox, fileReference: fileReference).start()
+                    return ActionDisposable {
+                        dataDisposable.dispose()
+                        //fetchedDisposable.dispose()
+                    }
+                }
+                |> map { next -> ((Data, String)?, Bool) in
                     let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe)
                     return (data == nil ? nil : (data!, next.path), next.complete)
                 }
                 
-                return thumbnail |> mapToSignal { thumbnailData in
-                    return fullSizeDataAndPath |> map { (dataAndPath, complete) in
+                return thumbnail
+                |> mapToSignal { thumbnailData in
+                    return fullSizeDataAndPath
+                    |> map { (dataAndPath, complete) in
                         return (thumbnailData, dataAndPath, complete)
                     }
                 }
@@ -667,7 +687,8 @@ private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: Im
     let fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0)
     if let smallestRepresentation = smallestImageRepresentation(photoReference.media.representations), let largestRepresentation = photoReference.media.representationForDisplayAtSize(fullRepresentationSize) {
         
-        let maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 180.0, height: 180.0), mode: .aspectFit), complete: onlyFullSize)
+        let maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 180.0, height: 180.0), mode: .aspectFit), complete: onlyFullSize, fetch: false)
+        let fetchedFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 180.0, height: 180.0), mode: .aspectFit), complete: onlyFullSize, fetch: true)
         
         let signal = maybeFullSize
         |> take(1)
@@ -690,19 +711,21 @@ private func chatMessagePhotoThumbnailDatas(account: Account, photoReference: Im
                     }
                 }
                 
-                let fullSizeData: Signal<(Data?, Bool), NoError> = maybeFullSize
-                    |> map { next -> (Data?, Bool) in
-                        return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete)
-                    }
+                let fullSizeData: Signal<(Data?, Bool), NoError> = fetchedFullSize
+                |> map { next -> (Data?, Bool) in
+                    return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete)
+                }
                 
-                
-                return thumbnail |> mapToSignal { thumbnailData in
-                    return fullSizeData |> map { (fullSizeData, complete) in
+                return thumbnail
+                |> mapToSignal { thumbnailData in
+                    return fullSizeData
+                    |> map { (fullSizeData, complete) in
                         return (thumbnailData, fullSizeData, complete)
                     }
                 }
             }
-        } |> filter({ $0.0 != nil || $0.1 != nil })
+        }
+        |> filter({ $0.0 != nil || $0.1 != nil })
         
         return signal
     } else {

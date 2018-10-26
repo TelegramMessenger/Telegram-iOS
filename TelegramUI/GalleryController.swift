@@ -90,12 +90,6 @@ private let internalMimePrefixes: [String] = [
     "image/png"
 ]
 
-private let supportedVideoMimeTypes = Set<String>([
-    "video/mp4",
-    "video/mpeg4",
-    "video/mov"
-])
-
 func internalDocumentItemSupportsMimeType(_ type: String, fileName: String?) -> Bool {
     if let fileName = fileName {
         let ext = (fileName as NSString).pathExtension
@@ -108,9 +102,6 @@ func internalDocumentItemSupportsMimeType(_ type: String, fileName: String?) -> 
     }
     
     if internalMimeTypes.contains(type) {
-        return true
-    }
-    if supportedVideoMimeTypes.contains(type) {
         return true
     }
     for prefix in internalMimePrefixes {
@@ -128,7 +119,7 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                 if let _ = media as? TelegramMediaImage {
                     return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location)
                 } else if let file = media as? TelegramMediaFile {
-                    if file.isVideo || supportedVideoMimeTypes.contains(file.mimeType) {
+                    if file.isVideo {
                         let content: UniversalVideoContent
                         if file.isAnimated {
                             content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: true, enableSound: false)

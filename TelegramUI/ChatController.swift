@@ -278,7 +278,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             return true
         }
         
-        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
+        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message, mode in
             guard let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) else {
                 return false
             }
@@ -298,6 +298,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             }
                         case let .photoUpdated(image):
                             openMessageByAction = image != nil
+                        case .gameScore:
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? ReplyMessageAttribute {
+                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId))
+                                    break
+                                }
+                            }
                         default:
                             break
                     }
@@ -306,6 +313,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     }
                 }
             }
+            
+            if case .stream = mode {
+                strongSelf.debugStreamSingleVideo(message.id)
+                return true
+            }
+            
             return openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
@@ -395,9 +408,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         break
                     }
                 }
-                let _ = contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, account: strongSelf.account, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, interfaceInteraction: strongSelf.interfaceInteraction, debugStreamSingleVideo: { id in
-                    self?.debugStreamSingleVideo(id)
-                }).start(next: { actions in
+                let _ = contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, account: strongSelf.account, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, interfaceInteraction: strongSelf.interfaceInteraction).start(next: { actions in
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
@@ -1710,7 +1721,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 if let strongSelf = self, let validLayout = strongSelf.validLayout {
                     var mappedTransition: (ChatHistoryListViewTransition, ListViewUpdateSizeAndInsets?)?
                     
-                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationHeight, transition: .animated(duration: 0.4, curve: .spring), listViewTransaction: { updateSizeAndInsets, _, _ in
+                    strongSelf.chatDisplayNode.containerLayoutUpdated(validLayout, navigationBarHeight: strongSelf.navigationHeight, transition: .animated(duration: 0.2, curve: .easeInOut), listViewTransaction: { updateSizeAndInsets, _, _ in
                         var options = transition.options
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
@@ -1731,7 +1742,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             insertItems.append(ListViewInsertItem(index: item.index, previousIndex: item.previousIndex, item: item.item, directionHint: item.directionHint == .Down ? .Up : nil))
                         }
                         
-                        let scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: 0.4), directionHint: .Up)
+                        let scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.2), directionHint: .Up)
                         
                         var stationaryItemRange: (Int, Int)?
                         if let maxInsertedItem = maxInsertedItem {
@@ -2824,7 +2835,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     return
                 }
                 if let currentItem = currentItem?.id as? PeerMessagesMediaPlaylistItemId, let previousItem = previousItem?.id as? PeerMessagesMediaPlaylistItemId, previousItem.messageId.peerId == peerId, currentItem.messageId.peerId == peerId, currentItem.messageId != previousItem.messageId {
-                    strongSelf.navigateToMessage(from: nil, to: .id(currentItem.messageId), scrollPosition: .center(.bottom), rememberInStack: false, animated: true, completion: nil)
+                    if strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(currentItem.messageId) != nil {
+                        strongSelf.navigateToMessage(from: nil, to: .id(currentItem.messageId), scrollPosition: .center(.bottom), rememberInStack: false, animated: true, completion: nil)
+                    }
                 }
             }
         }
@@ -3797,7 +3810,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     
     private func activateRaiseGesture() {
         if let messageToListen = self.firstLoadedMessageToListen() {
-            let _ = self.controllerInteraction?.openMessage(messageToListen)
+            let _ = self.controllerInteraction?.openMessage(messageToListen, .default)
         } else {
             self.requestAudioRecorder(beginWithTone: true)
         }
@@ -4587,6 +4600,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 default:
                     break
                 }
+        }, sendFile: { [weak self] f in
+            self?.interfaceInteraction?.sendSticker(f)
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in

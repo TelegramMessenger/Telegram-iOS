@@ -319,14 +319,14 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     @objc func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                let _ = item.controllerInteraction.openMessage(item.message)
+                let _ = item.controllerInteraction.openMessage(item.message, .default)
             }
         }
     }
     
     @objc private func buttonPressed() {
         if let item = self.item {
-            let _ = item.controllerInteraction.openMessage(item.message)
+            let _ = item.controllerInteraction.openMessage(item.message, .default)
         }
     }
 }
