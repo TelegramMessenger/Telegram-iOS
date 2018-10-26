@@ -861,7 +861,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (NSString *)incomingMessageDescription:(MTIncomingMessage *)message
 {
-    return [[NSString alloc] initWithFormat:@"%@ (%" PRId64")", message.body, message.messageId];
+    return [[NSString alloc] initWithFormat:@"%@ (%" PRId64", %" PRId64"/%" PRId64")", message.body, message.messageId, message.authKeyId, message.sessionId];
 }
 
 - (void)transportReadyForTransaction:(MTTransport *)transport transportSpecificTransaction:(MTMessageTransaction *)transportSpecificTransaction forceConfirmations:(bool)forceConfirmations transactionReady:(void (^)(NSArray *))transactionReady
@@ -1285,7 +1285,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%x sending time fix ping (%" PRId64 "/%" PRId32 ")]", self, timeFixMessageId, timeFixSeqNo);
+                MTLog(@"[MTProto#%x sending time fix ping (%" PRId64 "/%" PRId32 ", %" PRId64 ")]", self, timeFixMessageId, timeFixSeqNo, _sessionInfo.sessionId);
             }
             
             [decryptedOs writeInt64:[_authInfo authSaltForMessageId:timeFixMessageId]]; // salt
@@ -1521,7 +1521,6 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     {
         [sessionInfo addContainerMessageIdMapping:containerMessageId childMessageIds:containerMessageIds];
         
-#ifdef DEBUG
         NSMutableString *idsString = [[NSMutableString alloc] init];
         for (NSNumber *nMessageId in containerMessageIds)
         {
@@ -1530,9 +1529,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [idsString appendFormat:@"%lld", [nMessageId longLongValue]];
         }
         if (MTLogEnabled()) {
-            MTLog(@"    container (%" PRId64 ") of (%@)", containerMessageId, idsString);
+            MTLog(@"    container (%" PRId64 ") of (%@), in %" PRId64 "", containerMessageId, idsString, sessionInfo.sessionId);
         }
-#endif
     }
     
     [decryptedOs writeInt64:salt];
@@ -2227,6 +2225,8 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     
     bool readError = false;
     
+    int64_t embeddedAuthKeyId = 0;
+    int64_t embeddedSessionId = 0;
     int64_t embeddedMessageId = 0;
     int32_t embeddedSeqNo = 0;
     int64_t embeddedSalt = 0;
@@ -2241,6 +2241,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 *parseError = true;
             return nil;
         }
+        embeddedAuthKeyId = authKeyId;
         
         embeddedMessageId = [is readInt64:&readError];
         if (readError)
@@ -2263,6 +2264,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     }
     else
     {
+        embeddedAuthKeyId = _authInfo.authKeyId;
         embeddedSalt = [is readInt64:&readError];
         if (readError)
         {
@@ -2271,7 +2273,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             return nil;
         }
         
-        int64_t embeddedSessionId = [is readInt64:&readError];
+        embeddedSessionId = [is readInt64:&readError];
         if (readError)
         {
             if (parseError != NULL)
@@ -2349,7 +2351,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             int64_t subMessageId = subMessage.messageId;
             int32_t subMessageSeqNo = subMessage.seqNo;
             int32_t subMessageLength = (int32_t)subMessage.data.length;
-            [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subObject]];
+            [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo authKeyId:embeddedAuthKeyId sessionId:embeddedSessionId salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subObject]];
         }
     }
     else if ([topObject isKindOfClass:[MTMessage class]])
@@ -2366,10 +2368,10 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
         int64_t subMessageId = message.messageId;
         int32_t subMessageSeqNo = message.seqNo;
         int32_t subMessageLength = (int32_t)message.data.length;
-        [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subObject]];
+        [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo authKeyId:embeddedAuthKeyId sessionId:embeddedSessionId salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subObject]];
     }
     else
-        [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:embeddedMessageId seqNo:embeddedSeqNo salt:embeddedSalt timestamp:timestamp size:topMessageSize body:topObject]];
+        [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:embeddedMessageId seqNo:embeddedSeqNo authKeyId:embeddedAuthKeyId sessionId:embeddedSessionId salt:embeddedSalt timestamp:timestamp size:topMessageSize body:topObject]];
     
     return messages;
 }

@@ -14,4 +14,8 @@
     return self;
 }
 
+- (NSString *)description {
+    return [NSString stringWithFormat:@"MTNewSessionCreatedMessage session_created firstMessageId:%lld uniqueId:%lld serverSalt: %lld", _firstMessageId, _uniqueId, _serverSalt];
+}
+
 @end
