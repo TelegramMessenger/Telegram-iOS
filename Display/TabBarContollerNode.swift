@@ -36,12 +36,16 @@ final class TabBarControllerNode: ASDisplayNode {
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let update = {
-            let tabBarHeight: CGFloat
+            var tabBarHeight: CGFloat
             let bottomInset: CGFloat = layout.insets(options: []).bottom
             if !layout.safeInsets.left.isZero {
                 tabBarHeight = 34.0 + bottomInset
             } else {
                 tabBarHeight = 49.0 + bottomInset
+            }
+            
+            if let inputHeight = layout.inputHeight, layout.metrics.widthClass == .regular {
+                tabBarHeight += inputHeight
             }
             
             transition.updateFrame(node: self.tabBarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight)))
