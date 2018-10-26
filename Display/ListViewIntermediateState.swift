@@ -23,7 +23,7 @@ public enum ListViewScrollToItemDirectionHint {
 
 public enum ListViewAnimationCurve {
     case Spring(duration: Double)
-    case Default
+    case Default(duration: Double?)
 }
 
 public struct ListViewScrollToItem {

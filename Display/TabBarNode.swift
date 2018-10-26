@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 
 private let separatorHeight: CGFloat = 1.0 / UIScreen.main.scale
-private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: UIColor, tintColor: UIColor, horizontal: Bool) -> UIImage? {
+private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: UIColor, tintColor: UIColor, horizontal: Bool) -> (UIImage, CGFloat) {
     let font = horizontal ? Font.regular(13.0) : Font.medium(10.0)
     let titleSize = (title as NSString).boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin], attributes: [NSAttributedStringKey.font: font], context: nil).size
     
@@ -22,10 +22,13 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
     let horizontalSpacing: CGFloat = 4.0
     
     let size: CGSize
+    let contentWidth: CGFloat
     if horizontal {
         size = CGSize(width: ceil(titleSize.width) + horizontalSpacing + imageSize.width, height: 34.0)
+        contentWidth = size.width
     } else {
         size = CGSize(width: max(ceil(titleSize.width), imageSize.width), height: 45.0)
+        contentWidth = imageSize.width
     }
     
     UIGraphicsBeginImageContextWithOptions(size, true, 0.0)
@@ -67,10 +70,14 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
     let image = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
     
-    return image
+    return (image!, contentWidth)
 }
 
 private let badgeFont = Font.regular(13.0)
+
+private final class TabBarItemNode: ASImageNode {
+    var contentWidth: CGFloat?
+}
 
 private final class TabBarNodeContainer {
     let item: UITabBarItem
@@ -79,7 +86,7 @@ private final class TabBarNodeContainer {
     let updateImageListenerIndex: Int
     let updateSelectedImageListenerIndex: Int
     
-    let imageNode: ASImageNode
+    let imageNode: TabBarItemNode
     let badgeContainerNode: ASDisplayNode
     let badgeBackgroundNode: ASImageNode
     let badgeTextNode: ASTextNode
@@ -96,7 +103,7 @@ private final class TabBarNodeContainer {
     var selectedImageValue: UIImage?
     var appliedSelectedImageValue: UIImage?
     
-    init(item: UITabBarItem, imageNode: ASImageNode, updateBadge: @escaping (String) -> Void, updateTitle: @escaping (String, Bool) -> Void, updateImage: @escaping (UIImage?) -> Void, updateSelectedImage: @escaping (UIImage?) -> Void) {
+    init(item: UITabBarItem, imageNode: TabBarItemNode, updateBadge: @escaping (String) -> Void, updateTitle: @escaping (String, Bool) -> Void, updateImage: @escaping (UIImage?) -> Void, updateSelectedImage: @escaping (UIImage?) -> Void) {
         self.item = item
         
         self.imageNode = imageNode
@@ -238,7 +245,7 @@ class TabBarNode: ASDisplayNode {
         var tabBarNodeContainers: [TabBarNodeContainer] = []
         for i in 0 ..< self.tabBarItems.count {
             let item = self.tabBarItems[i]
-            let node = ASImageNode()
+            let node = TabBarItemNode()
             node.displaysAsynchronously = false
             node.displayWithoutProcessing = true
             node.isLayerBacked = true
@@ -252,9 +259,13 @@ class TabBarNode: ASDisplayNode {
                 self?.updateNodeImage(i, layout: true)
             })
             if let selectedIndex = self.selectedIndex, selectedIndex == i {
-                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal)
+                let (image, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal)
+                node.image = image
+                node.contentWidth = contentWidth
             } else {
-                node.image = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal)
+                let (image, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal)
+                node.image = image
+                node.contentWidth = contentWidth
             }
             container.badgeBackgroundNode.image = self.badgeImage
             tabBarNodeContainers.append(container)
@@ -277,9 +288,13 @@ class TabBarNode: ASDisplayNode {
             
             let previousImage = node.image
             if let selectedIndex = self.selectedIndex, selectedIndex == index {
-                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal)
+                let (image, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal)
+                node.image = image
+                node.contentWidth = contentWidth
             } else {
-                node.image = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal)
+                let (image, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal)
+                node.image = image
+                node.contentWidth = contentWidth
             }
             if previousImage?.size != node.image?.size {
                 if let validLayout = self.validLayout, layout {
@@ -351,7 +366,8 @@ class TabBarNode: ASDisplayNode {
                     if horizontal {
                         backgroundFrame = CGRect(origin: CGPoint(x: originX, y: 2.0), size: backgroundSize)
                     } else {
-                        backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) - 1.0 + node.frame.width - backgroundSize.width - 1.0, y: 2.0), size: backgroundSize)
+                        let contentWidth = node.contentWidth ?? node.frame.width
+                        backgroundFrame = CGRect(origin: CGPoint(x: floor(originX + node.frame.width / 2.0) - 1.0 + contentWidth - backgroundSize.width - 1.0, y: 2.0), size: backgroundSize)
                     }
                     transition.updateFrame(node: container.badgeContainerNode, frame: backgroundFrame)
                     container.badgeBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)

@@ -24,7 +24,7 @@ private final class WindowRootViewControllerView: UIView {
     }
 }
 
-private final class WindowRootViewController: UIViewController {
+private final class WindowRootViewController: UIViewController, UIViewControllerPreviewingDelegate {
     var presentController: ((UIViewController, PresentationSurfaceLevel, Bool, (() -> Void)?) -> Void)?
     var transitionToSize: ((CGSize, Double) -> Void)?
     
@@ -104,6 +104,17 @@ private final class WindowRootViewController: UIViewController {
         self.view = WindowRootViewControllerView()
         self.view.isOpaque = false
         self.view.backgroundColor = nil
+        
+        if #available(iOSApplicationExtension 9.0, *) {
+            self.registerForPreviewing(with: self, sourceView: self.view)
+        }
+    }
+    
+    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
+        return nil
+    }
+    
+    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
     }
 }
 
