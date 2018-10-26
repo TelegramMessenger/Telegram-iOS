@@ -88,6 +88,7 @@
     _sourceDatacenterMtProto.useTempAuthKeys = context.useTempAuthKeys;
     
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
+    requestService.forceBackgroundRequests = true;
     [_sourceDatacenterMtProto addMessageService:requestService];
     
     MTRequest *request = [[MTRequest alloc] init];
@@ -125,6 +126,7 @@
     _destinationDatacenterMtProto.useTempAuthKeys = context.useTempAuthKeys;
     
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
+    requestService.forceBackgroundRequests = true;
     [_destinationDatacenterMtProto addMessageService:requestService];
     
     MTRequest *request = [[MTRequest alloc] init];

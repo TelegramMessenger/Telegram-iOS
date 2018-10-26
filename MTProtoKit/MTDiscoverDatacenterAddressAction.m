@@ -95,6 +95,7 @@
             _mtProto = [[MTProto alloc] initWithContext:context datacenterId:_targetDatacenterId usageCalculationInfo:nil];
             _mtProto.useTempAuthKeys = useTempAuthKeys;
             _requestService = [[MTRequestMessageService alloc] initWithContext:_context];
+            _requestService.forceBackgroundRequests = true;
             [_mtProto addMessageService:_requestService];
             
             MTRequest *request = [[MTRequest alloc] init];
