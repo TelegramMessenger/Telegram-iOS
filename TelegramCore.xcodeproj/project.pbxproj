@@ -401,6 +401,8 @@
 		D07827CB1E02F5B200071108 /* RichText.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07827CA1E02F5B200071108 /* RichText.swift */; };
 		D07E413F208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */; };
 		D07E4140208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */; };
+		D081E10A217F5ADE003CD921 /* LocalizationPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081E109217F5ADE003CD921 /* LocalizationPreview.swift */; };
+		D081E10B217F5ADE003CD921 /* LocalizationPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081E109217F5ADE003CD921 /* LocalizationPreview.swift */; };
 		D08774FC1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */; };
 		D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */; };
 		D08984F22114B97400918162 /* ClearCloudDrafts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08984F12114B97400918162 /* ClearCloudDrafts.swift */; };
@@ -971,6 +973,7 @@
 		D07827C81E02F59C00071108 /* InstantPage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPage.swift; sourceTree = "<group>"; };
 		D07827CA1E02F5B200071108 /* RichText.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RichText.swift; sourceTree = "<group>"; };
 		D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyServersStatuses.swift; sourceTree = "<group>"; };
+		D081E109217F5ADE003CD921 /* LocalizationPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationPreview.swift; sourceTree = "<group>"; };
 		D08774FB1E3E39F600A97350 /* ManagedGlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedGlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GlobalNotificationSettings.swift; sourceTree = "<group>"; };
 		D08984F12114B97400918162 /* ClearCloudDrafts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClearCloudDrafts.swift; sourceTree = "<group>"; };
@@ -1678,6 +1681,7 @@
 			isa = PBXGroup;
 			children = (
 				D08CAA8B1ED81EDF0000FDA8 /* Localizations.swift */,
+				D081E109217F5ADE003CD921 /* LocalizationPreview.swift */,
 			);
 			name = Localization;
 			sourceTree = "<group>";
@@ -2270,6 +2274,7 @@
 				D03B0CD61D62245300955575 /* TelegramUser.swift in Sources */,
 				D02395D61F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */,
 				D019B1CC1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift in Sources */,
+				D081E10A217F5ADE003CD921 /* LocalizationPreview.swift in Sources */,
 				D03B0CD91D62245B00955575 /* PeerUtils.swift in Sources */,
 				D0F19F6620E6620D00EEC860 /* MultiplexedRequestManager.swift in Sources */,
 				D053B41B1F18DEF500E2D58A /* TelegramMediaExpiredContent.swift in Sources */,
@@ -2590,6 +2595,7 @@
 				D0C50E351E93A86600F62E39 /* CallSessionManager.swift in Sources */,
 				D0A3E448214802C7008ACEF6 /* VoipConfiguration.swift in Sources */,
 				D018EE062045E95000CBB130 /* CheckPeerChatServiceActions.swift in Sources */,
+				D081E10B217F5ADE003CD921 /* LocalizationPreview.swift in Sources */,
 				D0B8442D1DAB91E0005F29E1 /* NBMetadataCoreTest.m in Sources */,
 				D0C27B431F4B58C000A4E170 /* PeerSpecificStickerPack.swift in Sources */,
 				D0B844131DAB91CD005F29E1 /* StringFormat.swift in Sources */,

@@ -37,13 +37,7 @@ public func suggestedLocalizationInfo(network: Network, languageCode: String, ex
                         entries.append(.string(key: key, value: ""))
                 }
             }
-            var infos: [LocalizationInfo] = []
-            for language in languages {
-                switch language {
-                    case let .langPackLanguage(name, nativeName, langCode):
-                        infos.append(LocalizationInfo(languageCode: langCode, title: name, localizedTitle: nativeName))
-                }
-            }
+            let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
             return SuggestedLocalizationInfo(languageCode: languageCode, extractedEntries: entries, availableLocalizations: infos)
         }
 }
@@ -79,13 +73,7 @@ public func availableLocalizations(postbox: Postbox, network: Network, allowCach
     let remote = network.request(Api.functions.langpack.getLanguages(langPack: ""))
     |> retryRequest
     |> mapToSignal { languages -> Signal<[LocalizationInfo], NoError> in
-        var infos: [LocalizationInfo] = []
-        for language in languages {
-            switch language {
-                case let .langPackLanguage(name, nativeName, langCode):
-                    infos.append(LocalizationInfo(languageCode: langCode, title: name, localizedTitle: nativeName))
-            }
-        }
+        let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
         return postbox.transaction { transaction -> [LocalizationInfo] in
             transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: CachedLocalizationInfos(list: infos), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
             return infos
@@ -95,9 +83,15 @@ public func availableLocalizations(postbox: Postbox, network: Network, allowCach
     return cached |> then(remote)
 }
 
-public func downloadLocalization(network: Network, languageCode: String) -> Signal<Localization, NoError> {
+public enum DownloadLocalizationError {
+    case generic
+}
+
+public func downloadLocalization(network: Network, languageCode: String) -> Signal<Localization, DownloadLocalizationError> {
     return network.request(Api.functions.langpack.getLangPack(langPack: "", langCode: languageCode))
-    |> retryRequest
+    |> mapError { _ -> DownloadLocalizationError in
+        return .generic
+    }
     |> map { result -> Localization in
         let version: Int32
         var entries: [LocalizationEntry] = []
@@ -120,25 +114,35 @@ public func downloadLocalization(network: Network, languageCode: String) -> Sign
     }
 }
 
-public func downoadAndApplyLocalization(postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, NoError> {
+public enum DownoadAndApplyLocalizationError {
+    case generic
+}
+
+public func downoadAndApplyLocalization(postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownoadAndApplyLocalizationError> {
     return downloadLocalization(network: network, languageCode: languageCode)
-        |> mapToSignal { language -> Signal<Void, NoError> in
-            return postbox.transaction { transaction -> Signal<Void, NoError> in
-                transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
-                    return LocalizationSettings(languageCode: languageCode, localization: language)
-                })
-                
-                network.context.updateApiEnvironment { current in
-                    return current?.withUpdatedLangPackCode(languageCode)
-                }
-                
-                return network.request(Api.functions.help.test())
-                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                        return .complete()
-                    }
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
-            } |> switchToLatest
+    |> mapError { _ -> DownoadAndApplyLocalizationError in
+        return .generic
+    }
+    |> mapToSignal { language -> Signal<Void, DownoadAndApplyLocalizationError> in
+        return postbox.transaction { transaction -> Signal<Void, DownoadAndApplyLocalizationError> in
+            transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
+                return LocalizationSettings(languageCode: languageCode, localization: language)
+            })
+            
+            network.context.updateApiEnvironment { current in
+                return current?.withUpdatedLangPackCode(languageCode)
+            }
+            
+            return network.request(Api.functions.help.test())
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .complete()
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+            |> introduceError(DownoadAndApplyLocalizationError.self)
         }
+        |> introduceError(DownoadAndApplyLocalizationError.self)
+        |> switchToLatest
+    }
 }

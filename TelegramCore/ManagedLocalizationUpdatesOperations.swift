@@ -206,7 +206,9 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
                 return postbox.transaction { transaction -> Signal<Void, Void> in
                     let (code, _, _) = getLocalization(transaction)
                     return downoadAndApplyLocalization(postbox: postbox, network: network, languageCode: code)
-                    |> introduceError(Void.self)
+                    |> mapError { _ -> Void in
+                        return Void()
+                    }
                 }
                 |> introduceError(Void.self)
                 |> switchToLatest

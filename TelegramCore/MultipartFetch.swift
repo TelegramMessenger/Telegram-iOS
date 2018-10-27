@@ -394,7 +394,7 @@ private final class MultipartFetchManager {
     
     let queue = Queue()
     
-    var currentRanges: IndexSet?
+    var currentIntervals: [(Range<Int>, MediaBoxFetchPriority)]?
     var currentFilledRanges = IndexSet()
     
     var completeSize: Int?
@@ -409,6 +409,7 @@ private final class MultipartFetchManager {
     private var source: MultipartFetchSource
     
     var fetchingParts: [Int: (Int, Disposable)] = [:]
+    var nextFetchingPartId = 0
     var fetchedParts: [Int: (Int, Data)] = [:]
     var cachedPartHashes: [Int: Data] = [:]
     
@@ -423,7 +424,7 @@ private final class MultipartFetchManager {
     
     var rangesDisposable: Disposable?
     
-    init(resource: TelegramMediaResource, parameters: MediaResourceFetchParameters?, size: Int?, ranges: Signal<IndexSet, NoError>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?, location: MultipartFetchMasterLocation, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, partReady: @escaping (Int, Data) -> Void, reportCompleteSize: @escaping (Int) -> Void) {
+    init(resource: TelegramMediaResource, parameters: MediaResourceFetchParameters?, size: Int?, intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int32?, location: MultipartFetchMasterLocation, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, partReady: @escaping (Int, Data) -> Void, reportCompleteSize: @escaping (Int) -> Void) {
         self.resource = resource
         self.parameters = parameters
         self.consumerId = arc4random64()
@@ -447,14 +448,14 @@ private final class MultipartFetchManager {
         self.partReady = partReady
         self.reportCompleteSize = reportCompleteSize
         
-        self.rangesDisposable = (ranges |> deliverOn(self.queue)).start(next: { [weak self] ranges in
+        self.rangesDisposable = (intervals
+        |> deliverOn(self.queue)).start(next: { [weak self] intervals in
             if let strongSelf = self {
-                if let _ = strongSelf.currentRanges {
-                    let updatedRanges = ranges.subtracting(strongSelf.currentFilledRanges)
-                    strongSelf.currentRanges = updatedRanges
+                if let _ = strongSelf.currentIntervals {
+                    strongSelf.currentIntervals = intervals
                     strongSelf.checkState()
                 } else {
-                    strongSelf.currentRanges = ranges
+                    strongSelf.currentIntervals = intervals
                     strongSelf.checkState()
                 }
             }
@@ -486,18 +487,20 @@ private final class MultipartFetchManager {
     }
     
     func checkState() {
-        guard let currentRanges = self.currentRanges else {
+        guard let currentIntervals = self.currentIntervals else {
             return
         }
-        var rangesToFetch = currentRanges.subtracting(self.currentFilledRanges)
-        let isSingleContinuousRange = rangesToFetch.rangeView.count == 1
+        
+        var removeFromFetchIntervals = self.currentFilledRanges
+        
+        let isSingleContiguousRange = currentIntervals.count == 1
         for offset in self.fetchedParts.keys.sorted() {
             if let (_, data) = self.fetchedParts[offset] {
                 let partRange = offset ..< (offset + data.count)
-                rangesToFetch.remove(integersIn: partRange)
+                removeFromFetchIntervals.insert(integersIn: partRange)
                 
                 var hasEarlierFetchingPart = false
-                if isSingleContinuousRange {
+                if isSingleContiguousRange {
                     inner: for key in self.fetchingParts.keys {
                         if key < offset {
                             hasEarlierFetchingPart = true
@@ -515,13 +518,26 @@ private final class MultipartFetchManager {
         }
         
         for (offset, (size, _)) in self.fetchingParts {
-            rangesToFetch.remove(integersIn: offset ..< (offset + size))
+            removeFromFetchIntervals.insert(integersIn: offset ..< (offset + size))
         }
         
         if let completeSize = self.completeSize {
             self.currentFilledRanges.insert(integersIn: completeSize ..< Int.max)
-            rangesToFetch.remove(integersIn: completeSize ..< Int.max)
-            if rangesToFetch.isEmpty && self.fetchingParts.isEmpty && !self.completeSizeReported {
+            removeFromFetchIntervals.insert(integersIn: completeSize ..< Int.max)
+        }
+        
+        var intervalsToFetch: [(Range<Int>, MediaBoxFetchPriority)] = []
+        for (interval, priority) in currentIntervals {
+            var intervalIndexSet = IndexSet(integersIn: interval)
+            intervalIndexSet.subtract(removeFromFetchIntervals)
+            for cleanInterval in intervalIndexSet.rangeView {
+                assert(!cleanInterval.isEmpty)
+                intervalsToFetch.append((cleanInterval, priority))
+            }
+        }
+        
+        if let completeSize = self.completeSize {
+            if intervalsToFetch.isEmpty && self.fetchingParts.isEmpty && !self.completeSizeReported {
                 self.completeSizeReported = true
                 assert(self.fetchedParts.isEmpty)
                 if let decryptedSize = self.state.decryptedSize {
@@ -532,110 +548,126 @@ private final class MultipartFetchManager {
             }
         }
         
-        while !rangesToFetch.isEmpty && self.fetchingParts.count < self.parallelParts && !self.reuploadingToCdn && !self.revalidatingMediaReference {
-            var selectedRange: (Range<Int>, Range<Int>)?
-            for range in rangesToFetch.rangeView {
-                var dataRange: Range<Int> = range.lowerBound ..< min(range.lowerBound + self.defaultPartSize, range.upperBound)
-                let rawRange: Range<Int> = dataRange
-                if dataRange.lowerBound % self.partAlignment != 0 {
-                    let previousBoundary = (dataRange.lowerBound / self.partAlignment) * self.partAlignment
-                    dataRange = previousBoundary ..< dataRange.upperBound
+        while !intervalsToFetch.isEmpty && self.fetchingParts.count < self.parallelParts && !self.reuploadingToCdn && !self.revalidatingMediaReference {
+            var elevatedIndices: [Int] = []
+            for i in 0 ..< intervalsToFetch.count {
+                if case .elevated = intervalsToFetch[i].1 {
+                    elevatedIndices.append(i)
                 }
-                if dataRange.lowerBound / (1024 * 1024) != (dataRange.upperBound - 1) / (1024 * 1024) {
-                    let nextBoundary = (dataRange.lowerBound / (1024 * 1024) + 1) * (1024 * 1024)
-                    dataRange = dataRange.lowerBound ..< nextBoundary
-                }
-                selectedRange = (rawRange, dataRange)
-                break
             }
-            if let (rawRange, downloadRange) = selectedRange {
-                rangesToFetch.remove(integersIn: downloadRange)
-                var requestLimit = downloadRange.count
-                if requestLimit % self.partAlignment != 0 {
-                    requestLimit = (requestLimit / self.partAlignment + 1) * self.partAlignment
-                }
-                
-                let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, fileReference: self.fileReference)
-                |> deliverOn(self.queue)
-                let partDisposable = MetaDisposable()
-                self.fetchingParts[downloadRange.lowerBound] = (downloadRange.count, partDisposable)
-                
-                partDisposable.set(part.start(next: { [weak self] data in
-                    if let strongSelf = self {
-                        var data = data
-                        if data.count < downloadRange.count {
-                            strongSelf.completeSize = downloadRange.lowerBound + data.count
-                        }
-                        let _ = strongSelf.fetchingParts.removeValue(forKey: downloadRange.lowerBound)
-                        strongSelf.fetchedParts[downloadRange.lowerBound] = (rawRange.lowerBound, data)
-                        strongSelf.checkState()
-                    }
-                }, error: { [weak self] error in
-                    if let strongSelf = self {
-                        let _ = strongSelf.fetchingParts.removeValue(forKey: downloadRange.lowerBound)
-                        switch error {
-                            case .generic:
-                                break
-                            case .revalidateMediaReference:
-                                if !strongSelf.revalidatingMediaReference && !strongSelf.revalidatedMediaReference {
-                                    strongSelf.revalidatingMediaReference = true
-                                    if let info = strongSelf.parameters?.info as? TelegramCloudMediaResourceFetchInfo {
-                                        strongSelf.revalidateMediaReferenceDisposable.set((revalidateMediaResourceReference(postbox: strongSelf.postbox, network: strongSelf.network, revalidationContext: strongSelf.revalidationContext, info: info, resource: strongSelf.resource)
-                                        |> deliverOn(strongSelf.queue)).start(next: { fileReference in
-                                            if let strongSelf = self {
-                                                strongSelf.revalidatingMediaReference = false
-                                                strongSelf.revalidatedMediaReference = true
-                                                strongSelf.fileReference = fileReference
-                                                strongSelf.checkState()
-                                            }
-                                        }, error: { _ in
-                                            if let strongSelf = self {
-                                            }
-                                        }))
-                                    } else {
-                                        Logger.shared.log("MultipartFetch", "reference invalidation requested, but no valid reference given")
-                                    }
-                                }
-                            case let .switchToCdn(id, token, key, iv, partHashes):
-                                switch strongSelf.source {
-                                    case let .master(location, download):
-                                        strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, datacenterId: id, isCdn: true, network: strongSelf.network), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download))
-                                        strongSelf.checkState()
-                                    case .cdn, .none:
-                                        break
-                                }
-                            case let .reuploadToCdn(_, token):
-                                switch strongSelf.source {
-                                    case .master, .none:
-                                        break
-                                    case let .cdn(_, fileToken, _, _, _, masterDownload, _):
-                                        if !strongSelf.reuploadingToCdn {
-                                            strongSelf.reuploadingToCdn = true
-                                            let reupload: Signal<[Api.FileHash], NoError> = masterDownload.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)), tag: nil)
-                                            |> `catch` { _ -> Signal<[Api.FileHash], NoError> in
-                                                return .single([])
-                                            }
-                                            strongSelf.reuploadToCdnDisposable.set((reupload |> deliverOn(strongSelf.queue)).start(next: { _ in
-                                                if let strongSelf = self {
-                                                    strongSelf.reuploadingToCdn = false
-                                                    strongSelf.checkState()
-                                                }
-                                            }))
-                                    }
-                                }
-                            case .hashesMissing:
-                                break
-                        }
-                    }
-                }))
+            
+            let currentIntervalIndex: Int
+            if !elevatedIndices.isEmpty {
+                currentIntervalIndex = elevatedIndices[self.nextFetchingPartId % elevatedIndices.count]
             } else {
-                break
+                currentIntervalIndex = self.nextFetchingPartId % intervalsToFetch.count
             }
+            self.nextFetchingPartId += 1
+            let (firstInterval, priority) = intervalsToFetch[currentIntervalIndex]
+            var downloadRange: Range<Int> = firstInterval.lowerBound ..< min(firstInterval.lowerBound + self.defaultPartSize, firstInterval.upperBound)
+            let rawRange: Range<Int> = downloadRange
+            if downloadRange.lowerBound % self.partAlignment != 0 {
+                let previousBoundary = (downloadRange.lowerBound / self.partAlignment) * self.partAlignment
+                downloadRange = previousBoundary ..< downloadRange.upperBound
+            }
+            if downloadRange.lowerBound / (1024 * 1024) != (downloadRange.upperBound - 1) / (1024 * 1024) {
+                let nextBoundary = (downloadRange.lowerBound / (1024 * 1024) + 1) * (1024 * 1024)
+                downloadRange = downloadRange.lowerBound ..< nextBoundary
+            }
+            
+            var intervalIndexSet = IndexSet(integersIn: intervalsToFetch[currentIntervalIndex].0)
+            intervalIndexSet.remove(integersIn: downloadRange)
+            intervalsToFetch.remove(at: currentIntervalIndex)
+            var insertIndex = currentIntervalIndex
+            for interval in intervalIndexSet.rangeView {
+                intervalsToFetch.insert((interval, priority), at: insertIndex)
+                insertIndex += 1
+            }
+            var requestLimit = downloadRange.count
+            if requestLimit % self.partAlignment != 0 {
+                requestLimit = (requestLimit / self.partAlignment + 1) * self.partAlignment
+            }
+            
+            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, fileReference: self.fileReference)
+            |> deliverOn(self.queue)
+            let partDisposable = MetaDisposable()
+            self.fetchingParts[downloadRange.lowerBound] = (downloadRange.count, partDisposable)
+            
+            partDisposable.set(part.start(next: { [weak self] data in
+                guard let strongSelf = self else {
+                    return
+                }
+                var data = data
+                if data.count < downloadRange.count {
+                    strongSelf.completeSize = downloadRange.lowerBound + data.count
+                }
+                let _ = strongSelf.fetchingParts.removeValue(forKey: downloadRange.lowerBound)
+                strongSelf.fetchedParts[downloadRange.lowerBound] = (rawRange.lowerBound, data)
+                strongSelf.checkState()
+            }, error: { [weak self] error in
+                guard let strongSelf = self else {
+                    return
+                }
+                let _ = strongSelf.fetchingParts.removeValue(forKey: downloadRange.lowerBound)
+                switch error {
+                    case .generic:
+                        break
+                    case .revalidateMediaReference:
+                        if !strongSelf.revalidatingMediaReference && !strongSelf.revalidatedMediaReference {
+                            strongSelf.revalidatingMediaReference = true
+                            if let info = strongSelf.parameters?.info as? TelegramCloudMediaResourceFetchInfo {
+                                strongSelf.revalidateMediaReferenceDisposable.set((revalidateMediaResourceReference(postbox: strongSelf.postbox, network: strongSelf.network, revalidationContext: strongSelf.revalidationContext, info: info, resource: strongSelf.resource)
+                                |> deliverOn(strongSelf.queue)).start(next: { fileReference in
+                                    if let strongSelf = self {
+                                        strongSelf.revalidatingMediaReference = false
+                                        strongSelf.revalidatedMediaReference = true
+                                        strongSelf.fileReference = fileReference
+                                        strongSelf.checkState()
+                                    }
+                                }, error: { _ in
+                                    if let strongSelf = self {
+                                    }
+                                }))
+                            } else {
+                                Logger.shared.log("MultipartFetch", "reference invalidation requested, but no valid reference given")
+                            }
+                        }
+                    case let .switchToCdn(id, token, key, iv, partHashes):
+                        switch strongSelf.source {
+                            case let .master(location, download):
+                                strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, datacenterId: id, isCdn: true, network: strongSelf.network), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download))
+                                strongSelf.checkState()
+                            case .cdn, .none:
+                                break
+                        }
+                    case let .reuploadToCdn(_, token):
+                        switch strongSelf.source {
+                            case .master, .none:
+                                break
+                            case let .cdn(_, fileToken, _, _, _, masterDownload, _):
+                                if !strongSelf.reuploadingToCdn {
+                                    strongSelf.reuploadingToCdn = true
+                                    let reupload: Signal<[Api.FileHash], NoError> = masterDownload.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)), tag: nil)
+                                    |> `catch` { _ -> Signal<[Api.FileHash], NoError> in
+                                        return .single([])
+                                    }
+                                    strongSelf.reuploadToCdnDisposable.set((reupload |> deliverOn(strongSelf.queue)).start(next: { _ in
+                                        if let strongSelf = self {
+                                            strongSelf.reuploadingToCdn = false
+                                            strongSelf.checkState()
+                                        }
+                                    }))
+                            }
+                        }
+                    case .hashesMissing:
+                        break
+                }
+            }))
         }
     }
 }
 
-func multipartFetch(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int?, ranges: Signal<IndexSet, NoError>, parameters: MediaResourceFetchParameters?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+func multipartFetch(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int?, intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let location: MultipartFetchMasterLocation
         if let resource = resource as? TelegramCloudMediaResource {
@@ -653,7 +685,7 @@ func multipartFetch(account: Account, resource: TelegramMediaResource, datacente
             subscriber.putNext(.reset)
         }
         
-        let manager = MultipartFetchManager(resource: resource, parameters: parameters, size: size, ranges: ranges, encryptionKey: encryptionKey, decryptedSize: decryptedSize, location: location, postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, partReady: { dataOffset, data in
+        let manager = MultipartFetchManager(resource: resource, parameters: parameters, size: size, intervals: intervals, encryptionKey: encryptionKey, decryptedSize: decryptedSize, location: location, postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, partReady: { dataOffset, data in
             subscriber.putNext(.dataPart(resourceOffset: dataOffset, data: data, range: 0 ..< data.count, complete: false))
         }, reportCompleteSize: { size in
             subscriber.putNext(.resourceSizeUpdated(size))
