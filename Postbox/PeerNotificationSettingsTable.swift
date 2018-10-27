@@ -179,17 +179,22 @@ final class PeerNotificationSettingsTable: Table {
         self.updatedInitialSettings.removeAll()
     }
     
-    func transactionParticipationInTotalUnreadCountUpdates() -> (added: Set<PeerId>, removed: Set<PeerId>) {
+    func transactionParticipationInTotalUnreadCountUpdates(postbox: Postbox) -> (added: Set<PeerId>, removed: Set<PeerId>) {
         var added = Set<PeerId>()
         var removed = Set<PeerId>()
         
         for (peerId, initialSettings) in self.updatedInitialSettings {
+            guard let peer = postbox.peerTable.get(peerId) else {
+                continue
+            }
             var wasParticipating = false
-            if let initialEffective = initialSettings.effective {
+            let include = shouldPeerParticipateInUnreadCountStats(peer: peer)
+            
+            if include, let initialEffective = initialSettings.effective {
                 wasParticipating = !initialEffective.isRemovedFromTotalUnreadCount
             }
             var isParticipating = false
-            if let resultEffective = self.cachedSettings[peerId]?.effective {
+            if include, let resultEffective = self.cachedSettings[peerId]?.effective {
                 isParticipating = !resultEffective.isRemovedFromTotalUnreadCount
             }
             if wasParticipating != isParticipating {

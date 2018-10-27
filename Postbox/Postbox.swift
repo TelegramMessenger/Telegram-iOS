@@ -1847,7 +1847,7 @@ public final class Postbox {
         
         let transactionUnreadCountDeltas = self.readStateTable.transactionUnreadCountDeltas()
         let alteredInitialPeerCombinedReadStates = self.readStateTable.transactionAlteredInitialPeerCombinedReadStates()
-        let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates()
+        let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates(postbox: self)
         self.chatListIndexTable.commitWithTransaction(alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, getCombinedPeerReadState: { peerId in
             return self.readStateTable.getCombinedState(peerId)
         }, getPeer: { peerId in

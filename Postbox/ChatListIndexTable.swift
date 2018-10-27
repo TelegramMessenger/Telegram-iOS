@@ -1,5 +1,9 @@
 import Foundation
 
+func shouldPeerParticipateInUnreadCountStats(peer: Peer) -> Bool {
+    return true
+}
+
 struct ChatListPeerInclusionIndex {
     let topMessageIndex: MessageIndex?
     let inclusion: PeerChatListInclusion
@@ -328,6 +332,18 @@ final class ChatListIndexTable: Table {
             
             var totalUnreadState = self.metadataTable.getChatListTotalUnreadState()
             for (peerId, initialState) in alteredInitialPeerCombinedReadStates {
+                guard let peer = getPeer(peerId) else {
+                    continue
+                }
+                var notificationSettings: PeerNotificationSettings?
+                if let peer = getPeer(peerId) {
+                    if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
+                        notificationSettings = self.notificationSettingsTable.getEffective(notificationSettingsPeerId)
+                    } else {
+                        notificationSettings = self.notificationSettingsTable.getEffective(peerId)
+                    }
+                }
+                
                 let initialCount = initialState.count
                 let initialIsUnread = initialState.isUnread
                 let currentCount = getCombinedPeerReadState(peerId)?.count ?? 0
@@ -335,14 +351,7 @@ final class ChatListIndexTable: Table {
                 let delta = currentCount - initialCount
                 let chatDelta: Int32 = (currentIsUnread ? 1 : 0) - (initialIsUnread ? 1 : 0)
                 if !addedUnreadCountPeerIds.contains(peerId) && !removedUnreadCountPeerIds.contains(peerId) {
-                    var notificationSettings: PeerNotificationSettings?
-                    if let peer = getPeer(peerId) {
-                        if let notificationSettingsPeerId = peer.notificationSettingsPeerId {
-                            notificationSettings = self.notificationSettingsTable.getEffective(notificationSettingsPeerId)
-                        } else {
-                            notificationSettings = self.notificationSettingsTable.getEffective(peerId)
-                        }
-                    }
+                    
                     if let _ = self.get(peerId: peerId).includedIndex(peerId: peerId) {
                         totalUnreadState.absoluteCounters.messageCount += delta
                         totalUnreadState.absoluteCounters.chatCount += chatDelta
@@ -537,18 +546,27 @@ final class ChatListIndexTable: Table {
         })
         var state = ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0))
         for peerId in peerIds {
+            guard let peer = postbox.peerTable.get(peerId) else {
+                continue
+            }
+            let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
             let inclusion = self.get(peerId: peerId)
             if inclusion.includedIndex(peerId: peerId) != nil {
                 if let combinedState = postbox.readStateTable.getCombinedState(peerId) {
-                    state.absoluteCounters.messageCount = state.absoluteCounters.messageCount &+ combinedState.count
-                    if state.absoluteCounters.messageCount < 0 {
-                        state.absoluteCounters.messageCount = 0
-                    }
-                    if combinedState.isUnread {
-                        state.absoluteCounters.chatCount += 1
+                    var peerMessageCount = combinedState.count
+                    
+                    let include = shouldPeerParticipateInUnreadCountStats(peer: peer)
+                    if include {
+                        state.absoluteCounters.messageCount = state.absoluteCounters.messageCount &+ peerMessageCount
+                        if state.absoluteCounters.messageCount < 0 {
+                            state.absoluteCounters.messageCount = 0
+                        }
+                        if combinedState.isUnread {
+                            state.absoluteCounters.chatCount += 1
+                        }
                     }
                     
-                    if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
+                    if include, let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
                         state.filteredCounters.messageCount = state.filteredCounters.messageCount &+ combinedState.count
                         if state.filteredCounters.messageCount < 0 {
                             state.filteredCounters.messageCount = 0

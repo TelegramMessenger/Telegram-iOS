@@ -28,6 +28,8 @@
 		D00C7CE31E37861C0080C3D5 /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CE21E37861C0080C3D5 /* MessageView.swift */; };
 		D00C7CE41E37861C0080C3D5 /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CE21E37861C0080C3D5 /* MessageView.swift */; };
 		D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00EED1D1C81F28D00341DFF /* MessageHistoryTagsTable.swift */; };
+		D0105D6B218362F2007C04A7 /* TempBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0105D6A218362F2007C04A7 /* TempBox.swift */; };
+		D0105D6C218362F2007C04A7 /* TempBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0105D6A218362F2007C04A7 /* TempBox.swift */; };
 		D010B61A1E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */; };
 		D0119CAD20C9E7A100895300 /* PostboxUpgrade_17to18.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0119CAC20C9E7A100895300 /* PostboxUpgrade_17to18.swift */; };
 		D0119CAE20C9E7A100895300 /* PostboxUpgrade_17to18.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0119CAC20C9E7A100895300 /* PostboxUpgrade_17to18.swift */; };
@@ -397,6 +399,7 @@
 		D00C7CD31E365C4E0080C3D5 /* PeerChatListInclusion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatListInclusion.swift; sourceTree = "<group>"; };
 		D00C7CE21E37861C0080C3D5 /* MessageView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
 		D00EED1D1C81F28D00341DFF /* MessageHistoryTagsTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTagsTable.swift; sourceTree = "<group>"; };
+		D0105D6A218362F2007C04A7 /* TempBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempBox.swift; sourceTree = "<group>"; };
 		D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMergedOperationLogIndexTable.swift; sourceTree = "<group>"; };
 		D0119CAC20C9E7A100895300 /* PostboxUpgrade_17to18.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_17to18.swift; sourceTree = "<group>"; };
 		D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageGloballyUniqueIdTable.swift; sourceTree = "<group>"; };
@@ -615,6 +618,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D0105D69218362D9007C04A7 /* Temp Box */ = {
+			isa = PBXGroup;
+			children = (
+				D0105D6A218362F2007C04A7 /* TempBox.swift */,
+			);
+			name = "Temp Box";
+			sourceTree = "<group>";
+		};
 		D05F09981C9CAC1100BB6F96 /* Media Box */ = {
 			isa = PBXGroup;
 			children = (
@@ -910,6 +921,7 @@
 				D0E1DE191C5EB0B500C7826E /* Value Box */,
 				D0E1DE161C5EB06000C7826E /* Tables */,
 				D0E1DE1A1C5EB0DB00C7826E /* Views */,
+				D0105D69218362D9007C04A7 /* Temp Box */,
 				D05F09981C9CAC1100BB6F96 /* Media Box */,
 				D0E3A7811B28ADD000A402D9 /* Postbox.swift */,
 				D0DA44471E4C7D1E005FDCA7 /* PostboxAccess.swift */,
@@ -1274,6 +1286,7 @@
 				D0F7B1D01E045C6A007EB8A5 /* KeychainTable.swift in Sources */,
 				D0BEAF6E1E54B77900BD963D /* AccountManagerRecordTable.swift in Sources */,
 				D0B4184F1D7DFE20004562A4 /* ChatListHolesView.swift in Sources */,
+				D0105D6C218362F2007C04A7 /* TempBox.swift in Sources */,
 				D0F7B1D81E045C6A007EB8A5 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */,
 				D0B418581D7DFE29004562A4 /* SeedConfiguration.swift in Sources */,
 				D0B418311D7DFE16004562A4 /* ValueBox.swift in Sources */,
@@ -1451,6 +1464,7 @@
 				D04614302004E24600EC0EF2 /* LocalMessageHistoryTagsTable.swift in Sources */,
 				D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */,
 				D044CA2C1C617E2D002160FF /* MessageHistoryMetadataTable.swift in Sources */,
+				D0105D6B218362F2007C04A7 /* TempBox.swift in Sources */,
 				D0FC194A201E8EAF00FEDBB2 /* MediaBoxFile.swift in Sources */,
 				D03120FC1DA55427006A2A60 /* PeerNotificationSettings.swift in Sources */,
 				D0943B021FDB01D8001522CC /* PostboxUpgrade_14to15.swift in Sources */,

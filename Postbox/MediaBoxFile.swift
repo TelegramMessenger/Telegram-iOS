@@ -167,7 +167,7 @@ final class MediaBoxPartialFile {
     
     private let fullRangeRequests = Bag<Disposable>()
     
-    private var currentFetch: (Promise<IndexSet>, Disposable)?
+    private var currentFetch: (Promise<[(Range<Int>, MediaBoxFetchPriority)]>, Disposable)?
     private var processedAtLeastOneFetch: Bool = false
     
     init?(queue: Queue, path: String, completePath: String, completed: @escaping (Int32) -> Void) {
@@ -341,7 +341,7 @@ final class MediaBoxPartialFile {
                     assertionFailure()
                     removeIndices.append((index, request))
                 } else {
-                    let intRange = Range(Int(request.range.lowerBound) ..< Int(maxValue))
+                    let intRange = Range(Int(request.range.lowerBound) ..< Int(min(maxValue, request.range.upperBound)))
                     if self.fileMap.ranges.contains(integersIn: intRange) {
                         removeIndices.append((index, request))
                     }
@@ -352,7 +352,7 @@ final class MediaBoxPartialFile {
             for (index, request) in removeIndices {
                 self.dataRequests.remove(index)
                 var maxValue = request.range.upperBound
-                if let truncationSize = self.fileMap.truncationSize {
+                if let truncationSize = self.fileMap.truncationSize, truncationSize < maxValue {
                     maxValue = truncationSize
                 }
                 request.completion(MediaResourceData(path: self.path, offset: Int(request.range.lowerBound), size: Int(maxValue) - Int(request.range.lowerBound), complete: true))
@@ -453,7 +453,7 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func fetched(range: Range<Int32>, fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func fetched(range: Range<Int32>, priority: MediaBoxFetchPriority, fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         if self.fileMap.contains(range) {
@@ -461,7 +461,7 @@ final class MediaBoxPartialFile {
             return EmptyDisposable
         }
         
-        let (index, updatedRanges) = self.missingRanges.addRequest(fileMap: self.fileMap, range: range, error: error, completion: {
+        let (index, updatedRanges) = self.missingRanges.addRequest(fileMap: self.fileMap, range: range, priority: priority, error: error, completion: {
             completed()
         })
         if let updatedRanges = updatedRanges {
@@ -480,14 +480,14 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func fetchedFullRange(fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func fetchedFullRange(fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         let queue = self.queue
         let disposable = MetaDisposable()
         
         let index = self.fullRangeRequests.add(disposable)
         self.updateStatuses()
         
-        disposable.set(self.fetched(range: 0 ..< Int32.max, fetch: fetch, error: { e in
+        disposable.set(self.fetched(range: 0 ..< Int32.max, priority: .default, fetch: fetch, error: { e in
             error(e)
         }, completed: { [weak self] in
             queue.async {
@@ -593,19 +593,24 @@ final class MediaBoxPartialFile {
         }
     }
     
-    private func updateRequestRanges(_ ranges: IndexSet, fetch: ((Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)?) {
+    private func updateRequestRanges(_ intervals: [(Range<Int>, MediaBoxFetchPriority)], fetch: ((Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)?) {
         assert(self.queue.isCurrent())
         
-        if ranges.isEmpty {
+        #if DEBUG
+        for interval in intervals {
+            assert(!interval.0.isEmpty)
+        }
+        #endif
+        if intervals.isEmpty {
             if let (_, disposable) = self.currentFetch {
                 self.currentFetch = nil
                 disposable.dispose()
             }
         } else {
             if let (promise, _) = self.currentFetch {
-                promise.set(.single(ranges))
+                promise.set(.single(intervals))
             } else if let fetch = fetch {
-                let promise = Promise<IndexSet>()
+                let promise = Promise<[(Range<Int>, MediaBoxFetchPriority)]>()
                 let disposable = MetaDisposable()
                 self.currentFetch = (promise, disposable)
                 disposable.set((fetch(promise.get())
@@ -658,7 +663,7 @@ final class MediaBoxPartialFile {
                         error(e)
                     }
                 }))
-                promise.set(.single(ranges))
+                promise.set(.single(intervals))
             }
         }
     }
@@ -666,12 +671,14 @@ final class MediaBoxPartialFile {
 
 private final class MediaBoxFileMissingRange {
     var range: Range<Int32>
+    let priority: MediaBoxFetchPriority
     var remainingRanges: IndexSet
     let error: (MediaResourceDataFetchError) -> Void
     let completion: () -> Void
     
-    init(range: Range<Int32>, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) {
+    init(range: Range<Int32>, priority: MediaBoxFetchPriority, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) {
         self.range = range
+        self.priority = priority
         let intRange = Range(Int(range.lowerBound) ..< Int(range.upperBound))
         self.remainingRanges = IndexSet(integersIn: intRange)
         self.error = error
@@ -690,11 +697,77 @@ private final class MediaBoxFileMissingRanges {
         return errorsAndCompletions
     }
     
-    func reset(fileMap: MediaBoxFileMap) -> IndexSet? {
+    func reset(fileMap: MediaBoxFileMap) -> [(Range<Int>, MediaBoxFetchPriority)]? {
         return self.update(fileMap: fileMap)
     }
     
-    func fill(_ range: Range<Int32>) -> (IndexSet, [() -> Void])? {
+    private func missingRequestedIntervals() -> [(Range<Int>, MediaBoxFetchPriority)] {
+        var resolvedIntervals: [(Range<Int>, MediaBoxFetchPriority)] = []
+        for item in self.requestedRanges.copyItems() {
+            var requestedInterval = IndexSet(integersIn: Int(item.range.lowerBound) ..< Int(item.range.upperBound))
+            requestedInterval.formIntersection(self.missingRanges)
+            for range in requestedInterval.rangeView {
+                if !range.isEmpty {
+                    resolvedIntervals.append((range, item.priority))
+                }
+            }
+        }
+        outer: while resolvedIntervals.count > 1 {
+            var hadOverlap = false
+            for i in 0 ..< resolvedIntervals.count {
+                inner: for j in 0 ..< resolvedIntervals.count {
+                    if i == j {
+                        continue inner
+                    }
+                    if resolvedIntervals[i].0.overlaps(resolvedIntervals[j].0) {
+                        hadOverlap = true
+                        if resolvedIntervals[i].0 == resolvedIntervals[j].0 {
+                            if resolvedIntervals[i].1.rawValue > resolvedIntervals[j].1.rawValue {
+                                resolvedIntervals.remove(at: j)
+                            } else {
+                                resolvedIntervals.remove(at: i)
+                            }
+                            continue outer
+                        }
+                        let lowerBound: Int
+                        let lowerPriority: MediaBoxFetchPriority
+                        if resolvedIntervals[i].0.lowerBound == resolvedIntervals[j].0.lowerBound {
+                            lowerBound = resolvedIntervals[i].0.lowerBound
+                            lowerPriority = MediaBoxFetchPriority(rawValue: max(resolvedIntervals[i].1.rawValue, resolvedIntervals[j].1.rawValue))!
+                        } else if resolvedIntervals[i].0.lowerBound < resolvedIntervals[j].0.lowerBound {
+                            lowerBound = resolvedIntervals[i].0.lowerBound
+                            lowerPriority = resolvedIntervals[i].1
+                        } else {
+                            lowerBound = resolvedIntervals[j].0.lowerBound
+                            lowerPriority = resolvedIntervals[j].1
+                        }
+                        let upperBound: Int
+                        let upperPriority: MediaBoxFetchPriority
+                        if resolvedIntervals[i].0.upperBound == resolvedIntervals[j].0.upperBound {
+                            upperBound = resolvedIntervals[i].0.upperBound
+                            upperPriority = MediaBoxFetchPriority(rawValue: max(resolvedIntervals[i].1.rawValue, resolvedIntervals[j].1.rawValue))!
+                        } else if resolvedIntervals[i].0.upperBound > resolvedIntervals[j].0.upperBound {
+                            upperBound = resolvedIntervals[i].0.upperBound
+                            upperPriority = resolvedIntervals[i].1
+                        } else {
+                            upperBound = resolvedIntervals[j].0.upperBound
+                            upperPriority = resolvedIntervals[j].1
+                        }
+                        let middleBound = max(resolvedIntervals[i].0.lowerBound, resolvedIntervals[j].0.lowerBound)
+                        resolvedIntervals[i] = (lowerBound ..< middleBound, lowerPriority)
+                        resolvedIntervals[j] = (middleBound ..< upperBound, upperPriority)
+                        continue outer
+                    }
+                }
+            }
+            if !hadOverlap {
+                break
+            }
+        }
+        return resolvedIntervals
+    }
+    
+    func fill(_ range: Range<Int32>) -> ([(Range<Int>, MediaBoxFetchPriority)], [() -> Void])? {
         let intRange = Range(Int(range.lowerBound) ..< Int(range.upperBound))
         if self.missingRanges.intersects(integersIn: intRange) {
             self.missingRanges.remove(integersIn: intRange)
@@ -708,33 +781,34 @@ private final class MediaBoxFileMissingRanges {
                     }
                 }
             }
-            return (self.missingRanges, completions)
+            
+            return (self.missingRequestedIntervals(), completions)
         } else {
             return nil
         }
     }
     
-    func addRequest(fileMap: MediaBoxFileMap, range: Range<Int32>, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) -> (Int, IndexSet?) {
-        let index = self.requestedRanges.add(MediaBoxFileMissingRange(range: range, error: error, completion: completion))
+    func addRequest(fileMap: MediaBoxFileMap, range: Range<Int32>, priority: MediaBoxFetchPriority, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) -> (Int, [(Range<Int>, MediaBoxFetchPriority)]?) {
+        let index = self.requestedRanges.add(MediaBoxFileMissingRange(range: range, priority: priority, error: error, completion: completion))
         
         return (index, self.update(fileMap: fileMap))
     }
     
-    func removeRequest(fileMap: MediaBoxFileMap, index: Int) -> IndexSet? {
+    func removeRequest(fileMap: MediaBoxFileMap, index: Int) -> [(Range<Int>, MediaBoxFetchPriority)]? {
         self.requestedRanges.remove(index)
         return self.update(fileMap: fileMap)
     }
     
-    private func update(fileMap: MediaBoxFileMap) -> IndexSet? {
+    private func update(fileMap: MediaBoxFileMap) -> [(Range<Int>, MediaBoxFetchPriority)]? {
         var requested = IndexSet()
-        for (item) in self.requestedRanges.copyItems() {
+        for item in self.requestedRanges.copyItems() {
             let intRange = Range(Int(item.range.lowerBound) ..< Int(item.range.upperBound))
             requested.insert(integersIn: intRange)
         }
         requested.subtract(fileMap.ranges)
         if requested != self.missingRanges {
             self.missingRanges = requested
-            return requested
+            return self.missingRequestedIntervals()
         }
         return nil
     }
@@ -806,16 +880,16 @@ final class MediaBoxFileContext {
         }
     }
     
-    func fetched(range: Range<Int32>, fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func fetched(range: Range<Int32>, priority: MediaBoxFetchPriority, fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case .complete:
                 return EmptyDisposable
             case let .partial(file):
-                return file.fetched(range: range, fetch: fetch, error: error, completed: completed)
+                return file.fetched(range: range, priority: priority, fetch: fetch, error: error, completed: completed)
         }
     }
     
-    func fetchedFullRange(fetch: @escaping (Signal<IndexSet, NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func fetchedFullRange(fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case .complete:
                 return EmptyDisposable

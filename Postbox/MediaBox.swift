@@ -63,6 +63,11 @@ public protocol MediaResourceDataFetchCopyLocalItem {
     func copyTo(url: URL) -> Bool
 }
 
+public enum MediaBoxFetchPriority: Int32 {
+    case `default` = 0
+    case elevated = 1
+}
+
 public enum MediaResourceDataFetchResult {
     case dataPart(resourceOffset: Int, data: Data, range: Range<Int>, complete: Bool)
     case resourceSizeUpdated(Int)
@@ -122,9 +127,9 @@ public final class MediaBox {
     
     private var fileContexts: [WrappedMediaResourceId: MediaBoxFileContext] = [:]
     
-    private var wrappedFetchResource = Promise<(MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>>()
+    private var wrappedFetchResource = Promise<(MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>>()
     public var preFetchedResourcePath: (MediaResource) -> String? = { _ in return nil }
-    public var fetchResource: ((MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)? {
+    public var fetchResource: ((MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)? {
         didSet {
             if let fetchResource = self.fetchResource {
                 wrappedFetchResource.set(.single(fetchResource))
@@ -134,8 +139,8 @@ public final class MediaBox {
         }
     }
     
-    public var wrappedFetchCachedResourceRepresentation = Promise<(MediaResource, MediaResourceData, CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>>()
-    public var fetchCachedResourceRepresentation: ((MediaResource, MediaResourceData, CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>)? {
+    public var wrappedFetchCachedResourceRepresentation = Promise<(MediaResource, CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>>()
+    public var fetchCachedResourceRepresentation: ((MediaResource, CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>)? {
         didSet {
             if let fetchCachedResourceRepresentation = self.fetchCachedResourceRepresentation {
                 wrappedFetchCachedResourceRepresentation.set(.single(fetchCachedResourceRepresentation))
@@ -199,7 +204,6 @@ public final class MediaBox {
             let pathsTo = self.storePathsForId(to)
             link(pathsFrom.partial, pathsTo.partial)
             link(pathsFrom.complete, pathsTo.complete)
-            
         }
     }
     
@@ -362,7 +366,7 @@ public final class MediaBox {
                                         if let pathExtension = pathExtension {
                                             let symlinkPath = paths.complete + ".\(pathExtension)"
                                             if fileSize(symlinkPath) == nil {
-                                                let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                                                let _ = try? FileManager.default.linkItem(atPath: paths.complete, toPath: symlinkPath)
                                             }
                                             subscriber.putNext(MediaResourceData(path: symlinkPath, offset: 0, size: value.size, complete: true))
                                         } else {
@@ -423,7 +427,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResourceData(_ resource: MediaResource, in range: Range<Int>, parameters: MediaResourceFetchParameters?) -> Signal<Void, NoError> {
+    public func fetchedResourceData(_ resource: MediaResource, in range: Range<Int>, priority: MediaBoxFetchPriority = .default, parameters: MediaResourceFetchParameters?) -> Signal<Void, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -434,11 +438,11 @@ public final class MediaBox {
                 }
                 
                 let fetchResource = self.wrappedFetchResource.get()
-                let fetchedDisposable = fileContext.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), fetch: { ranges in
+                let fetchedDisposable = fileContext.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), priority: priority, fetch: { intervals in
                     return fetchResource
                     |> introduceError(MediaResourceDataFetchError.self)
                     |> mapToSignal { fetch in
-                        return fetch(resource, ranges, parameters)
+                        return fetch(resource, intervals, parameters)
                     }
                 }, error: { _ in
                     subscriber.putCompletion()
@@ -578,7 +582,7 @@ public final class MediaBox {
         }
     }
     
-    public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, complete: Bool) -> Signal<MediaResourceData, NoError> {
+    public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, complete: Bool, fetch: Bool = true) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.concurrentQueue.async {
@@ -586,7 +590,7 @@ public final class MediaBox {
                 if let size = fileSize(path) {
                     subscriber.putNext(MediaResourceData(path: path, offset: 0, size: size, complete: true))
                     subscriber.putCompletion()
-                } else {
+                } else if fetch {
                     self.dataQueue.async {
                         let key = CachedMediaResourceRepresentationKey(resourceId: resource.id, representation: representation)
                         let context: CachedMediaResourceRepresentationContext
@@ -630,18 +634,11 @@ public final class MediaBox {
                         
                         if !context.initialized {
                             context.initialized = true
-                            let signal = self.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-                            |> mapToSignal { resourceData -> Signal<CachedMediaResourceRepresentationResult?, NoError> in
-                                if resourceData.complete {
-                                    return self.wrappedFetchCachedResourceRepresentation.get()
-                                        |> take(1)
-                                        |> mapToSignal { fetch in
-                                            return fetch(resource, resourceData, representation)
-                                                |> map(Optional.init)
-                                        }
-                                } else {
-                                    return .single(nil)
-                                }
+                            let signal = self.wrappedFetchCachedResourceRepresentation.get()
+                            |> take(1)
+                            |> mapToSignal { fetch in
+                                return fetch(resource, representation)
+                                |> map(Optional.init)
                             }
                             |> deliverOn(self.dataQueue)
                             context.disposable.set(signal.start(next: { [weak self, weak context] next in
@@ -671,9 +668,14 @@ public final class MediaBox {
                             }))
                         }
                     }
+                } else {
+                    subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
+                    subscriber.putCompletion()
                 }
             }
-            return disposable
+            return ActionDisposable {
+                disposable.dispose()
+            }
         }
     }
     
