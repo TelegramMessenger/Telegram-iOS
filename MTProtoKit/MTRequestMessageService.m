@@ -461,12 +461,21 @@
     
     if (messages.count != 0)
     {
+        NSMutableDictionary *requestInternalIdToTransactionResetStateVersion = [[NSMutableDictionary alloc] init];
+        for (MTRequest *request in _requests) {
+            requestInternalIdToTransactionResetStateVersion[request.internalId] = @(request.transactionResetStateVersion);
+        }
         return [[MTMessageTransaction alloc] initWithMessagePayload:messages prepared:^(NSDictionary *messageInternalIdToPreparedMessage) {
             for (MTRequest *request in _requests) {
                 id messageInternalId = requestInternalIdToMessageInternalId[request.internalId];
                 if (messageInternalId != nil) {
                     MTPreparedMessage *preparedMessage = messageInternalIdToPreparedMessage[messageInternalId];
                     if (preparedMessage != nil) {
+                        NSNumber *nTransactionResetStateVersion = requestInternalIdToTransactionResetStateVersion[request.internalId];
+                        if (nTransactionResetStateVersion != nil && [nTransactionResetStateVersion intValue] != request.transactionResetStateVersion) {
+                            continue;
+                        }
+                        
                         MTRequestContext *requestContext = [[MTRequestContext alloc] initWithMessageId:preparedMessage.messageId messageSeqNo:preparedMessage.seqNo transactionId:nil quickAckId:0];
                         requestContext.willInitializeApi = requestsWillInitializeApi;
                         requestContext.waitingForMessageId = true;
@@ -492,6 +501,10 @@
                     MTPreparedMessage *preparedMessage = messageInternalIdToPreparedMessage[messageInternalId];
                     if (preparedMessage != nil && messageInternalIdToTransactionId[messageInternalId] != nil)
                     {
+                        NSNumber *nTransactionResetStateVersion = requestInternalIdToTransactionResetStateVersion[request.internalId];
+                        if (nTransactionResetStateVersion != nil && [nTransactionResetStateVersion intValue] != request.transactionResetStateVersion) {
+                            continue;
+                        }
                         MTRequestContext *requestContext = [[MTRequestContext alloc] initWithMessageId:preparedMessage.messageId messageSeqNo:preparedMessage.seqNo transactionId:messageInternalIdToTransactionId[messageInternalId] quickAckId:(int32_t)[messageInternalIdToQuickAckId[messageInternalId] intValue]];
                         requestContext.willInitializeApi = requestsWillInitializeApi;
                         request.requestContext = requestContext;
@@ -789,6 +802,9 @@
         if (request.requestContext != nil && request.requestContext.transactionId != nil && [transactionIds containsObject:request.requestContext.transactionId])
         {
             request.requestContext.transactionId = nil;
+            request.requestContext.delivered = false;
+            request.requestContext.waitingForMessageId = false;
+            request.transactionResetStateVersion += 1;
             requestTransaction = true;
         }
     }
@@ -803,9 +819,12 @@
     
     for (MTRequest *request in _requests)
     {
-        if (request.requestContext != nil && request.requestContext.transactionId != nil)
+        if (request.requestContext != nil)
         {
             request.requestContext.transactionId = nil;
+            request.requestContext.delivered = false;
+            request.requestContext.waitingForMessageId = false;
+            request.transactionResetStateVersion += 1;
             requestTransaction = true;
         }
     }

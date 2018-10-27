@@ -15,6 +15,7 @@
 @property (nonatomic, strong, readonly) id (^responseParser)(NSData *);
 
 @property (nonatomic, strong) NSArray *decorators;
+@property (nonatomic) int32_t transactionResetStateVersion;
 @property (nonatomic, strong) MTRequestContext *requestContext;
 @property (nonatomic, strong) MTRequestErrorContext *errorContext;
 @property (nonatomic) bool hasHighPriority;
