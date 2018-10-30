@@ -2032,56 +2032,40 @@ extension Api {
     
     }
     enum LangPackLanguage: TypeConstructorDescription {
-        case langPackLanguage(flags: Int32, name: String, nativeName: String, langCode: String, baseLangCode: String?, stringsCount: Int32, translatedCount: Int32)
+        case langPackLanguage(name: String, nativeName: String, langCode: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let stringsCount, let translatedCount):
+                case .langPackLanguage(let name, let nativeName, let langCode):
                     if boxed {
-                        buffer.appendInt32(711286046)
+                        buffer.appendInt32(292985073)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(name, buffer: buffer, boxed: false)
                     serializeString(nativeName, buffer: buffer, boxed: false)
                     serializeString(langCode, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(baseLangCode!, buffer: buffer, boxed: false)}
-                    serializeInt32(stringsCount, buffer: buffer, boxed: false)
-                    serializeInt32(translatedCount, buffer: buffer, boxed: false)
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let stringsCount, let translatedCount):
-                return ("langPackLanguage", [("flags", flags), ("name", name), ("nativeName", nativeName), ("langCode", langCode), ("baseLangCode", baseLangCode), ("stringsCount", stringsCount), ("translatedCount", translatedCount)])
+                case .langPackLanguage(let name, let nativeName, let langCode):
+                return ("langPackLanguage", [("name", name), ("nativeName", nativeName), ("langCode", langCode)])
     }
     }
     
         static func parse_langPackLanguage(_ reader: BufferReader) -> LangPackLanguage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: String?
+            _1 = parseString(reader)
             var _2: String?
             _2 = parseString(reader)
             var _3: String?
             _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
-            var _6: Int32?
-            _6 = reader.readInt32()
-            var _7: Int32?
-            _7 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.LangPackLanguage.langPackLanguage(flags: _1!, name: _2!, nativeName: _3!, langCode: _4!, baseLangCode: _5, stringsCount: _6!, translatedCount: _7!)
+            if _c1 && _c2 && _c3 {
+                return Api.LangPackLanguage.langPackLanguage(name: _1!, nativeName: _2!, langCode: _3!)
             }
             else {
                 return nil
