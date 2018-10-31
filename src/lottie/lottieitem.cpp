@@ -399,7 +399,8 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
 void LOTCompLayerItem::updateContent()
 {
     for (const auto &layer : mLayers) {
-        layer->update( mLayerData->timeRemap(frameNo()), combinedMatrix(), combinedAlpha());
+        layer->update( mLayerData->timeRemap(frameNo()) - mLayerData->startFrame(),
+                       combinedMatrix(), combinedAlpha());
     }
 }
 
