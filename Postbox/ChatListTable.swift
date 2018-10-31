@@ -90,7 +90,7 @@ private func extractKey(_ key: ValueBoxKey) -> (groupId: PeerGroupId?, pinningIn
 private func readEntry(groupId: PeerGroupId?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, key: ValueBoxKey, value: ReadBuffer) -> ChatListIntermediateEntry {
     let (keyGroupId, pinningIndex, messageIndex, type) = extractKey(key)
     assert(groupId == keyGroupId)
-    
+    //preconditionFailure()
     let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
     if type == ChatListEntryType.message.rawValue {
         var message: IntermediateMessage?
