@@ -82,7 +82,7 @@ private func inputHeightOffsetForLayout(_ layout: WindowLayout) -> CGFloat {
     return 0.0
 }
 
-private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> ContainerViewLayout {
+private func containedLayoutForWindowLayout(_ layout: WindowLayout, hasOnScreenNavigation: Bool) -> ContainerViewLayout {
     let resolvedStatusBarHeight: CGFloat?
     if let statusBarHeight = layout.statusBarHeight {
         if layout.forceInCallStatusBarText != nil {
@@ -103,10 +103,10 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> Container
     var standardInputHeight: CGFloat = 216.0
     var predictiveHeight: CGFloat = 42.0
     
-    if let metrics = DeviceMetrics.forScreenSize(layout.size) {
+    if let metrics = DeviceMetrics.forScreenSize(layout.size, hintHasOnScreenNavigation: hasOnScreenNavigation) {
         let isLandscape = layout.size.width > layout.size.height
         let safeAreaInsets = metrics.safeAreaInsets(inLandscape: isLandscape)
-        if safeAreaInsets.left > 0.0 {
+        if !safeAreaInsets.left.isZero {
             resolvedSafeInsets.left = safeAreaInsets.left
             resolvedSafeInsets.right = safeAreaInsets.right
         }
@@ -229,6 +229,14 @@ public final class WindowHostView {
         self.updateDeferScreenEdgeGestures = updateDeferScreenEdgeGestures
         self.updatePreferNavigationUIHidden = updatePreferNavigationUIHidden
     }
+    
+    var hasOnScreenNavigation: Bool {
+        if #available(iOSApplicationExtension 11.0, *) {
+            return !self.eventView.safeAreaInsets.bottom.isZero
+        } else {
+            return false
+        }
+    }
 }
 
 public struct WindowTracingTags {
@@ -253,12 +261,8 @@ private func layoutMetricsForScreenSize(_ size: CGSize) -> LayoutMetrics {
     }
 }
 
-private func safeInsetsForScreenSize(_ size: CGSize) -> UIEdgeInsets {
-    return DeviceMetrics.forScreenSize(size)?.safeAreaInsets(inLandscape: size.width > size.height) ?? UIEdgeInsets.zero
-}
-
-private func isSizeOfScreenWithOnScreenNavigation(_ size: CGSize) -> Bool {
-    return (DeviceMetrics.forScreenSize(size)?.onScreenNavigationHeight(inLandscape: size.width > size.height) ?? 0.0) > 0.0
+private func safeInsetsForScreenSize(_ size: CGSize, hasOnScreenNavigation: Bool) -> UIEdgeInsets {
+    return DeviceMetrics.forScreenSize(size, hintHasOnScreenNavigation: hasOnScreenNavigation)?.safeAreaInsets(inLandscape: size.width > size.height) ?? UIEdgeInsets.zero
 }
 
 public final class WindowKeyboardGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
@@ -325,30 +329,23 @@ public class Window1 {
         self.volumeControlStatusBarNode.isHidden = true
         
         let boundsSize = self.hostView.eventView.bounds.size
+        let deviceMetrics = DeviceMetrics.forScreenSize(boundsSize, hintHasOnScreenNavigation: self.hostView.hasOnScreenNavigation)
         
         self.statusBarHost = statusBarHost
         let statusBarHeight: CGFloat
         if let statusBarHost = statusBarHost {
-            self.statusBarManager = StatusBarManager(host: statusBarHost, volumeControlStatusBar: self.volumeControlStatusBar, volumeControlStatusBarNode: self.volumeControlStatusBarNode)
             statusBarHeight = statusBarHost.statusBarFrame.size.height
+            self.statusBarManager = StatusBarManager(host: statusBarHost, volumeControlStatusBar: self.volumeControlStatusBar, volumeControlStatusBarNode: self.volumeControlStatusBarNode)
             self.keyboardManager = KeyboardManager(host: statusBarHost)
         } else {
+            statusBarHeight = deviceMetrics?.statusBarHeight ?? 20.0
             self.statusBarManager = nil
             self.keyboardManager = nil
-            
-            if (isSizeOfScreenWithOnScreenNavigation(boundsSize)) {
-                statusBarHeight = 44.0
-            } else {
-                statusBarHeight = 20.0
-            }
         }
         
-        var onScreenNavigationHeight: CGFloat?
-        if (isSizeOfScreenWithOnScreenNavigation(boundsSize)) {
-            onScreenNavigationHeight = 34.0
-        }
+        let onScreenNavigationHeight = deviceMetrics?.onScreenNavigationHeight(inLandscape: boundsSize.width > boundsSize.height)
         
-        self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForScreenSize(boundsSize), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, safeInsets: safeInsetsForScreenSize(boundsSize), onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil)
+        self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForScreenSize(boundsSize), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, safeInsets: safeInsetsForScreenSize(boundsSize, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil)
         self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         self.presentationContext = PresentationContext()
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost)
@@ -405,8 +402,8 @@ public class Window1 {
         }
         
         self.presentationContext.view = self.hostView.containerView
-        self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
-        self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
+        self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
+        self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
         
         self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self {
@@ -592,7 +589,7 @@ public class Window1 {
         } else {
             transition = .immediate
         }
-        self.updateLayout { $0.update(size: value, metrics: layoutMetricsForScreenSize(value), safeInsets: safeInsetsForScreenSize(value), forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
+        self.updateLayout { $0.update(size: value, metrics: layoutMetricsForScreenSize(value), safeInsets: safeInsetsForScreenSize(value, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
     }
     
     private var _rootController: ContainableController?
@@ -608,7 +605,7 @@ public class Window1 {
             
             if let rootController = self._rootController {
                 if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
-                    rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
+                    rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
                 }
                 
                 if let coveringView = self.coveringView {
@@ -631,8 +628,9 @@ public class Window1 {
             }
             self._topLevelOverlayControllers = value
             
+            let layout = containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation)
             for controller in self._topLevelOverlayControllers {
-                controller.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
+                controller.containerLayoutUpdated(layout, transition: .immediate)
                 
                 if let coveringView = self.coveringView {
                     self.hostView.containerView.insertSubview(controller.view, belowSubview: coveringView)
@@ -814,15 +812,15 @@ public class Window1 {
             self.updatingLayout = nil
             if updatingLayout.layout != self.windowLayout || self.isFirstLayout {
                 self.isFirstLayout = false
+                
+                let boundsSize = updatingLayout.layout.size
+                let deviceMetrics = DeviceMetrics.forScreenSize(boundsSize, hintHasOnScreenNavigation: self.hostView.hasOnScreenNavigation)
+                
                 var statusBarHeight: CGFloat?
                 if let statusBarHost = self.statusBarHost {
                     statusBarHeight = statusBarHost.statusBarFrame.size.height
                 } else {
-                    if isSizeOfScreenWithOnScreenNavigation(updatingLayout.layout.size) {
-                        statusBarHeight = 44.0
-                    } else {
-                        statusBarHeight = 20.0
-                    }
+                    statusBarHeight = deviceMetrics?.statusBarHeight ?? 20.0
                 }
                 let statusBarWasHidden = self.statusBarHidden
                 if statusBarHiddenInLandscape && updatingLayout.layout.size.width > updatingLayout.layout.size.height {
@@ -837,16 +835,11 @@ public class Window1 {
                 }
                 let previousInputOffset = inputHeightOffsetForLayout(self.windowLayout)
                 
-                var onScreenNavigationHeight: CGFloat?
-                if let height = updatingLayout.layout.onScreenNavigationHeight {
-                    onScreenNavigationHeight = height
-                } else if isSizeOfScreenWithOnScreenNavigation(updatingLayout.layout.size) {
-                    onScreenNavigationHeight = 34.0
-                }
+                let onScreenNavigationHeight = deviceMetrics?.onScreenNavigationHeight(inLandscape: boundsSize.width > boundsSize.height)
                 
                 self.windowLayout = WindowLayout(size: updatingLayout.layout.size, metrics: layoutMetricsForScreenSize(updatingLayout.layout.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: updatingLayout.layout.forceInCallStatusBarText, inputHeight: updatingLayout.layout.inputHeight, safeInsets: updatingLayout.layout.safeInsets, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: updatingLayout.layout.upperKeyboardInputPositionBound)
                 
-                let childLayout = containedLayoutForWindowLayout(self.windowLayout)
+                let childLayout = containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation)
                 let childLayoutUpdated = self.updatedContainerLayout != childLayout
                 self.updatedContainerLayout = childLayout
                 

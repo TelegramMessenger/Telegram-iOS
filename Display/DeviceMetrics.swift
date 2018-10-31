@@ -1,6 +1,6 @@
 import UIKit
 
-public enum DeviceMetrics {
+public enum DeviceMetrics: CaseIterable {
     case iPhone4
     case iPhone5
     case iPhone6
@@ -8,16 +8,20 @@ public enum DeviceMetrics {
     case iPhoneX
     case iPhoneXSMax
     case iPad
+    case iPadPro10Inch
+    case iPadPro11Inch
     case iPadPro
-    
-    static let allDevices = [iPhone4, iPhone5, iPhone6, iPhone6Plus, iPhoneX, iPhoneXSMax, iPad, iPadPro]
-    
-    public static func forScreenSize(_ size: CGSize) -> DeviceMetrics? {
-        for device in allDevices {
+    case iPadPro3rdGen
+
+    public static func forScreenSize(_ size: CGSize, hintHasOnScreenNavigation: Bool = false) -> DeviceMetrics? {
+        for device in DeviceMetrics.allCases {
             let width = device.screenSize.width
             let height = device.screenSize.height
             
             if (size.width.isEqual(to: width) && size.height.isEqual(to: height)) || size.height.isEqual(to: width) && size.width.isEqual(to: height) {
+                if hintHasOnScreenNavigation && device.onScreenNavigationHeight(inLandscape: false) == nil {
+                    continue
+                }
                 return device
             }
         }
@@ -40,7 +44,11 @@ public enum DeviceMetrics {
                 return CGSize(width: 414.0, height: 896.0)
             case .iPad:
                 return CGSize(width: 768.0, height: 1024.0)
-            case .iPadPro:
+            case .iPadPro10Inch:
+                return CGSize(width: 834.0, height: 1112.0)
+            case .iPadPro11Inch:
+                return CGSize(width: 834.0, height: 1194.0)
+            case .iPadPro, .iPadPro3rdGen:
                 return CGSize(width: 1024.0, height: 1366.0)
         }
     }
@@ -54,37 +62,64 @@ public enum DeviceMetrics {
         }
     }
     
-    func onScreenNavigationHeight(inLandscape: Bool) -> CGFloat {
+    func onScreenNavigationHeight(inLandscape: Bool) -> CGFloat? {
         switch self {
             case .iPhoneX, .iPhoneXSMax:
                 return inLandscape ? 21.0 : 34.0
+            case .iPadPro3rdGen, .iPadPro11Inch:
+                return 21.0
             default:
-                return 0.0
+                return nil
+        }
+    }
+    
+    var statusBarHeight: CGFloat {
+        switch self {
+            case .iPhoneX, .iPhoneXSMax:
+                return 44.0
+            case .iPadPro11Inch, .iPadPro3rdGen:
+                return 24.0
+            default:
+                return 20.0
         }
     }
     
     func standardInputHeight(inLandscape: Bool) -> CGFloat {
         if inLandscape {
             switch self {
-                case .iPhone4, .iPhone5, .iPhone6, .iPhone6Plus:
+                case .iPhone4, .iPhone5:
                     return 162.0
+                case .iPhone6, .iPhone6Plus:
+                    return 163.0
                 case .iPhoneX, .iPhoneXSMax:
-                    return 171.0
-                case .iPad, .iPadPro:
-                    return 264.0
+                    return 172.0
+                case .iPad, .iPadPro10Inch:
+                    return 348.0
+                case .iPadPro11Inch:
+                    return 368.0
+                case .iPadPro:
+                    return 421.0
+                case .iPadPro3rdGen:
+                    return 441.0
             }
         } else {
             switch self {
                 case .iPhone4, .iPhone5, .iPhone6:
                     return 216.0
                 case .iPhone6Plus:
-                    return 226.0
+                    return 227.0
                 case .iPhoneX:
                     return 291.0
                 case .iPhoneXSMax:
-                    return 301.0
-                case .iPad, .iPadPro:
-                    return 264.0
+                    return 302.0
+                case .iPad, .iPadPro10Inch:
+                    return 263.0
+                case .iPadPro11Inch:
+                    return 283.0
+                case .iPadPro:
+                    return 328.0
+                case .iPadPro3rdGen:
+                    return 348.0
             }
         }
     }
@@ -92,25 +127,19 @@ public enum DeviceMetrics {
     func predictiveInputHeight(inLandscape: Bool) -> CGFloat {
         if inLandscape {
             switch self {
-                case .iPhone4, .iPhone5, .iPhone6, .iPhone6Plus:
-                    return 38.0
-                case .iPhoneX, .iPhoneXSMax:
-                    return 38.0
-                case .iPad, .iPadPro:
-                    return 42.0
+                case .iPhone4, .iPhone5, .iPhone6, .iPhone6Plus, .iPhoneX, .iPhoneXSMax:
+                    return 37.0
+                case .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
+                    return 50.0
             }
         } else {
             switch self {
                 case .iPhone4, .iPhone5:
                     return 37.0
-                case .iPhone6, .iPhoneX:
+                case .iPhone6, .iPhone6Plus, .iPhoneX, .iPhoneXSMax:
                     return 44.0
-                case .iPhone6Plus:
-                    return 42.0
-                case .iPhoneXSMax:
-                    return 45.0
-                case .iPad, .iPadPro:
-                    return 42.0
+                case .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
+                    return 50.0
             }
         }
     }
@@ -119,6 +148,10 @@ public enum DeviceMetrics {
         let screenSize = self.screenSize
         if inLandscape {
             switch self {
+                case .iPhone5:
+                    return CGSize(width: screenSize.height, height: screenSize.width - 10.0)
+                case .iPhone6:
+                    return CGSize(width: screenSize.height, height: screenSize.width - 22.0)
                 case .iPhoneX:
                     return CGSize(width: screenSize.height, height: screenSize.width + 48.0)
                 case .iPhoneXSMax:
@@ -128,6 +161,10 @@ public enum DeviceMetrics {
             }
         } else {
             switch self {
+                case .iPhone5:
+                    return CGSize(width: screenSize.width, height: screenSize.height - 50.0)
+                case .iPhone6:
+                    return CGSize(width: screenSize.width, height: screenSize.height - 97.0)
                 case .iPhoneX:
                     return CGSize(width: screenSize.width, height: screenSize.height - 154.0)
                 case .iPhoneXSMax:
