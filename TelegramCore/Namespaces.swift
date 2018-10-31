@@ -127,6 +127,12 @@ public struct OperationLogTags {
     static let SynchronizeMarkAllUnseenPersonalMessages = PeerOperationLogTag(value: 16)
 }
 
+public extension PeerSummaryCounterTags {
+    public static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
+    public static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
+    public static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
+}
+
 private enum PreferencesKeyValues: Int32 {
     case globalNotifications = 0
     case cacheStorageSettings = 1

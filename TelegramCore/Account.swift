@@ -293,7 +293,18 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
         initializeMessageNamespacesWithHoles.append((peerNamespace, Namespaces.Message.Cloud))
     }
     
-    return SeedConfiguration(initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
+    return SeedConfiguration(initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat], peerSummaryCounterTags: { peer in
+        if let peer = peer as? TelegramChannel, let addressName = peer.addressName, !addressName.isEmpty {
+            switch peer.info {
+                case .group:
+                    return [.publicGroups]
+                case .broadcast:
+                    return [.channels]
+            }
+        } else {
+            return [.regularChatsAndPrivateGroups]
+        }
+    })
 }()
 
 public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
@@ -1012,11 +1023,11 @@ public class Account {
                 return .single(!value)
             }
         }
-        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue), delayNetworkStatus |> deliverOn(networkStateQueue))
-        |> map { isUpdating, connectionStatus, delayNetworkStatus -> AccountNetworkState in
-            if delayNetworkStatus {
+        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue)/*, delayNetworkStatus |> deliverOn(networkStateQueue)*/)
+        |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
+            /*if delayNetworkStatus {
                 return .online(proxy: nil)
-            }
+            }*/
             
             switch connectionStatus {
                 case .waitingForNetwork:
@@ -1046,7 +1057,8 @@ public class Account {
                     }
             }
         }
-        self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)
+        self.networkStateValue.set(networkStateSignal
+        |> distinctUntilChanged)
         
         self.networkTypeValue.set(currentNetworkType())
         

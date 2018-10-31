@@ -48,6 +48,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case customText(text: String, entities: [MessageTextEntity])
     case botDomainAccessGranted(domain: String)
     case botSentSecureValues(types: [SentSecureValueType])
+    case peerJoined
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -94,6 +95,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .botSentSecureValues(types: decoder.decodeInt32ArrayForKey("ty").map { value -> SentSecureValueType in
                     return SentSecureValueType(rawValue: value) ?? .personalDetails
                 })
+            case 19:
+                self = .peerJoined
             default:
                 self = .unknown
         }
@@ -174,6 +177,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             case let .botSentSecureValues(types):
                 encoder.encodeInt32(18, forKey: "_rawValue")
                 encoder.encodeInt32Array(types.map { $0.rawValue }, forKey: "ty")
+            case .peerJoined:
+                encoder.encodeInt32(19, forKey: "_rawValue")
         }
     }
     
@@ -193,126 +198,6 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 return []
         }
     }
-}
-
-public func ==(lhs: TelegramMediaActionType, rhs: TelegramMediaActionType) -> Bool {
-    switch lhs {
-        case .unknown:
-            if case .unknown = rhs {
-                return true
-            }
-        case let .groupCreated(lhsTitle):
-            if case let .groupCreated(rhsTitle) = rhs, lhsTitle == rhsTitle {
-                return true
-            }
-        case let .addedMembers(peerIds):
-            if case let .addedMembers(rhsPeerIds) = rhs {
-                if peerIds.count == rhsPeerIds.count {
-                    for i in 0 ..< peerIds.count {
-                        if peerIds[i] != rhsPeerIds[i] {
-                            return false
-                        }
-                    }
-                    return true
-                }
-            }
-        case let .removedMembers(peerIds):
-            if case let .removedMembers(rhsPeerIds) = rhs {
-                if peerIds.count == rhsPeerIds.count {
-                    for i in 0 ..< peerIds.count {
-                        if peerIds[i] != rhsPeerIds[i] {
-                            return false
-                        }
-                    }
-                    return true
-                }
-            }
-        case let .photoUpdated(image):
-            if case let .photoUpdated(rhsImage) = rhs {
-                if let image = image {
-                    if let rhsImage = rhsImage {
-                        return image == rhsImage
-                    } else {
-                        return false
-                    }
-                } else {
-                    return rhsImage == nil
-                }
-            }
-        case let .titleUpdated(title):
-            if case .titleUpdated(title) = rhs {
-                return true
-            }
-        case .pinnedMessageUpdated:
-            if case .pinnedMessageUpdated = rhs {
-                return true
-            }
-        case let .joinedByLink(inviter):
-            if case .joinedByLink(inviter) = rhs {
-                return true
-            }
-        case let .channelMigratedFromGroup(title, groupId):
-            if case .channelMigratedFromGroup(title, groupId) = rhs {
-                return true
-            }
-        case let .groupMigratedToChannel(channelId):
-            if case .groupMigratedToChannel(channelId) = rhs {
-                return true
-            }
-        case .historyCleared:
-            if case .historyCleared = rhs {
-                return true
-            }
-        case .historyScreenshot:
-            if case .historyScreenshot = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .messageAutoremoveTimeoutUpdated(timeout):
-            if case .messageAutoremoveTimeoutUpdated(timeout) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .gameScore(gameId, score):
-            if case .gameScore(gameId, score) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .paymentSent(currency, totalAmount):
-            if case .paymentSent(currency, totalAmount) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .phoneCall(lhsCallId, lhsDiscardReason, lhsDuration):
-            if case let .phoneCall(rhsCallId, rhsDiscardReason, rhsDuration) = rhs, lhsCallId == rhsCallId && lhsDiscardReason == rhsDiscardReason && lhsDuration == rhsDuration {
-                return true
-            } else {
-                return false
-            }
-        case let .customText(lhsText, lhsEntities):
-            if case let .customText(rhsText, rhsEntities) = rhs, lhsText == rhsText, lhsEntities == rhsEntities {
-                return true
-            } else {
-                return false
-            }
-        case let .botDomainAccessGranted(domain):
-            if case .botDomainAccessGranted(domain) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .botSentSecureValues(lhsTypes):
-            if case let .botSentSecureValues(rhsTypes) = rhs, lhsTypes == rhsTypes {
-                return true
-            } else {
-                return false
-            }
-    }
-    return false
 }
 
 public final class TelegramMediaAction: Media {

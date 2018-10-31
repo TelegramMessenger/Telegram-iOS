@@ -5,45 +5,90 @@ import Foundation
     import Postbox
 #endif
 
+private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource, Data)]? {
+    switch photo {
+        case let .photo(_, _, _, _, _, sizes):
+            for size in sizes {
+                switch size {
+                    case let .photoCachedSize(_, location, _, _, bytes):
+                        switch location {
+                            case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
+                                let data = bytes.makeData()
+                                let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count, fileReference: fileReference.makeData())
+                                return [(resource, data)]
+                            default:
+                                break
+                        }
+                    default:
+                        break
+                }
+            }
+            return nil
+        default:
+            return nil
+    }
+}
+
+private func collectPreCachedResources(for document: Api.Document) -> [(MediaResource, Data)]? {
+    switch document {
+        case let .document(content):
+            switch content.thumb {
+                case let .photoCachedSize(_, location, _, _, bytes):
+                    switch location {
+                        case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
+                            let data = bytes.makeData()
+                            let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count, fileReference: fileReference.makeData())
+                            return [(resource, data)]
+                        default:
+                            break
+                    }
+                default:
+                    break
+            }
+        default:
+            break
+    }
+    return nil
+}
+
 extension Api.MessageMedia {
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
             case let .messageMediaPhoto(_, photo, _):
                 if let photo = photo {
-                    switch photo {
-                        case let .photo(_, _, _, _, _, sizes):
-                            for size in sizes {
-                                switch size {
-                                    case let .photoCachedSize(_, location, _, _, bytes):
-                                        switch location {
-                                            case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
-                                                let data = bytes.makeData()
-                                                let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count, fileReference: fileReference.makeData())
-                                                return [(resource, data)]
-                                            default:
-                                                break
-                                        }
-                                    default:
-                                        break
-                                }
-                            }
-                            return nil
-                        default:
-                            return nil
-                    }
+                    return collectPreCachedResources(for: photo)
                 } else {
                     return nil
                 }
             case let .messageMediaDocument(_, document, _):
                 if let document = document {
-                    switch document {
-                        case .document:
-                            break
-                        default:
-                            break
-                    }
+                    return collectPreCachedResources(for: document)
                 }
                 return nil
+            case let .messageMediaWebPage(webPage):
+                var result: [(MediaResource, Data)]?
+                switch webPage {
+                    case let .webPage(content):
+                        if let photo = content.photo {
+                            if let photoResult = collectPreCachedResources(for: photo) {
+                                if result == nil {
+                                    result = []
+                                }
+                                result!.append(contentsOf: photoResult)
+                            }
+                        }
+                        if let file = content.document {
+                            if let fileResult = collectPreCachedResources(for: file) {
+                                if result == nil {
+                                    result = []
+                                }
+                                result!.append(contentsOf: fileResult)
+                            }
+                        }
+                    default:
+                        break
+                }
+                return result
             default:
                 return nil
         }

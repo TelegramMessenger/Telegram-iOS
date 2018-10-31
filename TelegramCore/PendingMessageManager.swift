@@ -748,7 +748,7 @@ public final class PendingMessageManager {
         |> switchToLatest
     }
     
-    private static func sendSecretMessageContent(transaction: Transaction, message: Message, content: PendingMessageUploadedContentAndReuploadInfo) {
+    static func sendSecretMessageContent(transaction: Transaction, message: Message, content: PendingMessageUploadedContentAndReuploadInfo) {
         var secretFile: SecretChatOutgoingFile?
         switch content.content {
             case let .secretMedia(file, size, key):

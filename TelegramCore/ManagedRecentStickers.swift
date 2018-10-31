@@ -44,21 +44,21 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
 func managedRecentStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentStickers, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getRecentStickers(flags: 0, hash: hash))
-            |> retryRequest
-            |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
-                switch result {
-                    case .recentStickersNotModified:
-                        return .single(nil)
-                    case let .recentStickers(_, _, stickers, _):
-                        var items: [OrderedItemListEntry] = []
-                        for sticker in stickers {
-                            if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
-                                items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: RecentMediaItem(file)))
-                            }
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+                case .recentStickersNotModified:
+                    return .single(nil)
+                case let .recentStickers(_, _, stickers, _):
+                    var items: [OrderedItemListEntry] = []
+                    for sticker in stickers {
+                        if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                            items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: RecentMediaItem(file)))
                         }
-                        return .single(items)
-                }
+                    }
+                    return .single(items)
             }
+        }
     })
 }
 
