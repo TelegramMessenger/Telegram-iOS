@@ -2506,7 +2506,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             case let .Default(duration):
                                 if let duration = duration {
                                     let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
-                                    basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseOut)
+                                    basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
                                     basicAnimation.duration = duration * UIView.animationDurationFactor()
                                     basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
                                     basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -3353,6 +3353,15 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             return node.frame.minY - self.insets.top
         }
         return nil
+    }
+    
+    public func itemNodeVisibleInsideInsets(_ node: ListViewItemNode) -> Bool {
+        if let _ = node.index {
+            if node.frame.maxY > self.insets.top && node.frame.minY < self.visibleSize.height - self.insets.bottom {
+                return true
+            }
+        }
+        return false
     }
 
     override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {

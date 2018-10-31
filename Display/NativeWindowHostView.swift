@@ -11,6 +11,25 @@ private let defaultOrientations: UIInterfaceOrientationMask = {
     }
 }()
 
+public protocol PreviewingHostView {
+    @available(iOSApplicationExtension 9.0, *)
+    var previewingDelegate: UIViewControllerPreviewingDelegate? { get }
+}
+
+private func tracePreviewingHostView(view: UIView, point: CGPoint) -> (UIView & PreviewingHostView, CGPoint)? {
+    if let view = view as? UIView & PreviewingHostView {
+        return (view, point)
+    }
+    for subview in view.subviews {
+        if subview.frame.contains(point) && !subview.isHidden && subview.isUserInteractionEnabled {
+            if let result = tracePreviewingHostView(view: subview, point: view.convert(point, to: subview)) {
+                return result
+            }
+        }
+    }
+    return nil
+}
+
 private final class WindowRootViewControllerView: UIView {
     override var frame: CGRect {
         get {
@@ -110,11 +129,25 @@ private final class WindowRootViewController: UIViewController, UIViewController
         }
     }
     
+    private weak var previousPreviewingHostView: (UIView & PreviewingHostView)?
+    
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
+        if #available(iOSApplicationExtension 9.0, *) {
+            if let (result, resultPoint) = tracePreviewingHostView(view: self.view, point: location), let delegate = result.previewingDelegate {
+                self.previousPreviewingHostView = result
+                return delegate.previewingContext(previewingContext, viewControllerForLocation: resultPoint)
+            }
+        }
         return nil
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
+        if #available(iOSApplicationExtension 9.0, *) {
+            if let previousPreviewingHostView = self.previousPreviewingHostView, let delegate = previousPreviewingHostView.previewingDelegate {
+                delegate.previewingContext(previewingContext, commit: viewControllerToCommit)
+            }
+            self.previousPreviewingHostView = nil
+        }
     }
 }
 
