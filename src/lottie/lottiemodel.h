@@ -369,8 +369,15 @@ public:
  */
 inline int LOTLayerData::timeRemap(int frameNo) const
 {
-    return mTimeRemap.isStatic() ? frameNo :
-           mCompRef->frameAtTime(mTimeRemap.value(frameNo));
+    frameNo = mTimeRemap.isStatic() ? frameNo :
+              mCompRef->frameAtTime(mTimeRemap.value(frameNo));
+    /* Apply time streatch if it has any.
+     * Time streatch is just a factor by which the animation will speedup or slow
+     * down with respect to the overal animation.
+     * Time streach factor is already applied to the layers inFrame and outFrame.
+     * @TODO need to find out if timestreatch also affects the in and out frame of the
+     * child layers or not. */
+    return frameNo / mTimeStreatch;
 }
 
 class LOTTransformData : public LOTData

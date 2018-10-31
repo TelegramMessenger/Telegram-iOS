@@ -257,7 +257,7 @@ void LOTLayerItem::updateStaticProperty()
 void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
                           float parentAlpha)
 {
-    mFrameNo = mLayerData->timeRemap(frameNumber);
+    mFrameNo = frameNumber;
     // 1. check if the layer is part of the current frame
     if (!visible()) return;
 
@@ -399,7 +399,7 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
 void LOTCompLayerItem::updateContent()
 {
     for (const auto &layer : mLayers) {
-        layer->update(frameNo(), combinedMatrix(), combinedAlpha());
+        layer->update( mLayerData->timeRemap(frameNo()), combinedMatrix(), combinedAlpha());
     }
 }
 

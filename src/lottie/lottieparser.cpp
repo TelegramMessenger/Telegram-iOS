@@ -798,6 +798,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
             Skip(key);
         }
     }
+
     // update the static property of layer
     bool staticFlag = true;
     for (const auto& child : layer->mChildren) {
@@ -1895,6 +1896,8 @@ public:
                << ", mask:"<<obj->hasMask()
                << ", inFm:" << obj->mInFrame
                << ", outFm:" << obj->mOutFrame
+               << ", stFm:" << obj->mStartFrame
+               << ", ts:" << obj->mTimeStreatch
                << "\n";
         visitChildren(static_cast<LOTGroupData *>(obj), level);
         vDebug << level
