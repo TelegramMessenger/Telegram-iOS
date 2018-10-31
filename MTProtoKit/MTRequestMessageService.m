@@ -453,7 +453,7 @@
         [dropAnswerBuffer appendInt32:(int32_t)0x58e4a740];
         [dropAnswerBuffer appendInt64:dropContext.dropMessageId];
         
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:dropAnswerBuffer.data metadata:@"dropAnswer" messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:dropAnswerBuffer.data metadata:[NSString stringWithFormat:@"dropAnswer for %" PRId64, dropContext.dropMessageId] messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
         outgoingMessage.requiresConfirmation = false;
         dropMessageIdToMessageInternalId[@(dropContext.dropMessageId)] = outgoingMessage.internalId;
         [messages addObject:outgoingMessage];
@@ -473,6 +473,9 @@
                     if (preparedMessage != nil) {
                         NSNumber *nTransactionResetStateVersion = requestInternalIdToTransactionResetStateVersion[request.internalId];
                         if (nTransactionResetStateVersion != nil && [nTransactionResetStateVersion intValue] != request.transactionResetStateVersion) {
+                            if (MTLogEnabled()) {
+                                MTLog(@"[MTRequestMessageService#%p request %" PRId64 " skipped in transaction: transactionResetStateVersion %d != %d]", self, preparedMessage.messageId, [nTransactionResetStateVersion intValue], request.transactionResetStateVersion);
+                            }
                             continue;
                         }
                         
@@ -503,6 +506,9 @@
                     {
                         NSNumber *nTransactionResetStateVersion = requestInternalIdToTransactionResetStateVersion[request.internalId];
                         if (nTransactionResetStateVersion != nil && [nTransactionResetStateVersion intValue] != request.transactionResetStateVersion) {
+                            if (MTLogEnabled()) {
+                                MTLog(@"[MTRequestMessageService#%p request %" PRId64 " skipped in transaction: transactionResetStateVersion %d != %d]", self, preparedMessage.messageId, [nTransactionResetStateVersion intValue], request.transactionResetStateVersion);
+                            }
                             continue;
                         }
                         MTRequestContext *requestContext = [[MTRequestContext alloc] initWithMessageId:preparedMessage.messageId messageSeqNo:preparedMessage.seqNo transactionId:messageInternalIdToTransactionId[messageInternalId] quickAckId:(int32_t)[messageInternalIdToQuickAckId[messageInternalId] intValue]];
@@ -801,9 +807,7 @@
     {
         if (request.requestContext != nil && request.requestContext.transactionId != nil && [transactionIds containsObject:request.requestContext.transactionId])
         {
-            request.requestContext.transactionId = nil;
-            request.requestContext.delivered = false;
-            request.requestContext.waitingForMessageId = false;
+            request.requestContext = nil;
             request.transactionResetStateVersion += 1;
             requestTransaction = true;
         }
@@ -821,9 +825,7 @@
     {
         if (request.requestContext != nil)
         {
-            request.requestContext.transactionId = nil;
-            request.requestContext.delivered = false;
-            request.requestContext.waitingForMessageId = false;
+            request.requestContext = nil;
             request.transactionResetStateVersion += 1;
             requestTransaction = true;
         }
