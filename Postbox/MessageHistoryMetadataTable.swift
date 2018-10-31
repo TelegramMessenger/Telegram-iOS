@@ -31,23 +31,67 @@ public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
     }
 }
 
+public enum ChatListTotalUnreadStateCategory: Int32 {
+    case filtered = 0
+    case raw = 1
+}
+
+public enum ChatListTotalUnreadStateStats: Int32 {
+    case messages = 0
+    case chats = 1
+}
+
 public struct ChatListTotalUnreadState: PostboxCoding, Equatable {
-    public var absoluteCounters: ChatListTotalUnreadCounters
-    public var filteredCounters: ChatListTotalUnreadCounters
+    public var absoluteCounters: [PeerSummaryCounterTags: ChatListTotalUnreadCounters]
+    public var filteredCounters: [PeerSummaryCounterTags: ChatListTotalUnreadCounters]
     
-    public init(absoluteCounters: ChatListTotalUnreadCounters, filteredCounters: ChatListTotalUnreadCounters) {
+    public init(absoluteCounters: [PeerSummaryCounterTags: ChatListTotalUnreadCounters], filteredCounters: [PeerSummaryCounterTags: ChatListTotalUnreadCounters]) {
         self.absoluteCounters = absoluteCounters
         self.filteredCounters = filteredCounters
     }
     
     public init(decoder: PostboxDecoder) {
-        self.absoluteCounters = decoder.decodeObjectForKey("a", decoder: { ChatListTotalUnreadCounters(decoder: $0) }) as! ChatListTotalUnreadCounters
-        self.filteredCounters = decoder.decodeObjectForKey("f", decoder: { ChatListTotalUnreadCounters(decoder: $0) }) as! ChatListTotalUnreadCounters
+        self.absoluteCounters = decoder.decodeObjectDictionaryForKey("ad", keyDecoder: { decoder in
+            return PeerSummaryCounterTags(rawValue: decoder.decodeInt32ForKey("k", orElse: 0))
+        }, valueDecoder: { decoder in
+            return ChatListTotalUnreadCounters(decoder: decoder)
+        })
+        self.filteredCounters = decoder.decodeObjectDictionaryForKey("fd", keyDecoder: { decoder in
+            return PeerSummaryCounterTags(rawValue: decoder.decodeInt32ForKey("k", orElse: 0))
+        }, valueDecoder: { decoder in
+            return ChatListTotalUnreadCounters(decoder: decoder)
+        })
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.absoluteCounters, forKey: "a")
-        encoder.encodeObject(self.filteredCounters, forKey: "f")
+        encoder.encodeObjectDictionary(self.absoluteCounters, forKey: "ad", keyEncoder: { key, encoder in
+            encoder.encodeInt32(key.rawValue, forKey: "k")
+        })
+        encoder.encodeObjectDictionary(self.filteredCounters, forKey: "fd", keyEncoder: { key, encoder in
+            encoder.encodeInt32(key.rawValue, forKey: "k")
+        })
+    }
+    
+    public func count(for category: ChatListTotalUnreadStateCategory, in statsType: ChatListTotalUnreadStateStats, with tags: PeerSummaryCounterTags) -> Int32 {
+        let counters: [PeerSummaryCounterTags: ChatListTotalUnreadCounters]
+        switch category {
+            case .raw:
+                counters = self.absoluteCounters
+            case .filtered:
+                counters = self.filteredCounters
+        }
+        var result: Int32 = 0
+        for tag in tags {
+            if let category = counters[tag] {
+                switch statsType {
+                    case .messages:
+                        result = result &+ category.messageCount
+                    case .chats:
+                        result = result &+ category.chatCount
+                }
+            }
+        }
+        return result
     }
 }
 
@@ -322,7 +366,7 @@ final class MessageHistoryMetadataTable: Table {
                 self.chatListTotalUnreadState = state
                 return state
             } else {
-                let state = ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0))
+                let state = ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:])
                 self.chatListTotalUnreadState = state
                 return state
             }

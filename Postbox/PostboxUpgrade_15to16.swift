@@ -224,17 +224,7 @@ func postboxUpgrade_15to16(metadataTable: MetadataTable, valueBox: ValueBox) {
     })
     
     
-    var state = ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0))
-    for peerId in includedPeerIds {
-        let count = getReadStateCount(valueBox: valueBox, table: readStateTable, peerId: peerId)
-        if count != 0 {
-            state.absoluteCounters.messageCount += count
-            
-            if parseNotificationSettings(valueBox: valueBox, table: notificationSettingsTable, peerId: peerId) {
-                state.filteredCounters.messageCount += count
-            }
-        }
-    }
+    let state = ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:])
     
     let key = ValueBoxKey(length: 1)
     key.setInt8(0, value: 4)

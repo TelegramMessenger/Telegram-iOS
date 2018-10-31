@@ -50,6 +50,18 @@ final class PeerTable: Table {
         assert(self.updatedInitialPeers.isEmpty)
     }
     
+    func transactionUpdatedPeers() -> [(Peer?, Peer)] {
+        var result: [(Peer?, Peer)] = []
+        for (peerId, initialPeer) in self.updatedInitialPeers {
+            if let peer = self.get(peerId) {
+                result.append((initialPeer, peer))
+            } else {
+                assertionFailure()
+            }
+        }
+        return result
+    }
+    
     override func beforeCommit() {
         if !self.updatedInitialPeers.isEmpty {
             for (peerId, previousPeer) in self.updatedInitialPeers {

@@ -1,17 +1,7 @@
 import Foundation
 
-public enum UnreadMessageCountsTotalItem {
-    case raw
-    case filtered
-}
-
-public enum UnreadMessageCountsTotalCategory {
-    case messages
-    case chats
-}
-
 public enum UnreadMessageCountsItem: Equatable {
-    case total(UnreadMessageCountsTotalItem, UnreadMessageCountsTotalCategory)
+    case total
     case peer(PeerId)
     case group(PeerGroupId)
 }
@@ -104,27 +94,24 @@ public final class UnreadMessageCountsView: PostboxView {
         }
     }
     
+    public func total() -> ChatListTotalUnreadState? {
+        for entry in self.entries {
+            switch entry {
+                case let .total(state):
+                    return state
+                default:
+                    break
+            }
+        }
+        return nil
+    }
+    
     public func count(for item: UnreadMessageCountsItem) -> Int32? {
         for entry in self.entries {
             switch entry {
                 case let .total(state):
-                    if case let .total(value, category) = item {
-                        switch value {
-                            case .raw:
-                                switch category {
-                                    case .messages:
-                                        return state.absoluteCounters.messageCount
-                                    case .chats:
-                                        return state.absoluteCounters.chatCount
-                                }
-                            case .filtered:
-                                switch category {
-                                    case .messages:
-                                        return state.filteredCounters.messageCount
-                                    case .chats:
-                                        return state.filteredCounters.chatCount
-                                }
-                        }
+                    if case .total = item {
+                        return nil
                     }
                 case let .peer(peerId, count):
                     if case .peer(peerId) = item {

@@ -734,7 +734,7 @@ public final class Transaction {
         if let postbox = self.postbox {
             return postbox.messageHistoryMetadataTable.getChatListTotalUnreadState()
         } else {
-            return ChatListTotalUnreadState(absoluteCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0), filteredCounters: ChatListTotalUnreadCounters(messageCount: 0, chatCount: 0))
+            return ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:])
         }
     }
     
@@ -1845,14 +1845,10 @@ public final class Postbox {
         
         self.peerChatTopTaggedMessageIdsTable.replay(historyOperationsByPeerId: self.currentOperationsByPeerId)
         
-        let transactionUnreadCountDeltas = self.readStateTable.transactionUnreadCountDeltas()
         let alteredInitialPeerCombinedReadStates = self.readStateTable.transactionAlteredInitialPeerCombinedReadStates()
+        let updatedPeers = self.peerTable.transactionUpdatedPeers()
         let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates(postbox: self)
-        self.chatListIndexTable.commitWithTransaction(alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, getCombinedPeerReadState: { peerId in
-            return self.readStateTable.getCombinedState(peerId)
-        }, getPeer: { peerId in
-            return self.peerTable.get(peerId)
-        }, updatedTotalUnreadState: &self.currentUpdatedTotalUnreadState)
+        self.chatListIndexTable.commitWithTransaction(postbox: self, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, updatedPeers: updatedPeers, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, updatedTotalUnreadState: &self.currentUpdatedTotalUnreadState)
         
         #if DEBUG
         /*if let updatedState = self.currentUpdatedTotalUnreadState {

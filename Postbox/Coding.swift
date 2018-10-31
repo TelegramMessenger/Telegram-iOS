@@ -499,6 +499,33 @@ public final class PostboxEncoder {
         }
     }
     
+    public func encodeObjectDictionary<K, V: PostboxCoding>(_ value: [K : V], forKey key: StaticString, keyEncoder: (K, PostboxEncoder) -> Void) {
+        self.encodeKey(key)
+        var t: Int8 = ValueType.ObjectDictionary.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        
+        let innerEncoder = PostboxEncoder()
+        for record in value {
+            var keyTypeHash: Int32 = murMurHashString32("\(type(of: record.0))")
+            self.buffer.write(&keyTypeHash, offset: 0, length: 4)
+            innerEncoder.reset()
+            keyEncoder(record.0, innerEncoder)
+            var keyLength: Int32 = Int32(innerEncoder.buffer.offset)
+            self.buffer.write(&keyLength, offset: 0, length: 4)
+            self.buffer.write(innerEncoder.buffer.memory, offset: 0, length: Int(keyLength))
+            
+            var valueTypeHash: Int32 = murMurHashString32("\(type(of: record.1))")
+            self.buffer.write(&valueTypeHash, offset: 0, length: 4)
+            innerEncoder.reset()
+            record.1.encode(innerEncoder)
+            var valueLength: Int32 = Int32(innerEncoder.buffer.offset)
+            self.buffer.write(&valueLength, offset: 0, length: 4)
+            self.buffer.write(innerEncoder.buffer.memory, offset: 0, length: Int(valueLength))
+        }
+    }
+    
     public func encodeBytes(_ bytes: WriteBuffer, forKey key: StaticString) {
         self.encodeKey(key)
         var type: Int8 = ValueType.Bytes.rawValue
@@ -1268,6 +1295,63 @@ public final class PostboxDecoder {
                 self.offset += 4 + Int(valueLength)
                 
                 let value = failed ? nil : (typeStore.decode(valueHash, decoder: innerDecoder) as? V)
+                
+                if let key = key, let value = value {
+                    dictionary[key] = value
+                } else {
+                    failed = true
+                }
+                
+                i += 1
+            }
+            
+            if failed {
+                return [:]
+            } else {
+                return dictionary
+            }
+        } else {
+            return [:]
+        }
+    }
+    
+    public func decodeObjectDictionaryForKey<K, V: PostboxCoding>(_ key: StaticString, keyDecoder: (PostboxDecoder) -> K, valueDecoder: (PostboxDecoder) -> V) -> [K : V] where K: Hashable {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectDictionary) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var dictionary: [K : V] = [:]
+            
+            var failed = false
+            var i: Int32 = 0
+            while i < length {
+                var keyHash: Int32 = 0
+                memcpy(&keyHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var keyLength: Int32 = 0
+                memcpy(&keyLength, self.buffer.memory + self.offset, 4)
+                
+                var innerDecoder = PostboxDecoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(keyLength), freeWhenDone: false))
+                self.offset += 4 + Int(keyLength)
+                
+                var key: K?
+                if !failed {
+                    key = keyDecoder(innerDecoder)
+                }
+                
+                var valueHash: Int32 = 0
+                memcpy(&valueHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var valueLength: Int32 = 0
+                memcpy(&valueLength, self.buffer.memory + self.offset, 4)
+                
+                innerDecoder = PostboxDecoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(valueLength), freeWhenDone: false))
+                self.offset += 4 + Int(valueLength)
+                
+                let value = failed ? nil : (valueDecoder(innerDecoder) as? V)
                 
                 if let key = key, let value = value {
                     dictionary[key] = value
