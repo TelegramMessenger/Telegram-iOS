@@ -215,6 +215,14 @@ void VPath::VPathData::addRect(const VRectF &rect, VPath::Direction dir)
     }
 }
 
+void VPath::VPathData::addRoundRect(const VRectF &rect, float roundness,
+                                    VPath::Direction dir)
+{
+    if (2 * roundness > rect.width()) roundness = rect.width()/2.0;
+    if (2 * roundness > rect.height()) roundness = rect.height()/2.0;
+    addRoundRect(rect, roundness, roundness, dir);
+}
+
 void VPath::VPathData::addRoundRect(const VRectF &rect, float rx, float ry,
                                     VPath::Direction dir)
 {
