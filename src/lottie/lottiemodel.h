@@ -664,6 +664,7 @@ public:
    size_t frameDuration() const {return mRoot->frameDuration();}
    size_t frameRate() const {return mRoot->frameRate();}
    size_t startFrame() const {return mRoot->startFrame();}
+   size_t endFrame() const {return mRoot->endFrame();}
    size_t frameAtPos(double pos) const {return mRoot->frameAtPos(pos);}
 public:
     std::shared_ptr<LOTCompositionData> mRoot;
