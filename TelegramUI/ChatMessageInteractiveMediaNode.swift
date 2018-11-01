@@ -593,7 +593,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     if case .constrained = sizeCalculation {
                         if let file = media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
                             if let size = file.size {
-                                if let duration = file.duration {
+                                if let duration = file.duration, !message.flags.contains(.Unsent) {
                                     if isMediaStreamable(message: message, media: file) {
                                         let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
                                         let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
@@ -762,6 +762,18 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             return true
         } else {
             return false
+        }
+    }
+    
+    func updateIsHidden(_ isHidden: Bool) {
+        guard let badgeNode = self.badgeNode, badgeNode.isHidden != isHidden else {
+            return
+        }
+        if isHidden {
+            badgeNode.isHidden = true
+        } else {
+            badgeNode.isHidden = false
+            badgeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
     }
 }

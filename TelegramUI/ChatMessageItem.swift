@@ -102,7 +102,7 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         }
     }
     
-    if abs(lhs.timestamp - rhs.timestamp) < Int32(5 * 60) && lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id {
+    if abs(lhs.timestamp - rhs.timestamp) < Int32(10 * 60) && lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id {
         var upperStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
         var lowerStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
         for media in lhs.media {

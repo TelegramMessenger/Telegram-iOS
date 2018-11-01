@@ -407,6 +407,8 @@ private func universalServiceMessageString(theme: PresentationTheme?, strings: P
                         }
                     }
                     attributedString = NSAttributedString(string: strings.Notification_PassportValuesSentMessage(message.peers[message.id.peerId]?.compactDisplayTitle ?? "", typesString).0, font: titleFont, textColor: primaryTextColor)
+                case .peerJoined:
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_Joined(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 case .unknown:
                     attributedString = nil
             }

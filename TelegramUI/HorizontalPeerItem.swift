@@ -164,13 +164,11 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                 badgeSize += max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
             }
 
-
-            
             return (itemLayout, { animated in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.peerNode.theme = itemTheme
-                    strongSelf.peerNode.setup(account: item.account, strings: item.strings, peer: item.peer, chatPeer: nil, numberOfLines: 1)
+                    strongSelf.peerNode.setup(account: item.account, strings: item.strings, peer: RenderedPeer(peer: item.peer), numberOfLines: 1)
                     strongSelf.peerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.size)
                     strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)
                     

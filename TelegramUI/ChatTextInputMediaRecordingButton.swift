@@ -334,8 +334,9 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         if self.fadeDisabled {
             self.recordingDisabled()
         } else {
+            //print("\(CFAbsoluteTimeGetCurrent()) began")
             self.modeTimeoutTimer?.invalidate()
-            let modeTimeoutTimer = SwiftSignalKit.Timer(timeout: 0.1, repeat: false, completion: { [weak self] in
+            let modeTimeoutTimer = SwiftSignalKit.Timer(timeout: 0.19, repeat: false, completion: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.modeTimeoutTimer = nil
                     strongSelf.beginRecording()
@@ -347,12 +348,15 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonInteractionCancelled(_ velocity: CGPoint) {
+        //print("\(CFAbsoluteTimeGetCurrent()) cancelled")
         self.modeTimeoutTimer?.invalidate()
         self.endRecording(false)
     }
     
     func micButtonInteractionCompleted(_ velocity: CGPoint) {
+        //print("\(CFAbsoluteTimeGetCurrent()) completed")
         if let modeTimeoutTimer = self.modeTimeoutTimer {
+            //print("\(CFAbsoluteTimeGetCurrent()) switch")
             modeTimeoutTimer.invalidate()
             self.modeTimeoutTimer = nil
             self.switchMode()

@@ -5,9 +5,15 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
-private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider {
+private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
     var inputAccessoryHeight: (() -> CGFloat)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
+    @available(iOSApplicationExtension 9.0, *)
+    var previewingDelegate: UIViewControllerPreviewingDelegate? {
+        return self.controller
+    }
+    
+    weak var controller: ChatController?
     
     func getWindowInputAccessoryHeight() -> CGFloat {
         return self.inputAccessoryHeight?() ?? 0.0
@@ -42,6 +48,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let account: Account
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
+    private weak var controller: ChatController?
     
     let navigationBar: NavigationBar?
     
@@ -158,13 +165,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    init(account: Account, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar?) {
+    init(account: Account, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
         self.account = account
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
         self.chatPresentationInterfaceState = chatPresentationInterfaceState
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         self.navigationBar = navigationBar
+        self.controller = controller
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -359,6 +367,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             return false
         }
+        
+        (self.view as? ChatControllerNodeView)?.controller = self.controller
     }
     
     private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
@@ -1301,7 +1311,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: transition.isAnimated)
             }
             
-            if let peer = chatPresentationInterfaceState.renderedPeer?.peer, let restrictionText = peer.restrictionText {
+            var restrictionText: String?
+            if chatPresentationInterfaceState.isNotAccessible {
+                restrictionText = chatPresentationInterfaceState.strings.Channel_ErrorAccessDenied
+            } else if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
+                restrictionText = peer.restrictionText
+            }
+            
+            if let restrictionText = restrictionText {
                 if self.restrictedNode == nil {
                     let restrictedNode = ChatRecentActionsEmptyNode(theme: chatPresentationInterfaceState.theme)
                     self.historyNodeContainer.supernode?.insertSubnode(restrictedNode, aboveSubnode: self.historyNodeContainer)
@@ -1310,11 +1327,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.restrictedNode?.setup(title: "", text: processedPeerRestrictionText(restrictionText))
                 self.historyNodeContainer.isHidden = true
                 self.navigateButtons.isHidden = true
+                self.loadingNode.isHidden = true
             } else if let restrictedNode = self.restrictedNode {
                 self.restrictedNode = nil
                 restrictedNode.removeFromSupernode()
                 self.historyNodeContainer.isHidden = false
                 self.navigateButtons.isHidden = false
+                self.loadingNode.isHidden = false
             }
             
             let layoutTransition: ContainedViewLayoutTransition = transition

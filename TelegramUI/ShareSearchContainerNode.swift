@@ -94,16 +94,12 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
             case let .topPeers(theme, strings):
                 return ShareControllerRecentPeersGridItem(account: account, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
             case let .peer(_, theme, peer, associatedPeer, strings):
-                let primaryPeer: Peer
-                var chatPeer: Peer?
+                var peers: [PeerId: Peer] = [peer.id: peer]
                 if let associatedPeer = associatedPeer {
-                    primaryPeer = associatedPeer
-                    chatPeer = peer
-                } else {
-                    primaryPeer = peer
-                    chatPeer = associatedPeer
+                    peers[associatedPeer.id] = associatedPeer
                 }
-                return ShareControllerPeerGridItem(account: account, theme: theme, strings: strings, peer: primaryPeer, chatPeer: chatPeer, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
+                let peer = RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers))
+                return ShareControllerPeerGridItem(account: account, theme: theme, strings: strings, peer: peer, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
 }
@@ -133,7 +129,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: nil, controllerInteraction: interfaceInteraction, search: true)
+        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: RenderedPeer(peer: self.peer), controllerInteraction: interfaceInteraction, search: true)
     }
 }
 

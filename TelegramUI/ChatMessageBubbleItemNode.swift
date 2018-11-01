@@ -342,7 +342,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             }
                             
                             if !isBroadcastChannel {
-                                hasAvatar = true
+                                hasAvatar = item.content.firstMessage.effectivelyIncoming(item.account.peerId)
                             }
                         }
                     } else if incoming {

@@ -1383,7 +1383,17 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
-                let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 150.0, height: 150.0))
+                let fullScaleBlur = true
+                var thumbnailContextFittingSize: CGSize
+                if fullScaleBlur {
+                    thumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 320.0, height: 320.0))
+                    thumbnailContextFittingSize.width = floor(thumbnailContextFittingSize.width * 0.8)
+                    thumbnailContextFittingSize.height = floor(thumbnailContextFittingSize.height * 0.8)
+                } else {
+                    thumbnailContextFittingSize = CGSize(width: 150.0, height: 150.0)
+                }
+                
+                let thumbnailContextSize = thumbnailSize.aspectFitted(thumbnailContextFittingSize)
                 let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
                 thumbnailContext.withFlippedContext { c in
                     c.interpolationQuality = .none
@@ -1432,7 +1442,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                 
                 c.setBlendMode(.copy)
                 if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
-                    c.interpolationQuality = .low
+                    c.interpolationQuality = .default
                     drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                     c.setBlendMode(.normal)
                 }

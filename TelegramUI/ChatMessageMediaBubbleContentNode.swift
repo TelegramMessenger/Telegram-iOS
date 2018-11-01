@@ -256,6 +256,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         self.interactiveImageNode.isHidden = mediaHidden
+        self.interactiveImageNode.updateIsHidden(mediaHidden)
         return mediaHidden
     }
     

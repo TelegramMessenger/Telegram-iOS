@@ -43,7 +43,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         self.peerNodes = members.map { peer in
             let node = SelectablePeerNode()
-            node.setup(account: account, strings: strings, peer: peer, chatPeer: nil)
+            node.setup(account: account, strings: strings, peer: RenderedPeer(peer: peer))
             node.theme = itemTheme
             return node
         }

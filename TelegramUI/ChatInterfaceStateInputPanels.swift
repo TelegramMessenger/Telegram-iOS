@@ -6,6 +6,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText != nil {
         return nil
     }
+    if chatPresentationInterfaceState.isNotAccessible {
+        return nil
+    }
     
     if let _ = chatPresentationInterfaceState.search {
         var hasSelection = false

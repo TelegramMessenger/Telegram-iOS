@@ -9,19 +9,19 @@ private let subtitleFont = Font.regular(12.0)
 
 private struct SharePeerEntry: Comparable, Identifiable {
     let index: Int32
-    let peer: Peer
+    let peer: RenderedPeer
     let theme: PresentationTheme
     let strings: PresentationStrings
     
     var stableId: Int64 {
-        return self.peer.id.toInt64()
+        return self.peer.peerId.toInt64()
     }
     
     static func ==(lhs: SharePeerEntry, rhs: SharePeerEntry) -> Bool {
         if lhs.index != rhs.index {
             return false
         }
-        if !arePeersEqual(lhs.peer, rhs.peer) {
+        if lhs.peer != rhs.peer {
             return false
         }
         return true
@@ -32,7 +32,7 @@ private struct SharePeerEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: nil, controllerInteraction: interfaceInteraction, search: false)
+        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, controllerInteraction: interfaceInteraction, search: false)
     }
 }
 
@@ -82,7 +82,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peers: [Peer], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peers: [RenderedPeer], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -90,31 +90,30 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.accountPeer = accountPeer
         
         let items: Signal<[SharePeerEntry], NoError> = combineLatest(.single(peers), foundPeers.get())
-            |> map { initialPeers, foundPeers -> [SharePeerEntry] in
-                var entries: [SharePeerEntry] = []
-                var index: Int32 = 0
-                
-                var existingPeerIds: Set<PeerId> = Set()
-                
-                entries.append(SharePeerEntry(index: index, peer: accountPeer, theme: theme, strings: strings))
+        |> map { initialPeers, foundPeers -> [SharePeerEntry] in
+            var entries: [SharePeerEntry] = []
+            var index: Int32 = 0
+            
+            var existingPeerIds: Set<PeerId> = Set()
+            
+            entries.append(SharePeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), theme: theme, strings: strings))
+            index += 1
+            
+            for peer in foundPeers.reversed() {
+                entries.append(SharePeerEntry(index: index, peer: RenderedPeer(peer: peer), theme: theme, strings: strings))
+                existingPeerIds.insert(peer.id)
                 index += 1
-                
-                for peer in foundPeers.reversed() {
+            }
+            
+            for peer in initialPeers {
+                if !existingPeerIds.contains(peer.peerId) {
                     entries.append(SharePeerEntry(index: index, peer: peer, theme: theme, strings: strings))
-                    existingPeerIds.insert(peer.id)
+                    existingPeerIds.insert(peer.peerId)
                     index += 1
                 }
-                
-                for peer in initialPeers {
-                    if !existingPeerIds.contains(peer.id) {
-                        entries.append(SharePeerEntry(index: index, peer: peer, theme: theme, strings: strings))
-                        existingPeerIds.insert(peer.id)
-                        index += 1
-                    }
-                }
-                return entries
+            }
+            return entries
         }
-        
         
         self.contentGridNode = GridNode()
         
@@ -249,7 +248,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         var scrollToItem: GridNodeScrollToItem?
         if let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {
             self.ensurePeerVisibleOnLayout = nil
-            if let index = self.entries.index(where: { $0.peer.id == ensurePeerVisibleOnLayout }) {
+            if let index = self.entries.index(where: { $0.peer.peerId == ensurePeerVisibleOnLayout }) {
                 scrollToItem = GridNodeScrollToItem(index: index, position: .visible, transition: transition, directionHint: .up, adjustForSection: false)
             }
         }

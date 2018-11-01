@@ -1045,7 +1045,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         let chatInfoButtonItem: UIBarButtonItem
         switch chatLocation {
             case .peer:
-                chatInfoButtonItem = UIBarButtonItem(customDisplayNode: ChatAvatarNavigationNode())!
+                let avatarNode = ChatAvatarNavigationNode()
+                avatarNode.chatController = self
+                chatInfoButtonItem = UIBarButtonItem(customDisplayNode: avatarNode)!
             case .group:
                 chatInfoButtonItem = UIBarButtonItem(customDisplayNode: ChatMultipleAvatarsNavigationNode())!
         }
@@ -1130,13 +1132,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                                 renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
                             }
                             
+                            var isNotAccessible: Bool = false
+                            if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                                isNotAccessible = cachedChannelData.isNotAccessible
+                            }
+                            
                             var animated = false
                             if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, let updated = renderedPeer?.peer as? TelegramSecretChat, peer.embeddedState != updated.embeddedState {
                                 animated = true
                             }
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in return renderedPeer
-                                }.updatedIsContact(isContact).updatedPeerIsMuted(peerIsMuted)
+                                }.updatedisNotAccessible(isNotAccessible).updatedIsContact(isContact).updatedPeerIsMuted(peerIsMuted)
                             })
                             if !strongSelf.didSetChatLocationInfoReady {
                                 strongSelf.didSetChatLocationInfoReady = true
@@ -1461,7 +1468,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatControllerNode(account: self.account, chatLocation: self.chatLocation, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar)
+        self.displayNode = ChatControllerNode(account: self.account, chatLocation: self.chatLocation, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, controller: self)
         
         self.chatDisplayNode.peerView = self.peerView
         
@@ -2622,7 +2629,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         
         switch self.chatLocation {
             case let .peer(peerId):
-                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(.filtered, .messages)])
+                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(ApplicationSpecificPreferencesKeys.inAppNotificationSettings)])
                 let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
                 self.chatUnreadCountDisposable = (self.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
                 |> deliverOnMainQueue).start(next: { [weak self] views in
@@ -2634,7 +2641,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             if let count = view.count(for: .peer(peerId)) {
                                 unreadCount = count
                             }
-                            if let count = view.count(for: .total(.filtered, .chats)) {
+                            if let (preferencesEntry, state) = view.total() {
+                                let inAppSettings = (preferencesEntry as? InAppNotificationSettings) ?? InAppNotificationSettings.defaultSettings
+                                let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
                                 totalChatCount = count
                             }
                         }
@@ -2711,7 +2720,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     }
                 }))
             case let .group(groupId):
-                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.group(groupId), .total(.filtered, .messages)])
+                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.group(groupId), .total(ApplicationSpecificPreferencesKeys.inAppNotificationSettings)])
                 self.chatUnreadCountDisposable = (self.account.postbox.combinedView(keys: [unreadCountsKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
                     if let strongSelf = self {
                         var unreadCount: Int32 = 0
@@ -2721,7 +2730,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             if let count = view.count(for: .group(groupId)) {
                                 unreadCount = count
                             }
-                            if let count = view.count(for: .total(.filtered, .messages)) {
+                            if let (preferencesEntry, state) = view.total() {
+                                let inAppSettings = (preferencesEntry as? InAppNotificationSettings) ?? InAppNotificationSettings.defaultSettings
+                                let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
                                 totalCount = count
                             }
                         }
@@ -2835,7 +2846,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     return
                 }
                 if let currentItem = currentItem?.id as? PeerMessagesMediaPlaylistItemId, let previousItem = previousItem?.id as? PeerMessagesMediaPlaylistItemId, previousItem.messageId.peerId == peerId, currentItem.messageId.peerId == peerId, currentItem.messageId != previousItem.messageId {
-                    if strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(currentItem.messageId) != nil {
+                    if strongSelf.chatDisplayNode.historyNode.isMessageVisibleOnScreen(currentItem.messageId) {
                         strongSelf.navigateToMessage(from: nil, to: .id(currentItem.messageId), scrollPosition: .center(.bottom), rememberInStack: false, animated: true, completion: nil)
                     }
                 }
@@ -4664,6 +4675,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             self.present(actionSheet, in: .window(.root))
         }
     }
+    
+    
     
     @available(iOSApplicationExtension 9.0, *)
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {

@@ -531,7 +531,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    func updatePeers(peers: [Peer], accountPeer: Peer, defaultAction: ShareControllerAction?) {
+    func updatePeers(peers: [RenderedPeer], accountPeer: Peer, defaultAction: ShareControllerAction?) {
         let peersContentNode = SharePeersContainerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
