@@ -692,7 +692,7 @@ void LOTRectItem::updatePath(VPath& path, int frameNo)
              size.y());
 
     path.reset();
-    path.addRoundRect(r, roundness, roundness, mData->direction());
+    path.addRoundRect(r, roundness, mData->direction());
     updateCache(frameNo, pos, size, roundness);
 }
 
