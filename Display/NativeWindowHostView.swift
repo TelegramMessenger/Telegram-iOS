@@ -20,11 +20,9 @@ private func tracePreviewingHostView(view: UIView, point: CGPoint) -> (UIView & 
     if let view = view as? UIView & PreviewingHostView {
         return (view, point)
     }
-    for subview in view.subviews {
-        if subview.frame.contains(point) && !subview.isHidden && subview.isUserInteractionEnabled {
-            if let result = tracePreviewingHostView(view: subview, point: view.convert(point, to: subview)) {
-                return result
-            }
+    if let superview = view.superview {
+        if let result = tracePreviewingHostView(view: superview, point: superview.convert(point, from: view)) {
+            return result
         }
     }
     return nil
@@ -133,7 +131,10 @@ private final class WindowRootViewController: UIViewController, UIViewController
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
         if #available(iOSApplicationExtension 9.0, *) {
-            if let (result, resultPoint) = tracePreviewingHostView(view: self.view, point: location), let delegate = result.previewingDelegate {
+            guard let result = self.view.hitTest(location, with: nil) else {
+                return nil
+            }
+            if let (result, resultPoint) = tracePreviewingHostView(view: result, point: self.view.convert(location, to: result)), let delegate = result.previewingDelegate {
                 self.previousPreviewingHostView = result
                 return delegate.previewingContext(previewingContext, viewControllerForLocation: resultPoint)
             }
