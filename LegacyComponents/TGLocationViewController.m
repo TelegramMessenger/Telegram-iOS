@@ -1013,6 +1013,7 @@
             if (strongSelf != nil)
                 [strongSelf getDirectionsPressed:strongSelf->_locationAttachment prompt:false];
         };
+        cell.safeInset = self.controllerSafeAreaInset;
         return cell;
     }
     else
@@ -1022,6 +1023,7 @@
             cell = [[TGLocationLiveCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:TGLocationLiveCellKind];
         cell.pallete = self.pallete;
         cell.edgeView = indexPath.row == 0 ? _edgeHighlightView : nil;
+        cell.safeInset = self.controllerSafeAreaInset;
         
         if (self.allowLiveLocationSharing && (indexPath.row == 0 || (![self isLiveLocation] && indexPath.row == 1)))
         {
@@ -1245,6 +1247,25 @@
         _ignoreNextUpdates = true;
     else
         _throttle = true;
+}
+
+- (void)layoutControllerForSize:(CGSize)size duration:(NSTimeInterval)duration
+{
+    [super layoutControllerForSize:size duration:duration];
+    
+    if (!self.isViewLoaded)
+        return;
+    
+    for (UITableViewCell *cell in _tableView.visibleCells)
+    {
+        if ([cell isKindOfClass:[TGLocationInfoCell class]])
+        {
+            ((TGLocationInfoCell *)cell).safeInset = self.controllerSafeAreaInset;
+        } else if ([cell isKindOfClass:[TGLocationLiveCell class]])
+        {
+            ((TGLocationLiveCell *)cell).safeInset = self.controllerSafeAreaInset;
+        }
+    }
 }
 
 @end

@@ -76,6 +76,7 @@ const CGFloat TGLocationMapInset = 100.0f;
     [super loadView];
     
     self.view.backgroundColor = self.pallete.backgroundColor;
+    self.alwaysUseTallNavigationBarHeight = true;
         
     _tableView = [[TGLocationTableView alloc] initWithFrame:self.view.bounds];
     if (iosMajorVersion() >= 11)
@@ -178,8 +179,8 @@ const CGFloat TGLocationMapInset = 100.0f;
         return;
     
     [self updateMapHeightAnimated:false];
-    _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f, self.controllerInset.top + 6.0f, 45.0f, 90.0f);
-    _tableView.contentOffset = CGPointMake(0.0f, -_tableViewTopInset);
+    _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f - self.controllerSafeAreaInset.right, self.controllerInset.top + 6.0f, 45.0f, 90.0f);
+    _tableView.contentOffset = CGPointMake(0.0f, -_tableViewTopInset - self.controllerInset.top);
 }
 
 - (void)setOptionsViewHidden:(bool)hidden

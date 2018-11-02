@@ -94,6 +94,7 @@ typedef enum {
 @property (nonatomic) bool autoManageStatusBarBackground;
 @property (nonatomic) bool automaticallyManageScrollViewInsets;
 @property (nonatomic) bool ignoreKeyboardWhenAdjustingScrollViewInsets;
+@property (nonatomic) bool alwaysUseTallNavigationBarHeight;
 
 @property (nonatomic) bool customAppearanceMethodsForwarding;
 

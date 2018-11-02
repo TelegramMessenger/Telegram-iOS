@@ -8,6 +8,7 @@
 @interface TGLocationLiveCell : UITableViewCell
 
 @property (nonatomic, strong) TGLocationPallete *pallete;
+@property (nonatomic, assign) UIEdgeInsets safeInset;
 @property (nonatomic, copy) void (^longPressed)(void);
 
 @property (nonatomic, readonly) int32_t messageId;

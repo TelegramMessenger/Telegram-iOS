@@ -335,21 +335,27 @@ const CGFloat TGLocationLiveCellHeight = 68;
     _circleView.image = TGTintedImage(circleImage, color);
 }
 
+- (void)setSafeInset:(UIEdgeInsets)safeInset
+{
+    _safeInset = safeInset;
+    [self setNeedsLayout];
+}
+
 - (void)layoutSubviews
 {
     [super layoutSubviews];
     
-    _circleView.frame = CGRectMake(12.0f, 12.0f, 48.0f, 48.0f);
+    _circleView.frame = CGRectMake(12.0f + self.safeInset.left, 12.0f, 48.0f, 48.0f);
     _iconView.frame = _circleView.bounds;
     _avatarView.frame = _circleView.frame;
     
-    CGFloat padding = 76.0f;
+    CGFloat padding = 76.0f + self.safeInset.left;
     CGFloat separatorThickness = TGScreenPixel;
     
-    _titleLabel.frame = CGRectMake(padding, 14, self.frame.size.width - padding - 14 - (_elapsedView.hidden ? 0.0f : 38.0f), 20);
-    _subtitleLabel.frame = CGRectMake(padding, 36, self.frame.size.width - padding - 14 - (_elapsedView.hidden ? 0.0f : 38.0f), 20);
+    _titleLabel.frame = CGRectMake(padding, 14, self.frame.size.width - padding - 14 - (_elapsedView.hidden ? 0.0f : 38.0f) - self.safeInset.right, 20);
+    _subtitleLabel.frame = CGRectMake(padding, 36, self.frame.size.width - padding - 14 - (_elapsedView.hidden ? 0.0f : 38.0f) - self.safeInset.right, 20);
     _separatorView.frame = CGRectMake(padding, self.frame.size.height - separatorThickness, self.frame.size.width - padding, separatorThickness);
-    _elapsedView.frame = CGRectMake(self.frame.size.width - 30.0f - 15.0f, floor((self.frame.size.height - 30.0f) / 2.0f), 30.0f, 30.0f);
+    _elapsedView.frame = CGRectMake(self.frame.size.width - 30.0f - 15.0f - self.safeInset.right, floor((self.frame.size.height - 30.0f) / 2.0f), 30.0f, 30.0f);
 }
 
 @end

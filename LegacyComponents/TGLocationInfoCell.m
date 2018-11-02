@@ -44,6 +44,8 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
     if (self != nil)
     {
+        _messageId = -1;
+        
         _locateButton = [[TGModernButton alloc] init];
         [_locateButton addTarget:self action:@selector(locateButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [self.contentView addSubview:_locateButton];
@@ -163,7 +165,7 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
     
     _messageId = messageId;
     
-    _titleLabel.text = location.venue != nil ? location.venue.title : TGLocalized(@"Map.Location");
+    _titleLabel.text = location.venue.title.length > 0 ? location.venue.title : TGLocalized(@"Map.Location");
     
     if (location.venue.type.length > 0 && [location.venue.provider isEqualToString:@"foursquare"])
         [_iconView loadUri:[NSString stringWithFormat:@"location-venue-icon://type=%@&width=%d&height=%d&color=%d", location.venue.type, 48, 48, TGColorHexCode(_pallete != nil ? _pallete.iconColor : [UIColor whiteColor])] withOptions:nil];
@@ -324,16 +326,22 @@ const CGFloat TGLocationInfoCellHeight = 134.0f;
     }
 }
 
+- (void)setSafeInset:(UIEdgeInsets)safeInset
+{
+    _safeInset = safeInset;
+    [self setNeedsLayout];
+}
+
 - (void)layoutSubviews
 {
     _locateButton.frame = CGRectMake(0.0f, 0.0f, self.frame.size.width, 60.0f);
-    _circleView.frame = CGRectMake(12.0f, 12.0f, 48.0f, 48.0f);
+    _circleView.frame = CGRectMake(12.0f + self.safeInset.left, 12.0f, 48.0f, 48.0f);
     _iconView.frame = _circleView.bounds;
     
-    _titleLabel.frame = CGRectMake(76.0f, 15.0f, self.frame.size.width - 77.0f - 12.0f, 20.0f);
-    _addressLabel.frame = CGRectMake(76.0f, 38.0f, self.frame.size.width - 77.0f - 12.0f, 20.0f);
+    _titleLabel.frame = CGRectMake(76.0f + self.safeInset.left, 15.0f, self.frame.size.width - 76.0f - 12.0f - self.safeInset.left - self.safeInset.right, 20.0f);
+    _addressLabel.frame = CGRectMake(76.0f + self.safeInset.left, 38.0f, self.frame.size.width - 76.0f - 12.0f - self.safeInset.left - self.safeInset.right, 20.0f);
     
-    _directionsButton.frame = CGRectMake(12.0f, 72.0f, self.frame.size.width - 12.0f * 2.0f, 50.0f);
+    _directionsButton.frame = CGRectMake(12.0f + self.safeInset.left, 72.0f, self.frame.size.width - 12.0f * 2.0f - self.safeInset.left - self.safeInset.right, 50.0f);
     
     bool hasEta = _etaLabel.text.length > 0;
     _directionsButtonLabel.frame = CGRectMake(0.0f, hasEta ? 6.0f : 14.0f, _directionsButton.frame.size.width, _directionsButtonLabel.frame.size.height);

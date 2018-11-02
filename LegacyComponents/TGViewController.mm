@@ -1069,8 +1069,8 @@ static id<LegacyComponentsContext> _defaultContext = nil;
             landscapeHeight = 44.0f;
         }
     });
-    
-    return (UIInterfaceOrientationIsPortrait(orientation) ? portraitHeight : landscapeHeight) + _additionalNavigationBarHeight;
+    bool large = UIInterfaceOrientationIsPortrait(orientation) || self.alwaysUseTallNavigationBarHeight;
+    return (large ? portraitHeight : landscapeHeight) + _additionalNavigationBarHeight;
 }
 
 - (CGFloat)tabBarHeight:(bool)landscape

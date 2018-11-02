@@ -7,6 +7,7 @@
 @interface TGLocationInfoCell : UITableViewCell
 
 @property (nonatomic, strong) TGLocationPallete *pallete;
+@property (nonatomic, assign) UIEdgeInsets safeInset;
 
 @property (nonatomic, copy) void (^locatePressed)(void);
 @property (nonatomic, copy) void (^directionsPressed)(void);
