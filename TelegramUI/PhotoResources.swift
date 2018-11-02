@@ -82,8 +82,8 @@ private func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaR
     }
 }
 
-private func chatMessageFileDatas(account: Account, fileReference: FileMediaReference, pathExtension: String? = nil, progressive: Bool = false) -> Signal<(Data?, String?, Bool), NoError> {
-    let thumbnailResource = smallestImageRepresentation(fileReference.media.previewRepresentations)?.resource
+private func chatMessageFileDatas(account: Account, fileReference: FileMediaReference, pathExtension: String? = nil, progressive: Bool = false, fetched: Bool = false) -> Signal<(Data?, String?, Bool), NoError> {
+    let thumbnailResource = fetched ? nil : smallestImageRepresentation(fileReference.media.previewRepresentations)?.resource
     let fullSizeResource = fileReference.media.resource
     
     let maybeFullSize = account.postbox.mediaBox.resourceData(fullSizeResource, pathExtension: pathExtension)
@@ -1770,19 +1770,19 @@ func drawImage(context: CGContext, image: CGImage, orientation: UIImageOrientati
     }
 }
 
-func chatMessageImageFile(account: Account, fileReference: FileMediaReference, thumbnail: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+func chatMessageImageFile(account: Account, fileReference: FileMediaReference, thumbnail: Bool, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal: Signal<(Data?, String?, Bool), NoError>
     if thumbnail {
         signal = chatMessageImageFileThumbnailDatas(account: account, fileReference: fileReference)
     } else {
-        signal = chatMessageFileDatas(account: account, fileReference: fileReference, progressive: false)
+        signal = chatMessageFileDatas(account: account, fileReference: fileReference, progressive: false, fetched: fetched)
     }
     
     return signal
     |> map { (thumbnailData, fullSizePath, fullSizeComplete) in
         return { arguments in
             assertNotOnMainThread()
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            let context = DrawingContext(size: arguments.drawingSize, clear: arguments.emptyColor == nil)
             
             let drawingRect = arguments.drawingRect
             var fittedSize: CGSize
@@ -1834,8 +1834,13 @@ func chatMessageImageFile(account: Account, fileReference: FileMediaReference, t
             }
             
             context.withFlippedContext { c in
+                if let emptyColor = arguments.emptyColor {
+                    c.setFillColor(emptyColor.cgColor)
+                    c.fill(drawingRect)
+                }
+                
                 c.setBlendMode(.copy)
-                if arguments.boundingSize != fittedSize {
+                if arguments.boundingSize != fittedSize && !fetched {
                     c.fill(drawingRect)
                 }
                 

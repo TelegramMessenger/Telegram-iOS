@@ -55,7 +55,6 @@ private let playImage = generateImage(CGSize(width: 15.0, height: 18.0), rotated
     context.translateBy(x: -(diameter - size.width) / 2.0 - 1.5, y: -(diameter - size.height) / 2.0)
 })
 
-private let textFont = Font.regular(16.0)
 private let titleFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
@@ -79,7 +78,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let forwardButton: HighlightableButtonNode
     private let playbackControlButton: HighlightableButtonNode
     
-    private var currentMessageText: String?
+    private var currentMessageText: NSAttributedString?
     private var currentAuthorNameText: String?
     private var currentDateText: String?
     
@@ -90,6 +89,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     var playbackControl: (() -> Void)?
     var seekBackward: (() -> Void)?
     var seekForward: (() -> Void)?
+    
+    var openUrl: ((String) -> Void)?
+    var openUrlOptions: ((String) -> Void)?
     
     var content: ChatItemGalleryFooterContent = .info {
         didSet {
@@ -140,7 +142,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         
         self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 10
-        self.textNode.isLayerBacked = true
+        self.textNode.linkHighlightColor = UIColor(white: 1.0, alpha: 0.4)
+
         self.authorNameNode = ASTextNode()
         self.authorNameNode.maximumNumberOfLines = 1
         self.authorNameNode.isLayerBacked = true
@@ -162,6 +165,24 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.playbackControlButton.isHidden = true
         
         super.init()
+        
+        self.textNode.highlightAttributeAction = { attributes in
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
+            } else {
+                return nil
+            }
+        }
+        self.textNode.tapAttributeAction = { [weak self] attributes in
+            if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                strongSelf.openUrl?(url)
+            }
+        }
+        self.textNode.longTapAttributeAction = { [weak self] attributes in
+            if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                strongSelf.openUrlOptions?(url)
+            }
+        }
         
         self.view.addSubview(self.deleteButton)
         self.view.addSubview(self.actionButton)
@@ -185,19 +206,19 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.messageContextDisposable.dispose()
     }
     
-    func setup(origin: GalleryItemOriginData?, caption: String) {
+    func setup(origin: GalleryItemOriginData?, caption: NSAttributedString) {
         let titleText = origin?.title
         let dateText = origin?.timestamp.flatMap { humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: $0) }
         
         if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
             self.currentMessageText = caption
             
-            if caption.isEmpty {
+            if caption.length == 0 {
                 self.textNode.isHidden = true
                 self.textNode.attributedText = nil
             } else {
                 self.textNode.isHidden = false
-                self.textNode.attributedText = NSAttributedString(string: caption, font: textFont, textColor: .white)
+                self.textNode.attributedText = caption
             }
             
             if let titleText = titleText {
@@ -251,7 +272,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         
         let dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp)
         
-        var messageText = ""
+        var messageText = NSAttributedString(string: "")
         var hasCaption = false
         for media in message.media {
             if media is TelegramMediaImage {
@@ -261,18 +282,25 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             }
         }
         if hasCaption {
-            messageText = message.text
+            var entities: [MessageTextEntity] = []
+            for attribute in message.attributes {
+                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                    entities = attribute.entities
+                    break
+                }
+            }
+            messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
         }
         
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
             self.currentMessageText = messageText
             
-            if messageText.isEmpty {
+            if messageText.length == 0 {
                 self.textNode.isHidden = true
                 self.textNode.attributedText = nil
             } else {
                 self.textNode.isHidden = false
-                self.textNode.attributedText = NSAttributedString(string: messageText, font: textFont, textColor: .white)
+                self.textNode.attributedText = messageText
             }
             
             if let authorNameText = authorNameText {

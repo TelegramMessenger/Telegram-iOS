@@ -127,7 +127,9 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                         if let index = items.index(where: { $0.isEqual(to: centralItem) }) {
                             let convertedIndex = (index, progress)
                             if strongSelf.currentThumbnailContainerNode?.groupId != centralId {
-                                node = GalleryThumbnailContainerNode(groupId: centralId)
+                                if items.count > 1 {
+                                    node = GalleryThumbnailContainerNode(groupId: centralId)
+                                }
                             } else {
                                 node = strongSelf.currentThumbnailContainerNode
                             }

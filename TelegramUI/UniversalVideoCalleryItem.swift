@@ -18,11 +18,13 @@ class UniversalVideoGalleryItem: GalleryItem {
     let originData: GalleryItemOriginData?
     let indexData: GalleryItemIndexData?
     let contentInfo: UniversalVideoGalleryItemContentInfo?
-    let caption: String
+    let caption: NSAttributedString
     let hideControls: Bool
     let playbackCompleted: () -> Void
+    let openUrl: (String) -> Void
+    let openUrlOptions: (String) -> Void
     
-    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: String, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}) {
+    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, openUrl: @escaping (String) -> Void, openUrlOptions: @escaping (String) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.content = content
@@ -32,10 +34,12 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.caption = caption
         self.hideControls = hideControls
         self.playbackCompleted = playbackCompleted
+        self.openUrl = openUrl
+        self.openUrlOptions = openUrlOptions
     }
     
     func node() -> GalleryItemNode {
-        let node = UniversalVideoGalleryItemNode(account: self.account, presentationData: self.presentationData)
+        let node = UniversalVideoGalleryItemNode(account: self.account, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
         
         if let indexData = self.indexData {
             node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
@@ -150,13 +154,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
-    init(account: Account, presentationData: PresentationData) {
+    init(account: Account, presentationData: PresentationData, openUrl: @escaping (String) -> Void, openUrlOptions: @escaping (String) -> Void) {
         self.account = account
         self.strings = presentationData.strings
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
         self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
         self.footerContentNode.scrubberView = self.scrubberView
+        self.footerContentNode.openUrl = openUrl
+        self.footerContentNode.openUrlOptions = openUrlOptions
         
         self.statusButtonNode = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))

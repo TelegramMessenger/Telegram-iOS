@@ -12,9 +12,15 @@ enum InstantPageTextStyle {
     case underline
     case strikethrough
     case textColor(UIColor)
+    case `subscript`
+    case superscript
+    case markerColor(UIColor)
+    case marker
 }
 
 let InstantPageLineSpacingFactorAttribute = "LineSpacingFactorAttribute"
+let InstantPageMarkerColorAttribute = "MarkerColorAttribute"
+let InstantPageMediaIdAttribute = "MediaIdAttribute"
 
 final class InstantPageTextStyleStack {
     private var items: [InstantPageTextStyle] = []
@@ -39,6 +45,9 @@ final class InstantPageTextStyleStack {
         var underline: Bool?
         var color: UIColor?
         var lineSpacingFactor: CGFloat?
+        var baselineOffset: CGFloat?
+        var markerColor: UIColor?
+        var marker: Bool?
         
         for item in self.items.reversed() {
             switch item {
@@ -78,6 +87,23 @@ final class InstantPageTextStyleStack {
                     if lineSpacingFactor == nil {
                         lineSpacingFactor = value
                     }
+                case .subscript:
+                    if baselineOffset == nil {
+                        baselineOffset = 0.35
+                        underline = false
+                    }
+                case .superscript:
+                    if baselineOffset == nil {
+                        baselineOffset = -0.35
+                    }
+                case let .markerColor(color):
+                    if markerColor == nil {
+                        markerColor = color
+                    }
+                case .marker:
+                    if marker == nil {
+                        marker = true
+                    }
             }
         }
         
@@ -88,6 +114,11 @@ final class InstantPageTextStyleStack {
             parsedFontSize = fontSize
         } else {
             parsedFontSize = 16.0
+        }
+        
+        if let baselineOffset = baselineOffset {
+            attributes[NSAttributedStringKey.baselineOffset] = round(parsedFontSize * baselineOffset);
+            parsedFontSize = round(parsedFontSize * 0.85)
         }
         
         if (bold != nil && bold!) && (italic != nil && italic!) {
@@ -140,6 +171,10 @@ final class InstantPageTextStyleStack {
         
         if let lineSpacingFactor = lineSpacingFactor {
             attributes[NSAttributedStringKey(rawValue: InstantPageLineSpacingFactorAttribute)] = lineSpacingFactor as NSNumber
+        }
+        
+        if marker != nil && marker!, let markerColor = markerColor {
+            attributes[NSAttributedStringKey(rawValue: InstantPageMarkerColorAttribute)] = markerColor
         }
         
         return attributes

@@ -3,42 +3,118 @@ import TelegramCore
 import WebKit
 import AsyncDisplayKit
 
-final class instantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
+private class WeakInstantPageWebEmbedNodeMessageHandler: NSObject, WKScriptMessageHandler {
+    private let f: (WKScriptMessage) -> ()
+    
+    init(_ f: @escaping (WKScriptMessage) -> ()) {
+        self.f = f
+        
+        super.init()
+    }
+    
+    func userContentController(_ controller: WKUserContentController, didReceive scriptMessage: WKScriptMessage) {
+        self.f(scriptMessage)
+    }
+}
+
+final class InstantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
     let url: String?
     let html: String?
+    let updateWebEmbedHeight: (Int, Int) -> Void
     
-    private let webView: WKWebView
+    private var webView: WKWebView?
     
-    init(frame: CGRect, url: String?, html: String?, enableScrolling: Bool) {
+    init(frame: CGRect, url: String?, html: String?, enableScrolling: Bool, updateWebEmbedHeight: @escaping (Int, Int) -> Void) {
         self.url = url
         self.html = html
-        
-        self.webView = WKWebView(frame: CGRect(origin: CGPoint(), size: frame.size))
+        self.updateWebEmbedHeight = updateWebEmbedHeight
         
         super.init()
         
+        let js = "var TelegramWebviewProxyProto = function() {}; " +
+            "TelegramWebviewProxyProto.prototype.postEvent = function(eventName, eventData) { " +
+            "window.webkit.messageHandlers.performAction.postMessage({'eventName': eventName, 'eventData': eventData}); " +
+            "}; " +
+        "var TelegramWebviewProxy = new TelegramWebviewProxyProto();"
+        
+        let configuration = WKWebViewConfiguration()
+        let userController = WKUserContentController()
+        
+        let userScript = WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        userController.addUserScript(userScript)
+        
+        userController.add(WeakInstantPageWebEmbedNodeMessageHandler { [weak self] message in
+            if let strongSelf = self {
+                strongSelf.handleScriptMessage(message)
+            }
+        }, name: "performAction")
+        
+        configuration.userContentController = userController
+        
+        let webView = WKWebView(frame: CGRect(origin: CGPoint(), size: frame.size), configuration: configuration)
+        if #available(iOSApplicationExtension 9.0, *) {
+            webView.allowsLinkPreview = false
+        }
+        if #available(iOSApplicationExtension 11.0, *) {
+            webView.scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        webView.scrollView.isScrollEnabled = enableScrolling
+        
         if let html = html {
-            self.webView.loadHTMLString(html, baseURL: nil)
+            webView.loadHTMLString(html, baseURL: nil)
         } else if let url = url, let parsedUrl = URL(string: url) {
             var request = URLRequest(url: parsedUrl)
             if let scheme = parsedUrl.scheme, let host = parsedUrl.host {
                 let referrer = "\(scheme)://\(host)"
                 request.setValue(referrer, forHTTPHeaderField: "Referer")
             }
-            self.webView.load(request)
+            webView.load(request)
+        }
+        self.webView = webView
+    }
+    
+    private func handleScriptMessage(_ message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any] else {
+            return
+        }
+        
+        guard let eventName = body["eventName"] as? String, let eventString = body["eventData"] as? String else {
+            return
+        }
+        
+        guard let eventData = eventString.data(using: .utf8) else {
+            return
+        }
+        
+        guard let dict = (try? JSONSerialization.jsonObject(with: eventData, options: [])) as? [String: Any] else {
+            return
+        }
+        
+        if eventName == "resize_frame", let height = dict["height"] as? Int {
+            var hash: Int?
+            if let url = self.url {
+                hash = url.hashValue
+            } else if let html = self.html {
+                hash = html.hashValue
+            }
+            if let hash = hash {
+                self.updateWebEmbedHeight(hash, height)
+            }
         }
     }
     
     override func didLoad() {
         super.didLoad()
         
-        self.view.addSubview(self.webView)
+        if let webView = self.webView {
+            self.view.addSubview(webView)
+        }
     }
     
     override func layout() {
         super.layout()
         
-        self.webView.frame = self.bounds
+        self.webView?.frame = self.bounds
     }
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {

@@ -781,8 +781,11 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     if let editingState = state.editingState {
         if canEditGroupInfo {
             entries.append(GroupInfoEntry.setGroupPhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
-            entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, editingState.editingDescriptionText))
-            entries.append(GroupInfoEntry.groupDescriptionSetupInfo(presentationData.theme, isGroup ? presentationData.strings.Group_About_Help : presentationData.strings.Channel_About_Help))
+            
+            if view.peers[view.peerId] is TelegramChannel {
+                entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, editingState.editingDescriptionText))
+                entries.append(GroupInfoEntry.groupDescriptionSetupInfo(presentationData.theme, isGroup ? presentationData.strings.Group_About_Help : presentationData.strings.Channel_About_Help))
+            }
         }
         
         if let group = view.peers[view.peerId] as? TelegramGroup {

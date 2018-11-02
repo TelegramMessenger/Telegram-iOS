@@ -61,6 +61,9 @@ final class GameControllerNode: ViewControllerTracingNode {
         if #available(iOSApplicationExtension 9.0, *) {
             webView.allowsLinkPreview = false
         }
+        if #available(iOSApplicationExtension 11.0, *) {
+            webView.scrollView.contentInsetAdjustmentBehavior = .never
+        }
         webView.interactiveTransitionGestureRecognizerTest = { point -> Bool in
             return point.x > 30.0
         }

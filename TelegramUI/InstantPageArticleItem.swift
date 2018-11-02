@@ -3,22 +3,30 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 
-final class InstantPagePeerReferenceItem: InstantPageItem {
+final class InstantPageArticleItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
     let medias: [InstantPageMedia] = []
+    let webPage: TelegramMediaWebpage
     
-    let initialPeer: Peer
-    let rtl: Bool
+    let title: String
+    let description: String
+    let cover: TelegramMediaImage?
+    let url: String
+    let webpageId: MediaId
     
-    init(frame: CGRect, initialPeer: Peer, rtl: Bool) {
+    init(frame: CGRect, webPage: TelegramMediaWebpage, title: String, description: String, cover: TelegramMediaImage?, url: String, webpageId: MediaId) {
         self.frame = frame
-        self.initialPeer = initialPeer
-        self.rtl = rtl
+        self.webPage = webPage
+        self.title = title
+        self.description = description
+        self.cover = cover
+        self.url = url
+        self.webpageId = webpageId
     }
-    
+
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPagePeerReferenceNode(account: account, strings: strings, theme: theme, initialPeer: self.initialPeer, rtl: self.rtl, openPeer: openPeer)
+        return InstantPageArticleNode(account: account, webPage: self.webPage, strings: strings, theme: theme, title: self.title, description: self.description, cover: self.cover, url: self.url, webpageId: self.webpageId, openUrl: openUrl)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -26,15 +34,15 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if let node = node as? InstantPagePeerReferenceNode {
-            return self.initialPeer.id == node.initialPeer.id
+        if let node = node as? InstantPageArticleNode {
+            return self.webpageId == node.webpageId
         } else {
             return false
         }
     }
     
     func distanceThresholdGroup() -> Int? {
-        return 5
+        return 7
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
@@ -45,10 +53,10 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
         }
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
-        return []
+    func drawInTile(context: CGContext) {
     }
     
-    func drawInTile(context: CGContext) {
+    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+        return []
     }
 }

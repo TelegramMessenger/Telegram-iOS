@@ -19,8 +19,8 @@ final class InstantPageWebEmbedItem: InstantPageItem {
         self.enableScrolling = enableScrolling
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return instantPageWebEmbedNode(frame: self.frame, url: self.url, html: self.html, enableScrolling: self.enableScrolling)
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+        return InstantPageWebEmbedNode(frame: self.frame, url: self.url, html: self.html, enableScrolling: self.enableScrolling, updateWebEmbedHeight: updateWebEmbedHeight)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -28,7 +28,7 @@ final class InstantPageWebEmbedItem: InstantPageItem {
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if let node = node as? instantPageWebEmbedNode {
+        if let node = node as? InstantPageWebEmbedNode {
             return self.url == node.url && self.html == node.html
         } else {
             return false
@@ -36,7 +36,7 @@ final class InstantPageWebEmbedItem: InstantPageItem {
     }
     
     func distanceThresholdGroup() -> Int? {
-        return 3
+        return 6
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {

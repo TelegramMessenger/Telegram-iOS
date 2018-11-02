@@ -316,6 +316,7 @@ public class LegacyController: ViewController {
     var sizeClassSignal: SSignal {
         return self.sizeClass.signal()!
     }
+    private var enableContainerLayoutUpdates = false
     
     public init(presentation: LegacyControllerPresentation, theme: PresentationTheme? = nil, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
@@ -393,7 +394,7 @@ public class LegacyController: ViewController {
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
+        self.enableContainerLayoutUpdates = true
         if self.ignoreAppearanceMethodInvocations() {
             return
         }
@@ -448,7 +449,9 @@ public class LegacyController: ViewController {
             }
             
             legacyTelegramController._updateInset(for: orientation, force: false, notify: true)
-            legacyTelegramController.layoutController(for: layout.size, duration: duration)
+            if self.enableContainerLayoutUpdates {
+                legacyTelegramController.layoutController(for: layout.size, duration: duration)
+            }
         }
         let updatedSizeClass: UIUserInterfaceSizeClass
         if case .regular = layout.metrics.widthClass {

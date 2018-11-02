@@ -3,22 +3,20 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 
-final class InstantPagePeerReferenceItem: InstantPageItem {
+final class InstantPageFeedbackItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
     let medias: [InstantPageMedia] = []
     
-    let initialPeer: Peer
-    let rtl: Bool
+    let webPage: TelegramMediaWebpage
     
-    init(frame: CGRect, initialPeer: Peer, rtl: Bool) {
+    init(frame: CGRect, webPage: TelegramMediaWebpage) {
         self.frame = frame
-        self.initialPeer = initialPeer
-        self.rtl = rtl
+        self.webPage = webPage
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPagePeerReferenceNode(account: account, strings: strings, theme: theme, initialPeer: self.initialPeer, rtl: self.rtl, openPeer: openPeer)
+        return InstantPageFeedbackNode(account: account, strings: strings, theme: theme, webPage: self.webPage, openUrl: openUrl)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -26,23 +24,18 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if let node = node as? InstantPagePeerReferenceNode {
-            return self.initialPeer.id == node.initialPeer.id
-        } else {
-            return false
+        if node is InstantPageFeedbackNode {
+            return true
         }
+        return false
     }
     
     func distanceThresholdGroup() -> Int? {
-        return 5
+        return nil
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
-        if count > 3 {
-            return 1000.0
-        } else {
-            return CGFloat.greatestFiniteMagnitude
-        }
+        return 0.0
     }
     
     func linkSelectionRects(at point: CGPoint) -> [CGRect] {

@@ -104,7 +104,7 @@ final class InstantPageSettingsThemeItemNode: InstantPageSettingsItemNode {
             InstantPageSettingsThemeSelectorNode(color: .white, edgeColor: (selectedIndex == 1 || selectedIndex == 2) ? UIColor.lightGray : UIColor.white, selectionColor: selectionColor),
             InstantPageSettingsThemeSelectorNode(color: UIColor(rgb: 0xcbb98e), edgeColor: UIColor(rgb: 0xcbb98e), selectionColor: selectionColor),
             InstantPageSettingsThemeSelectorNode(color: UIColor(rgb: 0x48484a), edgeColor: UIColor(rgb: 0x48484a), selectionColor: selectionColor),
-            InstantPageSettingsThemeSelectorNode(color: UIColor(rgb: 0x48484a), edgeColor: UIColor(rgb: 0x48484a), selectionColor: selectionColor)
+            InstantPageSettingsThemeSelectorNode(color: UIColor(rgb: 0x333333), edgeColor: UIColor(rgb: 0x333333), selectionColor: selectionColor)
         ]
         
         super.init(theme: theme, selectable: false)

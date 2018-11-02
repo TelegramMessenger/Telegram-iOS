@@ -29,7 +29,7 @@ public struct WatchPresetSettings: PreferencesEntry, Equatable {
     
     public func encode(_ encoder: PostboxEncoder) {
         let keys = self.customPresets.keys.sorted()
-        let values = keys.reduce([String]()) { (values, index) -> [String] in
+        let values = keys.reduce([String]()) { (values, index) in
             var values = values
             if let value = self.customPresets[index] {
                 values.append(value)

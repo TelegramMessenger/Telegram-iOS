@@ -3,22 +3,27 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 
-final class InstantPagePeerReferenceItem: InstantPageItem {
+final class InstantPageDetailsItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
     let medias: [InstantPageMedia] = []
-    
-    let initialPeer: Peer
+
+    let title: NSAttributedString
+    let items: [InstantPageItem]
     let rtl: Bool
     
-    init(frame: CGRect, initialPeer: Peer, rtl: Bool) {
+    var open: Bool
+    
+    init(frame: CGRect, title: NSAttributedString, items: [InstantPageItem], rtl: Bool, open: Bool) {
         self.frame = frame
-        self.initialPeer = initialPeer
+        self.title = title
+        self.items = items
         self.rtl = rtl
+        self.open = open
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPagePeerReferenceNode(account: account, strings: strings, theme: theme, initialPeer: self.initialPeer, rtl: self.rtl, openPeer: openPeer)
+        return InstantPageDetailsNode(account: account, strings: strings, theme: theme, item: self, updateDetailsOpened: updateDetailsOpened)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -26,15 +31,15 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if let node = node as? InstantPagePeerReferenceNode {
-            return self.initialPeer.id == node.initialPeer.id
+        if let node = node as? InstantPageDetailsNode {
+            return self === node.item
         } else {
             return false
         }
     }
     
     func distanceThresholdGroup() -> Int? {
-        return 5
+        return 8
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
@@ -45,10 +50,14 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
         }
     }
     
+    func drawInTile(context: CGContext) {
+    }
+    
     func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
-    
-    func drawInTile(context: CGContext) {
-    }
+}
+
+func layoutDetailsItem(theme: InstantPageTheme, title: NSAttributedString, boundingWidth: CGFloat, items: [InstantPageItem], contentSize: CGSize, rtl: Bool, open: Bool) -> InstantPageDetailsItem {
+    return InstantPageDetailsItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: contentSize.height + 44.0), title: title, items: items, rtl: rtl, open: open)
 }

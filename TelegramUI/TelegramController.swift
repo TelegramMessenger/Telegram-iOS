@@ -39,6 +39,7 @@ private func presentLiveLocationController(account: Account, peerId: PeerId, con
         } |> deliverOnMainQueue).start(next: presentImpl)
     } else if let liveLocationManager = account.telegramApplicationContext.liveLocationManager {
         let _ = (liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
+        |> take(1)
         |> map { peersAndMessages -> Message? in
             return peersAndMessages?.first?.1
         } |> deliverOnMainQueue).start(next: presentImpl)

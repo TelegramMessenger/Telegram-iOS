@@ -79,7 +79,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
             if let navigationController = navigationController {
                 navigationController.replaceTopController(controller, animated: false, ready: ready)
             }
-        })
+        }, baseNavigationController: navigationController)
         return .instantPage(gallery, centralIndex, galleryMedia)
     } else if let galleryMedia = galleryMedia {
         if let mapMedia = galleryMedia as? TelegramMediaMap {

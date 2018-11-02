@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-protocol InstantPageNode {
+protocol InstantPageNode {    
     func updateIsVisible(_ isVisible: Bool)
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)?

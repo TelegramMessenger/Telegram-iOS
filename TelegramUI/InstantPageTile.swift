@@ -14,6 +14,8 @@ final class InstantPageTile {
         for item in self.items {
             item.drawInTile(context: context)
         }
+//        context.setFillColor(UIColor.red.cgColor)
+//        context.fill(CGRect(x: 0.0, y: self.frame.maxY - 1.0, width: self.frame.width, height: 2.0))
         context.translateBy(x: self.frame.minX, y: self.frame.minY)
     }
 }
