@@ -32,6 +32,7 @@ private enum RecentSessionsMode: Int {
 
 private enum RecentSessionsSection: Int32 {
     case currentSession
+    case pendingSessions
     case otherSessions
 }
 
@@ -72,7 +73,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     case terminateOtherSessions(PresentationTheme, String)
     case terminateAllWebSessions(PresentationTheme, String)
     case currentSessionInfo(PresentationTheme, String)
-    
+    case pendingSessionsHeader(PresentationTheme, String)
+    case pendingSession(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
     case otherSessionsHeader(PresentationTheme, String)
     case session(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
     case website(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool)
@@ -81,6 +83,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         switch self {
             case .currentSessionHeader, .currentSession, .terminateOtherSessions, .terminateAllWebSessions, .currentSessionInfo:
                 return RecentSessionsSection.currentSession.rawValue
+            case .pendingSessionsHeader, .pendingSession:
+                return RecentSessionsSection.pendingSessions.rawValue
             case .otherSessionsHeader, .session, .website:
                 return RecentSessionsSection.otherSessions.rawValue
         }
@@ -98,8 +102,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return .index(3)
             case .currentSessionInfo:
                 return .index(4)
-            case .otherSessionsHeader:
+            case .pendingSessionsHeader:
                 return .index(5)
+            case let .pendingSession(_, _, _, _, session, _, _, _):
+                return .session(session.hash)
+            case .otherSessionsHeader:
+                return .index(6)
             case let .session(_, _, _, _, session, _, _, _):
                 return .session(session.hash)
             case let .website(_, _, _, _, website, _, _, _, _):
@@ -129,6 +137,18 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 }
             case let .currentSessionInfo(lhsTheme, lhsText):
                 if case let .currentSessionInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .pendingSessionsHeader(lhsTheme, lhsText):
+                if case let .pendingSessionsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .pendingSession(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsSession, lhsEnabled, lhsEditing, lhsRevealed):
+                if case let .pendingSession(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsSession, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsSession == rhsSession, lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
                     return true
                 } else {
                     return false
@@ -166,7 +186,11 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 if case let .index(rhsIndex) = rhs.stableId {
                     return lhsIndex <= rhsIndex
                 } else {
-                    return true
+                    if case .pendingSession = rhs, lhsIndex > 5 {
+                        return false
+                    } else {
+                        return true
+                    }
                 }
             case .session:
                 switch lhs {
@@ -175,6 +199,18 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                             return lhsIndex <= rhsIndex
                         } else {
                             return false
+                        }
+                    case let .pendingSession(lhsIndex, _, _, _, _, _, _, _):
+                        if case let .pendingSession(rhsIndex, _, _, _, _, _, _, _) = rhs {
+                            return lhsIndex <= rhsIndex
+                        } else if case .session = rhs {
+                            return true
+                        } else {
+                            if case let .index(rhsIndex) = rhs.stableId {
+                                return rhsIndex == 6
+                            } else {
+                                return false
+                            }
                         }
                     case let .website(lhsIndex, _, _, _, _, _, _, _, _):
                         if case let .website(rhsIndex, _, _, _, _, _, _, _, _) = rhs {
@@ -206,8 +242,16 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 })
             case let .currentSessionInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .pendingSessionsHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .otherSessionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .pendingSession(_, theme, strings, dateTimeFormat, session, enabled, editing, revealed):
+                return ItemListRecentSessionItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
+                    arguments.setSessionIdWithRevealedOptions(previousId, id)
+                }, removeSession: { id in
+                    arguments.removeSession(id)
+                })
             case let .session(_, theme, strings, dateTimeFormat, session, enabled, editing, revealed):
                 return ItemListRecentSessionItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                     arguments.setSessionIdWithRevealedOptions(previousId, id)
@@ -293,6 +337,18 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             entries.append(.terminateOtherSessions(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessions))
             entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
         
+            let filteredPendingSessions: [RecentAccountSession] = sessions.filter({ $0.flags.contains(.passwordPending) })
+            if !filteredPendingSessions.isEmpty {
+                entries.append(.pendingSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_PasswordPending))
+                
+                for i in 0 ..< filteredPendingSessions.count {
+                    if !existingSessionIds.contains(filteredPendingSessions[i].hash) {
+                        existingSessionIds.insert(filteredPendingSessions[i].hash)
+                        entries.append(.pendingSession(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredPendingSessions[i], enabled: state.removingSessionId != filteredPendingSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredPendingSessions[i].hash))
+                    }
+                }
+            }
+            
             entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
             
             let filteredSessions: [RecentAccountSession] = sessions.sorted(by: { lhs, rhs in
@@ -300,9 +356,9 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             })
             
             for i in 0 ..< filteredSessions.count {
-                if !existingSessionIds.contains(sessions[i].hash) {
-                    existingSessionIds.insert(sessions[i].hash)
-                    entries.append(.session(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: sessions[i], enabled: state.removingSessionId != sessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == sessions[i].hash))
+                if !existingSessionIds.contains(filteredSessions[i].hash) {
+                    existingSessionIds.insert(filteredSessions[i].hash)
+                    entries.append(.session(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredSessions[i], enabled: state.removingSessionId != filteredSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredSessions[i].hash))
                 }
             }
         }

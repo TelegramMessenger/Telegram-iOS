@@ -114,9 +114,7 @@ private func telegramMap(for location: TGLocationMediaAttachment) -> TelegramMed
     return TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: mapVenue, liveBroadcastingTimeout: nil)
 }
 
-func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, account: Account, modal: Bool, openPeer: @escaping (Peer) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, stopLiveLocation: @escaping () -> Void, openUrl: @escaping (String) -> Void) -> ViewController {
-    let legacyAuthor: AnyObject? = message.author.flatMap(makeLegacyPeer)
-    
+func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, account: Account, modal: Bool, openPeer: @escaping (Peer) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, stopLiveLocation: @escaping () -> Void, openUrl: @escaping (String) -> Void) -> ViewController {
     let legacyLocation = TGLocationMediaAttachment()
     legacyLocation.latitude = mapMedia.latitude
     legacyLocation.longitude = mapMedia.longitude
@@ -127,69 +125,85 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     
     let legacyController = LegacyController(presentation: modal ? .modal(animateIn: true) : .navigation, theme: presentationData.theme, strings: presentationData.strings)
-    
-    let legacyMessage = makeLegacyMessage(message)
-    
     let controller: TGLocationViewController
     
-    let updatedLocations = SSignal(generator: { subscriber in
-        let disposable = topPeerActiveLiveLocationMessages(viewTracker: account.viewTracker, accountPeerId: account.peerId, peerId: message.id.peerId).start(next: { (_, messages) in
-            var result: [Any] = []
-            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-            loop: for message in messages {
-                var liveBroadcastingTimeout: Int32 = 0
-                
-                mediaLoop: for media in message.media {
-                    if let map = media as? TelegramMediaMap, let timeout = map.liveBroadcastingTimeout  {
-                        liveBroadcastingTimeout = timeout
-                        break mediaLoop
-                    }
-                }
-                
-                let legacyMessage = makeLegacyMessage(message)
-                guard let legacyAuthor = message.author.flatMap(makeLegacyPeer) else {
-                    continue loop
-                }
-                let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
-                if legacyMessage.locationAttachment?.period != 0 {
-                    let hasOwnSession = message.localTags.contains(.OutgoingLiveLocation)
-                    var isOwn = false
-                    if !message.flags.contains(.Incoming) {
-                        isOwn = true
-                    } else if let peer = message.peers[message.id.peerId] as? TelegramChannel {
-                        isOwn = peer.hasAdminRights(.canPostMessages)
+    if let message = message {
+        let legacyMessage = makeLegacyMessage(message)
+        let legacyAuthor: AnyObject? = message.author.flatMap(makeLegacyPeer)
+        
+        let updatedLocations = SSignal(generator: { subscriber in
+            let disposable = topPeerActiveLiveLocationMessages(viewTracker: account.viewTracker, accountPeerId: account.peerId, peerId: message.id.peerId).start(next: { (_, messages) in
+                var result: [Any] = []
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                loop: for message in messages {
+                    var liveBroadcastingTimeout: Int32 = 0
+                    
+                    mediaLoop: for media in message.media {
+                        if let map = media as? TelegramMediaMap, let timeout = map.liveBroadcastingTimeout  {
+                            liveBroadcastingTimeout = timeout
+                            break mediaLoop
+                        }
                     }
                     
-                    let liveLocation = TGLiveLocation(message: legacyMessage, peer: legacyAuthor, hasOwnSession: hasOwnSession, isOwnLocation: isOwn, isExpired: remainingTime == 0)!
-                    result.append(liveLocation)
+                    let legacyMessage = makeLegacyMessage(message)
+                    guard let legacyAuthor = message.author.flatMap(makeLegacyPeer) else {
+                        continue loop
+                    }
+                    let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
+                    if legacyMessage.locationAttachment?.period != 0 {
+                        let hasOwnSession = message.localTags.contains(.OutgoingLiveLocation)
+                        var isOwn = false
+                        if !message.flags.contains(.Incoming) {
+                            isOwn = true
+                        } else if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                            isOwn = peer.hasAdminRights(.canPostMessages)
+                        }
+                        
+                        let liveLocation = TGLiveLocation(message: legacyMessage, peer: legacyAuthor, hasOwnSession: hasOwnSession, isOwnLocation: isOwn, isExpired: remainingTime == 0)!
+                        result.append(liveLocation)
+                    }
                 }
+                subscriber?.putNext(result)
+            })
+            
+            return SBlockDisposable(block: {
+                disposable.dispose()
+            })
+        })!
+        
+        if let liveBroadcastingTimeout = mapMedia.liveBroadcastingTimeout {
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
+            
+            let messageLiveLocation = TGLiveLocation(message: legacyMessage, peer: legacyAuthor, hasOwnSession: false, isOwnLocation: false, isExpired: remainingTime == 0)!
+            
+            controller = TGLocationViewController(context: legacyController.context, liveLocation: messageLiveLocation)
+            
+            if remainingTime == 0 {
+                let freezeLocations: [Any] = [messageLiveLocation]
+                controller.setLiveLocationsSignal(.single(freezeLocations))
+            } else {
+                controller.setLiveLocationsSignal(updatedLocations)
             }
-            subscriber?.putNext(result)
-        })
-        
-        return SBlockDisposable(block: {
-            disposable.dispose()
-        })
-    })!
-    
-    if let liveBroadcastingTimeout = mapMedia.liveBroadcastingTimeout {
-        let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
-        
-        let messageLiveLocation = TGLiveLocation(message: legacyMessage, peer: legacyAuthor, hasOwnSession: false, isOwnLocation: false, isExpired: remainingTime == 0)!
-        
-        controller = TGLocationViewController(context: legacyController.context, liveLocation: messageLiveLocation)
-        
-        if remainingTime == 0 {
-            let freezeLocations: [Any] = [messageLiveLocation]
-            controller.setLiveLocationsSignal(.single(freezeLocations))
         } else {
+            controller = TGLocationViewController(context: legacyController.context, message: legacyMessage, peer: legacyAuthor)!
+            controller.receivingPeer = message.peers[message.id.peerId].flatMap(makeLegacyPeer)
             controller.setLiveLocationsSignal(updatedLocations)
         }
+        
+        let namespacesWithEnabledLiveLocation: Set<PeerId.Namespace> = Set([
+            Namespaces.Peer.CloudChannel,
+            Namespaces.Peer.CloudGroup,
+            Namespaces.Peer.CloudUser
+            ])
+        if namespacesWithEnabledLiveLocation.contains(message.id.peerId.namespace) {
+            controller.allowLiveLocationSharing = true
+        }
     } else {
-        controller = TGLocationViewController(context: legacyController.context, message: legacyMessage, peer: legacyAuthor)!
-        controller.receivingPeer = message.peers[message.id.peerId].flatMap(makeLegacyPeer)
-        controller.setLiveLocationsSignal(updatedLocations)
+        let attachment = TGLocationMediaAttachment()
+        attachment.latitude = mapMedia.latitude
+        attachment.longitude = mapMedia.longitude
+        controller = TGLocationViewController(context: legacyController.context, locationAttachment: attachment, peer: nil)
     }
     
     controller.remainingTimeForMessage = { message in
@@ -202,15 +216,6 @@ func legacyLocationController(message: Message, mapMedia: TelegramMediaMap, acco
     controller.liveLocationStopped = { [weak legacyController] in
         stopLiveLocation()
         legacyController?.dismiss()
-    }
-    
-    let namespacesWithEnabledLiveLocation: Set<PeerId.Namespace> = Set([
-        Namespaces.Peer.CloudChannel,
-        Namespaces.Peer.CloudGroup,
-        Namespaces.Peer.CloudUser
-    ])
-    if namespacesWithEnabledLiveLocation.contains(message.id.peerId.namespace) {
-        controller.allowLiveLocationSharing = true
     }
     
     let theme = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme

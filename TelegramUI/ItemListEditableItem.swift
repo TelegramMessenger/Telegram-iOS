@@ -283,8 +283,8 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         if !self.revealOptions.left.isEmpty {
             let revealNode = ItemListRevealOptionsNode(optionSelected: { [weak self] option in
                 self?.revealOptionSelected(option, animated: false)
-                }, tapticAction: { [weak self] in
-                self?.hapticTap()
+            }, tapticAction: { [weak self] in
+                self?.hapticImpact()
             })
             revealNode.setOptions(self.revealOptions.left)
             self.leftRevealNode = revealNode
@@ -304,8 +304,8 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         if !self.revealOptions.right.isEmpty {
             let revealNode = ItemListRevealOptionsNode(optionSelected: { [weak self] option in
                 self?.revealOptionSelected(option, animated: false)
-                }, tapticAction: { [weak self] in
-                self?.hapticTap()
+            }, tapticAction: { [weak self] in
+                self?.hapticImpact()
             })
             revealNode.setOptions(self.revealOptions.right)
             self.rightRevealNode = revealNode
@@ -435,10 +435,10 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         }
     }
     
-    private func hapticTap() {
+    private func hapticImpact() {
         if self.hapticFeedback == nil {
             self.hapticFeedback = HapticFeedback()
         }
-        self.hapticFeedback?.tap()
+        self.hapticFeedback?.impact(.medium)
     }
 }

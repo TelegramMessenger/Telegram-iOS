@@ -35,13 +35,7 @@ public class ContactsController: ViewController {
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
         
-        let icon: UIImage?
-        if (useSpecialTabBarIcons()) {
-            icon = UIImage(bundleImageName: "Chat List/Tabs/IconContactsHW")
-        } else {
-            icon = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
-        }
-        
+        let icon = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")        
         self.tabBarItem.image = icon
         self.tabBarItem.selectedImage = icon
         

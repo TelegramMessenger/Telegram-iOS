@@ -76,9 +76,9 @@ final class InstantPageController: ViewController {
             return self?.navigationController as? NavigationController
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
-            }, pushController: { [weak self] c in
-                (self?.navigationController as? NavigationController)?.pushViewController(c)
-            }, openPeer: { [weak self] peerId in
+        }, pushController: { [weak self] c in
+            (self?.navigationController as? NavigationController)?.pushViewController(c)
+        }, openPeer: { [weak self] peerId in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)))
             }

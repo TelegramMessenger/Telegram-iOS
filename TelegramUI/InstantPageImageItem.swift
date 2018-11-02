@@ -3,12 +3,23 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 
+protocol InstantPageImageAttribute {
+}
+
+struct InstantPageMapAttribute: InstantPageImageAttribute {
+    let zoom: Int32
+    let dimensions: CGSize
+}
+
 final class InstantPageImageItem: InstantPageItem {
     var frame: CGRect
     
     let webPage: TelegramMediaWebpage
+    let url: InstantPageUrlItem?
     
     let media: InstantPageMedia
+    let attributes: [InstantPageImageAttribute]
+    
     var medias: [InstantPageMedia] {
         return [self.media]
     }
@@ -19,17 +30,19 @@ final class InstantPageImageItem: InstantPageItem {
     
     let wantsNode: Bool = true
     
-    init(frame: CGRect, webPage: TelegramMediaWebpage, media: InstantPageMedia, interactive: Bool, roundCorners: Bool, fit: Bool) {
+    init(frame: CGRect, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute] = [], url: InstantPageUrlItem? = nil, interactive: Bool, roundCorners: Bool, fit: Bool) {
         self.frame = frame
         self.webPage = webPage
         self.media = media
+        self.attributes = attributes
+        self.url = url
         self.interactive = interactive
         self.roundCorners = roundCorners
         self.fit = fit
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageImageNode(account: account, webPage: self.webPage, media: self.media, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia)
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+        return InstantPageImageNode(account: account, webPage: self.webPage, media: self.media, attributes: self.attributes, url: self.url, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia, openUrl: openUrl)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

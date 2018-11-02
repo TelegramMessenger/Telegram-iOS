@@ -4,12 +4,14 @@ import TelegramCore
 func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) -> CGFloat {
     if let upper = upper, let lower = lower {
         switch (upper, lower) {
-            case (_, .cover), (_, .channelBanner):
+            case (_, .cover), (_, .channelBanner), (.details, .details), (.relatedArticles, nil):
                 return 0.0
             case (.divider, _), (_, .divider):
                 return 25.0
             case (_, .blockQuote), (.blockQuote, _), (_, .pullQuote), (.pullQuote, _):
                 return 27.0
+            case (.kicker, .title):
+                return 16.0
             case (_, .title):
                 return 20.0
             case (.title, .authorDate), (.subtitle, .authorDate):
@@ -35,14 +37,12 @@ func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) ->
             case (.preformatted, .list):
                 return 19.0
             case (_, .list):
-                return 20.0
+                return 25.0
             case (.paragraph, .preformatted):
                 return 19.0
             case (_, .preformatted):
                 return 20.0
-            case (_, .header):
-                return 32.0
-            case (_, .subheader):
+            case (_, .header), (_, .subheader):
                 return 32.0
             default:
                 return 20.0
@@ -55,6 +55,10 @@ func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) ->
                 return 24.0
         }
     } else {
-        return 24.0
+        if let upper = upper, case .relatedArticles = upper {
+            return 0.0
+        } else {
+            return 24.0
+        }
     }
 }

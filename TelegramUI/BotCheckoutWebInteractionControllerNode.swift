@@ -65,6 +65,9 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
                 }
                 webView.navigationDelegate = self
         }
+        if #available(iOSApplicationExtension 11.0, *) {
+            webView.scrollView.contentInsetAdjustmentBehavior = .never
+        }
         self.webView = webView
         self.view.addSubview(webView)
         

@@ -29,6 +29,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let navigationBar: InstantPageNavigationBar
     private let scrollNode: ASScrollNode
     private let scrollNodeHeader: ASDisplayNode
+    private let scrollNodeFooter: ASDisplayNode
     private var linkHighlightingNode: LinkHighlightingNode?
     private var textSelectionNode: LinkHighlightingNode?
     private var settingsNode: InstantPageSettingsNode?
@@ -36,11 +37,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var currentLayout: InstantPageLayout?
     var currentLayoutTiles: [InstantPageTile] = []
-    var currentLayoutItemsWithViews: [InstantPageItem] = []
+    var currentLayoutItemsWithNodes: [InstantPageItem] = []
     var distanceThresholdGroupCount: [Int: Int] = [:]
     
     var visibleTiles: [Int: InstantPageTileNode] = [:]
-    var visibleItemsWithViews: [Int: InstantPageNode] = [:]
+    var visibleItemsWithNodes: [Int: InstantPageNode] = [:]
+    
+    var currentWebEmbedHeights: [Int: Int] = [:]
     
     var previousContentOffset: CGPoint?
     var isDeceleratingBecauseOfDragging = false
@@ -48,6 +51,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let hiddenMediaDisposable = MetaDisposable()
     private let resolveUrlDisposable = MetaDisposable()
     private let loadWebpageDisposable = MetaDisposable()
+    
+    private let updateLayoutDisposable = MetaDisposable()
     
     private var themeReferenceDate: Date?
     
@@ -74,6 +79,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNodeHeader = ASDisplayNode()
         self.scrollNodeHeader.backgroundColor = .black
         
+        self.scrollNodeFooter = ASDisplayNode()
+        self.scrollNodeFooter.backgroundColor = .black
+        
         super.init()
         
         self.setViewBlock({
@@ -82,9 +90,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if let theme = self.theme {
             self.backgroundColor = theme.pageBackgroundColor
+            self.scrollNodeFooter.backgroundColor = theme.panelBackgroundColor
         }
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.scrollNodeHeader)
+        self.scrollNode.addSubnode(self.scrollNodeFooter)
         self.addSubnode(self.navigationBar)
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.delegate = self
@@ -159,7 +169,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 self.updateLayout()
                 
-                for (_, itemNode) in self.visibleItemsWithViews {
+                self.scrollNodeFooter.backgroundColor = theme.panelBackgroundColor
+                for (_, itemNode) in self.visibleItemsWithNodes {
                     itemNode.update(strings: strings, theme: theme)
                 }
                 
@@ -188,6 +199,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             if item is InstantPagePeerReferenceItem {
                                 return .fail
                             } else if item is InstantPageAudioItem {
+                                return .fail
+                            } else if item is InstantPageArticleItem {
+                                return .fail
+                            } else if item is InstantPageFeedbackItem {
                                 return .fail
                             }
                             break
@@ -242,8 +257,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateFrame(node: settingsNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         }
         
-        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        
         let maxBarHeight: CGFloat
         if !layout.safeInsets.top.isZero {
             maxBarHeight = layout.safeInsets.top + 34.0
@@ -260,7 +273,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.scrollNode.bounds.size != layout.size || !self.scrollNode.view.contentInset.top.isEqual(to: scrollInsetTop) {
             self.scrollNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             self.scrollNodeHeader.frame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0), size: CGSize(width: layout.size.width, height: 2000.0))
-            self.scrollNode.view.contentInset = UIEdgeInsetsMake(scrollInsetTop, 0.0, 0.0, 0.0)
+            self.scrollNode.view.contentInset = UIEdgeInsetsMake(scrollInsetTop, 0.0, layout.intrinsicInsets.bottom, 0.0)
             if widthUpdated {
                 self.updateLayout()
             }
@@ -294,7 +307,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, dateTimeFormat: self.dateTimeFormat)
+        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, dateTimeFormat: self.dateTimeFormat, webEmbedHeights: self.currentWebEmbedHeights)
         
         for (_, tileNode) in self.visibleTiles {
             tileNode.removeFromSupernode()
@@ -304,7 +317,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let currentLayoutTiles = instantPageTilesFromLayout(currentLayout, boundingWidth: containerLayout.size.width)
         
         var currentLayoutItemsWithViews: [InstantPageItem] = []
-        var distanceThresholdGroupCount: [Int: Int] = [:]
+        var distanceThresholdGroupCount: [Int : Int] = [:]
         
         for item in currentLayout.items {
             if item.wantsNode {
@@ -323,10 +336,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.currentLayout = currentLayout
         self.currentLayoutTiles = currentLayoutTiles
-        self.currentLayoutItemsWithViews = currentLayoutItemsWithViews
+        self.currentLayoutItemsWithNodes = currentLayoutItemsWithViews
         self.distanceThresholdGroupCount = distanceThresholdGroupCount
         
         self.scrollNode.view.contentSize = currentLayout.contentSize
+        
+        self.scrollNodeFooter.frame = CGRect(origin: CGPoint(x: 0.0, y: currentLayout.contentSize.height), size: CGSize(width: containerLayout.size.width, height: 2000.0))
     }
     
     func updateVisibleItems() {
@@ -373,7 +388,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var itemIndex = -1
-        for item in self.currentLayoutItemsWithViews {
+        for item in self.currentLayoutItemsWithNodes {
             itemIndex += 1
             var itemThreshold: CGFloat = 0.0
             if let group = item.distanceThresholdGroup() {
@@ -389,11 +404,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if visibleBounds.intersects(itemFrame) {
                 visibleItemIndices.insert(itemIndex)
                 
-                var itemNode = self.visibleItemsWithViews[itemIndex]
+                var itemNode = self.visibleItemsWithNodes[itemIndex]
                 if let currentItemNode = itemNode {
                     if !item.matchesNode(currentItemNode) {
                         (currentItemNode as! ASDisplayNode).removeFromSupernode()
-                        self.visibleItemsWithViews.removeValue(forKey: itemIndex)
+                        self.visibleItemsWithNodes.removeValue(forKey: itemIndex)
                         itemNode = nil
                     }
                 }
@@ -403,6 +418,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         self?.openMedia(media)
                     }, openPeer: { [weak self] peerId in
                         self?.openPeer(peerId)
+                    }, openUrl: { [weak self] url in
+                        self?.openUrl(url)
+                    }, updateWebEmbedHeight: { [weak self] key, height in
+                        self?.updateWebEmbedHeight(key, height)
                     }) {
                         itemNode.frame = item.frame
                         if let topNode = topNode {
@@ -411,7 +430,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             self.scrollNode.insertSubnode(itemNode, at: 0)
                         }
                         topNode = itemNode
-                        self.visibleItemsWithViews[itemIndex] = itemNode
+                        self.visibleItemsWithNodes[itemIndex] = itemNode
                     }
                 } else {
                     if (itemNode as! ASDisplayNode).frame != item.frame {
@@ -433,7 +452,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var removeItemIndices: [Int] = []
-        for (index, itemNode) in self.visibleItemsWithViews {
+        for (index, itemNode) in self.visibleItemsWithNodes {
             if !visibleItemIndices.contains(index) {
                 removeItemIndices.append(index)
                 (itemNode as! ASDisplayNode).removeFromSupernode()
@@ -446,7 +465,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         for index in removeItemIndices {
-            self.visibleItemsWithViews.removeValue(forKey: index)
+            self.visibleItemsWithNodes.removeValue(forKey: index)
         }
     }
     
@@ -540,7 +559,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, pageProgress: pageProgress, transition: transition)
         
         transition.animateView {
-            self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationBarFrame.size.height, left: 0.0, bottom: 0.0, right: 0.0)
+            self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationBarFrame.size.height, left: 0.0, bottom: containerLayout.intrinsicInsets.bottom, right: 0.0)
         }
     }
     
@@ -549,10 +568,15 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let location = location, let currentLayout = self.currentLayout {
             for item in currentLayout.items {
                 if item.frame.contains(location) {
-                    let textNodeFrame = item.frame
+                    let itemNodeFrame = item.frame
                     var itemRects = item.linkSelectionRects(at: location.offsetBy(dx: -item.frame.minX, dy: -item.frame.minY))
+                    var contentOffset = CGPoint()
+                    if let item = item as? InstantPageTableItem {
+                        contentOffset = tableContentOffset(item: item)
+                    }
+                    
                     for i in 0 ..< itemRects.count {
-                        itemRects[i] = itemRects[i].offsetBy(dx: textNodeFrame.minX, dy: textNodeFrame.minY).insetBy(dx: -2.0, dy: -2.0)
+                        itemRects[i] = itemRects[i].offsetBy(dx: itemNodeFrame.minX - contentOffset.x, dy: itemNodeFrame.minY).insetBy(dx: -2.0, dy: -2.0)
                     }
                     if !itemRects.isEmpty {
                         rects = itemRects
@@ -567,7 +591,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
             } else {
-                linkHighlightingNode = LinkHighlightingNode(color: UIColor(rgb: 0x007BE8).withAlphaComponent(0.4))
+                linkHighlightingNode = LinkHighlightingNode(color: UIColor(rgb: 0x007be8).withAlphaComponent(0.4))
                 linkHighlightingNode.isUserInteractionEnabled = false
                 self.linkHighlightingNode = linkHighlightingNode
                 self.scrollNode.addSubnode(linkHighlightingNode)
@@ -582,11 +606,27 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func textItemAtLocation(_ location: CGPoint) -> InstantPageTextItem? {
+    private func tableContentOffset(item: InstantPageTableItem) -> CGPoint {
+        var contentOffset = CGPoint()
+        for (_, itemNode) in self.visibleItemsWithNodes {
+            if let itemNode = itemNode as? InstantPageTableNode, itemNode.item === item {
+                contentOffset = itemNode.contentOffset
+                break
+            }
+        }
+        return contentOffset
+    }
+    
+    private func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
         if let currentLayout = self.currentLayout {
             for item in currentLayout.items {
-                if let item = item as? InstantPageTextItem, item.frame.contains(location) {
-                    return item
+                if let item = item as? InstantPageTextItem, item.selectable, item.frame.contains(location) {
+                    return (item, CGPoint())
+                } else if let item = item as? InstantPageTableItem, item.frame.contains(location) {
+                    let contentOffset = tableContentOffset(item: item)
+                    if let (textItem, parentOffset) = item.textItemAtLocation(location.offsetBy(dx: -item.frame.minX + contentOffset.x, dy: -item.frame.minY)) {
+                        return (textItem, item.frame.origin.offsetBy(dx: parentOffset.x - contentOffset.x, dy: parentOffset.y))
+                    }
                 }
             }
         }
@@ -594,8 +634,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func urlForTapLocation(_ location: CGPoint) -> InstantPageUrlItem? {
-        if let item = self.textItemAtLocation(location) {
-            return item.urlAttribute(at: location.offsetBy(dx: -item.frame.minX, dy: -item.frame.minY))
+        if let (item, parentOffset) = self.textItemAtLocation(location) {
+            return item.urlAttribute(at: location.offsetBy(dx: -item.frame.minX - parentOffset.x, dy: -item.frame.minY - parentOffset.y))
         }
         return nil
     }
@@ -638,11 +678,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     })
                                 ])])
                                 self.present(actionSheet, nil)
-                            } else if let item = self.textItemAtLocation(location) {
+                            } else if let (item, parentOffset) = self.textItemAtLocation(location) {
                                 let textNodeFrame = item.frame
                                 var itemRects = item.lineRects()
                                 for i in 0 ..< itemRects.count {
-                                    itemRects[i] = itemRects[i].offsetBy(dx: textNodeFrame.minX, dy: textNodeFrame.minY).insetBy(dx: -2.0, dy: -2.0)
+                                    itemRects[i] = itemRects[i].offsetBy(dx: parentOffset.x + textNodeFrame.minX, dy: parentOffset.y + textNodeFrame.minY).insetBy(dx: -2.0, dy: -2.0)
                                 }
                                 self.updateTextSelectionRects(itemRects, text: item.plainText())
                             }
@@ -770,6 +810,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
+        if let map = media.media as? TelegramMediaMap {
+            let controller = legacyLocationController(message: nil, mapMedia: map, account: self.account, modal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: { }, openUrl: { _ in })
+            self.pushController(controller)
+            return
+        }
+        
         if let file = media.media as? TelegramMediaFile, (file.isVoice || file.isMusic) {
             var medias: [InstantPageMedia] = []
             var initialIndex = 0
@@ -798,7 +844,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var entries: [InstantPageGalleryEntry] = []
         for media in medias {
-            entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption ?? "", location: InstantPageGalleryEntryLocation(position: Int32(entries.count), totalCount: Int32(medias.count))))
+            entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, location: InstantPageGalleryEntryLocation(position: Int32(entries.count), totalCount: Int32(medias.count))))
         }
         
         var centralIndex: Int?
@@ -811,17 +857,17 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if let centralIndex = centralIndex {
             let controller = InstantPageGalleryController(account: self.account, webPage: webPage, entries: entries, centralIndex: centralIndex, replaceRootController: { _, _ in
-            })
+            }, baseNavigationController: self.getNavigationController())
             self.hiddenMediaDisposable.set((controller.hiddenMedia |> deliverOnMainQueue).start(next: { [weak self] entry in
                 if let strongSelf = self {
-                    for (_, itemNode) in strongSelf.visibleItemsWithViews {
+                    for (_, itemNode) in strongSelf.visibleItemsWithNodes {
                         itemNode.updateHiddenMedia(media: entry?.media)
                     }
                 }
             }))
             self.present(controller, InstantPageGalleryControllerPresentationArguments(transitionArguments: { [weak self] entry -> GalleryTransitionArguments? in
                 if let strongSelf = self {
-                    for (_, itemNode) in strongSelf.visibleItemsWithViews {
+                    for (_, itemNode) in strongSelf.visibleItemsWithNodes {
                         if let transitionNode = itemNode.transitionNode(media: entry.media) {
                             return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { _ in
                             })
@@ -829,6 +875,24 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
                 return nil
+            }))
+        }
+    }
+    
+    private func updateWebEmbedHeight(_ key: Int, _ height: Int) {
+        let currentHeight = self.currentWebEmbedHeights[key]
+        if height != currentHeight {
+            if let currentHeight = currentHeight, currentHeight > height {
+                return
+            }
+            self.currentWebEmbedHeights[key] = height
+            
+            let signal: Signal<Void, NoError> = (.complete() |> delay(0.08, queue: Queue.mainQueue()))
+            self.updateLayoutDisposable.set(signal.start(completed: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.updateLayout()
+                    strongSelf.updateVisibleItems()
+                }
             }))
         }
     }

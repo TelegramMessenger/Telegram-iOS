@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		091346962183496900846E49 /* InstantPageArticleItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091346952183496900846E49 /* InstantPageArticleItem.swift */; };
+		091346982183498A00846E49 /* InstantPageArticleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091346972183498A00846E49 /* InstantPageArticleNode.swift */; };
+		0913469A218528D200846E49 /* InstantPageTableItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09134699218528D200846E49 /* InstantPageTableItem.swift */; };
+		0913469C21883C3700846E49 /* InstantPageDetailsItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0913469B21883C3700846E49 /* InstantPageDetailsItem.swift */; };
 		091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02DADBE2138D76F00116225 /* Vision.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */; };
 		092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */; };
@@ -24,6 +28,9 @@
 		0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A5210B822D00EBE194 /* OpenInOptions.swift */; };
 		0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */; };
 		0952D1772177FB5400194860 /* WatchPresetSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1762177FB5400194860 /* WatchPresetSettings.swift */; };
+		0958FBB9218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */; };
+		0958FBBB218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */; };
+		0958FBBD218B03CA00E0CBD8 /* InstantPageDetailsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBBC218B03CA00E0CBD8 /* InstantPageDetailsNode.swift */; };
 		096C98BA21787A5C00C211FF /* LegacyBridgeAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */; };
 		096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */; };
 		096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */; };
@@ -1041,6 +1048,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		091346952183496900846E49 /* InstantPageArticleItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageArticleItem.swift; sourceTree = "<group>"; };
+		091346972183498A00846E49 /* InstantPageArticleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageArticleNode.swift; sourceTree = "<group>"; };
+		09134699218528D200846E49 /* InstantPageTableItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageTableItem.swift; sourceTree = "<group>"; };
+		0913469B21883C3700846E49 /* InstantPageDetailsItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageDetailsItem.swift; sourceTree = "<group>"; };
 		092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 		092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListCallListItem.swift; sourceTree = "<group>"; };
 		09310D14213BC5DE0020033A /* anim_read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_read.json; sourceTree = "<group>"; };
@@ -1057,6 +1068,9 @@
 		0941A9A5210B822D00EBE194 /* OpenInOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInOptions.swift; sourceTree = "<group>"; };
 		0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationMuteSettingsController.swift; sourceTree = "<group>"; };
 		0952D1762177FB5400194860 /* WatchPresetSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchPresetSettings.swift; sourceTree = "<group>"; };
+		0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageFeedbackItem.swift; sourceTree = "<group>"; };
+		0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageFeedbackNode.swift; sourceTree = "<group>"; };
+		0958FBBC218B03CA00E0CBD8 /* InstantPageDetailsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageDetailsNode.swift; sourceTree = "<group>"; };
 		096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBridgeAudio.swift; sourceTree = "<group>"; };
 		096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeAudioEncoder.m; sourceTree = "<group>"; };
 		096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
@@ -3024,6 +3038,13 @@
 				D048EA8A1F4F298A00188713 /* InstantPageSettingsThemeItemNode.swift */,
 				D048EA8C1F4F299A00188713 /* InstantPageSettingsSwitchItemNode.swift */,
 				09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */,
+				09134699218528D200846E49 /* InstantPageTableItem.swift */,
+				091346952183496900846E49 /* InstantPageArticleItem.swift */,
+				091346972183498A00846E49 /* InstantPageArticleNode.swift */,
+				0913469B21883C3700846E49 /* InstantPageDetailsItem.swift */,
+				0958FBBC218B03CA00E0CBD8 /* InstantPageDetailsNode.swift */,
+				0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */,
+				0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */,
 			);
 			name = "Instant Page";
 			sourceTree = "<group>";
@@ -4827,6 +4848,7 @@
 				D0E412DF206AA00500BEE4A2 /* SecureIdVerificationDocumentsContext.swift in Sources */,
 				D0EC6CCC1EB9F58800EBF1C3 /* ServiceSoundManager.swift in Sources */,
 				D0EC6CCD1EB9F58800EBF1C3 /* DeclareEncodables.swift in Sources */,
+				0958FBBD218B03CA00E0CBD8 /* InstantPageDetailsNode.swift in Sources */,
 				D02D60B1206C189900FEFE1E /* SecureIdPlaintextFormController.swift in Sources */,
 				D0CFBB951FD8B05000B65C0D /* OverlayInstantVideoDecoration.swift in Sources */,
 				D0EC6CCE1EB9F58800EBF1C3 /* TelegramApplicationContext.swift in Sources */,
@@ -4838,6 +4860,7 @@
 				D0FC4FBB1F751E8900B7443F /* SelectablePeerNode.swift in Sources */,
 				D0E9BAD21F0573C000F079A4 /* STPToken.m in Sources */,
 				D0EC6CD31EB9F58800EBF1C3 /* GenerateTextEntities.swift in Sources */,
+				0913469A218528D200846E49 /* InstantPageTableItem.swift in Sources */,
 				D0EC6CD41EB9F58800EBF1C3 /* StringWithAppliedEntities.swift in Sources */,
 				D0192D46210F4F950005FA10 /* FixSearchableListNodeScrolling.swift in Sources */,
 				D0EC6CD51EB9F58800EBF1C3 /* StoredMessageFromSearchPeer.swift in Sources */,
@@ -4993,6 +5016,7 @@
 				D0EC6D261EB9F58800EBF1C3 /* TransformOutgoingMessageMedia.swift in Sources */,
 				D0EC6D271EB9F58800EBF1C3 /* FetchResource.swift in Sources */,
 				D048EA8F1F4F2A9C00188713 /* InstantPageSettingsItemNode.swift in Sources */,
+				0913469C21883C3700846E49 /* InstantPageDetailsItem.swift in Sources */,
 				D056CD721FF1569800880D28 /* MusicPlaybackSettings.swift in Sources */,
 				D0A723541FC3B40E0094D167 /* RadialCheckContentNode.swift in Sources */,
 				D09D88731F86D56B00BEB4C9 /* AuthorizationLayout.swift in Sources */,
@@ -5229,6 +5253,7 @@
 				09797873210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift in Sources */,
 				D0EC6D9F1EB9F58900EBF1C3 /* ChatUnreadItem.swift in Sources */,
 				D0E9B9E81EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift in Sources */,
+				091346962183496900846E49 /* InstantPageArticleItem.swift in Sources */,
 				D0EC6DA01EB9F58900EBF1C3 /* ChatHoleItem.swift in Sources */,
 				D093D82020699A7300BC3599 /* FormController.swift in Sources */,
 				D0EC6DA11EB9F58900EBF1C3 /* ChatMessageSelectionNode.swift in Sources */,
@@ -5290,6 +5315,7 @@
 				D0EC6DC11EB9F58900EBF1C3 /* ChatMediaInputTrendingItem.swift in Sources */,
 				D0BCC3D620404CD8008126C2 /* ChatMessageActionSheetControllerNode.swift in Sources */,
 				D0EC6DC21EB9F58900EBF1C3 /* ChatMediaInputStickerPackItem.swift in Sources */,
+				091346982183498A00846E49 /* InstantPageArticleNode.swift in Sources */,
 				D0EC6DC31EB9F58900EBF1C3 /* ChatMediaInputStickerGridItem.swift in Sources */,
 				D0EC6DC41EB9F58900EBF1C3 /* MultiplexedSoftwareVideoNode.swift in Sources */,
 				D0BE30432061B80B00FBE6D8 /* SecureIdAuthControllerNode.swift in Sources */,
@@ -5475,6 +5501,7 @@
 				D0EC6E2D1EB9F58900EBF1C3 /* CounterContollerTitleView.swift in Sources */,
 				D0AEAE292080FD660013176E /* StickerPaneSearchGlobaltem.swift in Sources */,
 				D0F19F6220E5694D00EEC860 /* GroupStickerPackCurrentItem.swift in Sources */,
+				0958FBBB218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift in Sources */,
 				D0EC6E2E1EB9F58900EBF1C3 /* ContactMultiselectionController.swift in Sources */,
 				D0EC6E2F1EB9F58900EBF1C3 /* ContactMultiselectionControllerNode.swift in Sources */,
 				D0EC6E301EB9F58900EBF1C3 /* ContactSelectionController.swift in Sources */,
@@ -5505,6 +5532,7 @@
 				D0EC6E3E1EB9F58900EBF1C3 /* ItemListSectionHeaderItem.swift in Sources */,
 				D0EC6E3F1EB9F58900EBF1C3 /* ItemListTextItem.swift in Sources */,
 				D0EC6E401EB9F58900EBF1C3 /* ItemListActivityTextItem.swift in Sources */,
+				0958FBB9218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift in Sources */,
 				D0EC6E411EB9F58900EBF1C3 /* ItemListEditableItem.swift in Sources */,
 				D0EC6E421EB9F58900EBF1C3 /* ItemListRevealOptionsNode.swift in Sources */,
 				D0E8175920122FE100B82BBB /* ChatRecentActionsFilterController.swift in Sources */,

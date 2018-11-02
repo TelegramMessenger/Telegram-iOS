@@ -26,13 +26,6 @@ import TelegramCore
 //    })
 //})
 
-public func useSpecialTabBarIcons() -> Bool {
-    let calendar = Calendar(identifier: .gregorian)
-    let now = calendar.dateComponents([.year, .month, .day], from: Date())
-    let target = calendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: 1540987200))
-    return now.day == target.day && now.month == target.month && now.year == target.year
-}
-
 public class ChatListController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -86,13 +79,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.navigationItem.titleView = self.titleView
             self.tabBarItem.title = self.presentationData.strings.DialogList_Title
             
-            let icon: UIImage?
-            if (useSpecialTabBarIcons()) {
-                icon = UIImage(bundleImageName: "Chat List/Tabs/IconChatsHW")
-            } else {
-                icon = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
-            }
-            
+            let icon = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
             self.tabBarItem.image = icon
             self.tabBarItem.selectedImage = icon
             

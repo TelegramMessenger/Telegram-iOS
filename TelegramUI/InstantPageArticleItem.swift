@@ -3,24 +3,30 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 
-final class InstantPageWebEmbedItem: InstantPageItem {
+final class InstantPageArticleItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
     let medias: [InstantPageMedia] = []
+    let webPage: TelegramMediaWebpage
     
-    let url: String?
-    let html: String?
-    let enableScrolling: Bool
+    let title: String
+    let description: String
+    let cover: TelegramMediaImage?
+    let url: String
+    let webpageId: MediaId
     
-    init(frame: CGRect, url: String?, html: String?, enableScrolling: Bool) {
+    init(frame: CGRect, webPage: TelegramMediaWebpage, title: String, description: String, cover: TelegramMediaImage?, url: String, webpageId: MediaId) {
         self.frame = frame
+        self.webPage = webPage
+        self.title = title
+        self.description = description
+        self.cover = cover
         self.url = url
-        self.html = html
-        self.enableScrolling = enableScrolling
+        self.webpageId = webpageId
     }
-    
+
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageWebEmbedNode(frame: self.frame, url: self.url, html: self.html, enableScrolling: self.enableScrolling, updateWebEmbedHeight: updateWebEmbedHeight)
+        return InstantPageArticleNode(account: account, webPage: self.webPage, strings: strings, theme: theme, title: self.title, description: self.description, cover: self.cover, url: self.url, webpageId: self.webpageId, openUrl: openUrl)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -28,15 +34,15 @@ final class InstantPageWebEmbedItem: InstantPageItem {
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if let node = node as? InstantPageWebEmbedNode {
-            return self.url == node.url && self.html == node.html
+        if let node = node as? InstantPageArticleNode {
+            return self.webpageId == node.webpageId
         } else {
             return false
         }
     }
     
     func distanceThresholdGroup() -> Int? {
-        return 6
+        return 7
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
@@ -47,10 +53,10 @@ final class InstantPageWebEmbedItem: InstantPageItem {
         }
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
-        return []
+    func drawInTile(context: CGContext) {
     }
     
-    func drawInTile(context: CGContext) {
+    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+        return []
     }
 }

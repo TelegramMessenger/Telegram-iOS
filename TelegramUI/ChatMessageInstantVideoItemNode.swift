@@ -380,7 +380,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             }
             (self.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
         case .changed:
-            let translation = recognizer.translation(in: self.view)
+            var translation = recognizer.translation(in: self.view)
+            translation.x = max(-80.0, min(0.0, translation.x))
             var animateReplyNodeIn = false
             if (translation.x < -45.0) != (self.currentSwipeToReplyTranslation < -45.0) {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
@@ -402,6 +403,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if animateReplyNodeIn {
                     swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                     swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                } else {
+                    swipeToReplyNode.alpha = min(1.0, abs(translation.x / 45.0))
                 }
             }
         case .cancelled, .ended:

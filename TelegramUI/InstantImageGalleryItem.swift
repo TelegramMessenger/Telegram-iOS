@@ -32,19 +32,23 @@ class InstantImageGalleryItem: GalleryItem {
     let account: Account
     let presentationData: PresentationData
     let imageReference: ImageMediaReference
-    let caption: String
+    let caption: NSAttributedString
     let location: InstantPageGalleryEntryLocation
+    let openUrl: (InstantPageUrlItem) -> Void
+    let openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(account: Account, presentationData: PresentationData, imageReference: ImageMediaReference, caption: String, location: InstantPageGalleryEntryLocation) {
+    init(account: Account, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, location: InstantPageGalleryEntryLocation, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.imageReference = imageReference
         self.caption = caption
         self.location = location
+        self.openUrl = openUrl
+        self.openUrlOptions = openUrlOptions
     }
     
     func node() -> GalleryItemNode {
-        let node = InstantImageGalleryItemNode(account: self.account, presentationData: self.presentationData)
+        let node = InstantImageGalleryItemNode(account: self.account, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
         
         node.setImage(imageReference: self.imageReference)
     
@@ -80,11 +84,13 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var fetchDisposable = MetaDisposable()
     
-    init(account: Account, presentationData: PresentationData) {
+    init(account: Account, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
         self.account = account
         
         self.imageNode = TransformImageNode()
         self.footerContentNode = InstantPageGalleryFooterContentNode(account: account, presentationData: presentationData)
+        self.footerContentNode.openUrl = openUrl
+        self.footerContentNode.openUrlOptions = openUrlOptions
         
         super.init()
         
@@ -108,7 +114,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
-    fileprivate func setCaption(_ caption: String) {
+    fileprivate func setCaption(_ caption: NSAttributedString) {
         self.footerContentNode.setCaption(caption)
     }
     

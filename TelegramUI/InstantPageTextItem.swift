@@ -1,5 +1,6 @@
 import Foundation
 import TelegramCore
+import Display
 import Postbox
 import AsyncDisplayKit
 
@@ -13,8 +14,19 @@ final class InstantPageUrlItem {
     }
 }
 
+struct InstantPageTextMarkedItem {
+    let frame: CGRect
+    let color: UIColor
+}
+
 struct InstantPageTextStrikethroughItem {
     let frame: CGRect
+}
+
+struct InstantPageTextImageItem {
+    let frame: CGRect
+    let range: NSRange
+    let id: MediaId
 }
 
 final class InstantPageTextLine {
@@ -22,13 +34,17 @@ final class InstantPageTextLine {
     let range: NSRange
     let frame: CGRect
     let strikethroughItems: [InstantPageTextStrikethroughItem]
+    let markedItems: [InstantPageTextMarkedItem]
+    let imageItems: [InstantPageTextImageItem]
     let isRTL: Bool
     
-    init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem], isRTL: Bool) {
+    init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem], markedItems: [InstantPageTextMarkedItem], imageItems: [InstantPageTextImageItem], isRTL: Bool) {
         self.line = line
         self.range = range
         self.frame = frame
         self.strikethroughItems = strikethroughItems
+        self.markedItems = markedItems
+        self.imageItems = imageItems
         self.isRTL = isRTL
     }
 }
@@ -41,9 +57,18 @@ final class InstantPageTextItem: InstantPageItem {
     var alignment: NSTextAlignment = .natural
     let medias: [InstantPageMedia] = []
     let wantsNode: Bool = false
+    var selectable: Bool = true
     
     var containsRTL: Bool {
         return !self.rtlLineIndices.isEmpty
+    }
+    
+    var imageItems: [InstantPageTextImageItem] {
+        return self.lines.reduce([InstantPageTextImageItem]()) { (items, line) in
+            var items = items
+            items.append(contentsOf: line.imageItems)
+            return items
+        }
     }
     
     init(frame: CGRect, attributedString: NSAttributedString, lines: [InstantPageTextLine]) {
@@ -65,7 +90,7 @@ final class InstantPageTextItem: InstantPageItem {
         context.saveGState()
         context.textMatrix = CGAffineTransform(scaleX: 1.0, y: -1.0)
         context.translateBy(x: self.frame.minX, y: self.frame.minY)
-        
+                
         let clipRect = context.boundingBoxOfClipPath
         
         let upperOriginBound = clipRect.minY - 10.0
@@ -90,6 +115,21 @@ final class InstantPageTextItem: InstantPageItem {
             }
             
             context.textPosition = CGPoint(x: lineOrigin.x, y: lineOrigin.y + lineFrame.size.height)
+            
+            if !line.markedItems.isEmpty {
+                context.saveGState()
+                for item in line.markedItems {
+                    context.setFillColor(item.color.cgColor)
+                    
+                    let height = floor(item.frame.size.height * 2.2)
+                    let rect = CGRect(x: item.frame.minX - 2.0, y: floor(item.frame.minY + (item.frame.height - height) / 2.0), width: item.frame.width + 4.0, height: height)
+                    let path = UIBezierPath.init(roundedRect: rect, cornerRadius: 3.0)
+                    context.addPath(path.cgPath)
+                    context.fillPath()
+                }
+                context.restoreGState()
+            }
+            
             CTLineDraw(line.line, context)
             
             if !line.strikethroughItems.isEmpty {
@@ -116,35 +156,6 @@ final class InstantPageTextItem: InstantPageItem {
             } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
                 lineFrame.origin.x = boundsWidth - lineFrame.size.width
             }
-            if lineFrame.contains(transformedPoint) {
-                var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
-                if index == attributedString.length {
-                    index -= 1
-                } else if index != 0 {
-                    var glyphStart: CGFloat = 0.0
-                    CTLineGetOffsetForStringIndex(line.line, index, &glyphStart)
-                    if transformedPoint.x < glyphStart {
-                        index -= 1
-                    }
-                }
-                if index >= 0 && index < attributedString.length {
-                    return (index, attributedString.attributes(at: index, effectiveRange: nil))
-                }
-                break
-            }
-        }
-        for i in 0 ..< self.lines.count {
-            let line = self.lines[i]
-            
-            var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
-            if self.alignment == .center {
-                lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
-            } else if self.alignment == .right {
-                lineFrame.origin.x = boundsWidth - lineFrame.size.width
-            } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
-                lineFrame.origin.x = boundsWidth - lineFrame.size.width
-            }
-            
             if lineFrame.insetBy(dx: -5.0, dy: -5.0).contains(transformedPoint) {
                 var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
                 if index == attributedString.length {
@@ -191,7 +202,6 @@ final class InstantPageTextItem: InstantPageItem {
                     } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
                         lineFrame.origin.x = boundsWidth - lineFrame.size.width
                     }
-                    
                     rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset, y: lineFrame.minY), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height)))
                 }
             }
@@ -199,7 +209,6 @@ final class InstantPageTextItem: InstantPageItem {
                 return rects
             }
         }
-        
         return nil
     }
     
@@ -211,7 +220,6 @@ final class InstantPageTextItem: InstantPageItem {
                 }
             }
         }
-        
         return []
     }
     
@@ -227,10 +235,25 @@ final class InstantPageTextItem: InstantPageItem {
     func lineRects() -> [CGRect] {
         let boundsWidth = self.frame.width
         var rects: [CGRect] = []
+        var topLeft = CGPoint(x: CGFloat.greatestFiniteMagnitude, y: 0.0)
+        var bottomRight = CGPoint()
+        
+        var lastLineFrame: CGRect?
         for i in 0 ..< self.lines.count {
             let line = self.lines[i]
             
             var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+            for imageItem in line.imageItems {
+                if imageItem.frame.minY < lineFrame.minY {
+                    let delta = lineFrame.minY - imageItem.frame.minY - 2.0
+                    lineFrame = CGRect(x: lineFrame.minX, y: lineFrame.minY - delta, width: lineFrame.width, height: lineFrame.height + delta)
+                }
+                if imageItem.frame.maxY > lineFrame.maxY {
+                    let delta = imageItem.frame.maxY - lineFrame.maxY - 2.0
+                    lineFrame = CGRect(x: lineFrame.minX, y: lineFrame.minY, width: lineFrame.width, height: lineFrame.height + delta)
+                }
+            }
+            lineFrame = lineFrame.insetBy(dx: 0.0, dy: -4.0)
             if self.alignment == .center {
                 lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
             } else if self.alignment == .right {
@@ -239,9 +262,40 @@ final class InstantPageTextItem: InstantPageItem {
                 lineFrame.origin.x = boundsWidth - lineFrame.size.width
             }
             
-            rects.append(lineFrame)
+            if lineFrame.minX < topLeft.x {
+                topLeft = CGPoint(x: lineFrame.minX, y: topLeft.y)
+            }
+            if lineFrame.maxX > bottomRight.x {
+                bottomRight = CGPoint(x: lineFrame.maxX, y: bottomRight.y)
+            }
+            
+            if self.lines.count > 1 && i == self.lines.count - 1 {
+                lastLineFrame = lineFrame
+            } else {
+                if lineFrame.minY < topLeft.y {
+                    topLeft = CGPoint(x: topLeft.x, y: lineFrame.minY)
+                }
+                if lineFrame.maxY > bottomRight.y {
+                    bottomRight = CGPoint(x: bottomRight.x, y: lineFrame.maxY)
+                }
+            }
         }
+        rects.append(CGRect(x: topLeft.x, y: topLeft.y, width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y))
+        if self.lines.count > 1, var lastLineFrame = lastLineFrame {
+            let delta = lastLineFrame.minY - bottomRight.y
+            lastLineFrame = CGRect(x: lastLineFrame.minX, y: bottomRight.y, width: lastLineFrame.width, height: lastLineFrame.height + delta)
+            rects.append(lastLineFrame)
+        }
+        
         return rects
+    }
+    
+    func effectiveWidth() -> CGFloat {
+        var width: CGFloat = 0.0
+        for line in self.lines {
+            width = max(width, line.frame.width)
+        }
+        return ceil(width)
     }
     
     func plainText() -> String {
@@ -255,7 +309,7 @@ final class InstantPageTextItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return nil
     }
     
@@ -326,17 +380,71 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
                 string.append(substring)
             }
             return string
+        case let .subscript(text):
+            styleStack.push(.subscript)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
+            styleStack.pop()
+            return result
+        case let .superscript(text):
+            styleStack.push(.superscript)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
+            styleStack.pop()
+            return result
+        case let .marked(text):
+            styleStack.push(.marker)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
+            styleStack.pop()
+            return result
+        case let .phone(text, phone):
+            styleStack.push(.bold)
+            styleStack.push(.underline)
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: InstantPageUrlItem(url: "tel:\(phone)", webpageId: nil))
+            styleStack.pop()
+            styleStack.pop()
+            return result
+        case let .image(id, dimensions):
+            struct RunStruct {
+                let ascent: CGFloat
+                let descent: CGFloat
+                let width: CGFloat
+            }
+            let extentBuffer = UnsafeMutablePointer<RunStruct>.allocate(capacity: 1)
+            extentBuffer.initialize(to: RunStruct(ascent: dimensions.height, descent: 0.0, width: dimensions.width))
+            var callbacks = CTRunDelegateCallbacks(version: kCTRunDelegateVersion1, dealloc: { (pointer) in
+            }, getAscent: { (pointer) -> CGFloat in
+                let d = pointer.assumingMemoryBound(to: RunStruct.self)
+                return d.pointee.ascent
+            }, getDescent: { (pointer) -> CGFloat in
+                let d = pointer.assumingMemoryBound(to: RunStruct.self)
+                return d.pointee.descent
+            }, getWidth: { (pointer) -> CGFloat in
+                let d = pointer.assumingMemoryBound(to: RunStruct.self)
+                return d.pointee.width
+            })
+            let delegate = CTRunDelegateCreate(&callbacks, extentBuffer)
+            let attrDictionaryDelegate = [(kCTRunDelegateAttributeName as NSAttributedStringKey): (delegate as Any), NSAttributedStringKey(rawValue: InstantPageMediaIdAttribute): id.id]
+            return NSAttributedString(string: " ", attributes: attrDictionaryDelegate)
     }
 }
 
-func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat) -> InstantPageTextItem {
+func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false) -> ([InstantPageItem], CGSize) {
     if string.length == 0 {
-        return InstantPageTextItem(frame: CGRect(), attributedString: string, lines: [])
+        return ([], CGSize())
     }
     
     var lines: [InstantPageTextLine] = []
-    guard let font = string.attribute(NSAttributedStringKey.font, at: 0, effectiveRange: nil) as? UIFont else {
-        return InstantPageTextItem(frame: CGRect(), attributedString: string, lines: [])
+    var font = string.attribute(NSAttributedStringKey.font, at: 0, effectiveRange: nil) as? UIFont
+    if font == nil {
+        let range = NSMakeRange(0, string.length)
+        string.enumerateAttributes(in: range, options: []) { attributes, range, _ in
+            if font == nil, let furtherFont = attributes[NSAttributedStringKey.font] as? UIFont {
+                font = furtherFont
+            }
+        }
+    }
+    let image = string.attribute(NSAttributedStringKey.init(rawValue: InstantPageMediaIdAttribute), at: 0, effectiveRange: nil)
+    guard font != nil || image != nil else {
+        return ([], CGSize())
     }
     
     var lineSpacingFactor: CGFloat = 1.12
@@ -345,8 +453,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     }
     
     let typesetter = CTTypesetterCreateWithAttributedString(string)
-    let fontAscent = font.ascender
-    let fontDescent = font.descender
+    let fontAscent = font?.ascender ?? 0.0
+    let fontDescent = font?.descender ?? 0.0
     
     let fontLineHeight = floor(fontAscent + fontDescent)
     let fontLineSpacing = floor(fontLineHeight * lineSpacingFactor)
@@ -354,45 +462,105 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     var lastIndex: CFIndex = 0
     var currentLineOrigin = CGPoint()
     
+    var maxImageHeight: CGFloat = 0.0
+    var extraDescent: CGFloat = 0.0
+    let text = string.string
+    var indexOffset: CFIndex?
     while true {
         let currentMaxWidth = boundingWidth - currentLineOrigin.x
-        let currentLineInset: CGFloat = 0.0
-        let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, lastIndex, Double(currentMaxWidth))
-        
+        let lineCharacterCount: CFIndex
+        var hadIndexOffset = false
+        if minimizeWidth {
+            var count = 0
+            for ch in text.suffix(text.count - lastIndex) {
+                count += 1
+                if ch == " " || ch == "\n" || ch == "\t" {
+                    break
+                }
+            }
+            lineCharacterCount = count
+        } else {
+            let suggestedLineBreak = CTTypesetterSuggestLineBreak(typesetter, lastIndex, Double(currentMaxWidth))
+            if let offset = indexOffset {
+                lineCharacterCount = suggestedLineBreak + offset
+                indexOffset = nil
+                hadIndexOffset = true
+            } else {
+                lineCharacterCount = suggestedLineBreak
+            }
+        }
         if lineCharacterCount > 0 {
             let line = CTTypesetterCreateLineWithOffset(typesetter, CFRangeMake(lastIndex, lineCharacterCount), 100.0)
-            
-            let trailingWhitespace = CGFloat(CTLineGetTrailingWhitespaceWidth(line))
-            let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil) + Double(currentLineInset))
-            
-            var strikethroughItems: [InstantPageTextStrikethroughItem] = []
-            
+            let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
             let lineRange = NSMakeRange(lastIndex, lineCharacterCount)
             
-            string.enumerateAttribute(NSAttributedStringKey.strikethroughStyle, in: lineRange, options: [], using: { item, range, _ in
-                if let item = item {
+            var strikethroughItems: [InstantPageTextStrikethroughItem] = []
+            var markedItems: [InstantPageTextMarkedItem] = []
+            
+            string.enumerateAttributes(in: lineRange, options: []) { attributes, range, _ in
+                if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
                     let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                     let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
-                    
                     strikethroughItems.append(InstantPageTextStrikethroughItem(frame: CGRect(x: currentLineOrigin.x + lowerX, y: currentLineOrigin.y, width: upperX - lowerX, height: fontLineHeight)))
-                }
-            })
-            
-            var isRTL = false
-            let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
-            if glyphRuns.count != 0 {
-                let run = glyphRuns[0] as! CTRun
-                if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
-                    isRTL = true
+                } else if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageMarkerColorAttribute)] as? UIColor {
+                    let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
+                    let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
+                    markedItems.append(InstantPageTextMarkedItem(frame: CGRect(x: currentLineOrigin.x + lowerX, y: currentLineOrigin.y, width: upperX - lowerX, height: fontLineHeight), color: item))
                 }
             }
             
-            let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: fontLineHeight), strikethroughItems: strikethroughItems, isRTL: isRTL)
+            extraDescent = 0.0
+            var imageItems: [InstantPageTextImageItem] = []
+            var isRTL = false
+            if let glyphRuns = CTLineGetGlyphRuns(line) as? [CTRun], !glyphRuns.isEmpty {
+                if let run = glyphRuns.first, CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
+                    isRTL = true
+                }
+                
+                var appliedLineOffset: CGFloat = 0.0
+                for run in glyphRuns {
+                    let cfRunRange = CTRunGetStringRange(run)
+                    let runRange = NSMakeRange(cfRunRange.location == kCFNotFound ? NSNotFound : cfRunRange.location, cfRunRange.length)
+                    string.enumerateAttributes(in: runRange, options: []) { attributes, range, _ in
+                        if let id = attributes[NSAttributedStringKey.init(rawValue: InstantPageMediaIdAttribute)] as? Int64 {
+                            var imageFrame = CGRect()
+                            var ascent: CGFloat = 0
+                            imageFrame.size.width = CGFloat(CTRunGetTypographicBounds(run, CFRangeMake(0, 0), &ascent, nil, nil))
+                            imageFrame.size.height = ascent
+                            
+                            let xOffset = CTLineGetOffsetForStringIndex(line, CTRunGetStringRange(run).location, nil)
+                            let yOffset = fontLineHeight.isZero ? 0.0 : floorToScreenPixels((fontLineHeight - imageFrame.size.height) / 2.0)
+                            imageFrame.origin = imageFrame.origin.offsetBy(dx: currentLineOrigin.x + xOffset, dy: currentLineOrigin.y + yOffset)
+                            
+                            let minSpacing = fontLineSpacing - 3.0
+                            let delta = currentLineOrigin.y - minSpacing - imageFrame.minY - appliedLineOffset
+                            if !fontAscent.isZero && delta > 0.0 {
+                                currentLineOrigin.y += delta
+                                appliedLineOffset += delta
+                                imageFrame.origin = imageFrame.origin.offsetBy(dx: 0.0, dy: delta)
+                            }
+                            if !fontLineHeight.isZero {
+                                extraDescent = max(extraDescent, imageFrame.maxY - (currentLineOrigin.y + fontLineHeight + minSpacing))
+                            }
+                            maxImageHeight = max(maxImageHeight, imageFrame.height)
+                            imageItems.append(InstantPageTextImageItem(frame: imageFrame, range: range, id: MediaId(namespace: Namespaces.Media.CloudFile, id: id)))
+                        }
+                    }
+                }
+            }
+            
+            if !minimizeWidth && !hadIndexOffset && lineWidth > currentMaxWidth, let imageItem = imageItems.last {
+                indexOffset = -(lastIndex + lineCharacterCount - imageItem.range.lowerBound)
+                continue
+            }
+            
+            let height = !fontLineHeight.isZero ? fontLineHeight : maxImageHeight
+            let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: height), strikethroughItems: strikethroughItems, markedItems: markedItems, imageItems: imageItems, isRTL: isRTL)
             
             lines.append(textLine)
             
             currentLineOrigin.x = 0.0;
-            currentLineOrigin.y += fontLineHeight + fontLineSpacing
+            currentLineOrigin.y += fontLineHeight + fontLineSpacing + extraDescent
             
             lastIndex += lineCharacterCount
         } else {
@@ -402,8 +570,23 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     
     var height: CGFloat = 0.0
     if !lines.isEmpty {
-        height = lines.last!.frame.maxY
+        height = lines.last!.frame.maxY + extraDescent
     }
     
-    return InstantPageTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: height), attributedString: string, lines: lines)
+    let textItem = InstantPageTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: height), attributedString: string, lines: lines)
+    textItem.frame = textItem.frame.offsetBy(dx: offset.x, dy: offset.y)
+    var items: [InstantPageItem] = []
+    if textItem.imageItems.isEmpty || string.length > 1 {
+        items.append(textItem)
+    }
+    
+    if let webpage = webpage {
+        for imageItem in textItem.imageItems {
+            if let image = media[imageItem.id] as? TelegramMediaFile {
+                items.append(InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, caption: nil), interactive: false, roundCorners: false, fit: false))
+            }
+        }
+    }
+    
+    return (items, textItem.frame.size)
 }

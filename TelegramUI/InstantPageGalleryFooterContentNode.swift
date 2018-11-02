@@ -17,9 +17,12 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     private var shareMedia: AnyMediaReference?
     
     private let actionButton: UIButton
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
     
-    private var currentMessageText: String?
+    private var currentMessageText: NSAttributedString?
+    
+    var openUrl: ((InstantPageUrlItem) -> Void)?
+    var openUrlOptions: ((InstantPageUrlItem) -> Void)?
     
     init(account: Account, presentationData: PresentationData) {
         self.account = account
@@ -30,9 +33,30 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         
         self.actionButton.setImage(actionImage, for: [.normal])
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 10
+        self.textNode.insets = UIEdgeInsets(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0)
+        self.textNode.linkHighlightColor = UIColor(white: 1.0, alpha: 0.4)
         
         super.init()
+        
+        self.textNode.highlightAttributeAction = { attributes in
+            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
+            } else {
+                return nil
+            }
+        }
+        self.textNode.tapAttributeAction = { [weak self] attributes in
+            if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
+                strongSelf.openUrl?(url)
+            }
+        }
+        self.textNode.longTapAttributeAction = { [weak self] attributes in
+            if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
+                strongSelf.openUrlOptions?(url)
+            }
+        }
         
         self.view.addSubview(self.actionButton)
         self.addSubnode(self.textNode)
@@ -40,16 +64,16 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
     }
     
-    func setCaption(_ caption: String) {
+    func setCaption(_ caption: NSAttributedString) {
         if self.currentMessageText != caption {
             self.currentMessageText = caption
             
-            if caption.isEmpty {
+            if caption.length == 0 {
                 self.textNode.isHidden = true
                 self.textNode.attributedText = nil
             } else {
                 self.textNode.isHidden = false
-                self.textNode.attributedText = NSAttributedString(string: caption, font: textFont, textColor: .white)
+                self.textNode.attributedText = caption
             }
             
             self.requestLayout?(.immediate)
@@ -65,9 +89,9 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         var panelHeight: CGFloat = 44.0 + bottomInset + contentInset
         if !self.textNode.isHidden {
             let sideInset: CGFloat = leftInset + 8.0
-            let topInset: CGFloat = 8.0
-            let bottomInset: CGFloat = 8.0
-            let textSize = self.textNode.measure(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let topInset: CGFloat = 0.0
+            let bottomInset: CGFloat = 0.0
+            let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
             panelHeight += textSize.height + topInset + bottomInset
             transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize))
         }

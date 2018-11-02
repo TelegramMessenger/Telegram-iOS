@@ -17,7 +17,7 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
         self.rtl = rtl
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPagePeerReferenceNode(account: account, strings: strings, theme: theme, initialPeer: self.initialPeer, rtl: self.rtl, openPeer: openPeer)
     }
     
@@ -34,7 +34,7 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
     }
     
     func distanceThresholdGroup() -> Int? {
-        return 4
+        return 5
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {

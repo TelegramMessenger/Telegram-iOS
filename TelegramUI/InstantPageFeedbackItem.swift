@@ -3,23 +3,17 @@ import Postbox
 import TelegramCore
 import AsyncDisplayKit
 
-final class InstantPageAudioItem: InstantPageItem {
+final class InstantPageFeedbackItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
-    let medias: [InstantPageMedia]
-    
-    let media: InstantPageMedia
-    let webpage: TelegramMediaWebpage
-    
-    init(frame: CGRect, media: InstantPageMedia, webpage: TelegramMediaWebpage) {
+    let medias: [InstantPageMedia] = []
+        
+    init(frame: CGRect) {
         self.frame = frame
-        self.media = media
-        self.webpage = webpage
-        self.medias = [media]
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageAudioNode(account: account, strings: strings, theme: theme, webPage: self.webpage, media: self.media, openMedia: openMedia)
+        return InstantPageFeedbackNode(account: account, strings: strings, theme: theme, openPeer: openPeer)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -27,23 +21,18 @@ final class InstantPageAudioItem: InstantPageItem {
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if let node = node as? InstantPageAudioNode {
-            return self.media == node.media
-        } else {
-            return false
+        if node is InstantPageFeedbackNode {
+            return true
         }
+        return false
     }
     
     func distanceThresholdGroup() -> Int? {
-        return 4
+        return nil
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
-        if count > 3 {
-            return 1000.0
-        } else {
-            return CGFloat.greatestFiniteMagnitude
-        }
+        return 0.0
     }
     
     func linkSelectionRects(at point: CGPoint) -> [CGRect] {
@@ -53,4 +42,3 @@ final class InstantPageAudioItem: InstantPageItem {
     func drawInTile(context: CGContext) {
     }
 }
-

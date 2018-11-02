@@ -49,13 +49,7 @@ public final class CallListController: ViewController {
         if case .tab = self.mode {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
             
-            let icon: UIImage?
-            if (useSpecialTabBarIcons()) {
-                icon = UIImage(bundleImageName: "Chat List/Tabs/IconCallsHW")
-            } else {
-                icon = UIImage(bundleImageName: "Chat List/Tabs/IconCalls")
-            }
-            
+            let icon = UIImage(bundleImageName: "Chat List/Tabs/IconCalls") 
             self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle
             self.tabBarItem.image = icon
             self.tabBarItem.selectedImage = icon
