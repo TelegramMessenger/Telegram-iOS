@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public struct StickerPackCollectionInfoFlags : OptionSet {
+public struct StickerPackCollectionInfoFlags: OptionSet {
     public var rawValue: Int32
     
     public init(rawValue: Int32) {

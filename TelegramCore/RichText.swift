@@ -16,6 +16,11 @@ private enum RichTextTypes: Int32 {
     case url = 7
     case email = 8
     case concat = 9
+    case `subscript` = 10
+    case superscript = 11
+    case marked = 12
+    case phone = 13
+    case image = 14
 }
 
 public indirect enum RichText: PostboxCoding, Equatable {
@@ -29,6 +34,11 @@ public indirect enum RichText: PostboxCoding, Equatable {
     case url(text: RichText, url: String, webpageId: MediaId?)
     case email(text: RichText, email: String)
     case concat([RichText])
+    case `subscript`(RichText)
+    case superscript(RichText)
+    case marked(RichText)
+    case phone(text: RichText, phone: String)
+    case image(id: MediaId, dimensions: CGSize)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -58,6 +68,16 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 self = .email(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, email: decoder.decodeStringForKey("e", orElse: ""))
             case RichTextTypes.concat.rawValue:
                 self = .concat(decoder.decodeObjectArrayWithDecoderForKey("a"))
+            case RichTextTypes.subscript.rawValue:
+                self = .subscript(decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
+            case RichTextTypes.superscript.rawValue:
+                self = .superscript(decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
+            case RichTextTypes.marked.rawValue:
+                self = .marked(decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText)
+            case RichTextTypes.phone.rawValue:
+                self = .phone(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, phone: decoder.decodeStringForKey("p", orElse: ""))
+            case RichTextTypes.image.rawValue:
+                self = .image(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0)), dimensions: CGSize(width: CGFloat(decoder.decodeInt32ForKey("sw", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("sh", orElse: 0))))
             default:
                 self = .empty
         }
@@ -103,6 +123,25 @@ public indirect enum RichText: PostboxCoding, Equatable {
             case let .concat(texts):
                 encoder.encodeInt32(RichTextTypes.concat.rawValue, forKey: "r")
                 encoder.encodeObjectArray(texts, forKey: "a")
+            case let .subscript(text):
+                encoder.encodeInt32(RichTextTypes.subscript.rawValue, forKey: "r")
+                encoder.encodeObject(text, forKey: "t")
+            case let .superscript(text):
+                encoder.encodeInt32(RichTextTypes.superscript.rawValue, forKey: "r")
+                encoder.encodeObject(text, forKey: "t")
+            case let .marked(text):
+                encoder.encodeInt32(RichTextTypes.marked.rawValue, forKey: "r")
+                encoder.encodeObject(text, forKey: "t")
+            case let .phone(text, phone):
+                encoder.encodeInt32(RichTextTypes.phone.rawValue, forKey: "r")
+                encoder.encodeObject(text, forKey: "t")
+                encoder.encodeString(phone, forKey: "p")
+            case let .image(id, dimensions):
+                encoder.encodeInt32(RichTextTypes.image.rawValue, forKey: "r")
+                encoder.encodeInt32(id.namespace, forKey: "i.n")
+                encoder.encodeInt64(id.id, forKey: "i.i")
+                encoder.encodeInt32(Int32(dimensions.width), forKey: "sw")
+                encoder.encodeInt32(Int32(dimensions.height), forKey: "sh")
         }
     }
     
@@ -168,6 +207,36 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
+            case let .subscript(text):
+                if case .subscript(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .superscript(text):
+                if case .superscript(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .marked(text):
+                if case .marked(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .phone(text, phone):
+                if case .phone(text, phone) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .image(id, dimensions):
+                if case .image(id, dimensions) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -199,6 +268,16 @@ public extension RichText {
                     string += text.plainText
                 }
                 return string
+            case let .subscript(text):
+                return text.plainText
+            case let .superscript(text):
+                return text.plainText
+            case let .marked(text):
+                return text.plainText
+            case let .phone(text, _):
+                return text.plainText
+            case .image:
+                return ""
         }
     }
 }
@@ -226,6 +305,16 @@ extension RichText {
                 self = .email(text: RichText(apiText: text), email: email)
             case let .textConcat(texts):
                 self = .concat(texts.map({ RichText(apiText: $0) }))
+            case let .textSubscript(text):
+                self = .subscript(RichText(apiText: text))
+            case let .textSuperscript(text):
+                self = .superscript(RichText(apiText: text))
+            case let .textMarked(text):
+                self = .marked(RichText(apiText: text))
+            case let .textPhone(text, phone):
+                self = .phone(text: RichText(apiText: text), phone: phone)
+            case let .textImage(documentId, w, h):
+                self = .image(id: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)))
         }
     }
 }
