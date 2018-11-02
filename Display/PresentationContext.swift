@@ -31,6 +31,8 @@ final class PresentationContext {
         }
     }
     
+    var updateIsInteractionBlocked: ((Bool) -> Void)?
+    
     private var layout: ContainerViewLayout?
     
     private var ready: Bool {
@@ -43,7 +45,29 @@ final class PresentationContext {
     
     var topLevelSubview: UIView?
     
-    public func present(_ controller: ViewController, on: PresentationSurfaceLevel) {
+    private var nextBlockInteractionToken = 0
+    private var blockInteractionTokens = Set<Int>()
+    
+    private func addBlockInteraction() -> Int {
+        let token = self.nextBlockInteractionToken
+        self.nextBlockInteractionToken += 1
+        let wasEmpty = self.blockInteractionTokens.isEmpty
+        self.blockInteractionTokens.insert(token)
+        if wasEmpty {
+            self.updateIsInteractionBlocked?(true)
+        }
+        return token
+    }
+    
+    private func removeBlockInteraction(_ token: Int) {
+        let wasEmpty = self.blockInteractionTokens.isEmpty
+        self.blockInteractionTokens.remove(token)
+        if !wasEmpty && self.blockInteractionTokens.isEmpty {
+            self.updateIsInteractionBlocked?(false)
+        }
+    }
+    
+    public func present(_ controller: ViewController, on: PresentationSurfaceLevel, blockInteraction: Bool = false) {
         let controllerReady = controller.ready.get()
         |> filter({ $0 })
         |> take(1)
@@ -63,9 +87,21 @@ final class PresentationContext {
             }
             controller.view.frame = CGRect(origin: CGPoint(), size: initialLayout.size)
             controller.containerLayoutUpdated(initialLayout, transition: .immediate)
-        
-            self.presentationDisposables.add(controllerReady.start(next: { [weak self] _ in
+            var blockInteractionToken: Int?
+            if blockInteraction {
+                blockInteractionToken = self.addBlockInteraction()
+            }
+            self.presentationDisposables.add((controllerReady |> afterDisposed { [weak self] in
+                Queue.mainQueue().async {
+                    if let blockInteractionToken = blockInteractionToken {
+                        self?.removeBlockInteraction(blockInteractionToken)
+                    }
+                }
+            }).start(next: { [weak self] _ in
                 if let strongSelf = self {
+                    if let blockInteractionToken = blockInteractionToken {
+                        strongSelf.removeBlockInteraction(blockInteractionToken)
+                    }
                     if strongSelf.controllers.contains(where: { $0 === controller }) {
                         return
                     }

@@ -208,7 +208,7 @@ public final class WindowHostView {
     let updateDeferScreenEdgeGestures: (UIRectEdge) -> Void
     let updatePreferNavigationUIHidden: (Bool) -> Void
     
-    var present: ((ViewController, PresentationSurfaceLevel) -> Void)?
+    var present: ((ViewController, PresentationSurfaceLevel, Bool) -> Void)?
     var presentInGlobalOverlay: ((_ controller: ViewController) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
     var updateSize: ((CGSize, Double) -> Void)?
@@ -246,7 +246,7 @@ public struct WindowTracingTags {
 
 public protocol WindowHost {
     func forEachController(_ f: (ViewController) -> Void)
-    func present(_ controller: ViewController, on level: PresentationSurfaceLevel)
+    func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool)
     func presentInGlobalOverlay(_ controller: ViewController)
     func invalidateDeferScreenEdgeGestures()
     func invalidatePreferNavigationUIHidden()
@@ -321,6 +321,8 @@ public class Window1 {
     private let volumeControlStatusBar: VolumeControlStatusBar
     private let volumeControlStatusBarNode: VolumeControlStatusBarNode
     
+    private var isInteractionBlocked = false
+    
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         
@@ -350,8 +352,12 @@ public class Window1 {
         self.presentationContext = PresentationContext()
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost)
         
-        self.hostView.present = { [weak self] controller, level in
-            self?.present(controller, on: level)
+        self.presentationContext.updateIsInteractionBlocked = { [weak self] value in
+            self?.isInteractionBlocked = value
+        }
+        
+        self.hostView.present = { [weak self] controller, level, blockInteraction in
+            self?.present(controller, on: level, blockInteraction: blockInteraction)
         }
         
         self.hostView.presentInGlobalOverlay = { [weak self] controller in
@@ -554,6 +560,9 @@ public class Window1 {
     }
     
     public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.isInteractionBlocked {
+            return nil
+        }
         if let coveringView = self.coveringView, !coveringView.isHidden, coveringView.superview != nil, coveringView.frame.contains(point) {
             return coveringView.hitTest(point, with: event)
         }
@@ -877,8 +886,8 @@ public class Window1 {
         }
     }
     
-    public func present(_ controller: ViewController, on level: PresentationSurfaceLevel) {
-        self.presentationContext.present(controller, on: level)
+    public func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false) {
+        self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction)
     }
     
     public func presentInGlobalOverlay(_ controller: ViewController) {

@@ -11,9 +11,19 @@ private let defaultOrientations: UIInterfaceOrientationMask = {
     }
 }()
 
+public final class PreviewingHostViewDelegate {
+    public let controllerForLocation: (UIView, CGPoint) -> (UIViewController, CGRect)?
+    public let commitController: (UIViewController) -> Void
+    
+    public init(controllerForLocation: @escaping (UIView, CGPoint) -> (UIViewController, CGRect)?, commitController: @escaping (UIViewController) -> Void) {
+        self.controllerForLocation = controllerForLocation
+        self.commitController = commitController
+    }
+}
+
 public protocol PreviewingHostView {
     @available(iOSApplicationExtension 9.0, *)
-    var previewingDelegate: UIViewControllerPreviewingDelegate? { get }
+    var previewingDelegate: PreviewingHostViewDelegate? { get }
 }
 
 private func tracePreviewingHostView(view: UIView, point: CGPoint) -> (UIView & PreviewingHostView, CGPoint)? {
@@ -136,7 +146,10 @@ private final class WindowRootViewController: UIViewController, UIViewController
             }
             if let (result, resultPoint) = tracePreviewingHostView(view: result, point: self.view.convert(location, to: result)), let delegate = result.previewingDelegate {
                 self.previousPreviewingHostView = result
-                return delegate.previewingContext(previewingContext, viewControllerForLocation: resultPoint)
+                if let (controller, rect) = delegate.controllerForLocation(previewingContext.sourceView, resultPoint) {
+                    previewingContext.sourceRect = rect
+                    return controller
+                }
             }
         }
         return nil
@@ -145,7 +158,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
         if #available(iOSApplicationExtension 9.0, *) {
             if let previousPreviewingHostView = self.previousPreviewingHostView, let delegate = previousPreviewingHostView.previewingDelegate {
-                delegate.previewingContext(previewingContext, commit: viewControllerToCommit)
+                delegate.commitController(viewControllerToCommit)
             }
             self.previousPreviewingHostView = nil
         }
@@ -157,7 +170,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var layoutSubviewsEvent: (() -> Void)?
     var updateIsUpdatingOrientationLayout: ((Bool) -> Void)?
     var updateToInterfaceOrientation: (() -> Void)?
-    var presentController: ((ViewController, PresentationSurfaceLevel) -> Void)?
+    var presentController: ((ViewController, PresentationSurfaceLevel, Bool) -> Void)?
     var presentControllerInGlobalOverlay: ((_ controller: ViewController) -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentNativeImpl: ((UIViewController) -> Void)?
@@ -235,8 +248,8 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.updateToInterfaceOrientation?()
     }*/
     
-    func present(_ controller: ViewController, on level: PresentationSurfaceLevel) {
-        self.presentController?(controller, level)
+    func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool) {
+        self.presentController?(controller, level, blockInteraction)
     }
     
     func presentInGlobalOverlay(_ controller: ViewController) {
@@ -324,8 +337,8 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         hostView?.updateToInterfaceOrientation?()
     }
     
-    window.presentController = { [weak hostView] controller, level in
-        hostView?.present?(controller, level)
+    window.presentController = { [weak hostView] controller, level, blockInteraction in
+        hostView?.present?(controller, level, blockInteraction)
     }
     
     window.presentControllerInGlobalOverlay = { [weak hostView] controller in
@@ -358,7 +371,7 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     
     rootViewController.presentController = { [weak hostView] controller, level, animated, completion in
         if let hostView = hostView {
-            hostView.present?(LegacyPresentedController(legacyController: controller, presentation: .custom), level)
+            hostView.present?(LegacyPresentedController(legacyController: controller, presentation: .custom), level, false)
             completion?()
         }
     }
