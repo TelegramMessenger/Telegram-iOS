@@ -224,7 +224,7 @@ func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<EnqueueMess
             let finalDimensions = TGMediaVideoConverter.dimensions(for: dimensions, adjustments: nil, preset: TGMediaVideoConversionPresetAnimation)
             
             var fileAttributes: [TelegramMediaFileAttribute] = []
-            fileAttributes.append(.Video(duration: Int(0), size: finalDimensions, flags: []))
+            fileAttributes.append(.Video(duration: Int(0), size: finalDimensions, flags: [.supportsStreaming]))
             fileAttributes.append(.FileName(fileName: fileName))
             fileAttributes.append(.Animated)
             
@@ -398,7 +398,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                 fileAttributes.append(.Animated)
                             }
                             if !asFile {
-                                fileAttributes.append(.Video(duration: Int(finalDuration), size: finalDimensions, flags: []))
+                                fileAttributes.append(.Video(duration: Int(finalDuration), size: finalDimensions, flags: [.supportsStreaming]))
                                 if let adjustments = adjustments {
                                     if adjustments.sendAsGif {
                                         fileAttributes.append(.Animated)

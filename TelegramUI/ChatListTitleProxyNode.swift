@@ -46,7 +46,7 @@ final class ChatTitleProxyNode: ASDisplayNode {
                     case .available:
                         self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: false, off: true)
                 }
-                self.activityIndicator.type = .custom(theme.rootController.navigationBar.accentTextColor, 10.0, 1.0, false)
+                self.activityIndicator.type = .custom(theme.rootController.navigationBar.accentTextColor, 10.0, 1.0, true)
             }
         }
     }

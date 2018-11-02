@@ -610,11 +610,16 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: strings.Conversation_Processing))
                             }
                         } else {
-                            if let _ = file.size {
+                            if isMediaStreamable(message: message, media: file), let _ = file.size {
                                 if !message.flags.contains(.Unsent) {
                                     let progressString = String(format: "%d%%", Int(progress * 100.0))
                                     badgeContent = .text(inset: 16.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: progressString))
                                     mediaDownloadState = .compactFetching(progress: progress)
+                                }
+                            } else {
+                                if let duration = file.duration, !file.isAnimated {
+                                    let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
+                                    badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                                 }
                             }
                         }
@@ -670,7 +675,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 badgeContent = .text(inset: 16.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                                 mediaDownloadState = .compactRemote
                             } else {
-                                badgeContent = .text(inset: 16.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                                badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                             }
                         }
                     }
