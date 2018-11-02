@@ -52,7 +52,7 @@ final class ChatListHighlightedLocation {
 final class ChatListNodeInteraction {
     let activateSearch: () -> Void
     let peerSelected: (Peer) -> Void
-    let messageSelected: (Message) -> Void
+    let messageSelected: (Message, Bool) -> Void
     let groupSelected: (PeerGroupId) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let setItemPinned: (PinnedItemId, Bool) -> Void
@@ -63,7 +63,7 @@ final class ChatListNodeInteraction {
     
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, messageSelected: @escaping (Message) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void) {
+    init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, messageSelected: @escaping (Message, Bool) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.messageSelected = messageSelected
@@ -291,7 +291,7 @@ final class ChatListNode: ListView {
         return _ready.get()
     }
     
-    var peerSelected: ((PeerId, Bool) -> Void)?
+    var peerSelected: ((PeerId, Bool, Bool) -> Void)?
     var groupSelected: ((PeerGroupId) -> Void)?
     var activateSearch: (() -> Void)?
     var deletePeerChat: ((PeerId) -> Void)?
@@ -361,11 +361,11 @@ final class ChatListNode: ListView {
             }
         }, peerSelected: { [weak self] peer in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                peerSelected(peer.id, true)
+                peerSelected(peer.id, true, false)
             }
-        }, messageSelected: { [weak self] message in
+        }, messageSelected: { [weak self] message, isAd in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                peerSelected(message.id.peerId, true)
+                peerSelected(message.id.peerId, true, isAd)
             }
         }, groupSelected: { [weak self] groupId in
             if let strongSelf = self, let groupSelected = strongSelf.groupSelected {
@@ -1054,7 +1054,7 @@ final class ChatListNode: ListView {
                             , scrollPosition: .center(.top), animated: true)
                         strongSelf.currentLocation = location
                         strongSelf.chatListLocation.set(location)
-                        strongSelf.peerSelected?(index.messageIndex.id.peerId, false)
+                        strongSelf.peerSelected?(index.messageIndex.id.peerId, false, false)
                     })
                     break
                 case .previous(unread: false), .next(unread: false):
@@ -1082,7 +1082,7 @@ final class ChatListNode: ListView {
                             , scrollPosition: .center(.top), animated: true)
                         self.currentLocation = location
                         self.chatListLocation.set(location)
-                        self.peerSelected?(target.1, false)
+                        self.peerSelected?(target.1, false, false)
                     }
                     break
             }

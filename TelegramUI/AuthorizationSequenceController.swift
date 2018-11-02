@@ -258,7 +258,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                                     let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                                                         transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
                                                     }).start()
-                                                })]), on: .root)
+                                                })]), on: .root, blockInteraction: false)
                                             })
                                         ], actionLayout: .vertical)
                                         contentNode.textAttributeAction = (NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), { value in
@@ -271,7 +271,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                             controller?.dismissAnimated()
                                         }
                                         strongSelf.view.endEditing(true)
-                                        strongSelf.currentWindow?.present(controller, on: .root)
+                                        strongSelf.currentWindow?.present(controller, on: .root, blockInteraction: false)
                                     }
                                     presentAlertAgainImpl = {
                                         presentAlertImpl()

@@ -97,9 +97,9 @@ class ChatListItem: ListViewItem {
     
     func selected(listView: ListView) {
         switch self.content {
-            case let .peer(message, peer, _, _, _, _, _, _, _):
+            case let .peer(message, peer, _, _, _, _, _, isAd, _):
                 if let message = message {
-                    self.interaction.messageSelected(message)
+                    self.interaction.messageSelected(message, isAd)
                 } else if let peer = peer.peers[peer.peerId] {
                     self.interaction.peerSelected(peer)
                 }

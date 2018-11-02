@@ -347,7 +347,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                     return addMembers(contacts) |> `catch` { error -> Signal<Void, NoError> in
                         return .single(Void())
                     } |> mapToSignal { _ in
-                        return channelMembers(postbox: account.postbox, network: account.network, peerId: peerId)
+                        return channelMembers(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId)
                         } |> deliverOnMainQueue |> afterNext { _ in
                             contactsController?.dismiss()
                     }
@@ -412,7 +412,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     
     let peerView = account.viewTracker.peerView(peerId)
     
-    let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, updated: { state in
+    let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { state in
         peersPromise.set(.single(state.list))
     })
     actionsDisposable.add(disposable)

@@ -85,6 +85,7 @@
 		D0185E882089ED5F005E1A6C /* ProxyListSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */; };
 		D0185E8A208A01AF005E1A6C /* ProxySettingsActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */; };
 		D0185E8C208A025A005E1A6C /* ProxySettingsServerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E8B208A025A005E1A6C /* ProxySettingsServerItem.swift */; };
+		D018BE58218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018BE57218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift */; };
 		D0192D3C210A44D00005FA10 /* DeviceContactData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0192D3B210A44D00005FA10 /* DeviceContactData.swift */; };
 		D0192D44210A5AA50005FA10 /* DeviceContactDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0192D43210A5AA50005FA10 /* DeviceContactDataManager.swift */; };
 		D0192D46210F4F950005FA10 /* FixSearchableListNodeScrolling.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0192D45210F4F940005FA10 /* FixSearchableListNodeScrolling.swift */; };
@@ -1168,6 +1169,7 @@
 		D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyListSettingsController.swift; sourceTree = "<group>"; };
 		D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingsActionItem.swift; sourceTree = "<group>"; };
 		D0185E8B208A025A005E1A6C /* ProxySettingsServerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingsServerItem.swift; sourceTree = "<group>"; };
+		D018BE57218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageDeliveryFailedNode.swift; sourceTree = "<group>"; };
 		D018D3311E6460B300C5E089 /* ChatUnblockInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatUnblockInputPanelNode.swift; sourceTree = "<group>"; };
 		D018D3341E6489EC00C5E089 /* CreateChannelController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CreateChannelController.swift; sourceTree = "<group>"; };
 		D0192D3B210A44D00005FA10 /* DeviceContactData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceContactData.swift; sourceTree = "<group>"; };
@@ -4202,6 +4204,7 @@
 				D0E8174F2012027900B82BBB /* ChatMessageEventLogPreviousLinkContentNode.swift */,
 				D0B69C3820EBB397003632C7 /* ChatMessageInteractiveInstantVideoNode.swift */,
 				D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */,
+				D018BE57218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -5137,6 +5140,7 @@
 				D0CE6F6E213EDF8800BCD44B /* SecureIdAuthPasswordSetupContentNode.swift in Sources */,
 				D07E413D208A494D00FCA8F0 /* ProxyServerActionSheetController.swift in Sources */,
 				D02C81732177AC5900CD1006 /* NotificationSearchItem.swift in Sources */,
+				D018BE58218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift in Sources */,
 				D0EC6D681EB9F58800EBF1C3 /* AuthorizationSequenceController.swift in Sources */,
 				D0EC6D691EB9F58800EBF1C3 /* AuthorizationSequenceSplashController.swift in Sources */,
 				D0EC6D6A1EB9F58800EBF1C3 /* AuthorizationSequenceSplashControllerNode.swift in Sources */,

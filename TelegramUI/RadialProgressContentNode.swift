@@ -210,7 +210,7 @@ private final class RadialProgressContentCancelNode: ASDisplayNode {
                 let factor = diameter / 50.0
                 
                 context.setStrokeColor(parameters.color.cgColor)
-                context.setLineWidth(max(1.6, 2.0 * factor))
+                context.setLineWidth(max(1.3, 2.0 * factor))
                 context.setLineCap(.round)
                 
                 let crossSize: CGFloat = 14.0 * factor

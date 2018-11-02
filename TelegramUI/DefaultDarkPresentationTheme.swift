@@ -180,7 +180,9 @@ private let bubble = PresentationThemeChatBubble(
     selectionControlBorderColor: .white,
     selectionControlFillColor: accentColor,
     selectionControlForegroundColor: .black,
-    mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6)
+    mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
+    deliveryFailedFillColor: destructiveColor,
+    deliveryFailedForegroundColor: .white
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(

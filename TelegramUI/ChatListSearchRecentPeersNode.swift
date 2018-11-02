@@ -202,7 +202,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
             }
         }))
         if case .actionSheet = mode {
-            peersDisposable.add(managedUpdatedRecentPeers(postbox: account.postbox, network: account.network).start())
+            peersDisposable.add(managedUpdatedRecentPeers(accountPeerId: account.peerId, postbox: account.postbox, network: account.network).start())
         }
         self.disposable.set(peersDisposable)
     }

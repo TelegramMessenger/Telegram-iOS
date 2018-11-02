@@ -68,27 +68,7 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
-@available(iOSApplicationExtension 9.0, *)
-private final class ChatControllerPreviewingDelegate: NSObject, UIViewControllerPreviewingDelegate {
-    private weak var target: (NSObject & UIViewControllerPreviewingDelegate)?
-    
-    init(target: NSObject & UIViewControllerPreviewingDelegate) {
-        self.target = target
-        
-        super.init()
-    }
-    
-    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
-        return self.target?.previewingContext(previewingContext, viewControllerForLocation: location)
-    }
-    
-    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
-        self.target?.previewingContext(previewingContext, commit: viewControllerToCommit)
-    }
-}
-
-public final class ChatController: TelegramController, KeyShortcutResponder, UIDropInteractionDelegate, UIViewControllerPreviewingDelegate {
-    private var previewingDelegate: AnyObject?
+public final class ChatController: TelegramController, KeyShortcutResponder, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     public var peekActions: ChatControllerPeekActions = .standard
@@ -322,7 +302,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             return openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
-                self?.present(c, in: .window(.root), with: a)
+                self?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, transitionNode: { messageId, media in
                 var selectedNode: (ASDisplayNode, () -> UIView?)?
                 if let strongSelf = self {
@@ -1000,6 +980,49 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 default:
                     break
             }
+        }, requestRedeliveryOfFailedMessages: { [weak self] id in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = (strongSelf.account.postbox.transaction { transaction -> [Message] in
+                return transaction.getMessageFailedGroup(id) ?? []
+            } |> deliverOnMainQueue).start(next: { messages in
+                guard let strongSelf = self, !messages.isEmpty else {
+                    return
+                }
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                var items: [ActionSheetItem] = []
+                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_MessageDialogRetry, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = resendMessages(account: strongSelf.account, messageIds: [id]).start()
+                }))
+                if messages.count != 1 {
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_MessageDialogRetryAll(messages.count).0, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = resendMessages(account: strongSelf.account, messageIds: messages.map({ $0.id })).start()
+                    }))
+                }
+                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_MessageDialogDelete, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: messages.map({ $0.id }), type: .forLocalPeer).start()
+                }))
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                strongSelf.chatDisplayNode.dismissInput()
+                strongSelf.present(actionSheet, in: .window(.root))
+            })
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -1069,7 +1092,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     peerView.set(account.viewTracker.peerView(peerId))
                     var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        onlineMemberCount = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: account.postbox, network: account.network, peerId: peerId)
+                        onlineMemberCount = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId)
                         |> map(Optional.init)
                     }
                     self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount)
@@ -1101,8 +1124,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             strongSelf.peerView = peerView
                             if wasGroupChannel != isGroupChannel {
                                 if let isGroupChannel = isGroupChannel, isGroupChannel {
-                                    let (recentDisposable, _) = strongSelf.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: strongSelf.account.postbox, network: strongSelf.account.network, peerId: peerView.peerId, updated: { _ in })
-                                    let (adminsDisposable, _) = strongSelf.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: strongSelf.account.postbox, network: strongSelf.account.network, peerId: peerView.peerId, updated: { _ in })
+                                    let (recentDisposable, _) = strongSelf.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: strongSelf.account.postbox, network: strongSelf.account.network, accountPeerId: account.peerId, peerId: peerView.peerId, updated: { _ in })
+                                    let (adminsDisposable, _) = strongSelf.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: strongSelf.account.postbox, network: strongSelf.account.network, accountPeerId: account.peerId, peerId: peerView.peerId, updated: { _ in })
                                     let disposable = DisposableSet()
                                     disposable.add(recentDisposable)
                                     disposable.add(adminsDisposable)
@@ -1874,7 +1897,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         
         self.chatDisplayNode.navigateButtons.mentionsPressed = { [weak self] in
             if let strongSelf = self, strongSelf.isNodeLoaded, case let .peer(peerId) = strongSelf.chatLocation {
-                let signal = earliestUnseenPersonalMentionMessage(postbox: strongSelf.account.postbox, network: strongSelf.account.network, peerId: peerId)
+                let signal = earliestUnseenPersonalMentionMessage(postbox: strongSelf.account.postbox, network: strongSelf.account.network, accountPeerId: strongSelf.account.peerId, peerId: peerId)
                 strongSelf.navigationActionDisposable.set((signal |> deliverOnMainQueue).start(next: { result in
                     if let strongSelf = self {
                         switch result {
@@ -2863,19 +2886,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
             if #available(iOSApplicationExtension 9.0, *) {
-                let previewingDelegate: ChatControllerPreviewingDelegate
-                if let current = self.previewingDelegate as? ChatControllerPreviewingDelegate {
-                    previewingDelegate = current
-                } else {
-                    previewingDelegate = ChatControllerPreviewingDelegate(target: self)
-                    self.previewingDelegate = previewingDelegate
-                }
-                
-                //self.registerForPreviewing(with: previewingDelegate, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
+                //self.registerForPreviewing(with: self, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
                 if case .peer = self.chatLocation, let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view {
-                    //self.registerForPreviewing(with: previewingDelegate, sourceView: buttonView, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
+                    //self.registerForPreviewing(with: self, sourceView: buttonView, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
                 }
-                //self.registerForPreviewing(with: previewingDelegate, sourceView: self.chatDisplayNode.historyNodeContainer.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: true)
             }
             
             if #available(iOSApplicationExtension 11.0, *) {
@@ -4676,76 +4690,79 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         }
     }
     
+    func avatarPreviewingController(from sourceView: UIView) -> (UIViewController, CGRect)? {
+        guard let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view else {
+            return nil
+        }
+        if let peer = self.presentationInterfaceState.renderedPeer?.peer, peer.smallProfileImage != nil {
+            let galleryController = AvatarGalleryController(account: self.account, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
+            }, synchronousLoad: true)
+            galleryController.setHintWillBePresentedInPreviewingContext(true)
+            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+            return (galleryController, buttonView.convert(buttonView.bounds, to: sourceView))
+        }
+        return nil
+    }
     
-    
-    @available(iOSApplicationExtension 9.0, *)
-    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
-        if previewingContext.sourceView === (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view {
-            if let peer = self.presentationInterfaceState.renderedPeer?.peer, peer.smallProfileImage != nil {
-                let galleryController = AvatarGalleryController(account: self.account, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
-                }, synchronousLoad: true)
-                galleryController.setHintWillBePresentedInPreviewingContext(true)
-                galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
-                return galleryController
-            }
-        } else {
-            let historyPoint = previewingContext.sourceView.convert(location, to: self.chatDisplayNode.historyNode.view)
-            var result: (Message, ChatMessagePeekPreviewContent)?
-            self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                if let itemNode = itemNode as? ChatMessageItemView {
-                    if itemNode.frame.contains(historyPoint) {
-                        if let value = itemNode.peekPreviewContent(at: self.chatDisplayNode.historyNode.view.convert(historyPoint, to: itemNode.view)) {
-                            result = value
-                        }
+    func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
+        let historyPoint = sourceView.convert(location, to: self.chatDisplayNode.historyNode.view)
+        var result: (Message, ChatMessagePeekPreviewContent)?
+        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if itemNode.frame.contains(historyPoint) {
+                    if let value = itemNode.peekPreviewContent(at: self.chatDisplayNode.historyNode.view.convert(historyPoint, to: itemNode.view)) {
+                        result = value
                     }
                 }
             }
-            if let (message, content) = result {
-                switch content {
-                    case let .media(media):
-                        var selectedTransitionNode: (ASDisplayNode, () -> UIView?)?
-                        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? ChatMessageItemView {
-                                if let result = itemNode.transitionNode(id: message.id, media: media) {
-                                    selectedTransitionNode = result
-                                }
+        }
+        if let (message, content) = result {
+            switch content {
+                case let .media(media):
+                    var selectedTransitionNode: (ASDisplayNode, () -> UIView?)?
+                    self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView {
+                            if let result = itemNode.transitionNode(id: message.id, media: media) {
+                                selectedTransitionNode = result
                             }
                         }
-                        
-                        if let selectedTransitionNode = selectedTransitionNode {
-                            if let previewData = chatMessagePreviewControllerData(account: self.account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: self.navigationController as? NavigationController) {
-                                switch previewData {
-                                    case let .gallery(gallery):
-                                        gallery.setHintWillBePresentedInPreviewingContext(true)
-                                        let rect = selectedTransitionNode.0.view.convert(selectedTransitionNode.0.bounds, to: previewingContext.sourceView)
-                                        previewingContext.sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
-                                        gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
-                                        return gallery
-                                    case let .instantPage(gallery, centralIndex, galleryMedia):
-                                        break
-                                }
+                    }
+                    
+                    if let selectedTransitionNode = selectedTransitionNode {
+                        if let previewData = chatMessagePreviewControllerData(account: self.account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: self.navigationController as? NavigationController) {
+                            switch previewData {
+                                case let .gallery(gallery):
+                                    gallery.setHintWillBePresentedInPreviewingContext(true)
+                                    let rect = selectedTransitionNode.0.view.convert(selectedTransitionNode.0.bounds, to: sourceView)
+                                    let sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
+                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                                    return (gallery, sourceRect)
+                                case let .instantPage(gallery, centralIndex, galleryMedia):
+                                    break
                             }
                         }
-                    case let .url(node, rect, string):
-                        let targetRect = node.view.convert(rect, to: previewingContext.sourceView)
-                        previewingContext.sourceRect = CGRect(origin: CGPoint(x: floor(targetRect.midX), y: floor(targetRect.midY)), size: CGSize(width: 1.0, height: 1.0))
-                        if let parsedUrl = URL(string: string) {
-                            if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
+                    }
+                case let .url(node, rect, string):
+                    let targetRect = node.view.convert(rect, to: sourceView)
+                    let sourceRect = CGRect(origin: CGPoint(x: floor(targetRect.midX), y: floor(targetRect.midY)), size: CGSize(width: 1.0, height: 1.0))
+                    if let parsedUrl = URL(string: string) {
+                        if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
+                            if #available(iOSApplicationExtension 9.0, *) {
                                 let controller = SFSafariViewController(url: parsedUrl)
                                 if #available(iOSApplicationExtension 10.0, *) {
                                     controller.preferredBarTintColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
                                     controller.preferredControlTintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
                                 }
-                                return controller
+                                return (controller, sourceRect)
                             }
                         }
-                }
+                    }
             }
         }
         return nil
     }
     
-    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
+    func previewingCommit(_ viewControllerToCommit: UIViewController) {
         if let gallery = viewControllerToCommit as? AvatarGalleryController {
             self.chatDisplayNode.dismissInput()
             gallery.setHintWillBePresentedInPreviewingContext(false)

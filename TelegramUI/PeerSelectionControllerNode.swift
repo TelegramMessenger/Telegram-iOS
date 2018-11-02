@@ -70,26 +70,28 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        
         self.chatListNode.activateSearch = { [weak self] in
             self?.requestActivateSearch?()
         }
         
-        self.chatListNode.peerSelected = { [weak self] peerId, _ in
+        self.chatListNode.peerSelected = { [weak self] peerId, _, _ in
             self?.requestOpenPeer?(peerId)
         }
         
         self.addSubnode(self.chatListNode)
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
-                    strongSelf.presentationData = presentationData
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                        strongSelf.updateThemeAndStrings()
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                strongSelf.presentationData = presentationData
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
                 }
-            })
+            }
+        })
         
         self.addSubnode(self.toolbarBackgroundNode)
         self.addSubnode(self.toolbarSeparatorNode)
@@ -106,6 +108,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
     
     private func updateThemeAndStrings() {
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
     }

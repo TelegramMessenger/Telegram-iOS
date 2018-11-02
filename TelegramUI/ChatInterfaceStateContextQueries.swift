@@ -308,7 +308,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
                             }
                         }
                         
-                        let participants = searchGroupMembers(postbox: account.postbox, network: account.network, peerId: peer.id, query: query)
+                        let participants = searchGroupMembers(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peer.id, query: query)
                             |> map { peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                                 let filteredPeers = peers
                                 var sortedPeers: [Peer] = []

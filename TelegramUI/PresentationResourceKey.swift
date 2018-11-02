@@ -49,6 +49,8 @@ enum PresentationResourceKey: Int32 {
     case itemListStickerItemUnreadDot
     case itemListVerifiedPeerIcon
     
+    case itemListCloudFetchIcon
+    
     case chatListLockTopLockedImage
     case chatListLockBottomLockedImage
     case chatListLockTopUnlockedImage
@@ -117,6 +119,8 @@ enum PresentationResourceKey: Int32 {
     case chatBubbleFileCloudFetchedOutgoingIcon
     
     case chatBubbleReplyThumbnailPlayImage
+    
+    case chatBubbleDeliveryFailedIcon
     
     case chatInfoItemBackgroundImageWithWallpaper
     case chatInfoItemBackgroundImageWithoutWallpaper

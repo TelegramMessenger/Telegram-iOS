@@ -530,7 +530,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     let accountPeer = account.postbox.loadedPeerWithId(account.peerId)
                     |> take(1)
                     
-                    let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId) |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
+                    let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId)
+                    |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
                         return combineLatest(local.map {account.postbox.peerView(id: $0.peerId)}) |> map { views in
                             return (views, local)
                         }
@@ -643,7 +644,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             openPeer(peer, false)
             let _ = addRecentlySearchedPeer(postbox: account.postbox, peerId: peer.id).start()
             self?.listNode.clearHighlightAnimated(true)
-        }, messageSelected: { [weak self] message in
+        }, messageSelected: { [weak self] message, _ in
             if let peer = message.peers[message.id.peerId] {
                 openMessage(peer, message.id)
             }
@@ -721,7 +722,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 return .single((transition, previousEntries == nil))
         }
         
-        self.updatedRecentPeersDisposable.set(managedUpdatedRecentPeers(postbox: account.postbox, network: account.network).start())
+        self.updatedRecentPeersDisposable.set(managedUpdatedRecentPeers(accountPeerId: account.peerId, postbox: account.postbox, network: account.network).start())
         
         self.recentDisposable.set((recentItemsTransition |> deliverOnMainQueue).start(next: { [weak self] (transition, firstTime) in
             if let strongSelf = self {

@@ -115,7 +115,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.panelButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
         
-        let (adminsDisposable, _) = self.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: self.account.postbox, network: self.account.network, peerId: self.peer.id, searchQuery: nil, updated: { [weak self] state in
+        let (adminsDisposable, _) = self.account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: self.account.postbox, network: self.account.network, accountPeerId: account.peerId, peerId: self.peer.id, searchQuery: nil, updated: { [weak self] state in
             self?.adminsState = state
         })
         self.adminsDisposable = adminsDisposable
@@ -348,6 +348,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return false
         }, navigateToFirstDateMessage: { _ in
             
+        }, requestRedeliveryOfFailedMessages: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)

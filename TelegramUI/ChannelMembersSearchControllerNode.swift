@@ -152,7 +152,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         })
         
         let previousEntries = Atomic<[ChannelMembersSearchEntry]?>(value: nil)
-        let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, updated: { [weak self] state in
+        let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { [weak self] state in
             guard let strongSelf = self else {
                 return
             }

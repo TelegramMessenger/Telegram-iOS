@@ -386,7 +386,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     
     let peerView = account.viewTracker.peerView(peerId)
     
-    let (listDisposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restrictedAndBanned(postbox: account.postbox, network: account.network, peerId: peerId, updated: { listState in
+    let (listDisposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restrictedAndBanned(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { listState in
         if case .loading = listState.loadingState, listState.list.isEmpty {
             blacklistPromise.set(.single(nil))
         } else {

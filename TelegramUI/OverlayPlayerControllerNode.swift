@@ -66,6 +66,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, canSetupReply: { _ in
             return false
         }, navigateToFirstDateMessage: { _ in
+        }, requestRedeliveryOfFailedMessages: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings)

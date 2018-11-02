@@ -72,7 +72,6 @@ public final class PeerSelectionController: ViewController {
         self.displayNode = PeerSelectionControllerNode(account: self.account, filter: self.filter, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
-        self.displayNode.backgroundColor = .white
         
         self.peerSelectionNode.navigationBar = self.navigationBar
         

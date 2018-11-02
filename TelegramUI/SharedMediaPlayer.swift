@@ -408,6 +408,9 @@ final class SharedMediaPlayer {
     
     private var inForegroundDisposable: Disposable?
     
+    private var currentPrefetchItems: (SharedMediaPlaybackDataSource, SharedMediaPlaybackDataSource)?
+    private let prefetchDisposable = MetaDisposable()
+    
     init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, postbox: Postbox, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool) {
         self.mediaManager = mediaManager
         self.postbox = postbox
@@ -428,6 +431,7 @@ final class SharedMediaPlayer {
         |> deliverOnMainQueue).start(next: { [weak self] state in
             if let strongSelf = self {
                 let previousPlaybackItem = strongSelf.playbackItem
+                strongSelf.updatePrefetchItems(item: state.item, previousItem: state.previousItem, nextItem: state.nextItem, ordering: state.order)
                 if state.item?.playbackData != strongSelf.stateValue?.item?.playbackData {
                     if let playbackItem = strongSelf.playbackItem {
                         switch playbackItem {
@@ -598,6 +602,7 @@ final class SharedMediaPlayer {
         self.markItemAsPlayedDisposable.dispose()
         self.inForegroundDisposable?.dispose()
         self.playbackStateValueDisposable?.dispose()
+        self.prefetchDisposable.dispose()
         
         if let proximityManagerIndex = self.proximityManagerIndex {
             DeviceProximityManager.shared().remove(proximityManagerIndex)
@@ -676,6 +681,52 @@ final class SharedMediaPlayer {
                     player.pause()
                 case let .instantVideo(node):
                     node.setSoundEnabled(false)
+            }
+        }
+    }
+    
+    private func updatePrefetchItems(item: SharedMediaPlaylistItem?, previousItem: SharedMediaPlaylistItem?, nextItem: SharedMediaPlaylistItem?, ordering: MusicPlaybackSettingsOrder) {
+        var prefetchItems: (SharedMediaPlaybackDataSource, SharedMediaPlaybackDataSource)?
+        if let playbackData = item?.playbackData {
+            switch ordering {
+                case .regular:
+                    if let previousItem = previousItem?.playbackData {
+                        prefetchItems = (playbackData.source, previousItem.source)
+                    }
+                case .reversed:
+                    if let nextItem = nextItem?.playbackData {
+                        prefetchItems = (playbackData.source, nextItem.source)
+                    }
+                case .random:
+                    break
+            }
+        }
+        if self.currentPrefetchItems?.0 != prefetchItems?.0 || self.currentPrefetchItems?.1 != prefetchItems?.1 {
+            self.currentPrefetchItems = prefetchItems
+            if let (current, next) = prefetchItems {
+                let fetchedCurrentSignal: Signal<Never, NoError>
+                let fetchedNextSignal: Signal<Never, NoError>
+                switch current {
+                    case let .telegramFile(file):
+                        fetchedCurrentSignal = self.postbox.mediaBox.resourceData(file.media.resource)
+                        |> mapToSignal { data -> Signal<Void, NoError> in
+                            if data.complete {
+                                return .single(Void())
+                            } else {
+                                return .complete()
+                            }
+                        }
+                        |> take(1)
+                        |> ignoreValues
+                }
+                switch next {
+                    case let .telegramFile(file):
+                        fetchedNextSignal = fetchedMediaResource(postbox: self.postbox, reference: file.resourceReference(file.media.resource))
+                        |> ignoreValues
+                }
+                self.prefetchDisposable.set((fetchedCurrentSignal |> then(fetchedNextSignal)).start())
+            } else {
+                self.prefetchDisposable.set(nil)
             }
         }
     }

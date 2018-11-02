@@ -453,7 +453,7 @@ public func dataPrivacyController(account: Account) -> ViewController {
                         return state
                     }
                     if clear {
-                        clearPaymentInfoDisposable.set((clearCloudDraftsInteractively(postbox: account.postbox, network: account.network)
+                        clearPaymentInfoDisposable.set((clearCloudDraftsInteractively(postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
                             |> deliverOnMainQueue).start(completed: {
                                 updateState { state in
                                     var state = state
@@ -475,7 +475,7 @@ public func dataPrivacyController(account: Account) -> ViewController {
     
     let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
     
-    actionsDisposable.add(managedUpdatedRecentPeers(postbox: account.postbox, network: account.network).start())
+    actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: account.peerId, postbox: account.postbox, network: account.network).start())
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey()), preferencesKey]), recentPeers(account: account))
         |> map { presentationData, state, combined, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
