@@ -1087,6 +1087,50 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
+    func getMessageFailedGroup(_ index: MessageIndex) -> [IntermediateMessage]? {
+        if let value = self.valueBox.get(self.table, key: self.key(index)) {
+            let entry = self.readIntermediateEntry(self.key(index), value: value)
+            if case let .Message(message) = entry {
+                if message.flags.contains(.Failed) {
+                    var result: [IntermediateMessage] = []
+                    var previousIndex = index
+                    while true {
+                        var previous: IntermediateMessageHistoryEntry?
+                        self.valueBox.range(self.table, start: self.key(previousIndex), end: self.lowerBound(index.id.peerId), values: { key, value in
+                            previous = readIntermediateEntry(key, value: value)
+                            return false
+                        }, limit: 1)
+                        if let previous = previous, case let .Message(previousMessage) = previous, previousMessage.authorId == message.authorId, previousMessage.flags.contains(.Failed) {
+                            result.insert(previousMessage, at: 0)
+                            previousIndex = MessageIndex(previousMessage)
+                        } else {
+                            break
+                        }
+                    }
+                    result.append(message)
+                    var nextIndex = index
+                    while true {
+                        var next: IntermediateMessageHistoryEntry?
+                        self.valueBox.range(self.table, start: self.key(nextIndex), end: self.upperBound(index.id.peerId), values: { key, value in
+                            next = readIntermediateEntry(key, value: value)
+                            return false
+                        }, limit: 1)
+                        if let next = next, case let .Message(nextMessage) = next, nextMessage.authorId == message.authorId, nextMessage.flags.contains(.Failed) {
+                            result.append(nextMessage)
+                            nextIndex = MessageIndex(nextMessage)
+                        } else {
+                            break
+                        }
+                    }
+                    return result
+                } else {
+                    return [message]
+                }
+            }
+        }
+        return nil
+    }
+    
     func offsetPendingMessagesTimestamps(lowerBound: MessageId, excludeIds: Set<MessageId>, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation],  updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?], globalTagsOperations: inout [GlobalMessageHistoryTagsOperation], pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32], updatedMessageTagSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateMessageTagSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation], groupFeedOperations: inout [PeerGroupId : [GroupFeedIndexOperation]], localTagsOperations: inout [IntermediateMessageHistoryLocalTagsOperation]) {
         var peerMessageIds: [MessageId] = []
         for messageId in self.unsentTable.get() {

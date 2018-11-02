@@ -33,6 +33,8 @@
 		D010B61A1E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */; };
 		D0119CAD20C9E7A100895300 /* PostboxUpgrade_17to18.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0119CAC20C9E7A100895300 /* PostboxUpgrade_17to18.swift */; };
 		D0119CAE20C9E7A100895300 /* PostboxUpgrade_17to18.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0119CAC20C9E7A100895300 /* PostboxUpgrade_17to18.swift */; };
+		D018BE55218B9AA900C02DDC /* TimeBasedCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018BE54218B9AA900C02DDC /* TimeBasedCleanup.swift */; };
+		D018BE56218B9AA900C02DDC /* TimeBasedCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018BE54218B9AA900C02DDC /* TimeBasedCleanup.swift */; };
 		D019B1CF1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */; };
 		D01BAA551ED1D70C00295217 /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA541ED1D70C00295217 /* ManagedFile.swift */; };
 		D01BAA561ED1D70C00295217 /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA541ED1D70C00295217 /* ManagedFile.swift */; };
@@ -402,6 +404,7 @@
 		D0105D6A218362F2007C04A7 /* TempBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempBox.swift; sourceTree = "<group>"; };
 		D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMergedOperationLogIndexTable.swift; sourceTree = "<group>"; };
 		D0119CAC20C9E7A100895300 /* PostboxUpgrade_17to18.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_17to18.swift; sourceTree = "<group>"; };
+		D018BE54218B9AA900C02DDC /* TimeBasedCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeBasedCleanup.swift; sourceTree = "<group>"; };
 		D019B1CE1E2E770700F80DB3 /* MessageGloballyUniqueIdTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageGloballyUniqueIdTable.swift; sourceTree = "<group>"; };
 		D01BAA541ED1D70C00295217 /* ManagedFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedFile.swift; sourceTree = "<group>"; };
 		D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTextIndexTable.swift; sourceTree = "<group>"; };
@@ -633,6 +636,7 @@
 				D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */,
 				D0CE63F51CA1CCB2002BC462 /* MediaResource.swift */,
 				D0FC1949201E8EAF00FEDBB2 /* MediaBoxFile.swift */,
+				D018BE54218B9AA900C02DDC /* TimeBasedCleanup.swift */,
 			);
 			name = "Media Box";
 			sourceTree = "<group>";
@@ -1182,6 +1186,7 @@
 				D073CE771DCBF3B4007511FD /* Media.swift in Sources */,
 				D037178C20D923CA004773C8 /* CachedItemView.swift in Sources */,
 				D0A352F91F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift in Sources */,
+				D018BE56218B9AA900C02DDC /* TimeBasedCleanup.swift in Sources */,
 				D073CE791DCBF3B4007511FD /* ChatListHole.swift in Sources */,
 				D0F53BF41E794C6700117362 /* PeerChatStateView.swift in Sources */,
 				D0B4181C1D7DFDF1004562A4 /* SQLite-Bridging.m in Sources */,
@@ -1360,6 +1365,7 @@
 				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
 				D037178B20D923CA004773C8 /* CachedItemView.swift in Sources */,
 				D049EAF01E44D9B900A2CD3A /* PostboxStateView.swift in Sources */,
+				D018BE55218B9AA900C02DDC /* TimeBasedCleanup.swift in Sources */,
 				D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */,
 				D0E23DE21E808A9400B9B6D2 /* ItemCollectionIdsView.swift in Sources */,
 				D0AD23291E196B6400A7089A /* PeerOperationLogMetadataTable.swift in Sources */,

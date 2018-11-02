@@ -347,7 +347,7 @@ public final class Transaction {
         return self.postbox?.cachedPeerDataTable.get(peerId)
     }
     
-    public func updatePeerPresences(_ peerPresences: [PeerId: PeerPresence]) {
+    public func updatePeerPresencesInternal(_ peerPresences: [PeerId: PeerPresence]) {
         assert(!self.disposed)
         self.postbox?.updatePeerPresences(peerPresences)
     }
@@ -585,6 +585,11 @@ public final class Transaction {
     public func getMessageForwardedGroup(_ id: MessageId) -> [Message]? {
         assert(!self.disposed)
         return self.postbox?.getMessageForwardedGroup(id)
+    }
+    
+    public func getMessageFailedGroup(_ id: MessageId) -> [Message]? {
+        assert(!self.disposed)
+        return self.postbox?.getMessageFailedGroup(id)
     }
     
     public func getMedia(_ id: MediaId) -> Media? {
@@ -2761,7 +2766,7 @@ public final class Postbox {
     
     public func searchContacts(query: String) -> Signal<([Peer], [PeerId: PeerPresence]), NoError> {
         return self.transaction { transaction -> Signal<([Peer], [PeerId: PeerPresence]), NoError> in
-            let (_, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable, reverseAssociatedPeerTable: self.reverseAssociatedPeerTable)
+            let (_, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
             
             var contactPeers: [Peer] = []
             var presences: [PeerId: PeerPresence] = [:]
@@ -2784,7 +2789,15 @@ public final class Postbox {
             var peerIds = Set<PeerId>()
             var chatPeers: [RenderedPeer] = []
             
-            var (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable, reverseAssociatedPeerTable: self.reverseAssociatedPeerTable)
+            var (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
+            
+            var additionalChatPeerIds: [PeerId] = []
+            for peerId in chatPeerIds {
+                for associatedId in self.reverseAssociatedPeerTable.get(peerId: peerId) {
+                    additionalChatPeerIds.append(associatedId)
+                }
+            }
+            chatPeerIds.append(contentsOf: additionalChatPeerIds)
             
             if let groupId = groupId {
                 let groupPeerIds = self.groupAssociationTable.get(groupId: groupId)
@@ -3308,6 +3321,17 @@ public final class Postbox {
             return nil
         }
         if let messages = self.messageHistoryTable.getMessageForwardedGroup(index) {
+            return messages.map(self.renderIntermediateMessage)
+        } else {
+            return nil
+        }
+    }
+    
+    fileprivate func getMessageFailedGroup(_ id: MessageId) -> [Message]? {
+        guard let entry = self.messageHistoryIndexTable.getMaybeUninitialized(id), case let .Message(index) = entry else {
+            return nil
+        }
+        if let messages = self.messageHistoryTable.getMessageFailedGroup(index) {
             return messages.map(self.renderIntermediateMessage)
         } else {
             return nil

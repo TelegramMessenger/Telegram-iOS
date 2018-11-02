@@ -384,6 +384,7 @@ final class ChatListIndexTable: Table {
                 guard let peer = postbox.peerTable.get(peerId) else {
                     continue
                 }
+                let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
                 let initialReadState = alteredInitialPeerCombinedReadStates[peerId] ?? postbox.readStateTable.getCombinedState(peerId)
                 let currentReadState = postbox.readStateTable.getCombinedState(peerId)
                 
@@ -398,11 +399,13 @@ final class ChatListIndexTable: Table {
                         initialValue = (initialReadState.count, initialReadState.isUnread)
                     }
                 } else {
-                    if let initialReadState = initialReadState {
-                        initialValue = (initialReadState.count, initialReadState.isUnread)
-                    }
-                    if let currentReadState = currentReadState {
-                        currentValue = (currentReadState.count, currentReadState.isUnread)
+                    if self.get(peerId: peerId).includedIndex(peerId: peerId) != nil {
+                        if let initialReadState = initialReadState {
+                            initialValue = (initialReadState.count, initialReadState.isUnread)
+                        }
+                        if let currentReadState = currentReadState {
+                            currentValue = (currentReadState.count, currentReadState.isUnread)
+                        }
                     }
                 }
                 var initialFilteredValue: (Int32, Bool) = initialValue
@@ -412,7 +415,7 @@ final class ChatListIndexTable: Table {
                 } else if transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId) {
                     currentFilteredValue = (0, false)
                 } else {
-                    if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId), !notificationSettings.isRemovedFromTotalUnreadCount {
+                    if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId), !notificationSettings.isRemovedFromTotalUnreadCount {
                     } else {
                         initialFilteredValue = (0, false)
                         currentFilteredValue = (0, false)
@@ -586,7 +589,8 @@ final class ChatListIndexTable: Table {
             guard let peer = postbox.peerTable.get(peerId) else {
                 continue
             }
-            let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
+            let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
+            let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId)
             let inclusion = self.get(peerId: peerId)
             if inclusion.includedIndex(peerId: peerId) != nil {
                 if let combinedState = postbox.readStateTable.getCombinedState(peerId) {

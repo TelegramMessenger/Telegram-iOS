@@ -257,7 +257,7 @@ final class PeerNameIndexTable: Table {
         }
     }
     
-    func matchingPeerIds(tokens: (regular: [ValueBoxKey], transliterated: [ValueBoxKey]?), categories: PeerNameIndexCategories, chatListIndexTable: ChatListIndexTable, contactTable: ContactTable, reverseAssociatedPeerTable: ReverseAssociatedPeerTable) -> (chats: [PeerId], contacts: [PeerId]) {
+    func matchingPeerIds(tokens: (regular: [ValueBoxKey], transliterated: [ValueBoxKey]?), categories: PeerNameIndexCategories, chatListIndexTable: ChatListIndexTable, contactTable: ContactTable) -> (chats: [PeerId], contacts: [PeerId]) {
         if categories.isEmpty {
             return ([], [])
         } else {

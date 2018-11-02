@@ -121,6 +121,7 @@ public final class MediaBox {
     private let concurrentQueue = Queue.concurrentDefaultQueue()
     private let dataQueue = Queue()
     private let cacheQueue = Queue()
+    private let timeBasedCleanup: TimeBasedCleanup
     
     private var statusContexts: [WrappedMediaResourceId: ResourceStatusContext] = [:]
     private var cachedRepresentationContexts: [CachedMediaResourceRepresentationKey: CachedMediaResourceRepresentationContext] = [:]
@@ -158,7 +159,16 @@ public final class MediaBox {
     public init(basePath: String) {
         self.basePath = basePath
         
+        self.timeBasedCleanup = TimeBasedCleanup(paths: [
+            self.basePath,
+            self.basePath + "/cache"
+        ])
+        
         let _ = self.ensureDirectoryCreated
+    }
+    
+    public func setMaxStoreTime(_ maxStoreTime: Int32) {
+        self.timeBasedCleanup.setMaxStoreTime(maxStoreTime)
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
@@ -221,11 +231,17 @@ public final class MediaBox {
                 let paths = self.storePathsForId(resource.id)
                 
                 if let _ = fileSize(paths.complete) {
+                    self.timeBasedCleanup.touch(paths: [
+                        paths.complete
+                    ])
                     subscriber.putNext(.Local)
                     subscriber.putCompletion()
                 } else {
                     self.maybeCopiedPreFetchedResource(completePath: paths.complete, resource: resource)
                     if let _ = fileSize(paths.complete) {
+                        self.timeBasedCleanup.touch(paths: [
+                            paths.complete
+                        ])
                         subscriber.putNext(.Local)
                         subscriber.putCompletion()
                         return
@@ -339,6 +355,9 @@ public final class MediaBox {
                 }
                 
                 if let completeSize = fileSize(paths.complete) {
+                    self.timeBasedCleanup.touch(paths: [
+                        paths.complete
+                    ])
                     if let pathExtension = pathExtension {
                         let symlinkPath = paths.complete + ".\(pathExtension)"
                         if fileSize(symlinkPath) == nil {
@@ -401,7 +420,12 @@ public final class MediaBox {
             context = current
         } else {
             let paths = self.storePathsForId(resource.id)
-            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, path: paths.complete, partialPath: paths.partial) {
+            self.timeBasedCleanup.touch(paths: [
+                paths.complete,
+                paths.partial,
+                paths.partial + ".meta"
+            ])
+            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
                 context = fileContext
                 self.fileContexts[resourceId] = fileContext
             } else {
@@ -588,6 +612,9 @@ public final class MediaBox {
             self.concurrentQueue.async {
                 let path = self.cachedRepresentationPathForId(resource.id, representation: representation)
                 if let size = fileSize(path) {
+                    self.timeBasedCleanup.touch(paths: [
+                        path
+                    ])
                     subscriber.putNext(MediaResourceData(path: path, offset: 0, size: size, complete: true))
                     subscriber.putCompletion()
                 } else if fetch {

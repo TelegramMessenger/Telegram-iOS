@@ -155,6 +155,7 @@ private class MediaBoxPartialFileDataRequest {
 final class MediaBoxPartialFile {
     private let queue: Queue
     private let path: String
+    private let metaPath: String
     private let completePath: String
     private let completed: (Int32) -> Void
     private let metadataFd: ManagedFile
@@ -170,11 +171,12 @@ final class MediaBoxPartialFile {
     private var currentFetch: (Promise<[(Range<Int>, MediaBoxFetchPriority)]>, Disposable)?
     private var processedAtLeastOneFetch: Bool = false
     
-    init?(queue: Queue, path: String, completePath: String, completed: @escaping (Int32) -> Void) {
+    init?(queue: Queue, path: String, metaPath: String, completePath: String, completed: @escaping (Int32) -> Void) {
         assert(queue.isCurrent())
-        if let metadataFd = ManagedFile(queue: queue, path: path + ".meta", mode: .readwrite), let fd = ManagedFile(queue: queue, path: path, mode: .readwrite) {
+        if let metadataFd = ManagedFile(queue: queue, path: metaPath, mode: .readwrite), let fd = ManagedFile(queue: queue, path: path, mode: .readwrite) {
             self.queue = queue
             self.path = path
+            self.metaPath = metaPath
             self.completePath = completePath
             self.completed = completed
             self.metadataFd = metadataFd
@@ -231,7 +233,7 @@ final class MediaBoxPartialFile {
             
             if let size = fileSize(self.completePath) {
                 unlink(self.path)
-                unlink(self.path + ".meta")
+                unlink(self.metaPath)
                 
                 for (_, completion) in self.missingRanges.clear() {
                     completion()
@@ -273,7 +275,7 @@ final class MediaBoxPartialFile {
             
             if let size = fileSize(self.completePath) {
                 unlink(self.path)
-                unlink(self.path + ".meta")
+                unlink(self.metaPath)
                 
                 for (_, completion) in self.missingRanges.clear() {
                     completion()
@@ -756,6 +758,23 @@ private final class MediaBoxFileMissingRanges {
                         let middleBound = max(resolvedIntervals[i].0.lowerBound, resolvedIntervals[j].0.lowerBound)
                         resolvedIntervals[i] = (lowerBound ..< middleBound, lowerPriority)
                         resolvedIntervals[j] = (middleBound ..< upperBound, upperPriority)
+                        if resolvedIntervals[i].0.isEmpty || resolvedIntervals[j].0.isEmpty {
+                            if j > i {
+                                if resolvedIntervals[j].0.isEmpty {
+                                    resolvedIntervals.remove(at: j)
+                                }
+                                if resolvedIntervals[i].0.isEmpty {
+                                    resolvedIntervals.remove(at: i)
+                                }
+                            } else {
+                                if resolvedIntervals[i].0.isEmpty {
+                                    resolvedIntervals.remove(at: i)
+                                }
+                                if resolvedIntervals[j].0.isEmpty {
+                                    resolvedIntervals.remove(at: j)
+                                }
+                            }
+                        }
                         continue outer
                     }
                 }
@@ -823,6 +842,7 @@ final class MediaBoxFileContext {
     private let queue: Queue
     private let path: String
     private let partialPath: String
+    private let metaPath: String
     
     private var content: MediaBoxFileContent
     
@@ -832,17 +852,18 @@ final class MediaBoxFileContext {
         return self.references.isEmpty
     }
     
-    init?(queue: Queue, path: String, partialPath: String) {
+    init?(queue: Queue, path: String, partialPath: String, metaPath: String) {
         assert(queue.isCurrent())
         
         self.queue = queue
         self.path = path
         self.partialPath = partialPath
+        self.metaPath = metaPath
         
         var completeImpl: ((Int32) -> Void)?
         if let size = fileSize(path) {
             self.content = .complete(path, size)
-        } else if let file = MediaBoxPartialFile(queue: queue, path: partialPath, completePath: path, completed: { size in
+        } else if let file = MediaBoxPartialFile(queue: queue, path: partialPath, metaPath: metaPath, completePath: path, completed: { size in
             completeImpl?(size)
         }) {
             self.content = .partial(file)
