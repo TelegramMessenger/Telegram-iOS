@@ -71,6 +71,7 @@ public struct TelegramMediaVideoFlags: OptionSet {
     }
     
     public static let instantRoundVideo = TelegramMediaVideoFlags(rawValue: 1 << 0)
+    public static let supportsStreaming = TelegramMediaVideoFlags(rawValue: 1 << 1)
 }
 
 public struct StickerMaskCoords: PostboxCoding {
@@ -507,6 +508,9 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 var videoFlags = TelegramMediaVideoFlags()
                 if (flags & (1 << 0)) != 0 {
                     videoFlags.insert(.instantRoundVideo)
+                }
+                if (flags & (1 << 1)) != 0 {
+                    videoFlags.insert(.supportsStreaming)
                 }
                 result.append(.Video(duration: Int(duration), size: CGSize(width: CGFloat(w), height: CGFloat(h)), flags: videoFlags))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):

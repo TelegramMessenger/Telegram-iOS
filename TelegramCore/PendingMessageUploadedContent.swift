@@ -409,6 +409,9 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 if videoFlags.contains(.instantRoundVideo) {
                     flags |= (1 << 0)
                 }
+                if videoFlags.contains(.supportsStreaming) {
+                    flags |= (1 << 1)
+                }
                 
                 attributes.append(.documentAttributeVideo(flags: flags, duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
             case let .Audio(isVoice, duration, title, performer, waveform):

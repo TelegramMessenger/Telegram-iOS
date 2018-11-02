@@ -141,60 +141,62 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
     }
     
     let poll = currentLanguageAndVersion
-        |> mapError { _ -> SynchronizeLocalizationUpdatesError in return .done }
-        |> mapToSignal { (languageCode, fromVersion) -> Signal<Void, SynchronizeLocalizationUpdatesError> in
-            return network.request(Api.functions.langpack.getDifference(fromVersion: fromVersion))
-                |> mapError { _ -> SynchronizeLocalizationUpdatesError in return .reset }
-                |> mapToSignal { result -> Signal<Void, SynchronizeLocalizationUpdatesError> in
-                    let updatedCode: String
-                    let updatedVersion: Int32
-                    var updatedEntries: [LocalizationEntry] = []
-                    switch result {
-                        case let .langPackDifference(code, _, versionValue, strings):
-                            updatedCode = code
-                            updatedVersion = versionValue
-                            for string in strings {
-                                switch string {
-                                    case let .langPackString(key, value):
-                                        updatedEntries.append(.string(key: key, value: value))
-                                    case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
-                                        updatedEntries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
-                                    case let .langPackStringDeleted(key):
-                                        updatedEntries.append(.string(key: key, value: ""))
-                                }
+    |> mapError { _ -> SynchronizeLocalizationUpdatesError in return .done }
+    |> mapToSignal { (languageCode, fromVersion) -> Signal<Void, SynchronizeLocalizationUpdatesError> in
+        return network.request(Api.functions.langpack.getDifference(langCode: languageCode, fromVersion: fromVersion))
+            |> mapError { _ -> SynchronizeLocalizationUpdatesError in return .reset }
+            |> mapToSignal { result -> Signal<Void, SynchronizeLocalizationUpdatesError> in
+                let updatedCode: String
+                let updatedVersion: Int32
+                var updatedEntries: [LocalizationEntry] = []
+                switch result {
+                    case let .langPackDifference(code, _, versionValue, strings):
+                        updatedCode = code
+                        updatedVersion = versionValue
+                        for string in strings {
+                            switch string {
+                                case let .langPackString(key, value):
+                                    updatedEntries.append(.string(key: key, value: value))
+                                case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
+                                    updatedEntries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
+                                case let .langPackStringDeleted(key):
+                                    updatedEntries.append(.string(key: key, value: ""))
                             }
-                    }
-                    
-                    return postbox.transaction { transaction -> Signal<Void, SynchronizeLocalizationUpdatesError> in
-                        let (code, version, entries) = getLocalization(transaction)
-                        
-                        if code == updatedCode {
-                            if fromVersion == version {
-                                var updatedEntryKeys = Set<String>()
-                                for entry in updatedEntries {
-                                    updatedEntryKeys.insert(entry.key)
-                                }
-                                
-                                var mergedEntries: [LocalizationEntry] = []
-                                for entry in entries {
-                                    if !updatedEntryKeys.contains(entry.key) {
-                                        mergedEntries.append(entry)
-                                    }
-                                }
-                                mergedEntries.append(contentsOf: updatedEntries)
-                                
-                                transaction.setPreferencesEntry(key: PreferencesKeys.localizationSettings, value: LocalizationSettings(languageCode: updatedCode, localization: Localization(version: updatedVersion, entries: mergedEntries)))
-                                
-                                return .fail(.done)
-                            } else {
-                                return .complete()
-                            }
-                        } else {
-                            return .fail(.reset)
                         }
-                    } |> mapError { _ -> SynchronizeLocalizationUpdatesError in return .reset }
-                      |> switchToLatest
                 }
+                
+                return postbox.transaction { transaction -> Signal<Void, SynchronizeLocalizationUpdatesError> in
+                    let (code, version, entries) = getLocalization(transaction)
+                    
+                    if code == updatedCode {
+                        if fromVersion == version {
+                            var updatedEntryKeys = Set<String>()
+                            for entry in updatedEntries {
+                                updatedEntryKeys.insert(entry.key)
+                            }
+                            
+                            var mergedEntries: [LocalizationEntry] = []
+                            for entry in entries {
+                                if !updatedEntryKeys.contains(entry.key) {
+                                    mergedEntries.append(entry)
+                                }
+                            }
+                            mergedEntries.append(contentsOf: updatedEntries)
+                            
+                            transaction.setPreferencesEntry(key: PreferencesKeys.localizationSettings, value: LocalizationSettings(languageCode: updatedCode, localization: Localization(version: updatedVersion, entries: mergedEntries)))
+                            
+                            return .fail(.done)
+                        } else {
+                            return .complete()
+                        }
+                    } else {
+                        return .fail(.reset)
+                    }
+                }
+                |> mapError { _ -> SynchronizeLocalizationUpdatesError in return .reset
+                }
+                |> switchToLatest
+            }
         }
     
     return ((poll
@@ -218,7 +220,7 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
     }
 }
 
-func tryApplyingLanguageDifference(transaction: Transaction, difference: Api.LangPackDifference) -> Bool {
+func tryApplyingLanguageDifference(transaction: Transaction, langCode: String, difference: Api.LangPackDifference) -> Bool {
     let (code, version, entries) = getLocalization(transaction)
     switch difference {
         case let .langPackDifference(updatedCode, fromVersion, updatedVersion, strings):

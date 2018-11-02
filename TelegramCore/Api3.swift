@@ -2665,6 +2665,22 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func updatePinnedMessage(flags: Int32, peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-760547348)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.updatePinnedMessage", parameters: [("flags", flags), ("peer", peer), ("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
             }
             struct channels {
                 static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
@@ -4939,20 +4955,6 @@ extension Api {
                 }
             }
             struct langpack {
-                static func getDifference(fromVersion: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(187583869)
-                    serializeInt32(fromVersion, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "langpack.getDifference", parameters: [("fromVersion", fromVersion)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.LangPackDifference? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.LangPackDifference?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.LangPackDifference
-                        }
-                        return result
-                    })
-                }
-            
                 static func getLangPack(langPack: String, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-219008246)
@@ -4997,6 +4999,21 @@ extension Api {
                         var result: [Api.LangPackLanguage]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackLanguage.self)
+                        }
+                        return result
+                    })
+                }
+            
+                static func getDifference(langCode: String, fromVersion: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1655576556)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    serializeInt32(fromVersion, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "langpack.getDifference", parameters: [("langCode", langCode), ("fromVersion", fromVersion)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.LangPackDifference? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.LangPackDifference?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.LangPackDifference
                         }
                         return result
                     })

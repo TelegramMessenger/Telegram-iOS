@@ -193,7 +193,7 @@ public final class CachedChannelData: CachedPeerData {
         self.messageIds = messageIds
     }
     
-    func withUpdatedisNotAccessible(_ isNotAccessible: Bool) -> CachedChannelData {
+    func withUpdatedIsNotAccessible(_ isNotAccessible: Bool) -> CachedChannelData {
         return CachedChannelData(isNotAccessible: isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, topParticipants: self.topParticipants, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference)
     }
     

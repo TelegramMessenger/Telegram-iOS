@@ -61,32 +61,40 @@ public struct MessageNotificationSettings: PostboxCoding, Equatable {
 public struct GlobalNotificationSettingsSet: PostboxCoding, Equatable {
     public let privateChats: MessageNotificationSettings
     public let groupChats: MessageNotificationSettings
+    public let channels: MessageNotificationSettings
     
     public static var defaultSettings: GlobalNotificationSettingsSet {
-        return GlobalNotificationSettingsSet(privateChats: MessageNotificationSettings.defaultSettings, groupChats: .defaultSettings)
+        return GlobalNotificationSettingsSet(privateChats: MessageNotificationSettings.defaultSettings, groupChats: .defaultSettings, channels: .defaultSettings)
     }
     
-    public init(privateChats: MessageNotificationSettings, groupChats: MessageNotificationSettings) {
+    public init(privateChats: MessageNotificationSettings, groupChats: MessageNotificationSettings, channels: MessageNotificationSettings) {
         self.privateChats = privateChats
         self.groupChats = groupChats
+        self.channels = channels
     }
     
     public init(decoder: PostboxDecoder) {
         self.privateChats = decoder.decodeObjectForKey("p", decoder: { MessageNotificationSettings(decoder: $0) }) as! MessageNotificationSettings
         self.groupChats = decoder.decodeObjectForKey("g", decoder: { MessageNotificationSettings(decoder: $0) }) as! MessageNotificationSettings
+        self.channels = (decoder.decodeObjectForKey("c", decoder: { MessageNotificationSettings(decoder: $0) }) as? MessageNotificationSettings) ?? MessageNotificationSettings.defaultSettings
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.privateChats, forKey: "p")
         encoder.encodeObject(self.groupChats, forKey: "g")
+        encoder.encodeObject(self.channels, forKey: "c")
     }
     
     public func withUpdatedPrivateChats(_ f: (MessageNotificationSettings) -> MessageNotificationSettings) -> GlobalNotificationSettingsSet {
-        return GlobalNotificationSettingsSet(privateChats: f(self.privateChats), groupChats: self.groupChats)
+        return GlobalNotificationSettingsSet(privateChats: f(self.privateChats), groupChats: self.groupChats, channels: self.channels)
     }
     
     public func withUpdatedGroupChats(_ f: (MessageNotificationSettings) -> MessageNotificationSettings) -> GlobalNotificationSettingsSet {
-        return GlobalNotificationSettingsSet(privateChats: self.privateChats, groupChats: f(self.groupChats))
+        return GlobalNotificationSettingsSet(privateChats: self.privateChats, groupChats: f(self.groupChats), channels: self.channels)
+    }
+    
+    public func withUpdatedChannels(_ f: (MessageNotificationSettings) -> MessageNotificationSettings) -> GlobalNotificationSettingsSet {
+        return GlobalNotificationSettingsSet(privateChats: self.privateChats, groupChats: self.groupChats, channels: f(self.channels))
     }
     
     public static func ==(lhs: GlobalNotificationSettingsSet, rhs: GlobalNotificationSettingsSet) -> Bool {
@@ -94,6 +102,9 @@ public struct GlobalNotificationSettingsSet: PostboxCoding, Equatable {
             return false
         }
         if lhs.groupChats != rhs.groupChats {
+            return false
+        }
+        if lhs.channels != rhs.channels {
             return false
         }
         return true

@@ -113,13 +113,13 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                     |> mapToSignal { result -> Signal<Void, NoError> in
                         return postbox.transaction { transaction -> Void in
                             switch result {
-                                case let .userFull(_, user, _, _, _, notifySettings, _, _):
-                                    let telegramUser = TelegramUser(user: user)
+                                case let .userFull(userFull):
+                                    let telegramUser = TelegramUser(user: userFull.user)
                                     updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in
                                         return updated
                                     })
-                                    transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
-                                    if let presence = TelegramUserPresence(apiUser: user) {
+                                    transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: userFull.notifySettings)])
+                                    if let presence = TelegramUserPresence(apiUser: userFull.user) {
                                         updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: [peer.id: presence])
                                     }
                             }
@@ -131,18 +131,15 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                     previous = CachedUserData()
                                 }
                                 switch result {
-                                    case let .userFull(flags, _, about, link, _, _, apiBotInfo, commonChatsCount):
-                                        let botInfo: BotInfo?
-                                        if let apiBotInfo = apiBotInfo {
-                                            botInfo = BotInfo(apiBotInfo: apiBotInfo)
-                                        } else {
-                                            botInfo = nil
-                                        }
-                                        let isBlocked = (flags & (1 << 0)) != 0
-                                        let callsAvailable = (flags & (1 << 4)) != 0
-                                        let callsPrivate = (flags & (1 << 5)) != 0
+                                    case let .userFull(userFull):
+                                        let botInfo = userFull.botInfo.flatMap(BotInfo.init(apiBotInfo:))
+                                        let isBlocked = (userFull.flags & (1 << 0)) != 0
+                                        let callsAvailable = (userFull.flags & (1 << 4)) != 0
+                                        let callsPrivate = (userFull.flags & (1 << 5)) != 0
+                                        let canPinMessages = (userFull.flags & (1 << 7)) != 0
+                                        let pinnedMessageId = userFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                                         let hasPhone: Bool?
-                                        switch link {
+                                        switch userFull.link {
                                             case let .link(_, foreignLink, _):
                                                 switch foreignLink {
                                                     case .contactLinkContact, .contactLinkHasPhone:
@@ -154,7 +151,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                 }
                                                 break
                                         }
-                                        return previous.withUpdatedAbout(about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedHasAccountPeerPhone(hasPhone)
+                                        return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedHasAccountPeerPhone(hasPhone).withUpdatedPinnedMessageId(pinnedMessageId)
                                 }
                             })
                         }
@@ -167,16 +164,16 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                             switch result {
                                 case let .chatFull(fullChat, chats, users):
                                     switch fullChat {
-                                        case let .chatFull(_, _, _, notifySettings, _, _):
-                                            transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
+                                        case let .chatFull(chatFull):
+                                            transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: chatFull.notifySettings)])
                                         case .channelFull:
                                             break
                                     }
                                     
                                     switch fullChat {
-                                        case let .chatFull(_, apiParticipants, _, _, apiExportedInvite, apiBotInfos):
+                                        case let .chatFull(chatFull):
                                             var botInfos: [CachedPeerBotInfo] = []
-                                            for botInfo in apiBotInfos {
+                                            for botInfo in chatFull.botInfo ?? [] {
                                                 switch botInfo {
                                                 case let .botInfo(userId, _, _):
                                                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
@@ -184,8 +181,9 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))
                                                 }
                                             }
-                                            let participants = CachedGroupParticipants(apiParticipants: apiParticipants)
-                                            let exportedInvitation = ExportedInvitation(apiExportedInvite: apiExportedInvite)
+                                            let participants = CachedGroupParticipants(apiParticipants: chatFull.participants)
+                                            let exportedInvitation = ExportedInvitation(apiExportedInvite: chatFull.exportedInvite)
+                                            let pinnedMessageId = chatFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                                         
                                             var peers: [Peer] = []
                                             var peerPresences: [PeerId: PeerPresence] = [:]
@@ -216,7 +214,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     previous = CachedGroupData()
                                                 }
                                                 
-                                                return previous.withUpdatedParticipants(participants).withUpdatedExportedInvitation(exportedInvitation).withUpdatedBotInfos(botInfos)
+                                                return previous.withUpdatedParticipants(participants).withUpdatedExportedInvitation(exportedInvitation).withUpdatedBotInfos(botInfos).withUpdatedPinnedMessageId(pinnedMessageId)
                                             })
                                         case .channelFull:
                                             break
@@ -334,7 +332,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     previous = CachedChannelData()
                                                 }
                                                 
-                                                previous = previous.withUpdatedisNotAccessible(false)
+                                                previous = previous.withUpdatedIsNotAccessible(false)
                                                 
                                                 minAvailableMessageIdUpdated = previous.minAvailableMessageId != minAvailableMessageId
                                                 
@@ -359,7 +357,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                         } else {
                             transaction.updatePeerCachedData(peerIds: [peerId], update: { _, _ in
                                 var updated = CachedChannelData()
-                                updated = updated.withUpdatedisNotAccessible(true)
+                                updated = updated.withUpdatedIsNotAccessible(true)
                                 return updated
                             })
                         }

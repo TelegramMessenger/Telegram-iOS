@@ -19,12 +19,17 @@ public enum PinnedMessageUpdate {
 }
 
 public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {
-    return account.postbox.transaction { transaction -> Peer? in
-        return transaction.getPeer(peerId)
-    } |> mapError { _ -> UpdatePinnedMessageError in
+    return account.postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
+        return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
+    }
+    |> mapError { _ -> UpdatePinnedMessageError in
         return .generic
-    } |> mapToSignal { peer -> Signal<Void, UpdatePinnedMessageError> in
-        if let channel = peer as? TelegramChannel {
+    }
+    |> mapToSignal { peer, cachedPeerData -> Signal<Void, UpdatePinnedMessageError> in
+        guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
+            return .fail(.generic)
+        }
+        if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
             var canManagePin = false
             if case .broadcast = channel.info {
                 canManagePin = channel.hasAdminRights([.canEditMessages])
@@ -32,7 +37,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                 canManagePin = channel.hasAdminRights([.canPinMessages])
             }
             
-            if let inputChannel = apiInputChannel(channel), canManagePin {
+            if canManagePin {
                 var flags: Int32 = 0
                 let messageId: Int32
                 switch update {
@@ -48,30 +53,105 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                 let request = Api.functions.channels.updatePinnedMessage(flags: flags, channel: inputChannel, id: messageId)
                 
                 return account.network.request(request)
+                |> mapError { _ -> UpdatePinnedMessageError in
+                    return .generic
+                }
+                |> mapToSignal { updates -> Signal<Void, UpdatePinnedMessageError> in
+                    account.stateManager.addUpdates(updates)
+                    return account.postbox.transaction { transaction in
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedChannelData {
+                                let pinnedMessageId: MessageId?
+                                switch update {
+                                    case let .pin(id, _):
+                                        pinnedMessageId = id
+                                    case .clear:
+                                        pinnedMessageId = nil
+                                }
+                                return current.withUpdatedPinnedMessageId(pinnedMessageId)
+                            } else {
+                                return current
+                            }
+                        })
+                    }
+                    |> mapError { _ -> UpdatePinnedMessageError in return .generic
+                    }
+                }
+            } else {
+                return .fail(.generic)
+            }
+        } else {
+            var canPin = false
+            if let group = peer as? TelegramGroup {
+                if group.flags.contains(.adminsEnabled) {
+                    switch group.role {
+                        case .creator, .admin:
+                            canPin = true
+                        default:
+                            canPin = false
+                    }
+                } else {
+                    canPin = true
+                }
+            } else if let _ = peer as? TelegramUser, let cachedPeerData = cachedPeerData as? CachedUserData {
+                canPin = cachedPeerData.canPinMessages
+            }
+            if canPin {
+                var flags: Int32 = 0
+                let messageId: Int32
+                switch update {
+                    case let .pin(id, silent):
+                        messageId = id.id
+                        if silent {
+                            flags |= (1 << 0)
+                        }
+                    case .clear:
+                        messageId = 0
+                }
+                
+                let request = Api.functions.messages.updatePinnedMessage(flags: flags, peer: inputPeer, id: messageId)
+                
+                return account.network.request(request)
+                |> mapError { _ -> UpdatePinnedMessageError in
+                    return .generic
+                }
+                |> mapToSignal { updates -> Signal<Void, UpdatePinnedMessageError> in
+                    account.stateManager.addUpdates(updates)
+                    return account.postbox.transaction { transaction in
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let _ = peer as? TelegramGroup {
+                                let current = current as? CachedGroupData ?? CachedGroupData()
+                                let pinnedMessageId: MessageId?
+                                switch update {
+                                    case let .pin(id, _):
+                                        pinnedMessageId = id
+                                    case .clear:
+                                        pinnedMessageId = nil
+                                }
+                                return current.withUpdatedPinnedMessageId(pinnedMessageId)
+                            } else if let _ = peer as? TelegramUser {
+                                let current = current as? CachedUserData ?? CachedUserData()
+                                
+                                let pinnedMessageId: MessageId?
+                                switch update {
+                                    case let .pin(id, _):
+                                        pinnedMessageId = id
+                                    case .clear:
+                                        pinnedMessageId = nil
+                                }
+                                return current.withUpdatedPinnedMessageId(pinnedMessageId)
+                            } else {
+                                return current
+                            }
+                        })
+                    }
                     |> mapError { _ -> UpdatePinnedMessageError in
                         return .generic
                     }
-                    |> mapToSignal { updates -> Signal<Void, UpdatePinnedMessageError> in
-                        account.stateManager.addUpdates(updates)
-                        return account.postbox.transaction { transaction in
-                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                if let current = current as? CachedChannelData {
-                                    let pinnedMessageId: MessageId?
-                                    switch update {
-                                        case let .pin(id, _):
-                                            pinnedMessageId = id
-                                        case .clear:
-                                            pinnedMessageId = nil
-                                    }
-                                    return current.withUpdatedPinnedMessageId(pinnedMessageId)
-                                } else {
-                                    return current
-                                }
-                            })
-                        } |> mapError {_ -> UpdatePinnedMessageError in return .generic}
                 }
+            } else {
+                return .fail(.generic)
             }
         }
-        return .fail(.generic)
     }
 }

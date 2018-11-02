@@ -34,9 +34,10 @@ public final class CachedGroupData: CachedPeerData {
     public let exportedInvitation: ExportedInvitation?
     public let botInfos: [CachedPeerBotInfo]
     public let reportStatus: PeerReportStatus
+    public let pinnedMessageId: MessageId?
     
     public let peerIds: Set<PeerId>
-    public let messageIds = Set<MessageId>()
+    public let messageIds: Set<MessageId>
     public let associatedHistoryMessageId: MessageId? = nil
     
     init() {
@@ -44,14 +45,23 @@ public final class CachedGroupData: CachedPeerData {
         self.exportedInvitation = nil
         self.botInfos = []
         self.reportStatus = .unknown
+        self.pinnedMessageId = nil
+        self.messageIds = Set()
         self.peerIds = Set()
     }
     
-    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], reportStatus: PeerReportStatus) {
+    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], reportStatus: PeerReportStatus, pinnedMessageId: MessageId?) {
         self.participants = participants
         self.exportedInvitation = exportedInvitation
         self.botInfos = botInfos
         self.reportStatus = reportStatus
+        self.pinnedMessageId = pinnedMessageId
+        
+        var messageIds = Set<MessageId>()
+        if let pinnedMessageId = self.pinnedMessageId {
+            messageIds.insert(pinnedMessageId)
+        }
+        self.messageIds = messageIds
         
         var peerIds = Set<PeerId>()
         if let participants = participants {
@@ -71,6 +81,17 @@ public final class CachedGroupData: CachedPeerData {
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
         self.reportStatus = PeerReportStatus(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
+        if let pinnedMessagePeerId = decoder.decodeOptionalInt64ForKey("pm.p"), let pinnedMessageNamespace = decoder.decodeOptionalInt32ForKey("pm.n"), let pinnedMessageId = decoder.decodeOptionalInt32ForKey("pm.i") {
+            self.pinnedMessageId = MessageId(peerId: PeerId(pinnedMessagePeerId), namespace: pinnedMessageNamespace, id: pinnedMessageId)
+        } else {
+            self.pinnedMessageId = nil
+        }
+        
+        var messageIds = Set<MessageId>()
+        if let pinnedMessageId = self.pinnedMessageId {
+            messageIds.insert(pinnedMessageId)
+        }
+        self.messageIds = messageIds
         
         var peerIds = Set<PeerId>()
         if let participants = participants {
@@ -98,6 +119,15 @@ public final class CachedGroupData: CachedPeerData {
         }
         encoder.encodeObjectArray(self.botInfos, forKey: "b")
         encoder.encodeInt32(self.reportStatus.rawValue, forKey: "r")
+        if let pinnedMessageId = self.pinnedMessageId {
+            encoder.encodeInt64(pinnedMessageId.peerId.toInt64(), forKey: "pm.p")
+            encoder.encodeInt32(pinnedMessageId.namespace, forKey: "pm.n")
+            encoder.encodeInt32(pinnedMessageId.id, forKey: "pm.i")
+        } else {
+            encoder.encodeNil(forKey: "pm.p")
+            encoder.encodeNil(forKey: "pm.n")
+            encoder.encodeNil(forKey: "pm.i")
+        }
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
@@ -105,22 +135,27 @@ public final class CachedGroupData: CachedPeerData {
             return false
         }
         
-        return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos && self.reportStatus == other.reportStatus
+        return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos && self.reportStatus == other.reportStatus && self.pinnedMessageId == other.pinnedMessageId
     }
     
     func withUpdatedParticipants(_ participants: CachedGroupParticipants?) -> CachedGroupData {
-        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus)
+        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
     }
     
     func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus)
+        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
     }
     
     func withUpdatedBotInfos(_ botInfos: [CachedPeerBotInfo]) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, reportStatus: self.reportStatus)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId)
     }
     
     func withUpdatedReportStatus(_ reportStatus: PeerReportStatus) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: reportStatus)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: reportStatus, pinnedMessageId: self.pinnedMessageId)
     }
+
+    func withUpdatedPinnedMessageId(_ pinnedMessageId: MessageId?) -> CachedGroupData {
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: pinnedMessageId)
+    }
+
 }

@@ -979,8 +979,8 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                         updatedState.updateGlobalNotificationSettings(.privateChats, notificationSettings: MessageNotificationSettings(apiSettings: apiNotificationSettings))
                     case .notifyChats:
                         updatedState.updateGlobalNotificationSettings(.groups, notificationSettings: MessageNotificationSettings(apiSettings: apiNotificationSettings))
-                    default:
-                        break
+                    case .notifyBroadcasts:
+                        updatedState.updateGlobalNotificationSettings(.channels, notificationSettings: MessageNotificationSettings(apiSettings: apiNotificationSettings))
                 }
             case let .updateChatParticipants(participants):
                 let groupPeerId: PeerId
@@ -1075,6 +1075,28 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                         previous = CachedChannelData()
                     }
                     return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id))
+                })
+            case let .updateUserPinnedMessage(userId, id):
+                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                updatedState.updateCachedPeerData(userPeerId, { current in
+                    let previous: CachedUserData
+                    if let current = current as? CachedUserData {
+                        previous = current
+                    } else {
+                        previous = CachedUserData()
+                    }
+                    return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: userPeerId, namespace: Namespaces.Message.Cloud, id: id))
+                })
+            case let .updateChatPinnedMessage(groupId, id):
+                let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: groupId)
+                updatedState.updateCachedPeerData(groupPeerId, { current in
+                    let previous: CachedGroupData
+                    if let current = current as? CachedGroupData {
+                        previous = current
+                    } else {
+                        previous = CachedGroupData()
+                    }
+                    return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: groupPeerId, namespace: Namespaces.Message.Cloud, id: id))
                 })
             case let .updateUserBlocked(userId, blocked):
                 let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
@@ -1226,10 +1248,15 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                 updatedState.addUpdateChatInputState(peerId: peer.peerId, state: inputState)
             case let .updatePhoneCall(phoneCall):
                 updatedState.addUpdateCall(phoneCall)
-            case .updateLangPackTooLong:
-                updatedState.updateLangPack(nil)
+            case let .updateLangPackTooLong(langCode):
+                updatedState.updateLangPack(langCode: langCode, difference: nil)
             case let .updateLangPack(difference):
-                updatedState.updateLangPack(difference)
+                let langCode: String
+                switch difference {
+                    case let .langPackDifference(langPackDifference):
+                        langCode = langPackDifference.langCode
+                }
+                updatedState.updateLangPack(langCode: langCode, difference: difference)
             default:
                     break
         }
@@ -1930,8 +1957,8 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
     var recentlyUsedStickers: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
     var recentlyUsedGifs: [MediaId: (MessageIndex, TelegramMediaFile)] = [:]
     var syncRecentGifs = false
-    var langPackDifferences: [Api.LangPackDifference] = []
-    var pollLangPack = false
+    var langPackDifferences: [String: [Api.LangPackDifference]] = [:]
+    var pollLangPacks = Set<String>()
     var delayNotificatonsUntil: Int32?
     
     var addHolesToGroupFeedIds = Set<PeerGroupId>()
@@ -2142,6 +2169,18 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                                 return notificationSettings
                             })
                         })
+                    case .channels:
+                        transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
+                            var previous: GlobalNotificationSettings
+                            if let current = current as? GlobalNotificationSettings {
+                                previous = current
+                            } else {
+                                previous = GlobalNotificationSettings.defaultSettings
+                            }
+                            return GlobalNotificationSettings(toBeSynchronized: previous.toBeSynchronized, remote: previous.remote.withUpdatedChannels { _ in
+                                return notificationSettings
+                            })
+                        })
                 }
             case let .MergeApiChats(chats):
                 var peers: [Peer] = []
@@ -2289,11 +2328,14 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                 })
             case let .UpdateCall(call):
                 updatedCalls.append(call)
-            case let .UpdateLangPack(difference):
+            case let .UpdateLangPack(langCode, difference):
                 if let difference = difference {
-                    langPackDifferences.append(difference)
+                    if langPackDifferences[langCode] == nil {
+                        langPackDifferences[langCode] = []
+                    }
+                    langPackDifferences[langCode]!.append(difference)
                 } else {
-                    pollLangPack = true
+                    pollLangPacks.insert(langCode)
                 }
             case let .UpdateIsContact(peerId, value):
                 isContactUpdates.append((peerId, value))
@@ -2494,27 +2536,31 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
         }
     }
     
-    if pollLangPack {
+    if !pollLangPacks.isEmpty {
         addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
-    } else if !langPackDifferences.isEmpty {
-        langPackDifferences.sort(by: { lhs, rhs in
-            let lhsVersion: Int32
-            switch lhs {
-                case let .langPackDifference(_, fromVersion, _, _):
-                    lhsVersion = fromVersion
-            }
-            let rhsVersion: Int32
-            switch rhs {
-                case let .langPackDifference(_, fromVersion, _, _):
-                    rhsVersion = fromVersion
-            }
-            return lhsVersion < rhsVersion
-        })
-        
-        for difference in langPackDifferences {
-            if !tryApplyingLanguageDifference(transaction: transaction, difference: difference) {
-                addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
-                break
+    } else {
+        outer: for (langCode, langPackDifference) in langPackDifferences {
+            if !langPackDifference.isEmpty {
+                let sortedLangPackDifference = langPackDifference.sorted(by: { lhs, rhs in
+                    let lhsVersion: Int32
+                    switch lhs {
+                        case let .langPackDifference(_, fromVersion, _, _):
+                            lhsVersion = fromVersion
+                    }
+                    let rhsVersion: Int32
+                    switch rhs {
+                        case let .langPackDifference(_, fromVersion, _, _):
+                            rhsVersion = fromVersion
+                    }
+                    return lhsVersion < rhsVersion
+                })
+                
+                for difference in sortedLangPackDifference {
+                    if !tryApplyingLanguageDifference(transaction: transaction, langCode: langCode, difference: difference) {
+                        addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
+                        break outer
+                    }
+                }
             }
         }
     }

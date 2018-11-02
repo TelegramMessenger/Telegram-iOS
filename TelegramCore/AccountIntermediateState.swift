@@ -51,6 +51,7 @@ enum AccountStateNotificationSettingsSubject {
 enum AccountStateGlobalNotificationSettingsSubject {
     case privateChats
     case groups
+    case channels
 }
 
 enum AccountStateMutationOperation {
@@ -86,7 +87,7 @@ enum AccountStateMutationOperation {
     case UpdateRecentGifs
     case UpdateChatInputState(PeerId, SynchronizeableChatInputState?)
     case UpdateCall(Api.PhoneCall)
-    case UpdateLangPack(Api.LangPackDifference?)
+    case UpdateLangPack(String, Api.LangPackDifference?)
     case UpdateMinAvailableMessage(MessageId)
 }
 
@@ -263,8 +264,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateCachedPeerData(id, f))
     }
     
-    mutating func updateLangPack(_ difference: Api.LangPackDifference?) {
-        self.addOperation(.UpdateLangPack(difference))
+    mutating func updateLangPack(langCode: String, difference: Api.LangPackDifference?) {
+        self.addOperation(.UpdateLangPack(langCode, difference))
     }
     
     mutating func updateMinAvailableMessage(_ id: MessageId) {

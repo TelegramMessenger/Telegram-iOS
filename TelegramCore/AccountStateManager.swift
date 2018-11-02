@@ -857,7 +857,8 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
     
     var notificationPeerId = id.peerId
-    if let peer = transaction.getPeer(id.peerId), let associatedPeerId = peer.associatedPeerId {
+    let peer = transaction.getPeer(id.peerId)
+    if let peer = peer, let associatedPeerId = peer.associatedPeerId {
         notificationPeerId = associatedPeerId
     }
     if message.personal, let author = message.author {
@@ -876,6 +877,10 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
                 defaultNotify = globalNotificationSettings.effective.privateChats.enabled
                 defaultSound = globalNotificationSettings.effective.privateChats.sound
                 displayContents = false
+            } else if id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                defaultNotify = globalNotificationSettings.effective.channels.enabled
+                defaultSound = globalNotificationSettings.effective.channels.sound
+                displayContents = globalNotificationSettings.effective.channels.displayPreviews
             } else {
                 defaultNotify = globalNotificationSettings.effective.groupChats.enabled
                 defaultSound = globalNotificationSettings.effective.groupChats.sound
