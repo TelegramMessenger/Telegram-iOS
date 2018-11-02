@@ -579,9 +579,12 @@ private final class AudioPlayerRendererContext {
             }
             
             if let requestingFramesContext = self.requestingFramesContext {
-                requestingFramesContext.queue.async {
+                requestingFramesContext.queue.async { [weak self] in
                     let takenFrame = requestingFramesContext.takeFrame()
                     audioPlayerRendererQueue.async {
+                        guard let strongSelf = self else {
+                            return
+                        }
                         switch takenFrame {
                             case let .frame(frame):
                                 if let dataBuffer = CMSampleBufferGetDataBuffer(frame.sampleBuffer) {
@@ -593,10 +596,10 @@ private final class AudioPlayerRendererContext {
                                     
                                     let bytes = malloc(takeLength)!
                                     CMBlockBufferCopyDataBytes(dataBuffer, 0, takeLength, bytes)
-                                    self.enqueueSamples(Data(bytesNoCopy: bytes.assumingMemoryBound(to: UInt8.self), count: takeLength, deallocator: .free), sampleIndex: bufferSampleIndex)
+                                    strongSelf.enqueueSamples(Data(bytesNoCopy: bytes.assumingMemoryBound(to: UInt8.self), count: takeLength, deallocator: .free), sampleIndex: bufferSampleIndex)
                                     
                                     if takeLength < dataLength {
-                                        self.bufferContext.with { context in
+                                        strongSelf.bufferContext.with { context in
                                             let copyOffset = context.overflowData.count
                                             context.overflowData.count += dataLength - takeLength
                                             context.overflowData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
@@ -605,15 +608,15 @@ private final class AudioPlayerRendererContext {
                                         }
                                     }
                                     
-                                    self.checkBuffer()
+                                    strongSelf.checkBuffer()
                                 } else {
                                     assertionFailure()
                                 }
                             case .skipFrame:
-                                self.checkBuffer()
+                                strongSelf.checkBuffer()
                                 break
                             case .noFrames, .finished:
-                                self.requestingFramesContext = nil
+                                strongSelf.requestingFramesContext = nil
                         }
                     }
                 }

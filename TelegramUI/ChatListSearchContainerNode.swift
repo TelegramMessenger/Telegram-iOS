@@ -877,7 +877,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         self.recentListNode.frame = CGRect(origin: CGPoint(), size: layout.size)

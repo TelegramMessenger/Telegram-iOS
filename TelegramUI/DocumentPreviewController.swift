@@ -30,6 +30,8 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
     
     private var item: DocumentPreviewItem?
     
+    private var tempFile: TempBoxFile?
+    
     init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
         self.postbox = postbox
         self.file = file
@@ -55,21 +57,25 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
         controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         self.setViewControllers([controller], animated: false)
         
-        var pathExtension: String?
-        if let fileName = self.file.fileName {
-            let pathExtensionCandidate = (fileName as NSString).pathExtension
-            if !pathExtensionCandidate.isEmpty {
-                pathExtension = pathExtensionCandidate
+        if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource) {
+            var updatedPath = path
+            if let fileName = self.file.fileName {
+                let tempFile = TempBox.shared.file(path: path, fileName: fileName)
+                updatedPath = tempFile.path
+                self.tempFile = tempFile
             }
-        }
-        
-        if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource, pathExtension: pathExtension) {
-            self.item = DocumentPreviewItem(url: URL(fileURLWithPath: path), title: self.file.fileName ?? strings.Message_File)
+            self.item = DocumentPreviewItem(url: URL(fileURLWithPath: updatedPath), title: self.file.fileName ?? strings.Message_File)
         }
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        if let tempFile = self.tempFile {
+            TempBox.shared.dispose(tempFile)
+        }
     }
     
     @objc private func cancelPressed() {
@@ -108,6 +114,8 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
     
     private var item: DocumentPreviewItem?
     
+    private var tempFile: TempBoxFile?
+    
     init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
         self.postbox = postbox
         self.file = file
@@ -137,13 +145,25 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
             }
         }
         
-        if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource, pathExtension: pathExtension) {
-            self.item = DocumentPreviewItem(url: URL(fileURLWithPath: path), title: self.file.fileName ?? strings.Message_File)
+        if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource) {
+            var updatedPath = path
+            if let fileName = self.file.fileName {
+                let tempFile = TempBox.shared.file(path: path, fileName: fileName)
+                updatedPath = tempFile.path
+                self.tempFile = tempFile
+            }
+            self.item = DocumentPreviewItem(url: URL(fileURLWithPath: updatedPath), title: self.file.fileName ?? strings.Message_File)
         }
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        if let tempFile = self.tempFile {
+            TempBox.shared.dispose(tempFile)
+        }
     }
     
     @objc private func cancelPressed() {
@@ -177,9 +197,9 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
 }
 
 func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
-    if #available(iOS 10.0, *) {
+    /*if #available(iOS 10.0, *) {
         rootController.present(DocumentPreviewController(theme: theme, strings: strings, postbox: postbox, file: file), animated: true, completion: nil)
-    } else {
+    } else {*/
         if #available(iOSApplicationExtension 9.0, *) {
             let navigationBar = UINavigationBar.appearance(whenContainedInInstancesOf: [QLPreviewController.self])
             navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
@@ -193,5 +213,5 @@ func presentDocumentPreviewController(rootController: UIViewController, theme: P
         }
         
         rootController.present(CompactDocumentPreviewController(theme: theme, strings: strings, postbox: postbox, file: file), animated: true, completion: nil)
-    }
+    //}
 }

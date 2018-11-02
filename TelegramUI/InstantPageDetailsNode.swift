@@ -9,7 +9,192 @@ private let detailsHeaderHeight: CGFloat = 44.0
 private let detailsInset: CGFloat = 17.0
 private let titleInset: CGFloat = 22.0
 
+final class InstantPageDetailsContentNode : ASDisplayNode {
+    private let account: Account
+    private let strings: PresentationStrings
+    private let theme: InstantPageTheme
+    
+    var currentLayoutTiles: [InstantPageTile] = []
+    var currentLayoutItemsWithNodes: [InstantPageItem] = []
+    var distanceThresholdGroupCount: [Int: Int] = [:]
+    
+    var visibleTiles: [Int: InstantPageTileNode] = [:]
+    var visibleItemsWithNodes: [Int: InstantPageNode] = [:]
+    
+    var currentLayout: InstantPageLayout
+    let contentSize: CGSize
+    
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize) {
+        self.account = account
+        self.strings = strings
+        self.theme = theme
+        
+        self.currentLayout = InstantPageLayout(origin: CGPoint(), contentSize: contentSize, items: items)
+        self.contentSize = contentSize
+        
+        super.init()
+        
+        self.updateLayout()
+    }
+    
+    private func updateLayout() {
+        for (_, tileNode) in self.visibleTiles {
+            tileNode.removeFromSupernode()
+        }
+        self.visibleTiles.removeAll()
+        
+        let currentLayoutTiles = instantPageTilesFromLayout(currentLayout, boundingWidth: contentSize.width)
+        
+        var currentLayoutItemsWithViews: [InstantPageItem] = []
+        var distanceThresholdGroupCount: [Int : Int] = [:]
+        
+        for item in self.currentLayout.items {
+            if item.wantsNode {
+                currentLayoutItemsWithViews.append(item)
+                if let group = item.distanceThresholdGroup() {
+                    let count: Int
+                    if let currentCount = distanceThresholdGroupCount[Int(group)] {
+                        count = currentCount
+                    } else {
+                        count = 0
+                    }
+                    distanceThresholdGroupCount[Int(group)] = count + 1
+                }
+            }
+        }
+        
+        self.currentLayoutTiles = currentLayoutTiles
+        self.currentLayoutItemsWithNodes = currentLayoutItemsWithViews
+        self.distanceThresholdGroupCount = distanceThresholdGroupCount
+    }
+    
+    func updateVisibleItems() {
+        var visibleTileIndices = Set<Int>()
+        var visibleItemIndices = Set<Int>()
+        
+        let visibleBounds = self.bounds // self.scrollNode.view.bounds
+        
+        var topNode: ASDisplayNode?
+        if let scrollSubnodes = self.subnodes {
+            for node in scrollSubnodes.reversed() {
+                if let node = node as? InstantPageTileNode {
+                    topNode = node
+                    break
+                }
+            }
+        }
+        
+        var tileIndex = -1
+        for tile in self.currentLayoutTiles {
+            tileIndex += 1
+            var tileVisibleFrame = tile.frame
+            tileVisibleFrame.origin.y -= 400.0
+            tileVisibleFrame.size.height += 400.0 * 2.0
+            if tileVisibleFrame.intersects(visibleBounds) {
+                visibleTileIndices.insert(tileIndex)
+                
+                if visibleTiles[tileIndex] == nil {
+                    let tileNode = InstantPageTileNode(tile: tile, backgroundColor: .clear)
+                    tileNode.frame = tile.frame
+                    if let topNode = topNode {
+                        self.insertSubnode(tileNode, aboveSubnode: topNode)
+                    } else {
+                        self.insertSubnode(tileNode, at: 0)
+                    }
+                    topNode = tileNode
+                    self.visibleTiles[tileIndex] = tileNode
+                }
+            }
+        }
+        
+        var itemIndex = -1
+        for item in self.currentLayoutItemsWithNodes {
+            itemIndex += 1
+            var itemThreshold: CGFloat = 0.0
+            if let group = item.distanceThresholdGroup() {
+                var count: Int = 0
+                if let currentCount = self.distanceThresholdGroupCount[group] {
+                    count = currentCount
+                }
+                itemThreshold = item.distanceThresholdWithGroupCount(count)
+            }
+            var itemFrame = item.frame
+            itemFrame.origin.y -= itemThreshold
+            itemFrame.size.height += itemThreshold * 2.0
+            if visibleBounds.intersects(itemFrame) {
+                visibleItemIndices.insert(itemIndex)
+                
+                var itemNode = self.visibleItemsWithNodes[itemIndex]
+                if let currentItemNode = itemNode {
+                    if !item.matchesNode(currentItemNode) {
+                        (currentItemNode as! ASDisplayNode).removeFromSupernode()
+                        self.visibleItemsWithNodes.removeValue(forKey: itemIndex)
+                        itemNode = nil
+                    }
+                }
+                
+                if itemNode == nil {
+                    if let itemNode = item.node(account: self.account, strings: self.strings, theme: self.theme, openMedia: { [weak self] media in
+                        //self?.openMedia(media)
+                    }, openPeer: { [weak self] peerId in
+                        //self?.openPeer(peerId)
+                    }, openUrl: { [weak self] url in
+                        //self?.openUrl(url)
+                    }, updateWebEmbedHeight: { [weak self] key, height in
+                        //self?.updateWebEmbedHeight(key, height)
+                    }, updateDetailsOpened: { _, _ in
+                    }) {
+                        itemNode.frame = item.frame
+                        if let topNode = topNode {
+                            self.insertSubnode(itemNode, aboveSubnode: topNode)
+                        } else {
+                            self.insertSubnode(itemNode, at: 0)
+                        }
+                        topNode = itemNode
+                        self.visibleItemsWithNodes[itemIndex] = itemNode
+                    }
+                } else {
+                    if (itemNode as! ASDisplayNode).frame != item.frame {
+                        (itemNode as! ASDisplayNode).frame = item.frame
+                    }
+                }
+            }
+        }
+        
+        var removeTileIndices: [Int] = []
+        for (index, tileNode) in self.visibleTiles {
+            if !visibleTileIndices.contains(index) {
+                removeTileIndices.append(index)
+                tileNode.removeFromSupernode()
+            }
+        }
+        for index in removeTileIndices {
+            self.visibleTiles.removeValue(forKey: index)
+        }
+        
+        var removeItemIndices: [Int] = []
+        for (index, itemNode) in self.visibleItemsWithNodes {
+            if !visibleItemIndices.contains(index) {
+                removeItemIndices.append(index)
+                (itemNode as! ASDisplayNode).removeFromSupernode()
+            } else {
+                var itemFrame = (itemNode as! ASDisplayNode).frame
+                let itemThreshold: CGFloat = 200.0
+                itemFrame.origin.y -= itemThreshold
+                itemFrame.size.height += itemThreshold * 2.0
+                itemNode.updateIsVisible(visibleBounds.intersects(itemFrame))
+            }
+        }
+        for index in removeItemIndices {
+            self.visibleItemsWithNodes.removeValue(forKey: index)
+        }
+    }
+}
+
 final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
+    private let account: Account
+    private let strings: PresentationStrings
+    private let theme: InstantPageTheme
     let item: InstantPageDetailsItem
     
     private let titleTile: InstantPageTile
@@ -19,9 +204,19 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let buttonNode: HighlightableButtonNode
     private let arrowNode: InstantPageDetailsArrowNode
     private let separatorNode: ASDisplayNode
+    private let contentNode: InstantPageDetailsContentNode
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem) {
+    let updateOpened: (Int, Bool) -> Void
+    var opened: Bool
+    
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, updateDetailsOpened: @escaping (Int, Bool) -> Void) {
+        self.account = account
+        self.strings = strings
+        self.theme = theme
         self.item = item
+        
+        self.updateOpened = updateDetailsOpened
+        
         let frame = item.frame
         
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -46,16 +241,23 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         }
         self.titleTile.items.append(contentsOf: titleItems)
         
-        self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: false)
+        self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: item.open)
         self.separatorNode = ASDisplayNode()
         
+        self.contentNode = InstantPageDetailsContentNode(account: account, strings: strings, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height))
+        
+        self.opened = item.open
+        
         super.init()
+        
+        self.clipsToBounds = true
         
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.titleTileNode)
         self.addSubnode(self.arrowNode)
         self.addSubnode(self.separatorNode)
+        self.addSubnode(self.contentNode)
         
         let lineSize = CGSize(width: frame.width - detailsInset, height: UIScreenPixel)
         self.separatorNode.frame = CGRect(origin: CGPoint(x: item.rtl ? 0.0 : detailsInset, y: detailsHeaderHeight - lineSize.height), size: lineSize)
@@ -85,8 +287,13 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     }
     
     @objc func buttonPressed() {
-        self.arrowNode.setOpen(!self.arrowNode.open, animated: true)
-        //self.openUrl(InstantPageUrlItem(url: self.url, webpageId: self.webpageId))
+        self.setOpened(!self.opened, animated: true)
+    }
+    
+    func setOpened(_ opened: Bool, animated: Bool) {
+        self.opened = opened
+        self.arrowNode.setOpen(opened, animated: animated)
+        self.updateOpened(0, opened)
     }
     
     override func layout() {
@@ -98,6 +305,9 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: detailsHeaderHeight + UIScreenPixel))
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: detailsHeaderHeight))
         self.arrowNode.frame = CGRect(x: detailsInset, y: floorToScreenPixels((detailsHeaderHeight - 8.0) / 2.0) + 1.0, width: 13.0, height: 8.0)
+        self.contentNode.frame = CGRect(x: 0.0, y: detailsHeaderHeight, width: size.width, height: self.item.frame.height - detailsHeaderHeight)
+        
+        self.contentNode.updateVisibleItems()
     }
     
     func updateIsVisible(_ isVisible: Bool) {
@@ -113,8 +323,6 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     }
     
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
-//        self.titleNode.attributedText = NSAttributedString(string: self.title, font: UIFont(name: "Georgia", size: 17.0), textColor: theme.panelPrimaryColor)
-//        self.descriptionNode.attributedText = NSAttributedString(string: self.pageDescription, font: theme.serif ? UIFont(name: "Georgia", size: 15.0) : Font.regular(15.0), textColor: theme.panelSecondaryColor)
         self.arrowNode.color = theme.controlColor
         self.separatorNode.backgroundColor = theme.controlColor
         self.highlightedBackgroundNode.backgroundColor = theme.panelHighlightedBackgroundColor
@@ -175,6 +383,7 @@ final class InstantPageDetailsArrowNode : ASDisplayNode {
     }
     
     func setOpen(_ open: Bool, animated: Bool) {
+        self.open = open
         let openProgress: CGFloat = open ? 1.0 : 0.0
         if animated {
             self.targetProgress = openProgress
@@ -200,17 +409,13 @@ final class InstantPageDetailsArrowNode : ASDisplayNode {
     
     private func displayLinkEvent() {
         if let targetProgress = self.targetProgress {
-//            var fps: Int = 60
-//            if let link = self.displayLink, link.duration > 0 {
-//                fps = Int(round(1000 / link.duration) / 1000)
-//            }
-            let delta = targetProgress - self.progress
-            self.progress += delta * 0.01
-            if delta > 0 && self.progress > targetProgress {
+            let sign = CGFloat(targetProgress - self.progress > 0 ? 1 : -1)
+            self.progress += 0.14 * sign
+            if sign > 0 && self.progress > targetProgress {
                 self.progress = 1.0
                 self.targetProgress = nil
                 self.displayLink?.isPaused = true
-            } else if delta < 0 && self.progress < targetProgress {
+            } else if sign < 0 && self.progress < targetProgress {
                 self.progress = 0.0
                 self.targetProgress = nil
                 self.displayLink?.isPaused = true
@@ -232,9 +437,9 @@ final class InstantPageDetailsArrowNode : ASDisplayNode {
             context.setLineCap(.round)
             context.setLineWidth(2.0)
             
-            context.move(to: CGPoint(x: 1.0, y: 1.0 + 5.0 * parameters.progress))
-            context.addLine(to: CGPoint(x: 6.0, y: 6.0 - 5.0 * parameters.progress))
-            context.addLine(to: CGPoint(x: 11.0, y: 1.0 + 5.0 * parameters.progress))
+            context.move(to: CGPoint(x: 1.0, y: 6.0 - 5.0 * parameters.progress))
+            context.addLine(to: CGPoint(x: 6.0, y: 1.0 + 5.0 * parameters.progress))
+            context.addLine(to: CGPoint(x: 11.0, y: 6.0 - 5.0 * parameters.progress))
             context.strokePath()
         }
     }

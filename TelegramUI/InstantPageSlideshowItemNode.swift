@@ -60,6 +60,7 @@ private final class InstantPageSlideshowItemNode: ASDisplayNode {
 
 private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDelegate {
     private let account: Account
+    private let theme: InstantPageTheme
     private let webPage: TelegramMediaWebpage
     private let openMedia: (InstantPageMedia) -> Void
     private let pageGap: CGFloat
@@ -91,8 +92,9 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         }
     }
     
-    init(account: Account, webPage: TelegramMediaWebpage, openMedia: @escaping (InstantPageMedia) -> Void, pageGap: CGFloat = 0.0) {
+    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, openMedia: @escaping (InstantPageMedia) -> Void, pageGap: CGFloat = 0.0) {
         self.account = account
+        self.theme = theme
         self.webPage = webPage
         self.openMedia = openMedia
         self.pageGap = pageGap
@@ -172,7 +174,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         let media = self.items[index]
         let contentNode: ASDisplayNode
         if let _ = media.media as? TelegramMediaImage {
-            contentNode = InstantPageImageNode(account: self.account, webPage: self.webPage, media: media, attributes: [], interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia)
+            contentNode = InstantPageImageNode(account: self.account, theme: self.theme, webPage: self.webPage, media: media, attributes: [], interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia)
         } else if let file = media.media as? TelegramMediaFile {
             contentNode = ASDisplayNode()
         } else {
@@ -371,10 +373,10 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
     private let pagerNode: InstantPageSlideshowPagerNode
     private let pageControlNode: PageControlNode
     
-    init(account: Account, webPage: TelegramMediaWebpage, medias: [InstantPageMedia], openMedia: @escaping (InstantPageMedia) -> Void) {
+    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, medias: [InstantPageMedia], openMedia: @escaping (InstantPageMedia) -> Void) {
         self.medias = medias
         
-        self.pagerNode = InstantPageSlideshowPagerNode(account: account, webPage: webPage, openMedia: openMedia)
+        self.pagerNode = InstantPageSlideshowPagerNode(account: account, theme: theme, webPage: webPage, openMedia: openMedia)
         self.pagerNode.replaceItems(medias, centralItemIndex: nil)
         
         self.pageControlNode = PageControlNode(dotColor: .white)
@@ -400,7 +402,16 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
         self.pagerNode.frame = self.bounds
         self.pagerNode.containerLayoutUpdated(ContainerViewLayout(size: self.bounds.size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
         
+        self.pageControlNode.layer.transform = CATransform3DIdentity
         self.pageControlNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.bounds.size.height - 20.0), size: CGSize(width: self.bounds.size.width, height: 20.0))
+        
+        let maxWidth = self.bounds.width - 36.0;
+        let size = self.pageControlNode.calculateSizeThatFits(self.bounds.size)
+        if size.width > maxWidth
+        {
+            let scale = maxWidth / size.width
+            self.pageControlNode.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+        }
     }
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {

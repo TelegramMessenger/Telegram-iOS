@@ -222,7 +222,7 @@ final class InstantPageMediaPlaylist: SharedMediaPlaylist {
     }
     
     private func updateState() {
-        self.stateValue.set(.single(SharedMediaPlaylistState(loading: false, playedToEnd: self.playedToEnd, item: self.currentItem.flatMap({ InstantPageMediaPlaylistItem(webPage: self.webPage, item: $0) }), order: self.order, looping: self.looping)))
+        self.stateValue.set(.single(SharedMediaPlaylistState(loading: false, playedToEnd: self.playedToEnd, item: self.currentItem.flatMap({ InstantPageMediaPlaylistItem(webPage: self.webPage, item: $0) }), nextItem: nil, previousItem: nil, order: self.order, looping: self.looping)))
     }
     
     func onItemPlaybackStarted(_ item: SharedMediaPlaylistItem) {

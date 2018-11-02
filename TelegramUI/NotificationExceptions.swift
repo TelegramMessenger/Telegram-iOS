@@ -414,7 +414,7 @@ public func notificationExceptionsController(account: Account, mode: Notificatio
         activateSearch?()
     }, changeNotifications: { peerId, settings in
         
-        let globalSettings = globalValue.modify {$0}
+        /*let globalSettings = globalValue.modify {$0}
         
         let isPrivateChat = peerId.namespace == Namespaces.Peer.CloudUser
         
@@ -458,9 +458,9 @@ public func notificationExceptionsController(account: Account, mode: Notificatio
                     actionSheet?.dismissAnimated()
                 })
             ])])
-        presentControllerImpl?(actionSheet, nil)
+        presentControllerImpl?(actionSheet, nil)*/
     }, selectPeer: {
-        let filter: ChatListNodePeersFilter
+        /*let filter: ChatListNodePeersFilter
         switch mode {
         case .groups:
             filter = [.withoutSecretChats]
@@ -541,7 +541,7 @@ public func notificationExceptionsController(account: Account, mode: Notificatio
             
             
         }
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))*/
     })
     
     let peersSignal:Signal<[PeerId : Peer], NoError> = statePromise.get() |> mapToSignal { state in
@@ -1022,7 +1022,7 @@ private final class NotificationExceptionsSearchControllerContentNode: SearchDis
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         self.listNode.containerLayoutUpdated(layout, navigationBarHeight: 0, transition: transition)

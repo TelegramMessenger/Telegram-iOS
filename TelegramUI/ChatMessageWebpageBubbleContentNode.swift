@@ -118,7 +118,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         super.init()
         
         self.addSubnode(self.contentNode)
-        self.contentNode.openMedia = { [weak self] in
+        self.contentNode.openMedia = { [weak self] stream in
             if let strongSelf = self, let item = strongSelf.item {
                 if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content, let image = content.image, let instantPage = content.instantPage {
                     var isGallery = false
@@ -136,7 +136,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         return
                     }
                 }
-                let _ = item.controllerInteraction.openMessage(item.message)
+                let _ = item.controllerInteraction.openMessage(item.message, stream ? .stream : .default)
             }
         }
         self.contentNode.activateAction = { [weak self] in

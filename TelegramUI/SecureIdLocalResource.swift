@@ -68,7 +68,7 @@ func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureIdLocalIm
         
         subscriber.putNext(.reset)
         
-        let fetch = fetchResource(resource.source, .single(IndexSet(integersIn: 0 ..< Int.max)), nil)
+        let fetch = fetchResource(resource.source, .single([(0 ..< Int.max, .default)]), nil)
         let buffer = Atomic<Buffer>(value: Buffer())
         let disposable = fetch.start(next: { result in
             switch result {

@@ -129,13 +129,17 @@ final class SharedMediaPlaylistState: Equatable {
     let loading: Bool
     let playedToEnd: Bool
     let item: SharedMediaPlaylistItem?
+    let nextItem: SharedMediaPlaylistItem?
+    let previousItem: SharedMediaPlaylistItem?
     let order: MusicPlaybackSettingsOrder
     let looping: MusicPlaybackSettingsLooping
     
-    init(loading: Bool, playedToEnd: Bool, item: SharedMediaPlaylistItem?, order: MusicPlaybackSettingsOrder, looping: MusicPlaybackSettingsLooping) {
+    init(loading: Bool, playedToEnd: Bool, item: SharedMediaPlaylistItem?, nextItem: SharedMediaPlaylistItem?, previousItem: SharedMediaPlaylistItem?, order: MusicPlaybackSettingsOrder, looping: MusicPlaybackSettingsLooping) {
         self.loading = loading
         self.playedToEnd = playedToEnd
         self.item = item
+        self.nextItem = nextItem
+        self.previousItem = previousItem
         self.order = order
         self.looping = looping
     }
@@ -145,6 +149,12 @@ final class SharedMediaPlaylistState: Equatable {
             return false
         }
         if !arePlaylistItemsEqual(lhs.item, rhs.item) {
+            return false
+        }
+        if !arePlaylistItemsEqual(lhs.nextItem, rhs.nextItem) {
+            return false
+        }
+        if !arePlaylistItemsEqual(lhs.previousItem, rhs.previousItem) {
             return false
         }
         if lhs.order != rhs.order {
@@ -381,6 +391,8 @@ final class SharedMediaPlayer {
     }
     private let state = Promise<SharedMediaPlaylistState?>(nil)
     
+    private var playbackStateValueDisposable: Disposable?
+    private var _playbackStateValue: SharedMediaPlayerState?
     private let playbackStateValue = Promise<SharedMediaPlayerState?>(nil)
     var playbackState: Signal<SharedMediaPlayerState?, NoError> {
         return self.playbackStateValue.get()
@@ -412,7 +424,8 @@ final class SharedMediaPlayer {
             self.forceAudioToSpeaker = !DeviceProximityManager.shared().currentValue()
         }
         
-        self.stateDisposable = (playlist.state |> deliverOnMainQueue).start(next: { [weak self] state in
+        self.stateDisposable = (playlist.state
+        |> deliverOnMainQueue).start(next: { [weak self] state in
             if let strongSelf = self {
                 let previousPlaybackItem = strongSelf.playbackItem
                 if state.item?.playbackData != strongSelf.stateValue?.item?.playbackData {
@@ -525,7 +538,8 @@ final class SharedMediaPlayer {
                     let playlistLocation = strongSelf.playlist.location
                     let playerIndex = strongSelf.playerIndex
                     if let playbackItem = strongSelf.playbackItem, let item = state.item {
-                        strongSelf.playbackStateValue.set(playbackItem.playbackStatus |> map { itemStatus in
+                        strongSelf.playbackStateValue.set(playbackItem.playbackStatus
+                        |> map { itemStatus in
                             return .item(SharedMediaPlayerItemPlaybackState(playlistId: playlistId, playlistLocation: playlistLocation, item: item, status: itemStatus, order: state.order, looping: state.looping, playerIndex: playerIndex))
                         })
                     strongSelf.markItemAsPlayedDisposable.set((playbackItem.playbackStatus
@@ -558,6 +572,11 @@ final class SharedMediaPlayer {
             }
         })
         
+        self.playbackStateValueDisposable = (self.playbackState
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            self?._playbackStateValue = value
+        })
+        
         if controlPlaybackWithProximity {
             self.proximityManagerIndex = DeviceProximityManager.shared().add { [weak self] value in
                 let forceAudioToSpeaker = !value
@@ -578,6 +597,7 @@ final class SharedMediaPlayer {
         self.stateDisposable?.dispose()
         self.markItemAsPlayedDisposable.dispose()
         self.inForegroundDisposable?.dispose()
+        self.playbackStateValueDisposable?.dispose()
         
         if let proximityManagerIndex = self.proximityManagerIndex {
             DeviceProximityManager.shared().remove(proximityManagerIndex)
@@ -600,8 +620,13 @@ final class SharedMediaPlayer {
                 self.scheduledPlaybackAction = .play
                 self.playlist.control(.next)
             case .previous:
-                self.scheduledPlaybackAction = .play
-                self.playlist.control(.previous)
+                let threshold: Double = 5.0
+                if let playbackStateValue = self._playbackStateValue, case let .item(item) = playbackStateValue, item.status.duration > threshold, item.status.timestamp > threshold {
+                    self.control(.seek(0.0))
+                } else {
+                    self.scheduledPlaybackAction = .play
+                    self.playlist.control(.previous)
+                }
             case let .playback(action):
                 if let playbackItem = self.playbackItem {
                     switch action {

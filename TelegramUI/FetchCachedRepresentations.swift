@@ -8,15 +8,52 @@ import Display
 import UIKit
 import AVFoundation
 
-public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+//let signal = self.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+
+public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
-        return fetchCachedStickerAJpegRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchCachedStickerAJpegRepresentation(account: account, resource: resource, resourceData: data,  representation: representation)
+        }
     } else if let representation = representation as? CachedScaledImageRepresentation {
-        return fetchCachedScaledImageRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
-    } else if let representation = representation as? CachedVideoFirstFrameRepresentation {
-        return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchCachedScaledImageRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
+        }
+    } else if let _ = representation as? CachedVideoFirstFrameRepresentation {
+        /*return fetchPartialVideoThumbnail(postbox: account.postbox, resource: resource)
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            var randomId: Int64 = 0
+            arc4random_buf(&randomId, 8)
+            let path = NSTemporaryDirectory() + "\(randomId)"
+            if let data = data, let _ = try? data.write(to: URL(fileURLWithPath: path)) {
+                return .single(CachedMediaResourceRepresentationResult(temporaryPath: path))
+            } else {
+                return .complete()
+            }
+        }*/
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data)
+        }
     } else if let representation = representation as? CachedScaledVideoFirstFrameRepresentation {
-        return fetchCachedScaledVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: resourceData, representation: representation)
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchCachedScaledVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
+        }
     }
     return .never()
 }
@@ -157,7 +194,7 @@ func generateVideoFirstFrame(_ path: String, maxDimensions: CGSize) -> UIImage? 
     }
 }
 
-private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedVideoFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal { subscriber in
         if resourceData.complete {
             let tempFilePath = NSTemporaryDirectory() + "\(arc4random()).mov"
@@ -203,7 +240,8 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
 }
 
 private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedScaledVideoFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
-    return account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), complete: true) |> mapToSignal { firstFrame -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+    return account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), complete: true)
+    |> mapToSignal { firstFrame -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return Signal({ subscriber in
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: firstFrame.path), options: [.mappedIfSafe]) {
                     if let image = UIImage(data: data) {

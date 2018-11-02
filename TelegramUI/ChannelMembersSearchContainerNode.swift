@@ -464,7 +464,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: nil)
         }
         
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)

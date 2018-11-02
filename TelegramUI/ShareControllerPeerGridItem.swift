@@ -83,19 +83,17 @@ final class ShareControllerPeerGridItem: GridItem {
     let account: Account
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let peer: Peer
-    let chatPeer: Peer?
+    let peer: RenderedPeer
     let controllerInteraction: ShareControllerInteraction
     let search: Bool
     
     let section: GridSection?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: Peer, chatPeer: Peer?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil, search: Bool = false) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil, search: Bool = false) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.peer = peer
-        self.chatPeer = chatPeer
         self.controllerInteraction = controllerInteraction
         self.search = search
         
@@ -109,7 +107,7 @@ final class ShareControllerPeerGridItem: GridItem {
     func node(layout: GridNodeLayout) -> GridItemNode {
         let node = ShareControllerPeerGridItemNode()
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: self.chatPeer, search: self.search)
+        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, search: self.search)
         return node
     }
     
@@ -119,12 +117,12 @@ final class ShareControllerPeerGridItem: GridItem {
             return
         }
         node.controllerInteraction = self.controllerInteraction
-        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, chatPeer: self.chatPeer, search: self.search)
+        node.setup(account: self.account, theme: self.theme, strings: self.strings, peer: self.peer, search: self.search)
     }
 }
 
 final class ShareControllerPeerGridItemNode: GridItemNode {
-    private var currentState: (Account, Peer, Peer?, Bool)?
+    private var currentState: (Account, RenderedPeer, Bool)?
     private let peerNode: SelectablePeerNode
     
     var controllerInteraction: ShareControllerInteraction?
@@ -136,21 +134,22 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         
         self.peerNode.toggleSelection = { [weak self] in
             if let strongSelf = self {
-                if let (_, peer, chatPeer, search) = strongSelf.currentState {
-                    let mainPeer = chatPeer ?? peer
-                    strongSelf.controllerInteraction?.togglePeer(mainPeer, search)
+                if let (_, peer, search) = strongSelf.currentState {
+                    if let actualPeer = peer.peers[peer.peerId] {
+                    strongSelf.controllerInteraction?.togglePeer(actualPeer, search)
+                    }
                 }
             }
         }
         self.addSubnode(self.peerNode)
     }
     
-    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: Peer, chatPeer: Peer?, search: Bool) {
-        if self.currentState == nil || self.currentState!.0 !== account || !arePeersEqual(self.currentState!.1, peer) {
+    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, search: Bool) {
+        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != peer {
             let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor)
             self.peerNode.theme = itemTheme
-            self.peerNode.setup(account: account, strings: strings, peer: peer, chatPeer: chatPeer)
-            self.currentState = (account, peer, chatPeer, search)
+            self.peerNode.setup(account: account, strings: strings, peer: peer)
+            self.currentState = (account, peer, search)
             self.setNeedsLayout()
         }
         self.updateSelection(animated: false)
@@ -158,9 +157,8 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     
     func updateSelection(animated: Bool) {
         var selected = false
-        if let controllerInteraction = self.controllerInteraction, let (_, peer, chatPeer, _) = self.currentState {
-            let mainPeer = chatPeer ?? peer
-            selected = controllerInteraction.selectedPeerIds.contains(mainPeer.id)
+        if let controllerInteraction = self.controllerInteraction, let (_, peer, _) = self.currentState {
+            selected = controllerInteraction.selectedPeerIds.contains(peer.peerId)
         }
         
         self.peerNode.updateSelection(selected: selected, animated: animated)

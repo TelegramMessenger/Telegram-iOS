@@ -310,7 +310,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: listHeight, height: size.width), insets: insets, duration: duration, curve: listViewCurve)

@@ -65,14 +65,13 @@ final class SelectablePeerNode: ASDisplayNode {
     
     private var currentSelected = false
     
-    private var peer: Peer?
-    private var chatPeer: Peer?
+    private var peer: RenderedPeer?
     
     var theme: SelectablePeerNodeTheme = SelectablePeerNodeTheme(textColor: .black, secretTextColor: .green, selectedTextColor: .blue, checkBackgroundColor: .white, checkFillColor: .blue, checkColor: .white) {
         didSet {
             if !self.theme.isEqual(to: oldValue) {
-                if let peer = self.peer {
-                    self.textNode.attributedText = NSAttributedString(string: peer.displayTitle, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : self.theme.textColor, paragraphAlignment: .center)
+                if let peer = self.peer, let mainPeer = peer.chatMainPeer {
+                    self.textNode.attributedText = NSAttributedString(string: mainPeer.displayTitle, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : (peer.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor), paragraphAlignment: .center)
                 }
             }
         }
@@ -107,30 +106,26 @@ final class SelectablePeerNode: ASDisplayNode {
         
     }
     
-    func setup(account: Account, strings: PresentationStrings, peer: Peer, chatPeer: Peer?, numberOfLines: Int = 2) {
+    func setup(account: Account, strings: PresentationStrings, peer: RenderedPeer, numberOfLines: Int = 2) {
         self.peer = peer
-        self.chatPeer = chatPeer
-        
-        var defaultColor: UIColor = self.theme.textColor
-        if let chatPeer = chatPeer, chatPeer.id.namespace == Namespaces.Peer.SecretChat {
-            defaultColor = self.theme.secretTextColor
+        guard let mainPeer = peer.chatMainPeer else {
+            return
         }
+        
+        let defaultColor: UIColor = peer.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor
         
         let text: String
         var overrideImage: AvatarNodeImageOverride?
-        if peer.id == account.peerId {
+        if peer.peerId == account.peerId {
             text = strings.DialogList_SavedMessages
             overrideImage = .savedMessagesIcon
         } else {
-            text = peer.compactDisplayTitle
+            text = mainPeer.compactDisplayTitle
         }
         self.textNode.maximumNumberOfLines = UInt(numberOfLines)
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(account: account, peer: peer, overrideImage: overrideImage)
+        self.avatarNode.setPeer(account: account, peer: mainPeer, overrideImage: overrideImage)
         self.setNeedsLayout()
-        
-       
-        
     }
     
     func updateSelection(selected: Bool, animated: Bool) {

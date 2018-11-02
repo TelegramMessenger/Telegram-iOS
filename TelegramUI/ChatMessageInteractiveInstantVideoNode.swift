@@ -581,7 +581,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if self.infoBackgroundNode.alpha.isZero {
             item.account.telegramApplicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: .voice)
         } else {
-            let _ = item.controllerInteraction.openMessage(item.message)
+            let _ = item.controllerInteraction.openMessage(item.message, .default)
         }
     }
     

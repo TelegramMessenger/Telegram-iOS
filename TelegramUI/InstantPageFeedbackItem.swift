@@ -7,13 +7,16 @@ final class InstantPageFeedbackItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
     let medias: [InstantPageMedia] = []
-        
-    init(frame: CGRect) {
+    
+    let webPage: TelegramMediaWebpage
+    
+    init(frame: CGRect, webPage: TelegramMediaWebpage) {
         self.frame = frame
+        self.webPage = webPage
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageFeedbackNode(account: account, strings: strings, theme: theme, openPeer: openPeer)
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+        return InstantPageFeedbackNode(account: account, strings: strings, theme: theme, webPage: self.webPage, openUrl: openUrl)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

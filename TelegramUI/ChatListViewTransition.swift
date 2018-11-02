@@ -164,7 +164,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                     var index = toView.filteredEntries.count - 1
                     for entry in toView.filteredEntries {
                         if entry.index >= scrollIndex {
-                            scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default, directionHint: directionHint)
+                            scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default(duration: nil), directionHint: directionHint)
                             break
                         }
                         index -= 1
@@ -174,7 +174,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                         var index = 0
                         for entry in toView.filteredEntries.reversed() {
                             if entry.index < scrollIndex {
-                                scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default, directionHint: directionHint)
+                                scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default(duration: nil), directionHint: directionHint)
                                 break
                             }
                             index += 1

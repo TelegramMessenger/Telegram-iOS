@@ -342,7 +342,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             }
                             
                             if !isBroadcastChannel {
-                                hasAvatar = true
+                                hasAvatar = item.content.firstMessage.effectivelyIncoming(item.account.peerId)
                             }
                         }
                     } else if incoming {
@@ -1574,7 +1574,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     case .openMessage:
                                         foundTapAction = true
                                         if let item = self.item {
-                                            let _ = item.controllerInteraction.openMessage(item.message)
+                                            let _ = item.controllerInteraction.openMessage(item.message, .default)
                                         }
                                         break loop
                                 }

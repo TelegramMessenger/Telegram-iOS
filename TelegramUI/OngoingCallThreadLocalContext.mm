@@ -250,7 +250,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
         tgvoip::IPv6Address addressv6(std::string(connection.ipv6.UTF8String));
         unsigned char peerTag[16];
         [connection.peerTag getBytes:peerTag length:16];
-        endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, tgvoip::Endpoint::TYPE_UDP_RELAY, peerTag));
+        endpoints.push_back(tgvoip::Endpoint(connection.connectionId, (uint16_t)connection.port, address, addressv6, tgvoip::Endpoint::Type::UDP_RELAY, peerTag));
     }
     
     tgvoip::VoIPController::Config config(_callConnectTimeout, _callPacketTimeout, _dataSavingMode, false, true, true);

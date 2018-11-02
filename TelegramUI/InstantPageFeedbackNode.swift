@@ -7,7 +7,8 @@ import SwiftSignalKit
 
 final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     private let account: Account
-    private let openPeer: (PeerId) -> Void
+    private let webPage: TelegramMediaWebpage
+    private let openUrl: (InstantPageUrlItem) -> Void
     
     private let highlightedBackgroundNode: ASDisplayNode
     private let buttonNode: HighlightableButtonNode
@@ -15,9 +16,10 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     
     private let resolveDisposable = MetaDisposable()
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openPeer: @escaping (PeerId) -> Void) {
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, webPage: TelegramMediaWebpage, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.account = account
-        self.openPeer = openPeer
+        self.webPage = webPage
+        self.openUrl = openUrl
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -57,9 +59,9 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     }
     
     @objc func buttonPressed() {
-        self.resolveDisposable.set((resolvePeerByName(account: self.account, name: "previews") |> deliverOnMainQueue).start(next: { peerId in
-            if let peerId = peerId {
-                self.openPeer(peerId)
+        self.resolveDisposable.set((resolvePeerByName(account: self.account, name: "previews") |> deliverOnMainQueue).start(next: { [weak self] peerId in
+            if let strongSelf = self, let peerId = peerId, let webPageId = strongSelf.webPage.id?.id {
+                strongSelf.openUrl(InstantPageUrlItem(url: "https://t.me/previews?start=webpage\(webPageId)", webpageId: nil))
             }
         }))
     }

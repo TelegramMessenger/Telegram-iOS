@@ -31,10 +31,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.addSubnode(self.interactiveImageNode)
         
-        self.interactiveImageNode.activateLocalContent = { [weak self] in
+        self.interactiveImageNode.activateLocalContent = { [weak self] mode in
             if let strongSelf = self {
                 if let item = strongSelf.item {
-                    let _ = item.controllerInteraction.openMessage(item.message)
+                    let _ = item.controllerInteraction.openMessage(item.message, mode == .stream ? .stream : .default)
                 }
             }
         }
@@ -226,7 +226,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
-        if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isEqual(to: media) {
+        if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isSemanticallyEqual(to: media) {
             let interactiveImageNode = self.interactiveImageNode
             return (self.interactiveImageNode, { [weak interactiveImageNode] in
                 return interactiveImageNode?.view.snapshotContentTree(unhide: true)
@@ -256,6 +256,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         self.interactiveImageNode.isHidden = mediaHidden
+        self.interactiveImageNode.updateIsHidden(mediaHidden)
         return mediaHidden
     }
     

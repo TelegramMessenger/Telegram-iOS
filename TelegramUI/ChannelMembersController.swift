@@ -178,7 +178,8 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
             case let .addMemberInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .peerItem(_, theme, strings, dateTimeFormat, participant, editing, enabled):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: participant.peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+                
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: participant.peer, presence: participant.presences[participant.peer.id], text: .presence, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
                     arguments.openPeer(participant.peer)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)

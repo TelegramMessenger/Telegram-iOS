@@ -685,9 +685,12 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                 previousBlock = subBlock
             }
             
+            let closingSpacing = spacingBetweenBlocks(upper: previousBlock, lower: nil)
+            contentSize.height += closingSpacing
+            
             let styleStack = InstantPageTextStyleStack()
             setupStyleStack(styleStack, theme: theme, category: .paragraph, link: false)
-            let detailsItem = layoutDetailsItem(theme: theme, title: attributedStringForRichText(title, styleStack: styleStack), boundingWidth: boundingWidth, items: subitems, contentSize: contentSize, open: open, rtl: rtl)
+            let detailsItem = layoutDetailsItem(theme: theme, title: attributedStringForRichText(title, styleStack: styleStack), boundingWidth: boundingWidth, items: subitems, contentSize: contentSize, rtl: rtl, open: open)
             
             return InstantPageLayout(origin: CGPoint(), contentSize: detailsItem.frame.size, items: [detailsItem])
         case let .relatedArticles(title, articles):
@@ -791,7 +794,7 @@ func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, boundingWidth:
     let closingSpacing = spacingBetweenBlocks(upper: previousBlock, lower: nil)
     contentSize.height += closingSpacing
     
-    let feedbackItem = InstantPageFeedbackItem(frame: CGRect(x: 0.0, y: contentSize.height, width: boundingWidth, height: 40.0))
+    let feedbackItem = InstantPageFeedbackItem(frame: CGRect(x: 0.0, y: contentSize.height, width: boundingWidth, height: 40.0), webPage: webPage)
     contentSize.height += feedbackItem.frame.height
     items.append(feedbackItem)
     

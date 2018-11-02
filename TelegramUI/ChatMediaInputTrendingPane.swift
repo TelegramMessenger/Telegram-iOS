@@ -199,7 +199,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
         
         var duration: Double = 0.0
-        var listViewCurve: ListViewAnimationCurve = .Default
+        var listViewCurve: ListViewAnimationCurve = .Default(duration: nil)
         switch transition {
             case .immediate:
                 break
@@ -207,7 +207,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 duration = animationDuration
                 switch animationCurve {
                     case .easeInOut:
-                        listViewCurve = .Default
+                        listViewCurve = .Default(duration: duration)
                     case .spring:
                         listViewCurve = .Spring(duration: duration)
                 }

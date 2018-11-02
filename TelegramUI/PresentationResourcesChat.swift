@@ -1012,6 +1012,18 @@ struct PresentationResourcesChat {
         })
     }
     
+    static func chatBubbleFileCloudFetchMediaIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleFileCloudFetchMediaIcon.rawValue, { theme in
+            guard let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: theme.chat.bubble.mediaOverlayControlForegroundColor) else {
+                return nil
+            }
+            return generateImage(image.size, contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: image.size))
+            })
+        })
+    }
+    
     static func chatBubbleFileCloudFetchIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleFileCloudFetchIncomingIcon.rawValue, { theme in
             generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: theme.chat.bubble.incomingAccentControlColor)

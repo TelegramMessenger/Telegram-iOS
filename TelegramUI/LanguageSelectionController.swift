@@ -29,7 +29,7 @@ private final class LanguageAccessoryView: UIView {
         self.check = UIImageView()
         self.check.image = PresentationResourcesItemList.checkIconImage(theme)
         
-        self.indicator = ActivityIndicator(type: .navigationAccent(theme))
+        self.indicator = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 22.0, 1.0, false))
         
         super.init(frame: CGRect())
         

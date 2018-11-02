@@ -170,7 +170,7 @@ public final class ShareController: ViewController {
     private let immediateExternalShare: Bool
     private let subject: ShareControllerSubject
     
-    private let peers = Promise<([Peer], Peer)>()
+    private let peers = Promise<([RenderedPeer], Peer)>()
     private let peersDisposable = MetaDisposable()
     
     private var defaultAction: ShareControllerAction?
@@ -265,13 +265,16 @@ public final class ShareController: ViewController {
             })
         }
         
-        self.peers.set(combineLatest(account.postbox.loadedPeerWithId(account.peerId) |> take(1), account.viewTracker.tailChatListView(groupId: nil, count: 150) |> take(1)) |> map { accountPeer, view -> ([Peer], Peer) in
-            var peers: [Peer] = []
+        self.peers.set(combineLatest(account.postbox.loadedPeerWithId(account.peerId)
+        |> take(1), account.viewTracker.tailChatListView(groupId: nil, count: 150)
+        |> take(1))
+        |> map { accountPeer, view -> ([RenderedPeer], Peer) in
+            var peers: [RenderedPeer] = []
             for entry in view.0.entries.reversed() {
                 switch entry {
                     case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
-                        if let peer = renderedPeer.chatMainPeer, peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
-                            peers.append(peer)
+                        if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
+                            peers.append(renderedPeer)
                         }
                     default:
                         break

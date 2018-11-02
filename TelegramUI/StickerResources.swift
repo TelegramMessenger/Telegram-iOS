@@ -48,7 +48,7 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
     let thumbnailResource = chatMessageStickerResource(file: file, small: true)
     let resource = chatMessageStickerResource(file: file, small: small)
     
-    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: false)
+    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil), complete: false, fetch: false)
     
     return maybeFetched
     |> take(1)
@@ -64,45 +64,31 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
                 return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe), next.complete)
             }
             
-            if fetched {
-                return Signal { subscriber in
-                    let fetch = fetchedMediaResource(postbox: account.postbox, reference: stickerPackFileReference(file).resourceReference(resource)).start()
-                    let disposable = (fullSizeData |> map { (data, complete) -> (Data?, Data?, Bool) in
-                        return (nil, data, complete)
-                    }).start(next: { next in
-                        subscriber.putNext(next)
-                    }, error: { error in
-                        subscriber.putError(error)
-                    }, completed: {
-                        subscriber.putCompletion()
-                    })
-                    
-                    return ActionDisposable {
-                        fetch.dispose()
-                        disposable.dispose()
-                    }
+            return Signal { subscriber in
+                var fetch: Disposable?
+                if fetched {
+                    fetch = fetchedMediaResource(postbox: account.postbox, reference: stickerPackFileReference(file).resourceReference(resource)).start()
                 }
-            } else {
-                return Signal { subscriber in
-                    var fetchThumbnail: Disposable?
-                    if !thumbnailResource.id.isEqual(to: resource.id) {
-                        fetchThumbnail = fetchedMediaResource(postbox: account.postbox, reference: stickerPackFileReference(file).resourceReference(thumbnailResource)).start()
-                    }
-                    let disposable = (combineLatest(thumbnailData, fullSizeData)
-                    |> map { thumbnailData, fullSizeData -> (Data?, Data?, Bool) in
-                        return (thumbnailData.complete ? try? Data(contentsOf: URL(fileURLWithPath: thumbnailData.path)) : nil, fullSizeData.0, fullSizeData.1)
-                    }).start(next: { next in
-                        subscriber.putNext(next)
-                    }, error: { error in
-                        subscriber.putError(error)
-                    }, completed: {
-                        subscriber.putCompletion()
-                    })
-                    
-                    return ActionDisposable {
-                        fetchThumbnail?.dispose()
-                        disposable.dispose()
-                    }
+                
+                var fetchThumbnail: Disposable?
+                if !thumbnailResource.id.isEqual(to: resource.id) {
+                    fetchThumbnail = fetchedMediaResource(postbox: account.postbox, reference: stickerPackFileReference(file).resourceReference(thumbnailResource)).start()
+                }
+                let disposable = (combineLatest(thumbnailData, fullSizeData)
+                |> map { thumbnailData, fullSizeData -> (Data?, Data?, Bool) in
+                    return (thumbnailData.complete ? try? Data(contentsOf: URL(fileURLWithPath: thumbnailData.path)) : nil, fullSizeData.0, fullSizeData.1)
+                }).start(next: { next in
+                    subscriber.putNext(next)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                })
+                
+                return ActionDisposable {
+                    fetch?.dispose()
+                    fetchThumbnail?.dispose()
+                    disposable.dispose()
                 }
             }
         }

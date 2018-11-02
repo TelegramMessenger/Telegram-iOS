@@ -411,7 +411,7 @@ final class FeedGroupingControllerNode: ViewControllerTracingNode {
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         let listInsets = UIEdgeInsets(top: insets.top, left: layout.safeInsets.right, bottom: insets.bottom, right: layout.safeInsets.left)

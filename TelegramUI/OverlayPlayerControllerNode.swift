@@ -48,7 +48,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }
         
         var openMessageImpl: ((MessageId) -> Bool)?
-        self.controllerInteraction = ChatControllerInteraction(openMessage: { message in
+        self.controllerInteraction = ChatControllerInteraction(openMessage: { message, _ in
             if let openMessageImpl = openMessageImpl {
                 return openMessageImpl(message.id)
             } else {
@@ -232,13 +232,13 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: duration, curve: listViewCurve)
         self.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         if let replacementHistoryNode = replacementHistoryNode {
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default)
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default(duration: nil))
             replacementHistoryNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         }
     }
@@ -424,7 +424,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
             
             historyNode.frame = CGRect(origin: CGPoint(x: 0.0, y: listTopInset), size: listNodeSize)
             
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default)
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default(duration: nil))
             historyNode.updateLayout(transition: .immediate, updateSizeAndInsets: updateSizeAndInsets)
         }
         self.replacementHistoryNodeReadyDisposable.set((historyNode.historyState.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
@@ -507,7 +507,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
                 
                 self.historyNode.frame = CGRect(origin: CGPoint(x: 0.0, y: listTopInset), size: listNodeSize)
                 
-                let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default)
+                let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default(duration: nil))
                 self.historyNode.updateLayout(transition: .immediate, updateSizeAndInsets: updateSizeAndInsets)
                 
                 self.historyNode.recursivelyEnsureDisplaySynchronously(true)

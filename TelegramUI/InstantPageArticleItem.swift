@@ -25,7 +25,7 @@ final class InstantPageArticleItem: InstantPageItem {
         self.webpageId = webpageId
     }
 
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageArticleNode(account: account, webPage: self.webPage, strings: strings, theme: theme, title: self.title, description: self.description, cover: self.cover, url: self.url, webpageId: self.webpageId, openUrl: openUrl)
     }
     

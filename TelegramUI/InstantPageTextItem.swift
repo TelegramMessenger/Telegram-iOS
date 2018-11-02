@@ -309,7 +309,7 @@ final class InstantPageTextItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return nil
     }
     
@@ -549,7 +549,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                 }
             }
             
-            if !minimizeWidth && !hadIndexOffset && lineWidth > currentMaxWidth, let imageItem = imageItems.last {
+            if !minimizeWidth && !hadIndexOffset && lineCharacterCount > 1 && lineWidth > currentMaxWidth, let imageItem = imageItems.last {
                 indexOffset = -(lastIndex + lineCharacterCount - imageItem.range.lowerBound)
                 continue
             }

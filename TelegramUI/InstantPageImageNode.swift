@@ -7,6 +7,7 @@ import SwiftSignalKit
 
 final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private let account: Account
+    private let theme: InstantPageTheme
     let media: InstantPageMedia
     let attributes: [InstantPageImageAttribute]
     let url: InstantPageUrlItem?
@@ -23,8 +24,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var fetchedDisposable = MetaDisposable()
     
-    init(account: Account, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], url: InstantPageUrlItem? = nil, interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void = { _ in }) {
+    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], url: InstantPageUrlItem? = nil, interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void = { _ in }) {
         self.account = account
+        self.theme = theme
         self.media = media
         self.attributes = attributes
         self.url = url
@@ -106,10 +108,12 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
                 apply()
             } else if let file = self.media.media as? TelegramMediaFile, let dimensions = file.dimensions {
+                let emptyColor = file.mimeType.hasPrefix("image/") ? self.theme.imageEmptyColor : nil
+
                 let imageSize = dimensions.aspectFilled(size)
                 let boundingSize = size
                 let makeLayout = self.imageNode.asyncLayout()
-                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: emptyColor))
                 apply()
             } else if self.media.media is TelegramMediaMap {
                 for attribute in self.attributes {

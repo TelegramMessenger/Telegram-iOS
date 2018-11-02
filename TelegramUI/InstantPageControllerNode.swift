@@ -43,7 +43,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var visibleTiles: [Int: InstantPageTileNode] = [:]
     var visibleItemsWithNodes: [Int: InstantPageNode] = [:]
     
-    var currentWebEmbedHeights: [Int: Int] = [:]
+    var currentWebEmbedHeights: [Int : Int] = [:]
+    var currentOpenedDetails: [Int : Bool]? = [:]
     
     var previousContentOffset: CGPoint?
     var isDeceleratingBecauseOfDragging = false
@@ -204,6 +205,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 return .fail
                             } else if item is InstantPageFeedbackItem {
                                 return .fail
+                            } else if item is InstantPageDetailsItem {
+                                return .fail
                             }
                             break
                         }
@@ -316,12 +319,16 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let currentLayoutTiles = instantPageTilesFromLayout(currentLayout, boundingWidth: containerLayout.size.width)
         
-        var currentLayoutItemsWithViews: [InstantPageItem] = []
+        var currentLayoutItemsWithNodes: [InstantPageItem] = []
         var distanceThresholdGroupCount: [Int : Int] = [:]
         
+        var openedDetails: [Int : Bool] = [:]
+        
+        var itemIndex = -1
         for item in currentLayout.items {
             if item.wantsNode {
-                currentLayoutItemsWithViews.append(item)
+                itemIndex += 1
+                currentLayoutItemsWithNodes.append(item)
                 if let group = item.distanceThresholdGroup() {
                     let count: Int
                     if let currentCount = distanceThresholdGroupCount[Int(group)] {
@@ -331,12 +338,20 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     distanceThresholdGroupCount[Int(group)] = count + 1
                 }
+                
+                if let detailsItem = item as? InstantPageDetailsItem {
+                    openedDetails[itemIndex] = detailsItem.open
+                }
             }
+        }
+        
+        if self.currentOpenedDetails == nil {
+            self.currentOpenedDetails = openedDetails
         }
         
         self.currentLayout = currentLayout
         self.currentLayoutTiles = currentLayoutTiles
-        self.currentLayoutItemsWithNodes = currentLayoutItemsWithViews
+        self.currentLayoutItemsWithNodes = currentLayoutItemsWithNodes
         self.distanceThresholdGroupCount = distanceThresholdGroupCount
         
         self.scrollNode.view.contentSize = currentLayout.contentSize
@@ -387,6 +402,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        var collapseOffset: CGFloat = 0.0
+        
         var itemIndex = -1
         for item in self.currentLayoutItemsWithNodes {
             itemIndex += 1
@@ -398,10 +415,18 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 itemThreshold = item.distanceThresholdWithGroupCount(count)
             }
-            var itemFrame = item.frame
-            itemFrame.origin.y -= itemThreshold
-            itemFrame.size.height += itemThreshold * 2.0
-            if visibleBounds.intersects(itemFrame) {
+            
+            var itemFrame = item.frame.offsetBy(dx: 0.0, dy: -collapseOffset)
+            var thresholdedItemFrame = itemFrame
+            thresholdedItemFrame.origin.y -= itemThreshold
+            thresholdedItemFrame.size.height += itemThreshold * 2.0
+            
+            if let opened = self.currentOpenedDetails?[itemIndex], !opened {
+                collapseOffset = itemFrame.height - 44.0
+                itemFrame = CGRect(origin: itemFrame.origin, size: CGSize(width: itemFrame.width, height: 44.0))
+            }
+            
+            if visibleBounds.intersects(thresholdedItemFrame) {
                 visibleItemIndices.insert(itemIndex)
                 
                 var itemNode = self.visibleItemsWithNodes[itemIndex]
@@ -422,8 +447,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         self?.openUrl(url)
                     }, updateWebEmbedHeight: { [weak self] key, height in
                         self?.updateWebEmbedHeight(key, height)
+                    }, updateDetailsOpened: { [weak self] key, opened in
+                        self?.updateDetailsOpened(key, opened)
                     }) {
-                        itemNode.frame = item.frame
+                        itemNode.frame = itemFrame
                         if let topNode = topNode {
                             self.scrollNode.insertSubnode(itemNode, aboveSubnode: topNode)
                         } else {
@@ -433,8 +460,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         self.visibleItemsWithNodes[itemIndex] = itemNode
                     }
                 } else {
-                    if (itemNode as! ASDisplayNode).frame != item.frame {
-                        (itemNode as! ASDisplayNode).frame = item.frame
+                    if (itemNode as! ASDisplayNode).frame != itemFrame {
+                        (itemNode as! ASDisplayNode).frame = itemFrame
                     }
                 }
             }
@@ -783,6 +810,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     if let navigationController = strongSelf.getNavigationController() {
                                         navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId)
                                     }
+                                case let .withBotStartPayload(botStart):
+                                    if let navigationController = strongSelf.getNavigationController() {
+                                        navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), botStart: botStart)
+                                    }
                                 case .info:
                                     let _ = (strongSelf.account.postbox.loadedPeerWithId(peerId)
                                     |> deliverOnMainQueue).start(next: { peer in
@@ -895,6 +926,15 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }))
         }
+    }
+    
+    private func updateDetailsOpened(_ index: Int, _ opened: Bool) {
+        if var currentOpenedDetails = self.currentOpenedDetails {
+            currentOpenedDetails[index] = opened
+            self.currentOpenedDetails = currentOpenedDetails
+        }
+        //self.updateLayout()
+        self.updateVisibleItems()
     }
     
     private func presentSettings() {

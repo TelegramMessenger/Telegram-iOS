@@ -225,7 +225,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var media: Media?
     private var theme: ChatPresentationThemeData?
     
-    var openMedia: (() -> Void)?
+    var openMedia: ((Bool) -> Void)?
     var activateAction: (() -> Void)?
     
     var visibility: ListViewItemNodeVisibility = .none {
@@ -739,9 +739,9 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 if strongSelf.contentImageNode !== contentImageNode {
                                     strongSelf.contentImageNode = contentImageNode
                                     strongSelf.addSubnode(contentImageNode)
-                                    contentImageNode.activateLocalContent = { [weak strongSelf] in
+                                    contentImageNode.activateLocalContent = { [weak strongSelf] mode in
                                         if let strongSelf = strongSelf {
-                                            strongSelf.openMedia?()
+                                            strongSelf.openMedia?(mode == .stream)
                                         }
                                     }
                                     contentImageNode.visibility = strongSelf.visibility
@@ -772,7 +772,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 strongSelf.additionalImageBadgeNode = updatedAdditionalImageBadge
                                 contentImageNode.addSubnode(updatedAdditionalImageBadge)
                                 updatedAdditionalImageBadge.contentMode = .topRight
-                                updatedAdditionalImageBadge.content = additionalImageBadgeContent
+                                updatedAdditionalImageBadge.update(theme: presentationData.theme.theme, content: additionalImageBadgeContent, mediaDownloadState: nil, animated: false)
                                 updatedAdditionalImageBadge.frame = CGRect(origin: CGPoint(x: contentImageSize.width - 2.0, y: contentImageSize.height - 18.0 - 2.0), size: CGSize(width: 0.0, height: 0.0))
                             } else if let additionalImageBadgeNode = strongSelf.additionalImageBadgeNode {
                                 strongSelf.additionalImageBadgeNode = nil
@@ -788,7 +788,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     strongSelf.addSubnode(contentFileNode)
                                     contentFileNode.activateLocalContent = { [weak strongSelf] in
                                         if let strongSelf = strongSelf {
-                                            strongSelf.openMedia?()
+                                            strongSelf.openMedia?(false)
                                         }
                                     }
                                 }

@@ -354,7 +354,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             }
                         
                             if let item = self.item, self.imageNode.frame.contains(location) {
-                                let _ = item.controllerInteraction.openMessage(item.message)
+                                let _ = item.controllerInteraction.openMessage(item.message, .default)
                                 return
                             }
                         

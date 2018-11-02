@@ -230,6 +230,22 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                         convertedUrl = "https://t.me/addstickers/\(set)"
                     }
                 }
+            } else if parsedUrl.host == "setlanguage" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var lang: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "lang" {
+                                    lang = value
+                                }
+                            }
+                        }
+                    }
+                    if let lang = lang {
+                        convertedUrl = "https://t.me/setlanguage/\(lang)"
+                    }
+                }
             } else if parsedUrl.host == "msg_url" {
                 if let components = URLComponents(string: "/?" + query) {
                     var shareUrl: String?

@@ -319,7 +319,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         var additionalBottomInset: CGFloat = 0.0
@@ -424,7 +424,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                         additionalBottomInset = selectionPanel.bounds.size.height
                     }
                     
-                    node.updateLayout(transition: .immediate, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: containerLayout.0.size, insets: UIEdgeInsets(top: insets.top, left: insets.right + containerLayout.0.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + containerLayout.0.safeInsets.left), duration: 0.0, curve: .Default))
+                    node.updateLayout(transition: .immediate, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: containerLayout.0.size, insets: UIEdgeInsets(top: insets.top, left: insets.right + containerLayout.0.safeInsets.right, bottom: insets.bottom + additionalBottomInset, right: insets.left + containerLayout.0.safeInsets.left), duration: 0.0, curve: .Default(duration: nil)))
                     
                     let historyEmptyNode = PeerMediaCollectionEmptyNode(mode: mediaCollectionInterfaceState.mode, theme: self.mediaCollectionInterfaceState.theme, strings: self.mediaCollectionInterfaceState.strings)
                     historyEmptyNode.isHidden = true

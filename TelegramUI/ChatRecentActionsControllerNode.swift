@@ -120,7 +120,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         })
         self.adminsDisposable = adminsDisposable
         
-        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message in
+        let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message, _ in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
                 guard let state = strongSelf.listNode.opaqueTransactionState as? ChatRecentActionsListOpaqueState else {
                     return false
@@ -479,7 +479,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         if curve == 7 {
             listViewCurve = .Spring(duration: duration)
         } else {
-            listViewCurve = .Default
+            listViewCurve = .Default(duration: duration)
         }
         
         let contentBottomInset: CGFloat = panelHeight + 4.0
@@ -730,6 +730,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 strongSelf.openPeer(peerId: peerId, peer: nil)
                             }
                         }), nil)
+                    case let .localization(identifier):
+                        strongSelf.presentController(LanguageLinkPreviewController(account: strongSelf.account, identifier: identifier), nil)
                     case .proxy:
                         openResolvedUrl(result, account: strongSelf.account, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, _ in
                             if let strongSelf = self {

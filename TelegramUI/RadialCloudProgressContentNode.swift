@@ -271,7 +271,7 @@ final class RadialCloudProgressContentNode: RadialStatusContentNode {
     }
     
     override func enqueueReadyForTransition(_ f: @escaping () -> Void) {
-        if self.spinnerNode.isAnimatingProgress {
+        if self.spinnerNode.isAnimatingProgress && self.progress == 1.0 {
             self.enqueuedReadyForTransition = f
         } else {
             f()

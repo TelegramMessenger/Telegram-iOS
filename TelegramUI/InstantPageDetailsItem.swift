@@ -12,15 +12,18 @@ final class InstantPageDetailsItem: InstantPageItem {
     let items: [InstantPageItem]
     let rtl: Bool
     
-    init(frame: CGRect, title: NSAttributedString, items: [InstantPageItem], rtl: Bool) {
+    var open: Bool
+    
+    init(frame: CGRect, title: NSAttributedString, items: [InstantPageItem], rtl: Bool, open: Bool) {
         self.frame = frame
         self.title = title
         self.items = items
         self.rtl = rtl
+        self.open = open
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageDetailsNode(account: account, strings: strings, theme: theme, item: self)
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+        return InstantPageDetailsNode(account: account, strings: strings, theme: theme, item: self, updateDetailsOpened: updateDetailsOpened)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -55,9 +58,6 @@ final class InstantPageDetailsItem: InstantPageItem {
     }
 }
 
-func layoutDetailsItem(theme: InstantPageTheme, title: NSAttributedString, boundingWidth: CGFloat, items: [InstantPageItem], contentSize: CGSize, open: Bool, rtl: Bool) -> InstantPageDetailsItem {
-    for var item in items {
-        item.frame = item.frame.offsetBy(dx: 0.0, dy: 44.0)
-    }
-    return InstantPageDetailsItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: 44.0), title: title, items: items, rtl: rtl)
+func layoutDetailsItem(theme: InstantPageTheme, title: NSAttributedString, boundingWidth: CGFloat, items: [InstantPageItem], contentSize: CGSize, rtl: Bool, open: Bool) -> InstantPageDetailsItem {
+    return InstantPageDetailsItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: contentSize.height + 44.0), title: title, items: items, rtl: rtl, open: open)
 }

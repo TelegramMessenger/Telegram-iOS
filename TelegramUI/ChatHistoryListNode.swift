@@ -812,6 +812,18 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return nil
     }
     
+    public func isMessageVisibleOnScreen(_ id: MessageId) -> Bool {
+        var result = false
+        self.forEachItemNode({ itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, item.content.contains(where: { $0.id == id }) {
+                if self.itemNodeVisibleInsideInsets(itemNode) {
+                    result = true
+                }
+            }
+        })
+        return result
+    }
+    
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {
         if let historyView = self.historyView {
             for entry in historyView.filteredEntries {
