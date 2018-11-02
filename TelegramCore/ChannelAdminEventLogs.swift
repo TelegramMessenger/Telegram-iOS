@@ -58,7 +58,7 @@ public enum ChannelAdminLogEventError {
     case generic
 }
 
-public struct AdminLogEventsFlags : OptionSet {
+public struct AdminLogEventsFlags: OptionSet {
     public var rawValue: UInt32
     
     public init(rawValue: UInt32) {

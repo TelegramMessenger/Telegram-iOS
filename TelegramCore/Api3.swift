@@ -3882,6 +3882,20 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func getContactIDs(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(749357634)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "contacts.getContactIDs", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Int32]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Int32]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+                        }
+                        return result
+                    })
+                }
             }
             struct help {
                 static func getConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Config>) {
@@ -4908,6 +4922,21 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func confirmPasswordEmail(email: String, code: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-558870880)
+                    serializeString(email, buffer: buffer, boxed: false)
+                    serializeString(code, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.confirmPasswordEmail", parameters: [("email", email), ("code", code)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
             struct langpack {
                 static func getDifference(fromVersion: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
@@ -4968,6 +4997,21 @@ extension Api {
                         var result: [Api.LangPackLanguage]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackLanguage.self)
+                        }
+                        return result
+                    })
+                }
+            
+                static func getLanguage(langPack: String, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackLanguage>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1784243458)
+                    serializeString(langPack, buffer: buffer, boxed: false)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "langpack.getLanguage", parameters: [("langPack", langPack), ("langCode", langCode)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.LangPackLanguage? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.LangPackLanguage?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.LangPackLanguage
                         }
                         return result
                     })

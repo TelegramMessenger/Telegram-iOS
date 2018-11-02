@@ -557,7 +557,7 @@ private final class CallSessionManagerContext {
                     //assertionFailure()
                 }
             }
-        case let .phoneCall(id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connection, alternativeConnections, startDate):
+        case let .phoneCall(_, id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connection, alternativeConnections, startDate):
             if let internalId = self.contextIdByStableId[id] {
                 if let context = self.contexts[internalId] {
                     switch context.state {
@@ -820,7 +820,7 @@ private func acceptCallSession(postbox: Postbox, network: Network, stableId: Cal
                             return .failed
                         case .phoneCallWaiting:
                             return .success(.waiting(config: config))
-                        case let .phoneCall(id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connection, alternativeConnections, startDate):
+                        case let .phoneCall(_, id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connection, alternativeConnections, startDate):
                             if id == stableId {
                                 switch callProtocol{
                                 case let .phoneCallProtocol(_, _, maxLayer):
