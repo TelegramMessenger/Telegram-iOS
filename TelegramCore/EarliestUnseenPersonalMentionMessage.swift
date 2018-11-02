@@ -14,11 +14,11 @@ public enum EarliestUnseenPersonalMentionMessageResult {
     case result(MessageId?)
 }
 
-public func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
-    return earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, peerId: peerId, locally: false)
+public func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+    return earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: false)
 }
 
-private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, peerId: PeerId, locally: Bool) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, locally: Bool) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
     return postbox.transaction { transaction -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         var resultMessage: Message?
         var resultHole: MessageHistoryHole?
@@ -64,27 +64,27 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
             }
             
             if !locally, let _ = invalidateHistoryPts {
-                let validateSignal = fetchMessageHistoryHole(source: .network(network), postbox: postbox, hole: MessageHistoryHole(stableId: UInt32.max, maxIndex: MessageIndex.upperBound(peerId: peerId), min: resultMessage.id.id - 1, tags: 0), direction: .LowerToUpper, tagMask: .unseenPersonalMessage)
+                let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, hole: MessageHistoryHole(stableId: UInt32.max, maxIndex: MessageIndex.upperBound(peerId: peerId), min: resultMessage.id.id - 1, tags: 0), direction: .LowerToUpper, tagMask: .unseenPersonalMessage)
                     |> `catch` { _ -> Signal<Void, NoError> in
                         return .complete()
                     }
                     |> mapToSignal { _ -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
                         return .complete()
                     }
-                    |> then(earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, peerId: peerId, locally: true))
+                    |> then(earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true))
                 return .single(.loading) |> then(validateSignal)
             } else {
                 return .single(.result(resultMessage.id))
             }
         } else if let resultHole = resultHole, !locally {
-            let validateSignal = fetchMessageHistoryHole(source: .network(network), postbox: postbox, hole: resultHole, direction: .LowerToUpper, tagMask: .unseenPersonalMessage)
+            let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, hole: resultHole, direction: .LowerToUpper, tagMask: .unseenPersonalMessage)
                 |> `catch` { _ -> Signal<Void, NoError> in
                     return .complete()
                 }
                 |> mapToSignal { _ -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
                     return .complete()
                 }
-                |> then(earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, peerId: peerId, locally: true))
+                |> then(earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true))
             return .single(.loading) |> then(validateSignal)
         } else if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), summary.count > 0 {
             transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: 0, maxId: summary.range.maxId)

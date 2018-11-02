@@ -14,7 +14,7 @@ public enum GetMessagesStrategy  {
     case cloud
 }
 
-public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox, network:Network, strategy:GetMessagesStrategy = .cloud) -> Signal <[Message], NoError> {
+public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Postbox, network: Network, accountPeerId: PeerId, strategy: GetMessagesStrategy = .cloud) -> Signal <[Message], NoError> {
     let postboxSignal = postbox.transaction { transaction -> ([Message], Set<MessageId>, SimpleDictionary<PeerId, Peer>) in
         
         var ids = messageIds
@@ -108,7 +108,7 @@ public func getMessagesLoadIfNecessary(_ messageIds:[MessageId], postbox:Postbox
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        transaction.updatePeerPresences(peerPresences)
+                        updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                     }
                     var loadedMessages:[Message] = []
                     for messageId in missingMessageIds {

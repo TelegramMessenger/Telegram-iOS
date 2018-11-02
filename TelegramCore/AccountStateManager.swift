@@ -355,7 +355,7 @@ public final class AccountStateManager {
                         |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                             switch difference {
                                 case .differenceTooLong:
-                                    return accountStateReset(postbox: account.postbox, network: account.network) |> mapToSignal { _ -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                                    return accountStateReset(postbox: account.postbox, network: account.network, accountPeerId: account.peerId) |> mapToSignal { _ -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                         return .complete()
                                     } |> then(.single((nil, nil)))
                                 default:

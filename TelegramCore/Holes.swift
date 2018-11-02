@@ -123,7 +123,7 @@ func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistor
     |> switchToLatest
 }
 
-func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Postbox, hole: MessageHistoryHole, direction: MessageHistoryViewRelativeHoleDirection, tagMask: MessageTags?, limit: Int = 100) -> Signal<Void, NoError> {
+func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, hole: MessageHistoryHole, direction: MessageHistoryViewRelativeHoleDirection, tagMask: MessageTags?, limit: Int = 100) -> Signal<Void, NoError> {
     assert(tagMask == nil || tagMask!.rawValue != 0)
     return postbox.stateView()
     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
@@ -355,7 +355,7 @@ func fetchMessageHistoryHole(source: FetchMessageHistoryHoleSource, postbox: Pos
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        transaction.updatePeerPresences(peerPresences)
+                        updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                         
                         print("fetchMessageHistoryHole for \(peer.displayTitle) done")
                         
@@ -560,7 +560,7 @@ func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: Pe
     }*/
 }
 
-func fetchChatListHole(postbox: Postbox, network: Network, groupId: PeerGroupId?, hole: ChatListHole) -> Signal<Void, NoError> {
+func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId, groupId: PeerGroupId?, hole: ChatListHole) -> Signal<Void, NoError> {
     let location: FetchChatListLocation
     if let groupId = groupId {
         location = .group(groupId)
@@ -575,7 +575,8 @@ func fetchChatListHole(postbox: Postbox, network: Network, groupId: PeerGroupId?
                     return updated
                 })
             }
-            transaction.updatePeerPresences(fetchedChats.peerPresences)
+            
+            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: fetchedChats.peerPresences)
             transaction.updateCurrentPeerNotificationSettings(fetchedChats.notificationSettings)
             let _ = transaction.addMessages(fetchedChats.storeMessages, location: .UpperHistoryBlock)
             transaction.resetIncomingReadStates(fetchedChats.readStates)
@@ -611,7 +612,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, groupId: PeerGroupId?
     }
 }
 
-func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageIndex, limit: Int32 = 100) -> Signal<Void, NoError> {
+func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId, holeIndex: MessageIndex, limit: Int32 = 100) -> Signal<Void, NoError> {
     let offset: Signal<(Int32, Int32, Api.InputPeer), NoError>
     offset = single((holeIndex.timestamp, min(holeIndex.id.id, Int32.max - 1) + 1, Api.InputPeer.inputPeerEmpty), NoError.self)
     return offset
@@ -678,7 +679,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, holeIndex: MessageInd
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                     return updated
                 })
-                transaction.updatePeerPresences(peerPresences)
+                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
             }
         }
         return searchResult

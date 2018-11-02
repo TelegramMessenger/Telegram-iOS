@@ -104,7 +104,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId: PeerId, network: Network, 
     } |> switchToLatest
 }
 
-func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return postbox.loadedPeerWithId(peerId)
         |> mapToSignal { peer -> Signal<Void, NoError> in
             if let inputUser = apiInputUser(peer) {
@@ -120,7 +120,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                     })
                                     transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                                     if let presence = TelegramUserPresence(apiUser: user) {
-                                        transaction.updatePeerPresences([peer.id: presence])
+                                        updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: [peer.id: presence])
                                     }
                             }
                             transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
@@ -206,7 +206,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                 return updated
                                             })
                                             
-                                            transaction.updatePeerPresences(peerPresences)
+                                            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                                             
                                             transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                                 let previous: CachedGroupData
@@ -308,7 +308,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                                 return updated
                                             })
                                             
-                                            transaction.updatePeerPresences(peerPresences)
+                                            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                                            
                                             
                                             let stickerPack: StickerPackCollectionInfo? = stickerSet.flatMap { apiSet -> StickerPackCollectionInfo in

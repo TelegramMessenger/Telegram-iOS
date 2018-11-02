@@ -54,7 +54,7 @@ private func hashForCountAndIds(count: Int32, ids: [Int32]) -> Int32 {
     return Int32(acc & Int64(0x7FFFFFFF))
 }
 
-func syncContactsOnce(network: Network, postbox: Postbox) -> Signal<Never, NoError> {
+func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId) -> Signal<Never, NoError> {
     let initialContactPeerIdsHash = postbox.transaction { transaction -> Int32 in
         let contactPeerIds = transaction.getContactPeerIds()
         let totalCount = transaction.getRemoteContactCount()
@@ -76,7 +76,7 @@ func syncContactsOnce(network: Network, postbox: Postbox) -> Signal<Never, NoErr
                 
                 transaction.replaceRemoteContactCount(totalCount)
                 
-                transaction.updatePeerPresences(peerPresences)
+                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                 
                 if wasEmpty {
                     var insertSignal: Signal<Void, NoError> = .complete()

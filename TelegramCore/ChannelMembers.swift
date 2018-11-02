@@ -21,7 +21,7 @@ public enum ChannelMembersCategory {
     case banned(ChannelMembersCategoryFilter)
 }
 
-public func channelMembers(postbox: Postbox, network: Network, peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int32 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
+public func channelMembers(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int32 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
     return postbox.transaction { transaction -> Signal<[RenderedChannelParticipant]?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             let apiFilter: Api.ChannelParticipantsFilter
@@ -69,7 +69,7 @@ public func channelMembers(postbox: Postbox, network: Network, peerId: PeerId, c
                                 updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in
                                     return updated
                                 })
-                                transaction.updatePeerPresences(presences)
+                                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: presences)
                                 
                                 for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                                     if let peer = peers[participant.peerId] {

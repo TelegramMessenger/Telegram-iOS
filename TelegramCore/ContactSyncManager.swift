@@ -30,6 +30,7 @@ private final class ContactSyncManagerImpl {
     private let queue: Queue
     private let postbox: Postbox
     private let network: Network
+    private let accountPeerId: PeerId
     private let stateManager: AccountStateManager
     private var nextId: Int32 = 0
     private var operations: [ContactSyncOperation] = []
@@ -38,10 +39,11 @@ private final class ContactSyncManagerImpl {
     
     private let importableContactsDisposable = MetaDisposable()
     
-    init(queue: Queue, postbox: Postbox, network: Network, stateManager: AccountStateManager) {
+    init(queue: Queue, postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager) {
         self.queue = queue
         self.postbox = postbox
         self.network = network
+        self.accountPeerId = accountPeerId
         self.stateManager = stateManager
     }
     
@@ -143,7 +145,7 @@ private final class ContactSyncManagerImpl {
                     completion()
                 }))
             case .updatePresences:
-                disposable.add(updateContactPresences(postbox: self.postbox, network: self.network).start(completed: {
+                disposable.add(updateContactPresences(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId).start(completed: {
                     completion()
                 }))
             case let .sync(importableContacts):
@@ -154,7 +156,7 @@ private final class ContactSyncManagerImpl {
                     importSignal = .single(PushDeviceContactsResult(addedReimportAttempts: [:]))
                 }
                 disposable.add(
-                    (syncContactsOnce(network: self.network, postbox: self.postbox)
+                    (syncContactsOnce(network: self.network, postbox: self.postbox, accountPeerId: self.accountPeerId)
                     |> mapToSignal { _ -> Signal<PushDeviceContactsResult, NoError> in
                         return .complete()
                     }
@@ -346,7 +348,7 @@ private func pushDeviceContactData(postbox: Postbox, network: Network, contacts:
     return batches
 }
 
-private func updateContactPresences(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+private func updateContactPresences(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Never, NoError> {
     return network.request(Api.functions.contacts.getStatuses())
     |> `catch` { _ -> Signal<[Api.ContactStatus], NoError> in
         return .single([])
@@ -360,7 +362,7 @@ private func updateContactPresences(postbox: Postbox, network: Network) -> Signa
                         peerPresences[PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)] = TelegramUserPresence(apiStatus: status)
                 }
             }
-            transaction.updatePeerPresences(peerPresences)
+            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
         }
         |> ignoreValues
     }
@@ -370,10 +372,10 @@ final class ContactSyncManager {
     private let queue = Queue()
     private let impl: QueueLocalObject<ContactSyncManagerImpl>
     
-    init(postbox: Postbox, network: Network, stateManager: AccountStateManager) {
+    init(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return ContactSyncManagerImpl(queue: queue, postbox: postbox, network: network, stateManager: stateManager)
+            return ContactSyncManagerImpl(queue: queue, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager)
         })
     }
     

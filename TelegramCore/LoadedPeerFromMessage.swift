@@ -51,7 +51,7 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                                         let telegramUser = TelegramUser(user: user)
                                         if telegramUser.id == peerId && telegramUser.accessHash != 0 {
                                             if let presence = TelegramUserPresence(apiUser: user) {
-                                                transaction.updatePeerPresences([telegramUser.id: presence])
+                                                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: [telegramUser.id: presence])
                                             }
                                             
                                             updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in

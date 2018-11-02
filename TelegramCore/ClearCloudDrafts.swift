@@ -7,7 +7,7 @@ import Postbox
 import SwiftSignalKit
 #endif
 
-public func clearCloudDraftsInteractively(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+public func clearCloudDraftsInteractively(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.getAllDrafts())
     |> retryRequest
     |> mapToSignal { updates -> Signal<Void, NoError> in
@@ -40,7 +40,8 @@ public func clearCloudDraftsInteractively(postbox: Postbox, network: Network) ->
                     updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                         return updated
                     })
-                    transaction.updatePeerPresences(peerPresences)
+                    
+                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                     var signals: [Signal<Void, NoError>] = []
                     for peerId in peerIds {
                         transaction.updatePeerChatInterfaceState(peerId, update: { current in

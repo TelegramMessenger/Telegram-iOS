@@ -132,7 +132,8 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                             updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                                 return updated
                             })
-                            transaction.updatePeerPresences(peerPresences)
+                            
+                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
                         }
                     }
             } else {
@@ -373,7 +374,7 @@ public final class AccountViewTracker {
             if let account = self.account {
                 for holeId in addedHoleIds {
                     if self.visibleCallListHoleDisposables[holeId] == nil {
-                        self.visibleCallListHoleDisposables[holeId] = fetchCallListHole(network: account.network, postbox: account.postbox, holeIndex: holeId).start(completed: { [weak self] in
+                        self.visibleCallListHoleDisposables[holeId] = fetchCallListHole(network: account.network, postbox: account.postbox, accountPeerId: account.peerId, holeIndex: holeId).start(completed: { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.queue.async {
                                     strongSelf.visibleCallListHoleDisposables.removeValue(forKey: holeId)
@@ -537,7 +538,7 @@ public final class AccountViewTracker {
             }
             context.timestamp = CFAbsoluteTimeGetCurrent()
             if let account = self.account {
-                context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox)).start())
+                context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start())
             }
         }
     }
@@ -566,7 +567,7 @@ public final class AccountViewTracker {
             
             if dataUpdated {
                 if let account = self.account {
-                    context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox)).start())
+                    context.disposable.set(combineLatest(fetchAndUpdateSupplementalCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox), fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)).start())
                 }
             }
         }
@@ -748,7 +749,7 @@ public final class AccountViewTracker {
                     
                     if begin {
                         if let account = strongSelf.account {
-                            let signal = (fetchAndUpdateCachedParticipants(peerId: peerId, network: account.network, postbox: account.postbox)
+                            let signal = (fetchAndUpdateCachedParticipants(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)
                             |> then(Signal<Void, NoError>.complete()
                             |> suspendAwareDelay(10 * 60, queue: Queue.concurrentDefaultQueue())))
                             |> restart

@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func accountStateReset(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     let pinnedChats: Signal<Api.messages.PeerDialogs, NoError> = network.request(Api.functions.messages.getPinnedDialogs())
         |> retryRequest
     let state: Signal<Api.updates.State, NoError> =
@@ -193,7 +193,7 @@ func accountStateReset(postbox: Postbox, network: Network) -> Signal<Void, NoErr
             updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                 return updated
             })
-            transaction.updatePeerPresences(peerPresences)
+            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
             
             transaction.updateCurrentPeerNotificationSettings(notificationSettings)
             

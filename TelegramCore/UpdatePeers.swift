@@ -112,3 +112,11 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
         return update(previous, updated)
     })
 }
+
+func updatePeerPresences(transaction: Transaction, accountPeerId: PeerId, peerPresences: [PeerId: PeerPresence]) {
+    var peerPresences = peerPresences
+    if peerPresences[accountPeerId] != nil {
+        peerPresences.removeValue(forKey: accountPeerId)
+    }
+    transaction.updatePeerPresencesInternal(peerPresences)
+}

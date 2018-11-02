@@ -7,7 +7,7 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+func fetchAndUpdateCachedParticipants(accountPeerId: PeerId, peerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return postbox.loadedPeerWithId(peerId)
         |> mapToSignal { peer -> Signal<Void, NoError> in
             if let inputChannel = apiInputChannel(peer) {
@@ -31,7 +31,7 @@ func fetchAndUpdateCachedParticipants(peerId: PeerId, network: Network, postbox:
                                         return updated
                                     })
                                 
-                                    transaction.updatePeerPresences(peerPresences)
+                                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                                 
                                     let parsedParticipants = CachedChannelParticipants(apiParticipants: participants)
 

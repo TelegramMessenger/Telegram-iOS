@@ -68,7 +68,7 @@ public func recentPeers(account: Account) -> Signal<RecentPeers, NoError> {
     }
 }
 
-public func managedUpdatedRecentPeers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+public func managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let key = PostboxViewKey.cachedItem(cachedRecentPeersEntryId())
     let peersEnabled = postbox.combinedView(keys: [key])
     |> map { views -> Bool in
@@ -99,7 +99,8 @@ public func managedUpdatedRecentPeers(postbox: Postbox, network: Network) -> Sig
                         }
                     }
                     updatePeers(transaction: transaction, peers: peers, update: { return $1 })
-                    transaction.updatePeerPresences(peerPresences)
+                    
+                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                 
                     transaction.putItemCacheEntry(id: cachedRecentPeersEntryId(), entry: CachedRecentPeers(enabled: true, ids: peers.map { $0.id }), collectionSpec: collectionSpec)
                 case .topPeersNotModified:
@@ -168,7 +169,7 @@ public func updateRecentPeersEnabled(postbox: Postbox, network: Network, enabled
     } |> switchToLatest
 }
 
-public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     let remotePeers = network.request(Api.functions.contacts.getTopPeers(flags: 1 << 2, offset: 0, limit: 16, hash: 0))
         |> retryRequest
         |> map { result -> ([Peer], [PeerId: PeerPresence], [(PeerId, Double)])? in
@@ -209,7 +210,8 @@ public func managedRecentlyUsedInlineBots(postbox: Postbox, network: Network) ->
             if let (peers, peerPresences, peersWithRating) = peersAndPresences {
                 return postbox.transaction { transaction -> Void in
                     updatePeers(transaction: transaction, peers: peers, update: { return $1 })
-                    transaction.updatePeerPresences(peerPresences)
+                    
+                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                     
                     let sortedPeersWithRating = peersWithRating.sorted(by: { $0.1 > $1.1 })
                     

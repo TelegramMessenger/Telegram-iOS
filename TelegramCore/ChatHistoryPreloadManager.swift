@@ -65,7 +65,7 @@ private final class HistoryPreloadEntry: Comparable {
             let signal: Signal<Void, NoError> = .complete() |> delay(0.3, queue: queue) |> then(download |> take(1) |> deliverOn(queue) |> mapToSignal { download -> Signal<Void, NoError> in
                 switch hole.hole {
                     case let .peer(peerHole):
-                        return fetchMessageHistoryHole(source: .download(download), postbox: postbox, hole: peerHole, direction: hole.direction, tagMask: nil, limit: 60)
+                        return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, hole: peerHole, direction: hole.direction, tagMask: nil, limit: 60)
                     case let .groupFeed(groupId, lowerIndex, upperIndex):
                         return fetchGroupFeedHole(source: .download(download), accountPeerId: accountPeerId, postbox: postbox, groupId: groupId, minIndex: lowerIndex, maxIndex: upperIndex, direction: hole.direction, limit: 60)
                 }

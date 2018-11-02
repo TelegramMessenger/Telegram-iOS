@@ -892,6 +892,7 @@ public class Account {
     private let becomeMasterDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
+    private var storageSettingsDisposable: Disposable?
     
     public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
     
@@ -956,7 +957,7 @@ public class Account {
         
         self.peerInputActivityManager = PeerInputActivityManager()
         self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
-        self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, stateManager: self.stateManager)
+        self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager)
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, addUpdates: { [weak self] updates in
             self?.stateManager.addUpdates(updates)
         })
@@ -1160,7 +1161,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, accountPeerId: self.peerId, stateManager: self.stateManager).start())
         
         self.managedOperationsDisposable.add(managedSynchronizeGroupedPeersOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .stickers).start())
@@ -1169,7 +1170,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedRecentStickers(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
         self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
-        self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network, accountPeerId: peerId).start())
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
@@ -1203,6 +1204,16 @@ public class Account {
         self.managedOperationsDisposable.add(managedProxyInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
+        
+        let storagePreferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.cacheStorageSettings]))
+        let mediaBox = postbox.mediaBox
+        self.storageSettingsDisposable = self.postbox.combinedView(keys: [storagePreferencesKey]).start(next: { [weak mediaBox] view in
+            guard let mediaBox = mediaBox else {
+                return
+            }
+            let settings: CacheStorageSettings = ((view.views[storagePreferencesKey] as? PreferencesView)?.values[PreferencesKeys.cacheStorageSettings] as? CacheStorageSettings) ?? CacheStorageSettings.defaultSettings
+            mediaBox.setMaxStoreTime(settings.defaultCacheStorageTimeout)
+        })
         
         /*let updatedPresence = self.shouldKeepOnlinePresence.get()
         |> distinctUntilChanged
@@ -1245,6 +1256,7 @@ public class Account {
         self.voipTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.managedOperationsDisposable.dispose()
+        self.storageSettingsDisposable?.dispose()
     }
     
     public func resetStateManagement() {

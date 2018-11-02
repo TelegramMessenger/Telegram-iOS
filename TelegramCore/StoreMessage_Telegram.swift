@@ -394,12 +394,10 @@ extension StoreMessage {
                 }
                 
                 var attributes: [MessageAttribute] = []
-
                 
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        //savedFromPeer: Api.Peer?, savedFromMsgId: Int32?
                         case let .messageFwdHeader(_, fromId, date, channelId, channelPost, postAuthor, savedFromPeer, savedFromMsgId):
                             var authorId: PeerId?
                             var sourceId: PeerId?

@@ -39,7 +39,7 @@ private final class ManagedChatListHolesState {
     }
 }
 
-func managedChatListHoles(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return Signal { _ in
         let state = Atomic(value: ManagedChatListHolesState())
         
@@ -53,7 +53,7 @@ func managedChatListHoles(network: Network, postbox: Postbox) -> Signal<Void, No
             }
             
             for (entry, disposable) in added {
-                disposable.set(fetchChatListHole(postbox: postbox, network: network, groupId: entry.groupId, hole: entry.hole).start())
+                disposable.set(fetchChatListHole(postbox: postbox, network: network, accountPeerId: accountPeerId, groupId: entry.groupId, hole: entry.hole).start())
             }
         })
         

@@ -69,7 +69,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex:
         } |> switchToLatest
 }
 
-func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic<ManagedSynchronizePinnedChatsOperationsHelper>(value: ManagedSynchronizePinnedChatsOperationsHelper())
         
@@ -86,7 +86,7 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizePinnedChatsOperation {
-                            return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, operation: operation)
+                            return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -113,7 +113,7 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
     }
 }
 
-private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, operation: SynchronizePinnedChatsOperation) -> Signal<Void, NoError> {
+private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, operation: SynchronizePinnedChatsOperation) -> Signal<Void, NoError> {
     let initialRemoteItemIds = operation.previousItemIds
     let initialRemoteItemIdsWithoutSecretChats = initialRemoteItemIds.filter { item in
         switch item {
@@ -237,7 +237,7 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                 
                 transaction.setPinnedItemIds(resultingItemIds)
                 
-                transaction.updatePeerPresences(peerPresences)
+                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                 
                 transaction.updateCurrentPeerNotificationSettings(notificationSettings)
                 

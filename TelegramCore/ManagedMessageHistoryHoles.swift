@@ -55,7 +55,7 @@ func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox
             for (entry, disposable) in added {
                 switch entry.hole {
                     case let .peer(hole):
-                        disposable.set(fetchMessageHistoryHole(source: .network(network), postbox: postbox, hole: hole, direction: entry.direction, tagMask: entry.tags).start())
+                        disposable.set(fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, hole: hole, direction: entry.direction, tagMask: entry.tags).start())
                     case let .groupFeed(groupId, lowerIndex, upperIndex):
                         disposable.set(fetchGroupFeedHole(source: .network(network), accountPeerId: accountPeerId, postbox: postbox, groupId: groupId, minIndex: lowerIndex, maxIndex: upperIndex, direction: entry.direction).start())
                 }

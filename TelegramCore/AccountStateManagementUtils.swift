@@ -2193,7 +2193,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                     }
                     
                 }
-                transaction.updatePeerPresences(presences)
+                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: presences)
             case let .UpdateSecretChat(chat, _):
                 updateSecretChat(accountPeerId: accountPeerId, transaction: transaction, chat: chat, requestData: nil)
             case let .AddSecretMessages(messages):
