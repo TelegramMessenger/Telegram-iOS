@@ -1,10 +1,10 @@
 import Foundation
 #if os(macOS)
-import PostboxMac
-import SwiftSignalKitMac
+    import PostboxMac
+    import SwiftSignalKitMac
 #else
-import Postbox
-import SwiftSignalKit
+    import Postbox
+    import SwiftSignalKit
 #endif
 
 public func currentlySuggestedLocalization(network: Network, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo?, NoError> {
@@ -12,14 +12,14 @@ public func currentlySuggestedLocalization(network: Network, extractKeys: [Strin
         |> retryRequest
         |> mapToSignal { result -> Signal<SuggestedLocalizationInfo?, NoError> in
             switch result {
-            case let .config(config):
-                if let suggestedLangCode = config.suggestedLangCode {
-                    return suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
-                } else {
-                    return .single(nil)
-                }
+                case let .config(config):
+                    if let suggestedLangCode = config.suggestedLangCode {
+                        return suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
+                    } else {
+                        return .single(nil)
+                    }
             }
-    }
+        }
 }
 
 public func suggestedLocalizationInfo(network: Network, languageCode: String, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo, NoError> {
@@ -29,17 +29,17 @@ public func suggestedLocalizationInfo(network: Network, languageCode: String, ex
             var entries: [LocalizationEntry] = []
             for string in strings {
                 switch string {
-                case let .langPackString(key, value):
-                    entries.append(.string(key: key, value: value))
-                case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
-                    entries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
-                case let .langPackStringDeleted(key):
-                    entries.append(.string(key: key, value: ""))
+                    case let .langPackString(key, value):
+                        entries.append(.string(key: key, value: value))
+                    case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
+                        entries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
+                    case let .langPackStringDeleted(key):
+                        entries.append(.string(key: key, value: ""))
                 }
             }
             let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
             return SuggestedLocalizationInfo(languageCode: languageCode, extractedEntries: entries, availableLocalizations: infos)
-    }
+        }
 }
 
 final class CachedLocalizationInfos: PostboxCoding {
@@ -66,18 +66,18 @@ public func availableLocalizations(postbox: Postbox, network: Network, allowCach
                 return .single(entry.list)
             }
             return .complete()
-            } |> switchToLatest
+        } |> switchToLatest
     } else {
         cached = .complete()
     }
     let remote = network.request(Api.functions.langpack.getLanguages(langPack: ""))
-        |> retryRequest
-        |> mapToSignal { languages -> Signal<[LocalizationInfo], NoError> in
-            let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
-            return postbox.transaction { transaction -> [LocalizationInfo] in
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: CachedLocalizationInfos(list: infos), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
-                return infos
-            }
+    |> retryRequest
+    |> mapToSignal { languages -> Signal<[LocalizationInfo], NoError> in
+        let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
+        return postbox.transaction { transaction -> [LocalizationInfo] in
+            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: CachedLocalizationInfos(list: infos), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+            return infos
+        }
     }
     
     return cached |> then(remote)
@@ -89,28 +89,28 @@ public enum DownloadLocalizationError {
 
 public func downloadLocalization(network: Network, languageCode: String) -> Signal<Localization, DownloadLocalizationError> {
     return network.request(Api.functions.langpack.getLangPack(langPack: "", langCode: languageCode))
-        |> mapError { _ -> DownloadLocalizationError in
-            return .generic
-        }
-        |> map { result -> Localization in
-            let version: Int32
-            var entries: [LocalizationEntry] = []
-            switch result {
+    |> mapError { _ -> DownloadLocalizationError in
+        return .generic
+    }
+    |> map { result -> Localization in
+        let version: Int32
+        var entries: [LocalizationEntry] = []
+        switch result {
             case let .langPackDifference(_, _, versionValue, strings):
                 version = versionValue
                 for string in strings {
                     switch string {
-                    case let .langPackString(key, value):
-                        entries.append(.string(key: key, value: value))
-                    case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
-                        entries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
-                    case let .langPackStringDeleted(key):
-                        entries.append(.string(key: key, value: ""))
+                        case let .langPackString(key, value):
+                            entries.append(.string(key: key, value: value))
+                        case let .langPackStringPluralized(_, key, zeroValue, oneValue, twoValue, fewValue, manyValue, otherValue):
+                            entries.append(.pluralizedString(key: key, zero: zeroValue, one: oneValue, two: twoValue, few: fewValue, many: manyValue, other: otherValue))
+                        case let .langPackStringDeleted(key):
+                            entries.append(.string(key: key, value: ""))
                     }
                 }
-            }
-            
-            return Localization(version: version, entries: entries)
+        }
+        
+        return Localization(version: version, entries: entries)
     }
 }
 
@@ -120,29 +120,29 @@ public enum DownoadAndApplyLocalizationError {
 
 public func downoadAndApplyLocalization(postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownoadAndApplyLocalizationError> {
     return downloadLocalization(network: network, languageCode: languageCode)
-        |> mapError { _ -> DownoadAndApplyLocalizationError in
-            return .generic
+    |> mapError { _ -> DownoadAndApplyLocalizationError in
+        return .generic
+    }
+    |> mapToSignal { language -> Signal<Void, DownoadAndApplyLocalizationError> in
+        return postbox.transaction { transaction -> Signal<Void, DownoadAndApplyLocalizationError> in
+            transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
+                return LocalizationSettings(languageCode: languageCode, localization: language)
+            })
+            
+            network.context.updateApiEnvironment { current in
+                return current?.withUpdatedLangPackCode(languageCode)
+            }
+            
+            return network.request(Api.functions.help.test())
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .complete()
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+            |> introduceError(DownoadAndApplyLocalizationError.self)
         }
-        |> mapToSignal { language -> Signal<Void, DownoadAndApplyLocalizationError> in
-            return postbox.transaction { transaction -> Signal<Void, DownoadAndApplyLocalizationError> in
-                transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
-                    return LocalizationSettings(languageCode: languageCode, localization: language)
-                })
-                
-                network.context.updateApiEnvironment { current in
-                    return current?.withUpdatedLangPackCode(languageCode)
-                }
-                
-                return network.request(Api.functions.help.test())
-                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                        return .complete()
-                    }
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
-                    |> introduceError(DownoadAndApplyLocalizationError.self)
-                }
-                |> introduceError(DownoadAndApplyLocalizationError.self)
-                |> switchToLatest
+        |> introduceError(DownoadAndApplyLocalizationError.self)
+        |> switchToLatest
     }
 }

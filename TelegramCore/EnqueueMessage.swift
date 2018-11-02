@@ -186,7 +186,7 @@ public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], 
         return account.postbox.transaction { transaction -> [MessageId] in
             var messageIds: [MessageId] = []
             for peerId in peerIds {
-                for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages) {
+                for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages, disableAutoremove: true) {
                     if let id = id {
                         messageIds.append(id)
                     }
@@ -222,7 +222,7 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
     }
 }
 
-func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)]) -> [MessageId?] {
+func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false) -> [MessageId?] {
     var updatedMessages: [(Bool, EnqueueMessage)] = []
     outer: for (transformedMedia, message) in messages {
         switch message {
@@ -295,7 +295,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         if let _ = mediaReference?.media as? TelegramMediaAction {
                             isAction = true
                         }
-                        if let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
+                        if !disableAutoremove, let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
                             attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
                         }
                     }
@@ -387,7 +387,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                     break
                                 }
                             }
-                            if let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
+                            if !disableAutoremove, let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
                             }
                         }

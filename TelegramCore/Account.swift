@@ -293,7 +293,18 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
         initializeMessageNamespacesWithHoles.append((peerNamespace, Namespaces.Message.Cloud))
     }
     
-    return SeedConfiguration(initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat])
+    return SeedConfiguration(initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat], peerSummaryCounterTags: { peer in
+        if let peer = peer as? TelegramChannel, let addressName = peer.addressName, !addressName.isEmpty {
+            switch peer.info {
+                case .group:
+                    return [.publicGroups]
+                case .broadcast:
+                    return [.channels]
+            }
+        } else {
+            return [.regularChatsAndPrivateGroups]
+        }
+    })
 }()
 
 public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
@@ -755,10 +766,10 @@ public enum AccountNetworkState: Equatable {
 
 public final class AccountAuxiliaryMethods {
     public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
-    public let fetchResource: (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
+    public let fetchResource: (Account, MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     
-    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<IndexSet, NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
         self.updatePeerChatInputState = updatePeerChatInputState
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
@@ -1012,11 +1023,11 @@ public class Account {
                 return .single(!value)
             }
         }
-        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue), delayNetworkStatus |> deliverOn(networkStateQueue))
-        |> map { isUpdating, connectionStatus, delayNetworkStatus -> AccountNetworkState in
-            if delayNetworkStatus {
+        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue)/*, delayNetworkStatus |> deliverOn(networkStateQueue)*/)
+        |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
+            /*if delayNetworkStatus {
                 return .online(proxy: nil)
-            }
+            }*/
             
             switch connectionStatus {
                 case .waitingForNetwork:
@@ -1046,7 +1057,8 @@ public class Account {
                     }
             }
         }
-        self.networkStateValue.set(networkStateSignal |> distinctUntilChanged)
+        self.networkStateValue.set(networkStateSignal
+        |> distinctUntilChanged)
         
         self.networkTypeValue.set(currentNetworkType())
         
@@ -1278,16 +1290,16 @@ public func updateAccountNetworkUsageStats(account: Account, category: MediaReso
     updateNetworkUsageStats(basePath: account.basePath, category: category, delta: delta)
 }
 
-public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
+public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
 public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: AnyMediaReference, _ userInteractive: Bool) -> Signal<AnyMediaReference?, NoError>
 
 public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil, preFetchedResourcePath: @escaping (MediaResource) -> String? = { _ in return nil }) {
     account.postbox.mediaBox.preFetchedResourcePath = preFetchedResourcePath
-    account.postbox.mediaBox.fetchResource = { [weak account] resource, ranges, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+    account.postbox.mediaBox.fetchResource = { [weak account] resource, intervals, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         if let strongAccount = account {
-            if let result = fetchResource(account: strongAccount, resource: resource, ranges: ranges, parameters: parameters) {
+            if let result = fetchResource(account: strongAccount, resource: resource, intervals: intervals, parameters: parameters) {
                 return result
-            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, ranges, parameters) {
+            } else if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, intervals, parameters) {
                 return result
             } else {
                 return .never()
@@ -1297,9 +1309,9 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
         }
     }
     
-    account.postbox.mediaBox.fetchCachedResourceRepresentation = { [weak account] resource, resourceData, representation in
+    account.postbox.mediaBox.fetchCachedResourceRepresentation = { [weak account] resource, representation in
         if let strongAccount = account, let fetchCachedResourceRepresentation = fetchCachedResourceRepresentation {
-            return fetchCachedResourceRepresentation(strongAccount, resource, resourceData, representation)
+            return fetchCachedResourceRepresentation(strongAccount, resource, representation)
         } else {
             return .never()
         }

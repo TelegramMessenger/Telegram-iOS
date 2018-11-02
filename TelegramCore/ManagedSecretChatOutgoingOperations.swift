@@ -1184,6 +1184,19 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                             })
                             
                             maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: message.id, timestamp: timestamp))
+                            
+                            var sentStickers: [TelegramMediaFile] = []
+                            for media in message.media {
+                                if let file = media as? TelegramMediaFile {
+                                    if file.isSticker {
+                                        sentStickers.append(file)
+                                    }
+                                }
+                            }
+                            
+                            for file in sentStickers {
+                                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+                            }
                         }
                     }
                 } else {

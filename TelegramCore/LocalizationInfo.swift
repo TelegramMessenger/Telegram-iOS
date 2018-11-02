@@ -1,22 +1,22 @@
 import Foundation
 #if os(macOS)
-import PostboxMac
+    import PostboxMac
 #else
-import Postbox
+    import Postbox
 #endif
 
 public final class LocalizationInfo: PostboxCoding {
     public let languageCode: String
-    public let nativeLanguageCode: String?
+    public let baseLanguageCode: String?
     public let title: String
     public let localizedTitle: String
     public let isOfficial: Bool
     public let totalStringCount: Int32
     public let translatedStringCount: Int32
     
-    public init(languageCode: String, nativeLanguageCode: String?, title: String, localizedTitle: String, isOfficial: Bool, totalStringCount: Int32, translatedStringCount: Int32) {
+    public init(languageCode: String, baseLanguageCode: String?, title: String, localizedTitle: String, isOfficial: Bool, totalStringCount: Int32, translatedStringCount: Int32) {
         self.languageCode = languageCode
-        self.nativeLanguageCode = nativeLanguageCode
+        self.baseLanguageCode = baseLanguageCode
         self.title = title
         self.localizedTitle = localizedTitle
         self.isOfficial = isOfficial
@@ -26,7 +26,7 @@ public final class LocalizationInfo: PostboxCoding {
     
     public init(decoder: PostboxDecoder) {
         self.languageCode = decoder.decodeStringForKey("lc", orElse: "")
-        self.nativeLanguageCode = decoder.decodeOptionalStringForKey("nlc")
+        self.baseLanguageCode = decoder.decodeOptionalStringForKey("nlc")
         self.title = decoder.decodeStringForKey("t", orElse: "")
         self.localizedTitle = decoder.decodeStringForKey("lt", orElse: "")
         self.isOfficial = decoder.decodeInt32ForKey("of", orElse: 0) != 0
@@ -36,8 +36,8 @@ public final class LocalizationInfo: PostboxCoding {
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.languageCode, forKey: "lc")
-        if let nativeLanguageCode = self.nativeLanguageCode {
-            encoder.encodeString(nativeLanguageCode, forKey: "nlc")
+        if let baseLanguageCode = self.baseLanguageCode {
+            encoder.encodeString(baseLanguageCode, forKey: "nlc")
         } else {
             encoder.encodeNil(forKey: "nlc")
         }
@@ -52,8 +52,8 @@ public final class LocalizationInfo: PostboxCoding {
 extension LocalizationInfo {
     convenience init(apiLanguage: Api.LangPackLanguage) {
         switch apiLanguage {
-        case let .langPackLanguage(language):
-            self.init(languageCode: language.langCode, nativeLanguageCode: language.baseLangCode, title: language.name, localizedTitle: language.nativeName, isOfficial: (language.flags & (1 << 0)) != 0, totalStringCount: language.stringsCount, translatedStringCount: language.translatedCount)
+            case let .langPackLanguage(language):
+                self.init(languageCode: language.langCode, baseLanguageCode: nil/*language.baseLangCode*/, title: language.name, localizedTitle: language.nativeName, isOfficial: true/*(language.flags & (1 << 0)) != 0*/, totalStringCount: 1/*language.stringsCount*/, translatedStringCount: 1/*language.translatedCount*/)
         }
     }
 }

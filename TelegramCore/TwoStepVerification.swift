@@ -94,9 +94,14 @@ public enum UpdateTwoStepVerificationPasswordError {
     case invalidEmail
 }
 
+public struct TwoStepVerificationPendingEmail {
+    public let pattern: String
+    public let codeLength: Int32?
+}
+
 public enum UpdateTwoStepVerificationPasswordResult {
     case none
-    case password(password: String, pendingEmailPattern: String?)
+    case password(password: String, pendingEmail: TwoStepVerificationPendingEmail?)
 }
 
 public enum UpdatedTwoStepVerificationPassword {
@@ -188,13 +193,19 @@ public func updateTwoStepVerificationPassword(network: Network, currentPassword:
                 
                 return network.request(Api.functions.account.updatePasswordSettings(password:  checkPassword, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newAlgo: updatedPasswordDerivation.apiAlgo, newPasswordHash: Buffer(data: updatedPasswordHash), hint: hint, email: email, newSecureSettings: updatedSecureSettings)), automaticFloodWait: false)
                 |> map { _ -> UpdateTwoStepVerificationPasswordResult in
-                    return .password(password: password, pendingEmailPattern: nil)
+                    return .password(password: password, pendingEmail: nil)
                 }
                 |> `catch` { error -> Signal<UpdateTwoStepVerificationPasswordResult, MTRpcError> in
-                    if error.errorDescription == "EMAIL_UNCONFIRMED" {
+                    if error.errorDescription.hasPrefix("EMAIL_UNCONFIRMED") {
+                        var codeLength: Int32?
+                        if error.errorDescription.hasPrefix("EMAIL_UNCONFIRMED_") {
+                            if let value = Int32(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "EMAIL_UNCONFIRMED_".count)...]) {
+                                codeLength = value
+                            }
+                        }
                         return twoStepAuthData(network)
                         |> map { result -> UpdateTwoStepVerificationPasswordResult in
-                            return .password(password: password, pendingEmailPattern: result.unconfirmedEmailPattern)
+                            return .password(password: password, pendingEmail: result.unconfirmedEmailPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: codeLength) }))
                         }
                     } else {
                         return .fail(error)
@@ -269,13 +280,19 @@ public func updateTwoStepVerificationEmail(account: Account, currentPassword: St
         let flags: Int32 = 1 << 1
         return account.network.request(Api.functions.account.updatePasswordSettings(password: checkPassword, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newAlgo: nil, newPasswordHash: nil, hint: nil, email: updatedEmail, newSecureSettings: nil)), automaticFloodWait: false)
         |> map { _ -> UpdateTwoStepVerificationPasswordResult in
-            return .password(password: currentPassword, pendingEmailPattern: nil)
+            return .password(password: currentPassword, pendingEmail: nil)
         }
         |> `catch` { error -> Signal<UpdateTwoStepVerificationPasswordResult, MTRpcError> in
-            if error.errorDescription == "EMAIL_UNCONFIRMED" {
+            if error.errorDescription.hasPrefix("EMAIL_UNCONFIRMED") {
                 return twoStepAuthData(account.network)
-                    |> map { result -> UpdateTwoStepVerificationPasswordResult in
-                        return .password(password: currentPassword, pendingEmailPattern: result.unconfirmedEmailPattern)
+                |> map { result -> UpdateTwoStepVerificationPasswordResult in
+                    var codeLength: Int32?
+                    if error.errorDescription.hasPrefix("EMAIL_UNCONFIRMED_") {
+                        if let value = Int32(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "EMAIL_UNCONFIRMED_".count)...]) {
+                            codeLength = value
+                        }
+                    }
+                    return .password(password: currentPassword, pendingEmail: result.unconfirmedEmailPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: codeLength) }))
                 }
             } else {
                 return .fail(error)

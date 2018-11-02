@@ -19,6 +19,11 @@ public func webpagePreview(account: Account, url: String, webpageId: MediaId? = 
                     return .single(.messageMediaEmpty)
                 }
                 |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
+                    if let preCachedResources = result.preCachedResources {
+                        for (resource, data) in preCachedResources {
+                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                        }
+                    }
                     switch result {
                         case let .messageMediaWebPage(webpage):
                             if let media = telegramMediaWebpageFromApiWebpage(webpage, url: url) {
