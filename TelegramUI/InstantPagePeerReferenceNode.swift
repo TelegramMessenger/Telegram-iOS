@@ -44,6 +44,7 @@ private enum JoinState: Equatable {
 final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let account: Account
     let initialPeer: Peer
+    let safeInset: CGFloat
     private let rtl: Bool
     private var strings: PresentationStrings
     private var theme: InstantPageTheme
@@ -63,11 +64,12 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     
     private var joinState: JoinState = .none
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
         self.initialPeer = initialPeer
+        self.safeInset = safeInset
         self.rtl = rtl
         self.openPeer = openPeer
         
@@ -219,7 +221,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         super.layout()
         
         let size = self.bounds.size
-        let inset: CGFloat = 17.0
+        let inset: CGFloat = 17.0 + safeInset
         
         self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -230,15 +232,15 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         let indicatorSize = self.activityIndicator.measure(size)
         
         if self.rtl {
-            self.nameNode.frame = CGRect(origin: CGPoint(x: size.width - 17.0 - nameSize.width, y: floor((size.height - nameSize.height) / 2.0)), size: nameSize)
-            self.joinNode.frame = CGRect(origin: CGPoint(x: 17.0, y: floor((size.height - joinSize.height) / 2.0)), size: joinSize)
-            self.checkNode.frame = CGRect(origin: CGPoint(x: 17.0, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
-            self.activityIndicator.frame = CGRect(origin: CGPoint(x: 17.0, y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
+            self.nameNode.frame = CGRect(origin: CGPoint(x: size.width - inset - nameSize.width, y: floor((size.height - nameSize.height) / 2.0)), size: nameSize)
+            self.joinNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((size.height - joinSize.height) / 2.0)), size: joinSize)
+            self.checkNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
+            self.activityIndicator.frame = CGRect(origin: CGPoint(x: inset, y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
         } else {
-            self.nameNode.frame = CGRect(origin: CGPoint(x: 17.0, y: floor((size.height - nameSize.height) / 2.0)), size: nameSize)
-            self.joinNode.frame = CGRect(origin: CGPoint(x: size.width - 17.0 - joinSize.width, y: floor((size.height - joinSize.height) / 2.0)), size: joinSize)
-            self.checkNode.frame = CGRect(origin: CGPoint(x: size.width - 17.0 - checkSize.width, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
-            self.activityIndicator.frame = CGRect(origin: CGPoint(x: size.width - 17.0 - indicatorSize.width, y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
+            self.nameNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((size.height - nameSize.height) / 2.0)), size: nameSize)
+            self.joinNode.frame = CGRect(origin: CGPoint(x: size.width - inset - joinSize.width, y: floor((size.height - joinSize.height) / 2.0)), size: joinSize)
+            self.checkNode.frame = CGRect(origin: CGPoint(x: size.width - inset - checkSize.width, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
+            self.activityIndicator.frame = CGRect(origin: CGPoint(x: size.width - inset - indicatorSize.width, y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
         }
     }
     

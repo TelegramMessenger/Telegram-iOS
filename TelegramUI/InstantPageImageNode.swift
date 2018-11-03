@@ -7,7 +7,8 @@ import SwiftSignalKit
 
 final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private let account: Account
-    private let theme: InstantPageTheme
+    private let webPage: TelegramMediaWebpage
+    private var theme: InstantPageTheme
     let media: InstantPageMedia
     let attributes: [InstantPageImageAttribute]
     let url: InstantPageUrlItem?
@@ -24,9 +25,12 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var fetchedDisposable = MetaDisposable()
     
+    private var themeUpdated: Bool = false
+    
     init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], url: InstantPageUrlItem? = nil, interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void = { _ in }) {
         self.account = account
         self.theme = theme
+        self.webPage = webPage
         self.media = media
         self.attributes = attributes
         self.url = url
@@ -88,6 +92,19 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     }
     
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
+        if self.theme.imageEmptyColor != theme.imageEmptyColor {
+            self.theme = theme
+            self.themeUpdated = true
+            self.setNeedsLayout()
+            
+            if let file = self.media.media as? TelegramMediaFile {
+                let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
+                if file.mimeType.hasPrefix("image/") {
+                    _ = freeMediaFileInteractiveFetched(account: self.account, fileReference: fileReference).start()
+                    self.imageNode.setSignal(chatMessageImageFile(account: self.account, fileReference: fileReference, thumbnail: false, fetched: true))
+                }
+            }
+        }
     }
     
     override func layout() {
@@ -95,8 +112,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         
         let size = self.bounds.size
         
-        if self.currentSize != size {
+        if self.currentSize != size || self.themeUpdated {
             self.currentSize = size
+            self.themeUpdated = false
             
             self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
             

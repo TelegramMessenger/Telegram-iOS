@@ -140,9 +140,9 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
                         //self?.openPeer(peerId)
                     }, openUrl: { [weak self] url in
                         //self?.openUrl(url)
-                    }, updateWebEmbedHeight: { [weak self] key, height in
+                    }, updateWebEmbedHeight: { [weak self] height in
                         //self?.updateWebEmbedHeight(key, height)
-                    }, updateDetailsOpened: { _, _ in
+                    }, updateDetailsExpanded: { _ in
                     }) {
                         itemNode.frame = item.frame
                         if let topNode = topNode {
@@ -206,16 +206,16 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let separatorNode: ASDisplayNode
     private let contentNode: InstantPageDetailsContentNode
     
-    let updateOpened: (Int, Bool) -> Void
-    var opened: Bool
+    private let updateExpanded: (Bool) -> Void
+    var expanded: Bool
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, updateDetailsOpened: @escaping (Int, Bool) -> Void) {
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
         self.item = item
         
-        self.updateOpened = updateDetailsOpened
+        self.updateExpanded = updateDetailsExpanded
         
         let frame = item.frame
         
@@ -241,12 +241,12 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         }
         self.titleTile.items.append(contentsOf: titleItems)
         
-        self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: item.open)
+        self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: item.initiallyExpanded)
         self.separatorNode = ASDisplayNode()
         
         self.contentNode = InstantPageDetailsContentNode(account: account, strings: strings, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height))
         
-        self.opened = item.open
+        self.expanded = item.initiallyExpanded
         
         super.init()
         
@@ -258,9 +258,6 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.addSubnode(self.arrowNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.contentNode)
-        
-        let lineSize = CGSize(width: frame.width - detailsInset, height: UIScreenPixel)
-        self.separatorNode.frame = CGRect(origin: CGPoint(x: item.rtl ? 0.0 : detailsInset, y: detailsHeaderHeight - lineSize.height), size: lineSize)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
@@ -287,25 +284,37 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     }
     
     @objc func buttonPressed() {
-        self.setOpened(!self.opened, animated: true)
+        self.setExpanded(!self.expanded, animated: true)
     }
     
-    func setOpened(_ opened: Bool, animated: Bool) {
-        self.opened = opened
-        self.arrowNode.setOpen(opened, animated: animated)
-        self.updateOpened(0, opened)
+    func setExpanded(_ expanded: Bool, animated: Bool) {
+        self.expanded = expanded
+        self.arrowNode.setOpen(expanded, animated: animated)
+        self.updateExpanded(expanded)
+    }
+    
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let size = layout.size
+        let inset = detailsInset + self.item.safeInset
+        
+        let lineSize = CGSize(width: frame.width - inset, height: UIScreenPixel)
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: item.rtl ? 0.0 : inset, y: size.height - lineSize.height), size: lineSize))
     }
     
     override func layout() {
         super.layout()
         
         let size = self.bounds.size
+        let inset = detailsInset + self.item.safeInset
         
         self.titleTileNode.frame = self.titleTile.frame
         self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: detailsHeaderHeight + UIScreenPixel))
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: detailsHeaderHeight))
-        self.arrowNode.frame = CGRect(x: detailsInset, y: floorToScreenPixels((detailsHeaderHeight - 8.0) / 2.0) + 1.0, width: 13.0, height: 8.0)
+        self.arrowNode.frame = CGRect(x: inset, y: floorToScreenPixels((detailsHeaderHeight - 8.0) / 2.0) + 1.0, width: 13.0, height: 8.0)
         self.contentNode.frame = CGRect(x: 0.0, y: detailsHeaderHeight, width: size.width, height: self.item.frame.height - detailsHeaderHeight)
+        
+        let lineSize = CGSize(width: frame.width - inset, height: UIScreenPixel)
+        self.separatorNode.frame = CGRect(origin: CGPoint(x: item.rtl ? 0.0 : inset, y: size.height - lineSize.height), size: lineSize)
         
         self.contentNode.updateVisibleItems()
     }
@@ -437,9 +446,9 @@ final class InstantPageDetailsArrowNode : ASDisplayNode {
             context.setLineCap(.round)
             context.setLineWidth(2.0)
             
-            context.move(to: CGPoint(x: 1.0, y: 6.0 - 5.0 * parameters.progress))
-            context.addLine(to: CGPoint(x: 6.0, y: 1.0 + 5.0 * parameters.progress))
-            context.addLine(to: CGPoint(x: 11.0, y: 6.0 - 5.0 * parameters.progress))
+            context.move(to: CGPoint(x: 1.0, y: 1.0 + 5.0 * parameters.progress))
+            context.addLine(to: CGPoint(x: 6.0, y: 6.0 - 5.0 * parameters.progress))
+            context.addLine(to: CGPoint(x: 11.0, y: 1.0 + 5.0 * parameters.progress))
             context.strokePath()
         }
     }

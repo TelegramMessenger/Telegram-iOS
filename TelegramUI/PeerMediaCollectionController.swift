@@ -188,6 +188,7 @@ public class PeerMediaCollectionController: TelegramController {
             }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in
             }, longTap: { [weak self] content in
                 if let strongSelf = self {
+                    strongSelf.view.endEditing(true)
                     switch content {
                         case let .url(url):
                             let canOpenIn = availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).count > 1

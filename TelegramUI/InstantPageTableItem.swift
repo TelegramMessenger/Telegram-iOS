@@ -166,7 +166,7 @@ final class InstantPageTableItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageTableNode(item: self, account: account, strings: strings, theme: theme)
     }
     
@@ -227,7 +227,7 @@ final class InstantPageTableContentNode: ASDisplayNode {
         for cell in self.item.cells {
             for item in cell.additionalItems {
                 if item.wantsNode {
-                    if let node = item.node(account: account, strings: strings, theme: theme, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _, _ in }, updateDetailsOpened: { _, _ in }) {
+                    if let node = item.node(account: account, strings: strings, theme: theme, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }) {
                         node.frame = item.frame.offsetBy(dx: cell.frame.minX, dy: cell.frame.minY)
                         self.addSubnode(node)
                     }

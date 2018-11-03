@@ -682,6 +682,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     if let continueActionButtonLayout = continueActionButtonLayout {
                         let (size, apply) = continueActionButtonLayout(boundingWidth - 13.0 - insets.right)
                         actionButtonSizeAndApply = (size, apply)
+                        adjustedBoundingSize.width = max(adjustedBoundingSize.width, insets.left + size.width + insets.right)
                         adjustedBoundingSize.height += 7.0 + size.height
                     }
                     

@@ -230,7 +230,7 @@ public final class PresentationCall {
         self.isOutgoing = isOutgoing
         self.peer = peer
         
-        self.ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, allowP2P: allowP2P, proxyServer: proxyServer, initialNetworkType: currentNetworkType, updatedNetworkType: updatedNetworkType)
+        self.ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: currentNetworkType, updatedNetworkType: updatedNetworkType)
         
         var didReceiveAudioOutputs = false
         self.sessionStateDisposable = (callSessionManager.callState(internalId: internalId)
@@ -413,7 +413,7 @@ public final class PresentationCall {
                 presentationState = .terminated(reason)
             case let .requesting(ringing):
                 presentationState = .requesting(ringing)
-            case let .active(_, keyVisualHash, _, _):
+            case let .active(_, keyVisualHash, _, _, _):
                 if let callContextState = callContextState {
                     switch callContextState {
                         case .initializing:
@@ -441,10 +441,10 @@ public final class PresentationCall {
                 if let _ = audioSessionControl {
                     self.audioSessionShouldBeActive.set(true)
                 }
-            case let .active(key, _, connections, maxLayer):
+            case let .active(key, _, connections, maxLayer, allowsP2P):
                 self.audioSessionShouldBeActive.set(true)
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
-                    self.ongoingContext.start(key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, audioSessionActive: self.audioSessionActive.get())
+                    self.ongoingContext.start(key: key, isOutgoing: sessionState.isOutgoing, connections: connections, maxLayer: maxLayer, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get())
                     if sessionState.isOutgoing {
                         self.callKitIntegration?.reportOutgoingCallConnected(uuid: sessionState.id, at: Date())
                     }

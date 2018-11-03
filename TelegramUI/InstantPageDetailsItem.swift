@@ -10,20 +10,23 @@ final class InstantPageDetailsItem: InstantPageItem {
 
     let title: NSAttributedString
     let items: [InstantPageItem]
+    let safeInset: CGFloat
     let rtl: Bool
+    var initiallyExpanded: Bool
+    let index: Int
     
-    var open: Bool
-    
-    init(frame: CGRect, title: NSAttributedString, items: [InstantPageItem], rtl: Bool, open: Bool) {
+    init(frame: CGRect, title: NSAttributedString, items: [InstantPageItem], safeInset: CGFloat, rtl: Bool, initiallyExpanded: Bool, index: Int) {
         self.frame = frame
         self.title = title
         self.items = items
+        self.safeInset = safeInset
         self.rtl = rtl
-        self.open = open
+        self.initiallyExpanded = initiallyExpanded
+        self.index = index
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageDetailsNode(account: account, strings: strings, theme: theme, item: self, updateDetailsOpened: updateDetailsOpened)
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+        return InstantPageDetailsNode(account: account, strings: strings, theme: theme, item: self, updateDetailsExpanded: updateDetailsExpanded)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -58,6 +61,6 @@ final class InstantPageDetailsItem: InstantPageItem {
     }
 }
 
-func layoutDetailsItem(theme: InstantPageTheme, title: NSAttributedString, boundingWidth: CGFloat, items: [InstantPageItem], contentSize: CGSize, rtl: Bool, open: Bool) -> InstantPageDetailsItem {
-    return InstantPageDetailsItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: contentSize.height + 44.0), title: title, items: items, rtl: rtl, open: open)
+func layoutDetailsItem(theme: InstantPageTheme, title: NSAttributedString, boundingWidth: CGFloat, items: [InstantPageItem], contentSize: CGSize, safeInset: CGFloat, rtl: Bool, initiallyExpanded: Bool, index: Int) -> InstantPageDetailsItem {
+    return InstantPageDetailsItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: contentSize.height + 44.0), title: title, items: items, safeInset: safeInset, rtl: rtl, initiallyExpanded: initiallyExpanded, index: index)
 }

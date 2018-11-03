@@ -41,7 +41,7 @@ final class InstantPageImageItem: InstantPageItem {
         self.fit = fit
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (Int, Int) -> Void, updateDetailsOpened: @escaping (Int, Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageImageNode(account: account, theme: theme, webPage: self.webPage, media: self.media, attributes: self.attributes, url: self.url, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia, openUrl: openUrl)
     }
     

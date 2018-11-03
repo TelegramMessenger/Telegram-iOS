@@ -20,11 +20,11 @@ private class WeakInstantPageWebEmbedNodeMessageHandler: NSObject, WKScriptMessa
 final class InstantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
     let url: String?
     let html: String?
-    let updateWebEmbedHeight: (Int, Int) -> Void
+    let updateWebEmbedHeight: (CGFloat) -> Void
     
     private var webView: WKWebView?
     
-    init(frame: CGRect, url: String?, html: String?, enableScrolling: Bool, updateWebEmbedHeight: @escaping (Int, Int) -> Void) {
+    init(frame: CGRect, url: String?, html: String?, enableScrolling: Bool, updateWebEmbedHeight: @escaping (CGFloat) -> Void) {
         self.url = url
         self.html = html
         self.updateWebEmbedHeight = updateWebEmbedHeight
@@ -91,15 +91,7 @@ final class InstantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
         }
         
         if eventName == "resize_frame", let height = dict["height"] as? Int {
-            var hash: Int?
-            if let url = self.url {
-                hash = url.hashValue
-            } else if let html = self.html {
-                hash = html.hashValue
-            }
-            if let hash = hash {
-                self.updateWebEmbedHeight(hash, height)
-            }
+            self.updateWebEmbedHeight(CGFloat(height))
         }
     }
     

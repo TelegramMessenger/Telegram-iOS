@@ -125,7 +125,7 @@ final class OngoingCallContext {
     private let audioSessionDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
     
-    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, allowP2P: Bool, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
+    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
         let _ = setupLogs
         
         self.internalId = internalId
@@ -142,7 +142,7 @@ final class OngoingCallContext {
                         break
                 }
             }
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), allowP2P: allowP2P, proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType))
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType))
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
@@ -186,13 +186,13 @@ final class OngoingCallContext {
         }
     }
     
-    func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, audioSessionActive: Signal<Bool, NoError>) {
+    func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>) {
         self.audioSessionDisposable.set((audioSessionActive
         |> filter { $0 }
         |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.withContext { context in
-                    context.start(withKey: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer)
+                    context.start(withKey: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P)
                 }
             }
         }))

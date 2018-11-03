@@ -127,7 +127,6 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
     NSTimeInterval _callConnectTimeout;
     NSTimeInterval _callPacketTimeout;
     int32_t _dataSavingMode;
-    bool _allowP2P;
     
     tgvoip::VoIPController *_controller;
     
@@ -181,7 +180,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     TGVoipLoggingFunction = loggingFunction;
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue allowP2P:(BOOL)allowP2P proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -193,7 +192,6 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
         _callConnectTimeout = 30.0;
         _callPacketTimeout = 10.0;
         _dataSavingMode = 0;
-        _allowP2P = allowP2P;
         _networkType = networkType;
         
         _controller = new tgvoip::VoIPController();
@@ -232,7 +230,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     }
 }
 
-- (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer {
+- (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P {
     std::vector<tgvoip::Endpoint> endpoints;
     NSArray<OngoingCallConnectionDescription *> *connections = [@[primaryConnection] arrayByAddingObjectsFromArray:alternativeConnections];
     for (OngoingCallConnectionDescription *connection in connections) {
@@ -261,7 +259,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
         _controller->SetConfig(config);
         
         _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
-        _controller->SetRemoteEndpoints(endpoints, _allowP2P, maxLayer);
+        _controller->SetRemoteEndpoints(endpoints, allowP2P, maxLayer);
         _controller->Start();
         
         _controller->Connect();
