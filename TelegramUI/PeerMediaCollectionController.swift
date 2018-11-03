@@ -231,6 +231,7 @@ public class PeerMediaCollectionController: TelegramController {
             }, canSetupReply: { _ in
                 return false
         }, navigateToFirstDateMessage: { _ in
+        }, requestRedeliveryOfFailedMessages: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings)

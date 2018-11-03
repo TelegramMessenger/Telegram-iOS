@@ -118,6 +118,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var transitionClippingNode: ASDisplayNode?
     
     private var selectionNode: ChatMessageSelectionNode?
+    private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
     
@@ -1048,12 +1049,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 contentVerticalOffset = floorToScreenPixels((minimalContentSize.height - calculatedBubbleHeight) / 2.0)
             }
             
+            var deliveryFailedInset: CGFloat = 0.0
+            if item.content.firstMessage.flags.contains(.Failed) {
+                deliveryFailedInset += 24.0
+            }
+            
             let backgroundFrame: CGRect
             let contentOrigin: CGPoint
             let contentUpperRightCorner: CGPoint
             switch alignment {
                 case .none:
-                    backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset), y: 0.0), size: layoutBubbleSize)
+                    backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset - deliveryFailedInset), y: 0.0), size: layoutBubbleSize)
                     contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height + contentVerticalOffset)
                     contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
                 case .center:
@@ -1144,6 +1150,37 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, transition: transition)
                     
                     strongSelf.backgroundType = backgroundType
+                    
+                    if item.content.firstMessage.flags.contains(.Failed) {
+                        let deliveryFailedNode: ChatMessageDeliveryFailedNode
+                        var isAppearing = false
+                        if let current = strongSelf.deliveryFailedNode {
+                            deliveryFailedNode = current
+                        } else {
+                            isAppearing = true
+                            deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: {
+                                if let item = self?.item {
+                                item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
+                                }
+                            })
+                            strongSelf.deliveryFailedNode = deliveryFailedNode
+                            strongSelf.addSubnode(deliveryFailedNode)
+                        }
+                        let deliveryFailedSize = deliveryFailedNode.updateLayout(theme: item.presentationData.theme.theme)
+                        let deliveryFailedFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: backgroundFrame.maxY - deliveryFailedSize.height), size: deliveryFailedSize)
+                        if isAppearing {
+                            deliveryFailedNode.frame = deliveryFailedFrame
+                            transition.animatePositionAdditive(node: deliveryFailedNode, offset: CGPoint(x: deliveryFailedInset, y: 0.0))
+                        } else {
+                            transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedFrame)
+                        }
+                    } else if let deliveryFailedNode = strongSelf.deliveryFailedNode {
+                        strongSelf.deliveryFailedNode = nil
+                        transition.updateAlpha(node: deliveryFailedNode, alpha: 0.0)
+                        transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedNode.frame.offsetBy(dx: 24.0, dy: 0.0), completion: { [weak deliveryFailedNode] _ in
+                            deliveryFailedNode?.removeFromSupernode()
+                        })
+                    }
                     
                     if let nameNode = nameNodeSizeApply.1() {
                         strongSelf.nameNode = nameNode

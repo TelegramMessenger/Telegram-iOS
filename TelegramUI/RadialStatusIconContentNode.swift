@@ -49,7 +49,11 @@ final class RadialStatusIconContentNode: RadialStatusContentNode {
             switch parameters.icon {
                 case let .download(color):
                     context.setStrokeColor(color.cgColor)
-                    context.setLineWidth(2.0)
+                    var lineWidth: CGFloat = 2.0
+                    if diameter < 24.0 {
+                        lineWidth = 1.3
+                    }
+                    context.setLineWidth(lineWidth)
                     context.setLineCap(.round)
                     context.setLineJoin(.round)
                     

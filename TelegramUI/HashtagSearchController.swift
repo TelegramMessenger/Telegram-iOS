@@ -44,7 +44,7 @@ final class HashtagSearchController: TelegramController {
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { peer in
             
-        }, messageSelected: { [weak self] message in
+        }, messageSelected: { [weak self] message, _ in
             if let strongSelf = self {
                 if let peer = message.peers[message.id.peerId] {
                     strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: {

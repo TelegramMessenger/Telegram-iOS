@@ -140,6 +140,30 @@ private enum NavigatedMessageFromViewPosition {
     case exact
 }
 
+private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: MessageIndex) -> [Message] {
+    guard let index = view.entries.index(where: { $0.index.id == centralIndex.id }) else {
+        return []
+    }
+    var result: [Message] = []
+    if index != 0 {
+        for i in (0 ..< index).reversed() {
+            if case let .MessageEntry(message, _, _, _) = view.entries[i] {
+                result.append(message)
+                break
+            }
+        }
+    }
+    if index != view.entries.count - 1 {
+        for i in index + 1 ..< view.entries.count {
+            if case let .MessageEntry(message, _, _, _) = view.entries[i] {
+                result.append(message)
+                break
+            }
+        }
+    }
+    return result
+}
+
 private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: MessageIndex, position: NavigatedMessageFromViewPosition) -> (message: Message, around: [Message], exact: Bool)? {
     var index = 0
     for entry in view.entries {
@@ -148,7 +172,7 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
                 case .exact:
                     switch entry {
                         case let .MessageEntry(message, _, _, _):
-                            return (message, [], true)
+                            return (message, aroundMessagesFromView(view: view, centralIndex: entry.index), true)
                         default:
                             return nil
                     }
@@ -156,7 +180,7 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
                     if index + 1 < view.entries.count {
                         switch view.entries[index + 1] {
                             case let .MessageEntry(message, _, _, _):
-                                return (message, [], true)
+                                return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
                             default:
                                 return nil
                         }
@@ -167,7 +191,7 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
                     if index != 0 {
                         switch view.entries[index - 1] {
                             case let .MessageEntry(message, _, _, _):
-                                return (message, [], true)
+                                return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index - 1].index), true)
                             default:
                                 return nil
                         }
@@ -183,14 +207,14 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
             case .later, .exact:
                 switch view.entries[view.entries.count - 1] {
                     case let .MessageEntry(message, _, _, _):
-                        return (message, [], false)
+                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[view.entries.count - 1].index), false)
                     default:
                         return nil
                 }
             case .earlier:
                 switch view.entries[0] {
                     case let .MessageEntry(message, _, _, _):
-                        return (message, [], false)
+                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[0].index), false)
                     default:
                         return nil
                 }
@@ -410,21 +434,56 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         self.updateState()
         switch anchor {
             case let .messageId(messageId):
-                self.navigationDisposable.set((self.postbox.messageAtId(messageId)
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] message in
-                    if let strongSelf = self {
-                        assert(strongSelf.loadingItem)
-                        
-                        strongSelf.loadingItem = false
-                        if let message = message {
-                            strongSelf.currentItem = (message, [])
-                        } else {
-                            strongSelf.currentItem = nil
+                if case let .messages(peerId, tagMask, _) = self.messagesLocation {
+                    let historySignal = self.postbox.messageAtId(messageId)
+                    |> take(1)
+                    |> mapToSignal { message -> Signal<(Message, [Message])?, NoError> in
+                        guard let message = message else {
+                            return .single(nil)
                         }
-                        strongSelf.updateState()
+                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), index: .message(MessageIndex(message)), anchorIndex: .message(MessageIndex(message)), count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                        |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
+                            if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: MessageIndex(message), position: .exact) {
+                                return .single((message, aroundMessages))
+                            } else {
+                                return .single((message, []))
+                            }
+                        }
                     }
-                }))
+                    |> take(1)
+                    |> deliverOnMainQueue
+                    self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages in
+                        if let strongSelf = self {
+                            assert(strongSelf.loadingItem)
+                            
+                            strongSelf.loadingItem = false
+                            if let (message, aroundMessages) = messageAndAroundMessages {
+                                strongSelf.currentItem = (message, aroundMessages)
+                                strongSelf.playedToEnd = false
+                            } else {
+                                strongSelf.playedToEnd = true
+                            }
+                            strongSelf.updateState()
+                        }
+                    }))
+                } else {
+                
+                    self.navigationDisposable.set((self.postbox.messageAtId(messageId)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] message in
+                        if let strongSelf = self {
+                            assert(strongSelf.loadingItem)
+                            
+                            strongSelf.loadingItem = false
+                            if let message = message {
+                                strongSelf.currentItem = (message, [])
+                            } else {
+                                strongSelf.currentItem = nil
+                            }
+                            strongSelf.updateState()
+                        }
+                    }))
+                }
             case let .index(index):
                 switch self.messagesLocation {
                     case let .messages(peerId, tagMask, _):

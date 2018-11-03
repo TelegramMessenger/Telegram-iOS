@@ -27,6 +27,9 @@ final class ProxyServerActionSheetController: ActionSheetController {
         self._ready.set(.single(true))
         
         var items: [ActionSheetItem] = []
+        if case .mtp = server.connection {
+            items.append(ActionSheetTextItem(title: strings.SocksProxySetup_AdNoticeHelp))
+        }
         items.append(ProxyServerInfoItem(strings: strings, server: server))
         items.append(ProxyServerActionItem(account: account, strings: strings, server: server, dismiss: { [weak self] success in
             guard let strongSelf = self, !strongSelf.isDismissed else {

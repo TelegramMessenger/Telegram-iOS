@@ -1331,7 +1331,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         let members: Promise<[PeerId]> = Promise()
         if peerId.namespace == Namespaces.Peer.CloudChannel {
             var membersDisposable: Disposable?
-            let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, updated: { listState in
+            let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { listState in
                 members.set(.single(listState.list.map {$0.peer.id}))
                 membersDisposable?.dispose()
             })
@@ -1653,7 +1653,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     
     let channelMembersPromise = Promise<[RenderedChannelParticipant]>()
     if peerId.namespace == Namespaces.Peer.CloudChannel {
-        let (disposable, control) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, updated: { state in
+        let (disposable, control) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { state in
             channelMembersPromise.set(.single(state.list))
         })
         loadMoreControl = control

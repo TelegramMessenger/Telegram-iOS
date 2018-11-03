@@ -11,7 +11,7 @@ func searchPeerMembers(account: Account, peerId: PeerId, query: String) -> Signa
         |> mapToSignal { cachedData -> Signal<[Peer], NoError> in
             if let cachedData = cachedData, let memberCount = cachedData.participantsSummary.memberCount, memberCount <= 64 {
                 return Signal { subscriber in
-                    let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: nil, requestUpdate: false, updated: { state in
+                    let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: nil, requestUpdate: false, updated: { state in
                         if case .ready = state.loadingState {
                             let normalizedQuery = query.lowercased()
                             subscriber.putNext(state.list.compactMap { participant -> Peer? in
@@ -38,7 +38,7 @@ func searchPeerMembers(account: Account, peerId: PeerId, query: String) -> Signa
             }
             
             return Signal { subscriber in
-                let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: query, updated: { state in
+                let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                     if case .ready = state.loadingState {
                         subscriber.putNext(state.list.map { $0.peer })
                     }
@@ -50,6 +50,6 @@ func searchPeerMembers(account: Account, peerId: PeerId, query: String) -> Signa
             } |> runOn(Queue.mainQueue())
         }
     } else {
-        return searchGroupMembers(postbox: account.postbox, network: account.network, peerId: peerId, query: query)
+        return searchGroupMembers(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, query: query)
     }
 }

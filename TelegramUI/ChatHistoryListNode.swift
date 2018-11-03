@@ -5,6 +5,8 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 
+private let historyMessageCount: Int = 200
+
 public enum ChatHistoryListMode: Equatable {
     case bubbles
     case list(search: Bool, reversed: Bool)
@@ -659,9 +661,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     
                     if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
                         if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
-                            strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: 140))
+                            strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount))
                         } else if loaded.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
-                            strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: 140))
+                            strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount))
                         }
                     }
                 }
@@ -726,7 +728,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         } |> distinctUntilChanged(isEqual: { $0 == $1 })
         |> mapToSignal { messageId -> Signal<Void, NoError> in
             if let messageId = messageId {
-                return getMessagesLoadIfNecessary([messageId], postbox: account.postbox, network: account.network) |> map { _ -> Void in return Void() }
+                return getMessagesLoadIfNecessary([messageId], postbox: account.postbox, network: account.network, accountPeerId: account.peerId) |> map { _ -> Void in return Void() }
             } else {
                 return .complete()
             }

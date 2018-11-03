@@ -518,7 +518,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                 messageSound = settings.messageSound
             }
             
-            entries.append(ChannelInfoEntry.notificationSound(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Sound, value: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: messageSound, default: globalNotificationSettings.effective.groupChats.sound)))
+            entries.append(ChannelInfoEntry.notificationSound(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Sound, value: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: messageSound, default: globalNotificationSettings.effective.channels.sound)))
         } else {
             entries.append(ChannelInfoEntry.sharedMedia(theme: presentationData.theme, text: presentationData.strings.GroupInfo_SharedMedia))
         }

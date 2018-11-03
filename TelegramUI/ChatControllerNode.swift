@@ -8,9 +8,13 @@ import TelegramCore
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
     var inputAccessoryHeight: (() -> CGFloat)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
-    @available(iOSApplicationExtension 9.0, *)
-    var previewingDelegate: UIViewControllerPreviewingDelegate? {
-        return self.controller
+    
+    var previewingDelegate: PreviewingHostViewDelegate? {
+        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
+            return self?.controller?.previewingController(from: sourceView, for: point)
+        }, commitController: { [weak self] controller in
+            self?.controller?.previewingCommit(controller)
+        })
     }
     
     weak var controller: ChatController?

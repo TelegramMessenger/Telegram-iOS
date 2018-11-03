@@ -430,7 +430,7 @@ public func channelRecentActionsFilterController(account: Account, peer: Peer, e
     
     adminsPromise.set(.single(nil))
     
-    let (membersDisposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, peerId: peer.id) { membersState in
+    let (membersDisposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peer.id) { membersState in
         if case .loading = membersState.loadingState, membersState.list.isEmpty {
             adminsPromise.set(.single(nil))
         } else {

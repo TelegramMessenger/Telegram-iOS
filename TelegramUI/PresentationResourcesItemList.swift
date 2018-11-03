@@ -123,4 +123,10 @@ struct PresentationResourcesItemList {
             return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.rootController.activeNavigationSearchBar.inputIconColor)
         })
     }
+    
+    static func cloudFetchIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListCloudFetchIcon.rawValue, { theme in
+            generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: theme.list.itemAccentColor)
+        })
+    }
 }

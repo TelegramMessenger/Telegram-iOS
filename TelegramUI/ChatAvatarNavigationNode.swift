@@ -6,9 +6,12 @@ private let normalFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 private let smallFont = UIFont(name: ".SFCompactRounded-Semibold", size: 12.0)!
 
 final class ChatAvatarNavigationNodeView: UIView, PreviewingHostView {
-    @available(iOSApplicationExtension 9.0, *)
-    var previewingDelegate: UIViewControllerPreviewingDelegate? {
-        return self.chatController
+    var previewingDelegate: PreviewingHostViewDelegate? {
+        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
+            return self?.chatController?.avatarPreviewingController(from: sourceView)
+        }, commitController: { [weak self] controller in
+            self?.chatController?.previewingCommit(controller)
+        })
     }
     
     weak var chatController: ChatController?
@@ -45,6 +48,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     
     override func didLoad() {
         super.didLoad()
+        self.view.isOpaque = false
         (self.view as? ChatAvatarNavigationNodeView)?.targetNode = self
         (self.view as? ChatAvatarNavigationNodeView)?.chatController = self.chatController
     }

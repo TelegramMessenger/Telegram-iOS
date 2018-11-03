@@ -598,7 +598,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     
     let peerView = account.viewTracker.peerView(peerId) |> deliverOnMainQueue
     
-    let (membersDisposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, peerId: peerId) { membersState in
+    let (membersDisposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId) { membersState in
         if case .loading = membersState.loadingState, membersState.list.isEmpty {
             adminsPromise.set(.single(nil))
         } else {

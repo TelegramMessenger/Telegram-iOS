@@ -10,16 +10,18 @@ enum ChatMessageInteractiveMediaBadgeShape: Equatable {
 enum ChatMessageInteractiveMediaDownloadState: Equatable {
     case remote
     case fetching(progress: Float)
+    case compactRemote
+    case compactFetching(progress: Float)
 }
 
 enum ChatMessageInteractiveMediaBadgeContent: Equatable {
-    case text(backgroundColor: UIColor, foregroundColor: UIColor, shape: ChatMessageInteractiveMediaBadgeShape, text: NSAttributedString)
+    case text(inset: CGFloat, backgroundColor: UIColor, foregroundColor: UIColor, shape: ChatMessageInteractiveMediaBadgeShape, text: NSAttributedString)
     case mediaDownload(backgroundColor: UIColor, foregroundColor: UIColor, duration: String, size: String)
     
     static func ==(lhs: ChatMessageInteractiveMediaBadgeContent, rhs: ChatMessageInteractiveMediaBadgeContent) -> Bool {
         switch lhs {
-            case let .text(lhsBackgroundColor, lhsForegroundColor, lhsShape, lhsText):
-                if case let .text(rhsBackgroundColor, rhsForegroundColor, rhsShape, rhsText) = rhs, lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsShape == rhsShape, lhsText.isEqual(to: rhsText) {
+            case let .text(lhsInset, lhsBackgroundColor, lhsForegroundColor, lhsShape, lhsText):
+                if case let .text(rhsInset, rhsBackgroundColor, rhsForegroundColor, rhsShape, rhsText) = rhs, lhsInset.isEqual(to: rhsInset), lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsShape == rhsShape, lhsText.isEqual(to: rhsText) {
                     return true
                 } else {
                     return false
@@ -96,10 +98,10 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                 } else {
                     mediaDownloadStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
                     self.mediaDownloadStatusNode = mediaDownloadStatusNode
-                    mediaDownloadStatusNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0))
                     self.addSubnode(mediaDownloadStatusNode)
                 }
                 let state: RadialStatusNodeState
+                var isCompact = false
                 switch mediaDownloadState {
                     case .remote:
                         if let image = PresentationResourcesChat.chatBubbleFileCloudFetchMediaIcon(theme) {
@@ -109,7 +111,20 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         }
                     case let .fetching(progress):
                         state = .cloudProgress(color: .white, strokeBackgroundColor: UIColor(white: 1.0, alpha: 0.3), lineWidth: 2.0, value: CGFloat(progress))
+                    case .compactRemote:
+                        state = .download(.white)
+                        isCompact = true
+                    case .compactFetching:
+                        state = .progress(color: .white, lineWidth: nil, value: 0.0, cancelEnabled: true)
+                        isCompact = true
                 }
+                let mediaStatusFrame: CGRect
+                if isCompact {
+                    mediaStatusFrame = CGRect(origin: CGPoint(x: 1.0, y: -1.0), size: CGSize(width: 20.0, height: 20.0))
+                } else {
+                    mediaStatusFrame = CGRect(origin: CGPoint(x: 7.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0))
+                }
+                mediaDownloadStatusNode.frame = mediaStatusFrame
                 mediaDownloadStatusNode.transitionToState(state, animated: true, completion: {})
             } else if let mediaDownloadStatusNode = self.mediaDownloadStatusNode {
                 self.mediaDownloadStatusNode = nil
@@ -125,7 +140,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     @objc override public class func display(withParameters: Any?, isCancelled: () -> Bool) -> UIImage? {
         if let content = (withParameters as? ChatMessageInteractiveMediaBadgeParams)?.content {
             switch content {
-                case let .text(backgroundColor, foregroundColor, shape, text):
+                case let .text(inset, backgroundColor, foregroundColor, shape, text):
                     let convertedText = NSMutableAttributedString(string: text.string, attributes: [.font: font, .foregroundColor: foregroundColor])
                     text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: []) { attributes, range, _ in
                         if let _ = attributes[ChatTextInputAttributes.bold] {
@@ -133,7 +148,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         }
                     }
                     let textRect = convertedText.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-                    let imageSize = CGSize(width: ceil(textRect.size.width) + 10.0, height: 18.0)
+                    let imageSize = CGSize(width: inset + ceil(textRect.size.width) + 10.0, height: 18.0)
                     return generateImage(imageSize, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
                         context.setBlendMode(.copy)
@@ -155,7 +170,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         }
                         context.setBlendMode(.normal)
                         UIGraphicsPushContext(context)
-                        convertedText.draw(at: CGPoint(x: floor((size.width - textRect.size.width) / 2.0) + textRect.origin.x, y: 2.0 + textRect.origin.y))
+                        convertedText.draw(at: CGPoint(x: inset + floor((size.width - inset - textRect.size.width) / 2.0) + textRect.origin.x, y: 2.0 + textRect.origin.y))
                         UIGraphicsPopContext()
                     })
                 case let .mediaDownload(backgroundColor, foregroundColor, duration, size):

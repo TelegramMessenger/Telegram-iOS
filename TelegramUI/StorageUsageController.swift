@@ -266,11 +266,15 @@ func storageUsageController(account: Account) -> ViewController {
                 return current.withUpdatedDefaultCacheStorageTimeout(timeout)
             }).start()
         }
-        let values: [Int32] = [
+        var values: [Int32] = [
+            3 * 24 * 60 * 60,
             7 * 24 * 60 * 60,
             1 * 31 * 24 * 60 * 60,
             Int32.max
         ]
+        #if DEBUG
+        values.insert(60 * 60, at: 0)
+        #endif
         let timeoutItems: [ActionSheetItem] = values.map { value in
             return ActionSheetButtonItem(title: stringForKeepMediaTimeout(strings: presentationData.strings, timeout: value), action: {
                 dismissAction()

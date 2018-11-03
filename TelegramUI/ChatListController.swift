@@ -360,19 +360,24 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId, animated in
+        self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId, animated, isAd in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                    /*let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(postbox: strongSelf.account.postbox)
-                    |> deliverOnMainQueue).start(next: { value in
-                        if !value {
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: "The proxy you are using displays a sponsored channel in your chat list.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                                if let strongSelf = self {
-                                    let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(postbox: strongSelf.account.postbox).start()
-                                }
-                            })]), in: .window(.root))
-                        }
-                    })*/
+                    if isAd {
+                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(postbox: strongSelf.account.postbox)
+                        |> deliverOnMainQueue).start(next: { value in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if !value {
+                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                    if let strongSelf = self {
+                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(postbox: strongSelf.account.postbox).start()
+                                    }
+                                })]), in: .window(.root))
+                            }
+                        })
+                    }
                     
                     navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), animated: animated, completion: { [weak self] in
                         self?.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)

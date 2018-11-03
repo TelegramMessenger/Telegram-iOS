@@ -461,7 +461,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         var skipStandardStatus = false
                         if let count = webpageGalleryMediaCount {
-                            additionalImageBadgeContent = .text(backgroundColor: presentationData.theme.theme.chat.bubble.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.bubble.mediaDateAndStatusTextColor, shape: .corners(2.0), text: NSAttributedString(string: "1 \(presentationData.strings.Common_of) \(count)"))
+                            additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.bubble.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.bubble.mediaDateAndStatusTextColor, shape: .corners(2.0), text: NSAttributedString(string: "1 \(presentationData.strings.Common_of) \(count)"))
                             skipStandardStatus = imageMode
                         }
                         

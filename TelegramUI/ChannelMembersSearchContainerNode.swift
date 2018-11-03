@@ -177,7 +177,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     switch mode {
                         case .searchMembers, .banAndPromoteActions:
                             foundGroupMembers = Signal { subscriber in
-                                let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: query, updated: { state in
+                                let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                                     if case .ready = state.loadingState {
                                         subscriber.putNext(state.list)
                                         subscriber.putCompletion()
@@ -188,11 +188,11 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             foundMembers = .single([])
                         case .inviteActions:
                             foundGroupMembers = .single([])
-                            foundMembers = channelMembers(postbox: account.postbox, network: account.network, peerId: peerId, category: .recent(.search(query)))
+                            foundMembers = channelMembers(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, category: .recent(.search(query)))
                             |> map { $0 ?? [] }
                     case .searchAdmins:
                         foundGroupMembers = Signal { subscriber in
-                            let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: query, updated: { state in
+                            let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                                 if case .ready = state.loadingState {
                                     subscriber.putNext(state.list)
                                     subscriber.putCompletion()
@@ -203,7 +203,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         foundMembers = .single([])
                     case .searchBanned:
                         foundGroupMembers = Signal { subscriber in
-                            let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restrictedAndBanned(postbox: account.postbox, network: account.network, peerId: peerId, searchQuery: query, updated: { state in
+                            let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restrictedAndBanned(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                                 if case .ready = state.loadingState {
                                     subscriber.putNext(state.list)
                                     subscriber.putCompletion()
