@@ -552,7 +552,7 @@ final class MutableMessageHistoryView {
     fileprivate var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?]
     fileprivate var additionalDatas: [AdditionalMessageHistoryViewDataEntry]
     
-    init(id: MessageHistoryViewId, postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, index: InitialMessageHistoryViewAnchorIndex, anchorIndex: InternalMessageHistoryAnchorIndex?, combinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, count: Int, clipHoles: Bool, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+    init(id: MessageHistoryViewId, postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, index: InitialMessageHistoryViewAnchorIndex, anchorIndex: InternalMessageHistoryAnchorIndex?, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, count: Int, clipHoles: Bool, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         switch index {
             case let .index(realIndex):
                 let (entries, earlier, later) = fetchAround(postbox: postbox, peerIds: peerIds, index: realIndex, count: count, tagMask: tagMask)
@@ -572,7 +572,7 @@ final class MutableMessageHistoryView {
         self.peerIds = peerIds
         self.anchorIndex = anchorIndex ?? .upperBound
         self.combinedReadStates = combinedReadStates
-        self.transientReadStates = combinedReadStates
+        self.transientReadStates = transientReadStates
         self.tagMask = tagMask
         self.fillCount = count
         self.clipHoles = clipHoles
@@ -1553,7 +1553,7 @@ public final class MessageHistoryView {
     public let laterId: MessageIndex?
     public let entries: [MessageHistoryEntry]
     public let maxReadIndex: MessageIndex?
-    public let combinedReadStates: MessageHistoryViewReadState?
+    public let fixedReadStates: MessageHistoryViewReadState?
     public let topTaggedMessages: [Message]
     public let additionalData: [AdditionalMessageHistoryViewDataEntry]
     public let isLoading: Bool
@@ -1694,7 +1694,7 @@ public final class MessageHistoryView {
         self.earlierId = earlierId
         self.laterId = laterId
         
-        self.combinedReadStates = mutableView.combinedReadStates
+        self.fixedReadStates = mutableView.combinedReadStates
         
         if let combinedReadStates = mutableView.combinedReadStates {
             switch combinedReadStates {

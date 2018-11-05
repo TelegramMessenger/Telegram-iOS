@@ -2559,26 +2559,29 @@ public final class Postbox {
         }
         
         var readStates: MessageHistoryViewReadState?
+        var transientReadStates: MessageHistoryViewReadState?
+        switch peerIds {
+            case let .single(peerId):
+                if let readState = self.readStateTable.getCombinedState(peerId) {
+                    transientReadStates = .peer([peerId: readState])
+                }
+            case let .associated(peerId, _):
+                if let readState = self.readStateTable.getCombinedState(peerId) {
+                    transientReadStates = .peer([peerId: readState])
+                }
+            case let .group(groupId):
+                if let state = self.groupFeedReadStateTable.get(groupId) {
+                    transientReadStates = .group(groupId, state)
+                }
+        }
+        
         if let fixedCombinedReadStates = fixedCombinedReadStates {
             readStates = fixedCombinedReadStates
         } else {
-            switch peerIds {
-                case let .single(peerId):
-                    if let readState = self.readStateTable.getCombinedState(peerId) {
-                        readStates = .peer([peerId: readState])
-                    }
-                case let .associated(peerId, _):
-                    if let readState = self.readStateTable.getCombinedState(peerId) {
-                        readStates = .peer([peerId: readState])
-                    }
-                case let .group(groupId):
-                    if let state = self.groupFeedReadStateTable.get(groupId) {
-                        readStates = .group(groupId, state)
-                    }
-            }
+            readStates = transientReadStates
         }
         
-        let mutableView = MutableMessageHistoryView(id: MessageHistoryViewId(id: self.takeNextViewId()), postbox: self, orderStatistics: orderStatistics, peerIds: peerIds, index: index, anchorIndex: anchorIndex, combinedReadStates: readStates, tagMask: tagMask, count: count, clipHoles: clipHoles, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
+        let mutableView = MutableMessageHistoryView(id: MessageHistoryViewId(id: self.takeNextViewId()), postbox: self, orderStatistics: orderStatistics, peerIds: peerIds, index: index, anchorIndex: anchorIndex, combinedReadStates: readStates, transientReadStates: transientReadStates, tagMask: tagMask, count: count, clipHoles: clipHoles, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
             if let tagMask = tagMask {
                 return self.messageHistoryTable.getMessageCountInRange(peerId: lowerBound.id.peerId, tagMask: tagMask, lowerBound: lowerBound, upperBound: upperBound)
             } else {
