@@ -324,8 +324,8 @@ public func themeSettingsController(account: Account) -> ViewController {
             wallpaper = settings.chatWallpaper
             fontSize = settings.fontSize
             
-            if let entry = preferences.values[localizationSettingsKey] as? LocalizationSettings {
-                strings = PresentationStrings(languageCode: entry.languageCode, dict: dictFromLocalization(entry.localization))
+            if let localizationSettings = preferences.values[localizationSettingsKey] as? LocalizationSettings {
+                strings = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
             } else {
                 strings = defaultPresentationStrings
             }

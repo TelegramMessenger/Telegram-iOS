@@ -12,6 +12,7 @@ private let systemLocaleRegionSuffix: String = {
 let usEnglishLocale = Locale(identifier: "en_US")
 
 func localeWithStrings(_ strings: PresentationStrings) -> Locale {
-    let code = strings.languageCode + systemLocaleRegionSuffix
+    let languageCode = strings.baseLanguageCode
+    let code = languageCode + systemLocaleRegionSuffix
     return Locale(identifier: code)
 }

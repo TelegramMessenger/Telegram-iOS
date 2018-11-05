@@ -250,7 +250,7 @@ enum TwoStepVerificationPasswordEntryMode {
 
 struct TwoStepVerificationPasswordEntryResult {
     let password: String
-    let pendingEmailPattern: String?
+    let pendingEmail: (TwoStepVerificationPendingEmail, String?)?
 }
 
 func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepVerificationPasswordEntryMode, result: Promise<TwoStepVerificationPasswordEntryResult?>) -> ViewController {
@@ -329,7 +329,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         }
                         switch update {
                             case let .password(password, pendingEmail):
-                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmailPattern: pendingEmail?.pattern)))
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: pendingEmail.flatMap({ ($0, email) }))))
                             case .none:
                                 break
                         }
@@ -354,7 +354,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         }
                         switch update {
                             case let .password(password, pendingEmail):
-                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmailPattern: pendingEmail?.pattern)))
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: pendingEmail.flatMap({ ($0, email) }))))
                             case .none:
                                 break
                         }

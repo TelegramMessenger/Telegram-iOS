@@ -133,7 +133,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         self.contentContainerNode.addSubnode(self.actionsBackgroundNode)
         self.contentContainerNode.addSubnode(self.actionButtonNode)
         
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: theme))
+        self.transitionToContentNode(ShareLoadingContainerNode(theme: theme, forceNativeAppearance: false))
         
         self.actionButtonNode.alpha = 0.0
         self.actionSeparatorNode.alpha = 0.0
@@ -426,7 +426,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
         
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme), fastOut: true)
+        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: false), fastOut: true)
         let timestamp = CACurrentMediaTime()
         self.disposable.set(signal.start(completed: { [weak self] in
             let minDelay = 0.6

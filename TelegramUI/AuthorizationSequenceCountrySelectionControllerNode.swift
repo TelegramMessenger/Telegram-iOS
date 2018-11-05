@@ -87,7 +87,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         self.displayCodes = displayCodes
         self.itemSelected = itemSelected
         
-        self.needsSubtitle = strings.languageCode != "en"
+        self.needsSubtitle = strings.baseLanguageCode != "en"
         
         self.tableView = UITableView(frame: CGRect(), style: .plain)
         self.searchTableView = UITableView(frame: CGRect(), style: .plain)

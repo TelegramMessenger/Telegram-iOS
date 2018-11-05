@@ -1383,17 +1383,10 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
-                let fullScaleBlur = true
-                var thumbnailContextFittingSize: CGSize
-                if fullScaleBlur {
-                    thumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 320.0, height: 320.0))
-                    thumbnailContextFittingSize.width = floor(thumbnailContextFittingSize.width * 0.8)
-                    thumbnailContextFittingSize.height = floor(thumbnailContextFittingSize.height * 0.8)
-                } else {
-                    thumbnailContextFittingSize = CGSize(width: 150.0, height: 150.0)
-                }
                 
-                let thumbnailContextSize = thumbnailSize.aspectFitted(thumbnailContextFittingSize)
+                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 100.0, height: 100.0))
+                
+                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
                 let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
                 thumbnailContext.withFlippedContext { c in
                     c.interpolationQuality = .none
@@ -1401,7 +1394,21 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                 }
                 telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
-                blurredThumbnailImage = thumbnailContext.generateImage()
+                if true || initialThumbnailContextFittingSize.width < arguments.drawingSize.width * 0.5 {
+                    let thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                    let additionalContextSize = thumbnailContextFittingSize
+                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
+                    additionalBlurContext.withFlippedContext { c in
+                        c.interpolationQuality = .default
+                        if let image = thumbnailContext.generateImage()?.cgImage {
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
+                        }
+                    }
+                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                    blurredThumbnailImage = additionalBlurContext.generateImage()
+                } else {
+                    blurredThumbnailImage = thumbnailContext.generateImage()
+                }
             }
             
             context.withFlippedContext { c in

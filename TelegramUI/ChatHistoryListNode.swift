@@ -407,10 +407,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyViewUpdate = self.chatHistoryLocation
         |> distinctUntilChanged
         |> mapToSignal { location in
-            return chatHistoryViewForLocation(location, account: account, chatLocation: chatLocation, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData) |> beforeNext { viewUpdate in
+            return chatHistoryViewForLocation(location, account: account, chatLocation: chatLocation, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
+            |> beforeNext { viewUpdate in
                 switch viewUpdate {
                     case let .HistoryView(view, _, _, _, _):
-                        let _ = fixedCombinedReadStates.swap(view.combinedReadStates)
+                        let _ = fixedCombinedReadStates.swap(view.fixedReadStates)
                     default:
                         break
                 }
@@ -460,7 +461,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     return .complete()
                 case let .HistoryView(view, type, scrollPosition, originalScrollPosition, data):
                     initialData = data
-                    
                     var updatedScrollPosition = scrollPosition
                     
                     var reverse = false

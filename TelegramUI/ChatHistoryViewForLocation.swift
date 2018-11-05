@@ -55,7 +55,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                                                 }
                                         }
                                     }
-                                    if let combinedReadStates = view.combinedReadStates, case let .peer(readStates) = combinedReadStates, let readState = readStates[hole.0.maxIndex.id.peerId], readState.count == incomingCount {
+                                    if let combinedReadStates = view.fixedReadStates, case let .peer(readStates) = combinedReadStates, let readState = readStates[hole.0.maxIndex.id.peerId], readState.count == incomingCount {
                                     } else {
                                         fadeIn = true
                                         return .Loading(initialData: combinedInitialData)
@@ -198,7 +198,7 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
             case let .totalUnreadState(totalUnreadState):
                 switch chatLocation {
                     case let .peer(peerId):
-                        if let combinedReadStates = view.combinedReadStates {
+                        if let combinedReadStates = view.fixedReadStates {
                             if case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId] {
                                 readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalUnreadChatCount: totalUnreadState.count(for: .filtered, in: .chats, with: [.regularChatsAndPrivateGroups]), notificationSettings: notificationSettings)
                             }

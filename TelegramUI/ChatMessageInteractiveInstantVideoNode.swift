@@ -153,14 +153,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 if let file = media as? TelegramMediaFile {
                     updatedFile = file
                     if let previousFile = previousFile {
-                        updatedMedia = !previousFile.resource.isEqual(to: file.resource)
+                        updatedMedia = !previousFile.resource.id.isEqual(to: file.resource.id)
                     } else if previousFile == nil {
                         updatedMedia = true
                     }
                 } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let file = content.file {
                     updatedFile = file
                     if let previousFile = previousFile {
-                        updatedMedia = !previousFile.resource.isEqual(to: file.resource)
+                        updatedMedia = !previousFile.resource.id.isEqual(to: file.resource.id)
                     } else if previousFile == nil {
                         updatedMedia = true
                     }

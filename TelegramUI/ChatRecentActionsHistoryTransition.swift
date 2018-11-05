@@ -553,7 +553,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             
                             if let newBanInfo = newBanInfo, newBanInfo.rights.untilDate != 0 && newBanInfo.rights.untilDate != Int32.max {
                                 let formatter = DateFormatter()
-                                formatter.locale = Locale(identifier: self.presentationData.strings.languageCode)
+                                formatter.locale = Locale(identifier: self.presentationData.strings.baseLanguageCode)
                                 formatter.dateFormat = "E, d MMM HH:mm"
                                 let dateString = formatter.string(from: Date(timeIntervalSince1970: Double(newBanInfo.rights.untilDate)))
                                 

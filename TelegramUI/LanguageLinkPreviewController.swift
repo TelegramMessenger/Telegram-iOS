@@ -57,7 +57,7 @@ public final class LanguageLinkPreviewController: ViewController {
         }
         self.displayNodeDidLoad()
         
-        self.disposable.set((requestLocalizationPreview(postbox: self.account.postbox, network: self.account.network, identifier: self.identifier)
+        self.disposable.set((requestLocalizationPreview(network: self.account.network, identifier: self.identifier)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {
                 return
@@ -100,7 +100,7 @@ public final class LanguageLinkPreviewController: ViewController {
             return
         }
         self.controllerNode.setInProgress(true)
-        self.disposable.set((downoadAndApplyLocalization(postbox: self.account.postbox, network: self.account.network, languageCode: localizationInfo.languageCode)
+        self.disposable.set((downloadAndApplyLocalization(postbox: self.account.postbox, network: self.account.network, languageCode: localizationInfo.languageCode)
         |> deliverOnMainQueue).start(error: { [weak self] _ in
             guard let strongSelf = self else {
                 return

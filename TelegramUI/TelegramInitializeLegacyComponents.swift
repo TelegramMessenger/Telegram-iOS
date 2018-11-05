@@ -13,7 +13,7 @@ private var legacyComponentsAccount: Account?
 private var legacyLocalization = TGLocalization(version: 0, code: "en", dict: [:], isActive: true)
 
 func updateLegacyLocalization(strings: PresentationStrings) {
-    legacyLocalization = TGLocalization(version: 0, code: strings.languageCode, dict: strings.dict, isActive: true)
+    legacyLocalization = TGLocalization(version: 0, code: strings.primaryComponent.languageCode, dict: strings.primaryComponent.dict, isActive: true)
 }
 
 func updateLegacyTheme() {
