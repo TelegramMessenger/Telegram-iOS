@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public final class LoggingSettings: PreferencesEntry, Equatable {
+public final class LoggingSettings: AccountSharedData, Equatable {
     public let logToFile: Bool
     public let logToConsole: Bool
     public let redactSensitiveData: Bool
@@ -63,7 +63,7 @@ public final class LoggingSettings: PreferencesEntry, Equatable {
         return true
     }
     
-    public func isEqual(to: PreferencesEntry) -> Bool {
+    public func isEqual(to: AccountSharedData) -> Bool {
         guard let to = to as? LoggingSettings else {
             return false
         }
@@ -72,10 +72,10 @@ public final class LoggingSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateLoggingSettings(postbox: Postbox, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
+public func updateLoggingSettings(accountManager: AccountManager, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
         var updated: LoggingSettings?
-        transaction.updatePreferencesEntry(key: PreferencesKeys.loggingSettings, { current in
+        transaction.updateSharedData(SharedDataKeys.loggingSettings, { current in
             if let current = current as? LoggingSettings {
                 updated = f(current)
                 return updated
