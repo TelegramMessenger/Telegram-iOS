@@ -11,41 +11,51 @@ public struct AccountManagerModifier {
     public let getCurrentId: () -> AccountRecordId?
     public let setCurrentId: (AccountRecordId) -> Void
     public let createRecord: ([AccountRecordAttribute]) -> AccountRecordId
+    public let getSharedData: (ValueBoxKey) -> AccountSharedData?
+    public let updateSharedData: (ValueBoxKey, (AccountSharedData?) -> AccountSharedData?) -> Void
 }
 
-public final class AccountManager {
+final class AccountManagerImpl {
     private let queue: Queue
     private let basePath: String
-    public let temporarySessionId: Int64
+    private let temporarySessionId: Int64
     private let valueBox: ValueBox
     
     private var tables: [Table] = []
     
     private let metadataTable: AccountManagerMetadataTable
     private let recordTable: AccountManagerRecordTable
+    let sharedDataTable: AccountManagerSharedDataTable
     
     private var currentRecordOperations: [AccountManagerRecordOperation] = []
     private var currentMetadataOperations: [AccountManagerMetadataOperation] = []
     
-    private var recordsViews = Bag<(MutableAccountRecordsView, ValuePipe<AccountRecordsView>)>()
+    private var currentUpdatedSharedDataKeys = Set<ValueBoxKey>()
     
-    fileprivate init(queue: Queue, basePath: String) {
+    private var recordsViews = Bag<(MutableAccountRecordsView, ValuePipe<AccountRecordsView>)>()
+    private var sharedDataViews = Bag<(MutableAccountSharedDataView, ValuePipe<AccountSharedDataView>)>()
+    
+    fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64) {
         self.queue = queue
         self.basePath = basePath
-        var temporarySessionId: Int64 = 0
-        arc4random_buf(&temporarySessionId, 8)
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
         
         self.metadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
         self.recordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))
+        self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2))
         
         self.tables.append(self.metadataTable)
         self.tables.append(self.recordTable)
+        self.tables.append(self.sharedDataTable)
     }
     
-    public func transaction<T>(_ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
+    deinit {
+        assert(self.queue.isCurrent())
+    }
+    
+    fileprivate func transaction<T>(_ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             self.queue.justDispatch {
                 self.valueBox.begin()
@@ -67,6 +77,11 @@ public final class AccountManager {
                     let record = AccountRecord(id: id, attributes: attributes, temporarySessionId: nil)
                     self.recordTable.setRecord(id: id, record: record, operations: &self.currentRecordOperations)
                     return id
+                }, getSharedData: { key in
+                    return self.sharedDataTable.get(key: key)
+                }, updateSharedData: { key, f in
+                    let updated = f(self.sharedDataTable.get(key: key))
+                    self.sharedDataTable.set(key: key, value: updated, updatedKeys: &self.currentUpdatedSharedDataKeys)
                 })
                 
                 let result = f(transaction)
@@ -91,18 +106,35 @@ public final class AccountManager {
             }
         }
         
+        if !self.currentUpdatedSharedDataKeys.isEmpty {
+            for (view, pipe) in self.sharedDataViews.copyItems() {
+                if view.replay(accountManagerImpl: self, updatedKeys: self.currentUpdatedSharedDataKeys) {
+                    pipe.putNext(AccountSharedDataView(view))
+                }
+            }
+        }
+        
         self.currentRecordOperations.removeAll()
         self.currentMetadataOperations.removeAll()
+        self.currentUpdatedSharedDataKeys.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
         }
     }
     
-    public func accountRecords() -> Signal<AccountRecordsView, NoError> {
+    fileprivate func accountRecords() -> Signal<AccountRecordsView, NoError> {
         return self.transaction { transaction -> Signal<AccountRecordsView, NoError> in
             return self.accountRecordsInternal(transaction: transaction)
-        } |> switchToLatest
+        }
+        |> switchToLatest
+    }
+    
+    fileprivate func sharedData(keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView, NoError> {
+        return self.transaction { transaction -> Signal<AccountSharedDataView, NoError> in
+            return self.sharedDataInternal(transaction: transaction, keys: keys)
+        }
+        |> switchToLatest
     }
     
     private func accountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
@@ -112,21 +144,42 @@ public final class AccountManager {
         let pipe = ValuePipe<AccountRecordsView>()
         let index = self.recordsViews.add((mutableView, pipe))
         
+        let queue = self.queue
         return (.single(AccountRecordsView(mutableView))
         |> then(pipe.signal()))
         |> `catch` { _ -> Signal<AccountRecordsView, NoError> in
             return .complete()
         }
         |> afterDisposed { [weak self] in
-            if let strongSelf = self {
-                strongSelf.queue.async {
+            queue.async {
+                if let strongSelf = self {
                     strongSelf.recordsViews.remove(index)
                 }
             }
         }
     }
     
-    public func currentAccountId(allocateIfNotExists: Bool) -> Signal<AccountRecordId?, NoError> {
+    private func sharedDataInternal(transaction: AccountManagerModifier, keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView, NoError> {
+        let mutableView = MutableAccountSharedDataView(accountManagerImpl: self, keys: keys)
+        let pipe = ValuePipe<AccountSharedDataView>()
+        let index = self.sharedDataViews.add((mutableView, pipe))
+        
+        let queue = self.queue
+        return (.single(AccountSharedDataView(mutableView))
+        |> then(pipe.signal()))
+        |> `catch` { _ -> Signal<AccountSharedDataView, NoError> in
+            return .complete()
+        }
+        |> afterDisposed { [weak self] in
+            queue.async {
+                if let strongSelf = self {
+                    strongSelf.sharedDataViews.remove(index)
+                }
+            }
+        }
+    }
+    
+    fileprivate func currentAccountId(allocateIfNotExists: Bool) -> Signal<AccountRecordId?, NoError> {
         return self.transaction { transaction -> Signal<AccountRecordId?, NoError> in
             let current = transaction.getCurrentId()
             let id: AccountRecordId
@@ -154,7 +207,7 @@ public final class AccountManager {
         })
     }
     
-    public func allocatedTemporaryAccountId() -> Signal<AccountRecordId, NoError> {
+    func allocatedTemporaryAccountId() -> Signal<AccountRecordId, NoError> {
         let temporarySessionId = self.temporarySessionId
         return self.transaction { transaction -> Signal<AccountRecordId, NoError> in
             
@@ -172,13 +225,96 @@ public final class AccountManager {
     }
 }
 
+public final class AccountManager {
+    private let queue = Queue()
+    private let impl: QueueLocalObject<AccountManagerImpl>
+    public let temporarySessionId: Int64
+    
+    fileprivate init(basePath: String) {
+        var temporarySessionId: Int64 = 0
+        arc4random_buf(&temporarySessionId, 8)
+        self.temporarySessionId = temporarySessionId
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return AccountManagerImpl(queue: queue, basePath: basePath, temporarySessionId: temporarySessionId)
+        })
+    }
+    
+    public func transaction<T>(_ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.transaction(f).start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func accountRecords() -> Signal<AccountRecordsView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.accountRecords().start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func sharedData(keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.sharedData(keys: keys).start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func currentAccountId(allocateIfNotExists: Bool) -> Signal<AccountRecordId?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.currentAccountId(allocateIfNotExists: allocateIfNotExists).start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func allocatedTemporaryAccountId() -> Signal<AccountRecordId, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.allocatedTemporaryAccountId().start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+}
+
 public func accountManager(basePath: String) -> Signal<AccountManager, NoError> {
     return Signal { subscriber in
-        let queue = Queue()
-        queue.async {
-            subscriber.putNext(AccountManager(queue: queue, basePath: basePath))
-            subscriber.putCompletion()
-        }
+        subscriber.putNext(AccountManager(basePath: basePath))
+        subscriber.putCompletion()
         return EmptyDisposable
     }
 }

@@ -93,6 +93,10 @@
 		D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D055BD321B7D3D2D00F06C0A /* MediaBox.swift */; };
 		D0575AE31E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */; };
 		D0575AE41E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */; };
+		D05D8B31218F1D3D0064586F /* AccountSharedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B30218F1D3D0064586F /* AccountSharedData.swift */; };
+		D05D8B32218F1D3D0064586F /* AccountSharedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B30218F1D3D0064586F /* AccountSharedData.swift */; };
+		D05D8B34218F1EBB0064586F /* AccountManagerSharedDataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B33218F1EBB0064586F /* AccountManagerSharedDataTable.swift */; };
+		D05D8B35218F1EBB0064586F /* AccountManagerSharedDataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B33218F1EBB0064586F /* AccountManagerSharedDataTable.swift */; };
 		D05F09A61C9E9F9300BB6F96 /* MediaResourceStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */; };
 		D060B77B1CF4845A0050BE9B /* ReadStateTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */; };
 		D06ECFC520B796DC00C576C2 /* NoticeEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */; };
@@ -443,6 +447,8 @@
 		D049EAEF1E44D9B900A2CD3A /* PostboxStateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxStateView.swift; sourceTree = "<group>"; };
 		D055BD321B7D3D2D00F06C0A /* MediaBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaBox.swift; sourceTree = "<group>"; };
 		D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccessChallengeDataView.swift; sourceTree = "<group>"; };
+		D05D8B30218F1D3D0064586F /* AccountSharedData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSharedData.swift; sourceTree = "<group>"; };
+		D05D8B33218F1EBB0064586F /* AccountManagerSharedDataTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountManagerSharedDataTable.swift; sourceTree = "<group>"; };
 		D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceStatus.swift; sourceTree = "<group>"; };
 		D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReadStateTableTests.swift; sourceTree = "<group>"; };
 		D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoticeEntryView.swift; sourceTree = "<group>"; };
@@ -694,7 +700,9 @@
 				D0BEAF661E54B33900BD963D /* AccountRecord.swift */,
 				D0BEAF691E54B5FB00BD963D /* AccountManagerMetadataTable.swift */,
 				D0BEAF6C1E54B77900BD963D /* AccountManagerRecordTable.swift */,
+				D05D8B33218F1EBB0064586F /* AccountManagerSharedDataTable.swift */,
 				D0BEAF6F1E54BC1E00BD963D /* AccountRecordsView.swift */,
+				D05D8B30218F1D3D0064586F /* AccountSharedData.swift */,
 			);
 			name = "Account Manager";
 			sourceTree = "<group>";
@@ -1174,6 +1182,7 @@
 				D07047A31F3CE58200F6A8D4 /* PendingMessageActionsTable.swift in Sources */,
 				D04614342004F2CC00EC0EF2 /* LocalMessageTagsView.swift in Sources */,
 				D0BEAF681E54B33900BD963D /* AccountRecord.swift in Sources */,
+				D05D8B35218F1EBB0064586F /* AccountManagerSharedDataTable.swift in Sources */,
 				D0F7B1C61E045C6A007EB8A5 /* MessageHistoryIndexTable.swift in Sources */,
 				D0F7B1CD1E045C6A007EB8A5 /* MessageMediaTable.swift in Sources */,
 				D0B844071DAB91B5005F29E1 /* MediaResource.swift in Sources */,
@@ -1313,6 +1322,7 @@
 				D0B418221D7DFE0C004562A4 /* Coding.swift in Sources */,
 				D0B4184B1D7DFE20004562A4 /* SynchronizePeerReadStatesView.swift in Sources */,
 				D01C7EDF1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */,
+				D05D8B32218F1D3D0064586F /* AccountSharedData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1353,6 +1363,7 @@
 				D08C713A1C501F0700779C0F /* MessageHistoryHole.swift in Sources */,
 				D044CA2A1C617D39002160FF /* SeedConfiguration.swift in Sources */,
 				D07CFF811DCA765D00761F81 /* PeerChatInterfaceState.swift in Sources */,
+				D05D8B34218F1EBB0064586F /* AccountManagerSharedDataTable.swift in Sources */,
 				D00C7CE31E37861C0080C3D5 /* MessageView.swift in Sources */,
 				D0ECCB8F1FE9EB5500609802 /* PostboxLogging.swift in Sources */,
 				D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */,
@@ -1492,6 +1503,7 @@
 				D0D511001D64A58900A97B8A /* IpcPipe.swift in Sources */,
 				D01C7EDE1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */,
 				D07047B11F3DE40400F6A8D4 /* PendingMessageActionsSummaryView.swift in Sources */,
+				D05D8B31218F1D3D0064586F /* AccountSharedData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
