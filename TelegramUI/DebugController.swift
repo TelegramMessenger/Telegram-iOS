@@ -147,19 +147,19 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .logToFile(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Log to File", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateLoggingSettings(postbox: arguments.account.postbox, {
+                    let _ = updateLoggingSettings(accountManager: arguments.accountManager, {
                         $0.withUpdatedLogToFile(value)
                     }).start()
                 })
             case let .logToConsole(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Log to Console", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateLoggingSettings(postbox: arguments.account.postbox, {
+                    let _ = updateLoggingSettings(accountManager: arguments.accountManager, {
                         $0.withUpdatedLogToConsole(value)
                     }).start()
                 })
             case let .redactSensitiveData(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Remove Sensitive Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateLoggingSettings(postbox: arguments.account.postbox, {
+                    let _ = updateLoggingSettings(accountManager: arguments.accountManager, {
                         $0.withUpdatedRedactSensitiveData(value)
                     }).start()
                 })
@@ -250,10 +250,10 @@ public func debugController(account: Account, accountManager: AccountManager) ->
         hasLegacyAppData = FileManager.default.fileExists(atPath: statusPath)
     }
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [PreferencesKeys.loggingSettings, ApplicationSpecificPreferencesKeys.mediaInputSettings, ApplicationSpecificPreferencesKeys.experimentalUISettings]))
-        |> map { presentationData, preferencesView -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings])), account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.mediaInputSettings, ApplicationSpecificPreferencesKeys.experimentalUISettings]))
+        |> map { presentationData, sharedData, preferencesView -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
             let loggingSettings: LoggingSettings
-            if let value = preferencesView.values[PreferencesKeys.loggingSettings] as? LoggingSettings {
+            if let value = sharedData.entries [SharedDataKeys.loggingSettings] as? LoggingSettings {
                 loggingSettings = value
             } else {
                 loggingSettings = LoggingSettings.defaultSettings
