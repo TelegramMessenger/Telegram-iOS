@@ -39,6 +39,8 @@ const std::vector<LOTNode *> &AnimationImpl::renderList(size_t frameNo, const VS
 
 bool AnimationImpl::update(size_t frameNo, const VSize &size)
 {
+   frameNo += mModel->startFrame();
+
    if (frameNo > mModel->endFrame())
        frameNo = mModel->endFrame();
 

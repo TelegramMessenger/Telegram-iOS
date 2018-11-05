@@ -333,8 +333,7 @@ public:
     size_t frameAtPos(double pos) const {
         if (pos < 0) pos = 0;
         if (pos > 1) pos = 1;
-        return isStatic() ? startFrame() :
-                            startFrame() + pos * frameDuration();
+        return isStatic() ? 0 : pos * frameDuration();
     }
     long frameAtTime(double timeInSec) const {
         return isStatic() ? startFrame() : frameAtPos(timeInSec / duration());
