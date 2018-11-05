@@ -172,10 +172,14 @@ public final class AccountStateManager {
                             return .complete()
                         }
                     } else {
-                        return network.request(Api.functions.messages.receivedQueue(maxQts: value))
-                        |> ignoreValues
-                        |> `catch` { _ -> Signal<Never, NoError> in
+                        if value == 0 {
                             return .complete()
+                        } else {
+                            return network.request(Api.functions.messages.receivedQueue(maxQts: value))
+                            |> ignoreValues
+                            |> `catch` { _ -> Signal<Never, NoError> in
+                                return .complete()
+                            }
                         }
                     }
                 }).start())

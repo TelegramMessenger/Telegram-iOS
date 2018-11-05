@@ -12,13 +12,12 @@ public enum RequestLocalizationPreviewError {
     case generic
 }
 
-public func requestLocalizationPreview(postbox: Postbox, network: Network, identifier: String) -> Signal<LocalizationInfo, RequestLocalizationPreviewError> {
-    return .never()
-    /*return network.request(Api.functions.langpack.getLanguage(langPack: "", langCode: identifier))
+public func requestLocalizationPreview(network: Network, identifier: String) -> Signal<LocalizationInfo, RequestLocalizationPreviewError> {
+    return network.request(Api.functions.langpack.getLanguage(langPack: "", langCode: identifier))
     |> mapError { _ -> RequestLocalizationPreviewError in
         return .generic
     }
     |> map { language -> LocalizationInfo in
         return LocalizationInfo(apiLanguage: language)
-    }*/
+    }
 }

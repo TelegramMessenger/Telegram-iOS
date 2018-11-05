@@ -10,23 +10,23 @@ import Foundation
 #endif
 
 public enum TwoStepVerificationConfiguration {
-    case notSet(pendingEmailPattern: String)
-    case set(hint: String, hasRecoveryEmail: Bool, pendingEmailPattern: String, hasSecureValues: Bool)
+    case notSet(pendingEmail: TwoStepVerificationPendingEmail?)
+    case set(hint: String, hasRecoveryEmail: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
 public func twoStepVerificationConfiguration(account: Account) -> Signal<TwoStepVerificationConfiguration, NoError> {
     return account.network.request(Api.functions.account.getPassword())
-        |> retryRequest
-        |> map { result -> TwoStepVerificationConfiguration in
-            switch result {
-                case let .password(password):
-                    if password.currentAlgo != nil {
-                        return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmailPattern: password.emailUnconfirmedPattern ?? "", hasSecureValues: (password.flags & (1 << 1)) != 0)
-                    } else {
-                        return .notSet(pendingEmailPattern: password.emailUnconfirmedPattern ?? "")
-                    }
-            }
+    |> retryRequest
+    |> map { result -> TwoStepVerificationConfiguration in
+        switch result {
+            case let .password(password):
+                if password.currentAlgo != nil {
+                    return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }), hasSecureValues: (password.flags & (1 << 1)) != 0)
+                } else {
+                    return .notSet(pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }))
+                }
         }
+    }
 }
 
 public struct TwoStepVerificationSecureSecret {
@@ -97,6 +97,11 @@ public enum UpdateTwoStepVerificationPasswordError {
 public struct TwoStepVerificationPendingEmail {
     public let pattern: String
     public let codeLength: Int32?
+    
+    public init(pattern: String, codeLength: Int32?) {
+        self.pattern = pattern
+        self.codeLength = codeLength
+    }
 }
 
 public enum UpdateTwoStepVerificationPasswordResult {

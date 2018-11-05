@@ -153,7 +153,7 @@ public class UnauthorizedAccount {
             return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
                 return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
             } |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<UnauthorizedAccount, NoError> in
-                return initializedNetwork(arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
+                return initializedNetwork(arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
                 |> map { network in
                     let updated = UnauthorizedAccount(networkArguments: self.networkArguments, id: self.id, rootPath: self.rootPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                     updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
@@ -340,7 +340,7 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                         if let accountState = accountState {
                             switch accountState {
                                 case let unauthorizedState as UnauthorizedAccountState:
-                                    return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
+                                    return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
                                         |> map { network -> AccountResult in
                                             return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                         }
@@ -349,7 +349,7 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                                         return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
                                     }
                                     |> mapToSignal { phoneNumber in
-                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
+                                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
                                         |> map { network -> AccountResult in
                                             return .authorized(Account(id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                                         }
@@ -359,7 +359,7 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                             }
                         }
                         
-                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: beginWithTestingEnvironment, languageCode: localizationSettings?.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
+                        return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: beginWithTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
                         |> map { network -> AccountResult in
                             return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: beginWithTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                         }
@@ -963,6 +963,9 @@ public class Account {
         })
         self.localInputActivityManager = PeerInputActivityManager()
         self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
+        let _ = (postbox.transaction { transaction -> Void in
+            transaction.updatePeerPresencesInternal([peerId: TelegramUserPresence(status: .present(until: Int32.max - 1))])
+        }).start()
         self.notificationAutolockReportManager = NotificationAutolockReportManager(deadline: self.autolockReportDeadline.get(), network: network)
         self.autolockReportDeadline.set(
             postbox.combinedView(keys: [.accessChallengeData])
@@ -1128,27 +1131,27 @@ public class Account {
         }))
         
         let shouldBeMaster = combineLatest(shouldBeServiceTaskMaster.get(), postbox.isMasterClient())
-            |> map { [weak self] shouldBeMaster, isMaster -> Bool in
-                if shouldBeMaster == .always && !isMaster {
-                    self?.postbox.becomeMasterClient()
-                }
-                return (shouldBeMaster == .now || shouldBeMaster == .always) && isMaster
+        |> map { [weak self] shouldBeMaster, isMaster -> Bool in
+            if shouldBeMaster == .always && !isMaster {
+                self?.postbox.becomeMasterClient()
             }
-            |> distinctUntilChanged
+            return (shouldBeMaster == .now || shouldBeMaster == .always) && isMaster
+        }
+        |> distinctUntilChanged
         
         self.network.shouldKeepConnection.set(shouldBeMaster)
         self.network.shouldExplicitelyKeepWorkerConnections.set(self.shouldExplicitelyKeepWorkerConnections.get())
         
         let serviceTasksMaster = shouldBeMaster
-            |> deliverOn(self.serviceQueue)
-            |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
-                if let strongSelf = self, value {
-                    Logger.shared.log("Account", "Became master")
-                    return managedServiceViews(accountPeerId: peerId, network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
-                } else {
-                    Logger.shared.log("Account", "Resigned master")
-                    return .never()
-                }
+        |> deliverOn(self.serviceQueue)
+        |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
+            if let strongSelf = self, value {
+                Logger.shared.log("Account", "Became master")
+                return managedServiceViews(accountPeerId: peerId, network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
+            } else {
+                Logger.shared.log("Account", "Resigned master")
+                return .never()
+            }
         }
         self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
         
@@ -1214,39 +1217,6 @@ public class Account {
             let settings: CacheStorageSettings = ((view.views[storagePreferencesKey] as? PreferencesView)?.values[PreferencesKeys.cacheStorageSettings] as? CacheStorageSettings) ?? CacheStorageSettings.defaultSettings
             mediaBox.setMaxStoreTime(settings.defaultCacheStorageTimeout)
         })
-        
-        /*let updatedPresence = self.shouldKeepOnlinePresence.get()
-        |> distinctUntilChanged
-        |> mapToSignal { [weak self] online -> Signal<Void, NoError> in
-            if let strongSelf = self {
-                let delayRequest: Signal<Void, NoError> = .complete()
-                |> delay(60.0, queue: Queue.concurrentDefaultQueue())
-                let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: online ? .boolFalse : .boolTrue))
-                |> retryRequest
-                |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
-                
-                let pushStatusRepeatedly = (pushStatusOnce
-                |> then(delayRequest))
-                |> restart
-                
-                let peerId = strongSelf.peerId
-                let updatePresenceLocally = strongSelf.postbox.transaction { transaction -> Void in
-                    let timestamp: Double
-                    if online {
-                        timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
-                    } else {
-                        timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
-                    }
-                    transaction.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
-                }
-                return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
-                |> mapToSignal { _ -> Signal<Void, NoError> in return .complete()
-                }
-            } else {
-                return .complete()
-            }
-        }
-        self.updatedPresenceDisposable.set(updatedPresence.start())*/
     }
     
     deinit {

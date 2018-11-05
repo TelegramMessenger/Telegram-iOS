@@ -113,6 +113,8 @@
 		D017495E1E118F790057C89A /* AccountStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495D1E118F790057C89A /* AccountStateManager.swift */; };
 		D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495F1E118FC30057C89A /* AccountIntermediateState.swift */; };
 		D0177B7B1DF8A16C00A5083A /* SecretChatState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0177B7A1DF8A16C00A5083A /* SecretChatState.swift */; };
+		D01843A82190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01843A72190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift */; };
+		D01843A92190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01843A72190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift */; };
 		D018D3371E648ACF00C5E089 /* ChannelCreation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018D3361E648ACF00C5E089 /* ChannelCreation.swift */; };
 		D018D3381E648ACF00C5E089 /* ChannelCreation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018D3361E648ACF00C5E089 /* ChannelCreation.swift */; };
 		D018EE002044939F00CBB130 /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
@@ -807,6 +809,7 @@
 		D017495D1E118F790057C89A /* AccountStateManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountStateManager.swift; sourceTree = "<group>"; };
 		D017495F1E118FC30057C89A /* AccountIntermediateState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountIntermediateState.swift; sourceTree = "<group>"; };
 		D0177B7A1DF8A16C00A5083A /* SecretChatState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretChatState.swift; sourceTree = "<group>"; };
+		D01843A72190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmTwoStepRecoveryEmail.swift; sourceTree = "<group>"; };
 		D018D3361E648ACF00C5E089 /* ChannelCreation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelCreation.swift; sourceTree = "<group>"; };
 		D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretApiLayer73.swift; sourceTree = "<group>"; };
 		D018EE0120458E1E00CBB130 /* SecretChatLayerNegotiation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretChatLayerNegotiation.swift; sourceTree = "<group>"; };
@@ -1552,6 +1555,7 @@
 				D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */,
 				D06ECFC720B810D300C576C2 /* TermsOfService.swift */,
 				D051DB16215ECC4D00F30F92 /* AppChangelog.swift */,
+				D01843A72190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift */,
 			);
 			name = Account;
 			sourceTree = "<group>";
@@ -2209,6 +2213,7 @@
 				D0ADF911212B00DD00310BBC /* SecureIdConfiguration.swift in Sources */,
 				D0448CA51E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
 				D0C26D661FE022DB004ABF18 /* SynchronizeGroupedPeersOperation.swift in Sources */,
+				D01843A82190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift in Sources */,
 				D03C53771DAFF20F004C17B3 /* MultipartUpload.swift in Sources */,
 				D00C7CE01E3785710080C3D5 /* MarkMessageContentAsConsumedInteractively.swift in Sources */,
 				C2E0646D1ECF171D00387BB8 /* TelegramMediaWebDocument.swift in Sources */,
@@ -2790,6 +2795,7 @@
 				D0B844301DAB91E0005F29E1 /* NBNumberFormat.m in Sources */,
 				D001F3F71E128A1C007A8C60 /* ApplyUpdateMessage.swift in Sources */,
 				D0B418971D7E0580004562A4 /* TelegramMediaImage.swift in Sources */,
+				D01843A92190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift in Sources */,
 				D041E3F91E535A88008C24B4 /* RemovePeerMember.swift in Sources */,
 				D049EAF61E44DF3300A2CD3A /* AccountState.swift in Sources */,
 				D0467D1620D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift in Sources */,

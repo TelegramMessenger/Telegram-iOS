@@ -68,8 +68,17 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                             return configuration
                         })
                     
-                        let (_, version, _) = getLocalization(transaction)
-                        if version != config.langPackVersion {
+                        let (primary, secondary) = getLocalization(transaction)
+                        var invalidateLocalization = false
+                        if primary.version != config.langPackVersion {
+                            invalidateLocalization = true
+                        }
+                        if let secondary = secondary, let baseLangPackVersion = config.baseLangPackVersion {
+                            if secondary.version != baseLangPackVersion {
+                                invalidateLocalization = true
+                            }
+                        }
+                        if invalidateLocalization {
                             addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
                         }
                 }

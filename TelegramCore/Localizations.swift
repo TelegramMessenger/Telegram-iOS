@@ -114,35 +114,53 @@ public func downloadLocalization(network: Network, languageCode: String) -> Sign
     }
 }
 
-public enum DownoadAndApplyLocalizationError {
+public enum DownloadAndApplyLocalizationError {
     case generic
 }
 
-public func downoadAndApplyLocalization(postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownoadAndApplyLocalizationError> {
-    return downloadLocalization(network: network, languageCode: languageCode)
-    |> mapError { _ -> DownoadAndApplyLocalizationError in
+public func downloadAndApplyLocalization(postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
+    return requestLocalizationPreview(network: network, identifier: languageCode)
+    |> mapError { _ -> DownloadAndApplyLocalizationError in
         return .generic
     }
-    |> mapToSignal { language -> Signal<Void, DownoadAndApplyLocalizationError> in
-        return postbox.transaction { transaction -> Signal<Void, DownoadAndApplyLocalizationError> in
-            transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
-                return LocalizationSettings(languageCode: languageCode, localization: language)
-            })
-            
-            network.context.updateApiEnvironment { current in
-                return current?.withUpdatedLangPackCode(languageCode)
-            }
-            
-            return network.request(Api.functions.help.test())
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .complete()
-            }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
-            }
-            |> introduceError(DownoadAndApplyLocalizationError.self)
+    |> mapToSignal { preview -> Signal<Void, DownloadAndApplyLocalizationError> in
+        var primaryAndSecondaryLocalizations: [Signal<Localization, DownloadLocalizationError>] = []
+        primaryAndSecondaryLocalizations.append(downloadLocalization(network: network, languageCode: preview.languageCode))
+        if let secondaryCode = preview.baseLanguageCode {
+            primaryAndSecondaryLocalizations.append(downloadLocalization(network: network, languageCode: secondaryCode))
         }
-        |> introduceError(DownoadAndApplyLocalizationError.self)
-        |> switchToLatest
+        return combineLatest(primaryAndSecondaryLocalizations)
+        |> mapError { _ -> DownloadAndApplyLocalizationError in
+            return .generic
+        }
+        |> mapToSignal { components -> Signal<Void, DownloadAndApplyLocalizationError> in
+            guard let primaryLocalization = components.first else {
+                return .fail(.generic)
+            }
+            var secondaryComponent: LocalizationComponent?
+            if let secondaryCode = preview.baseLanguageCode, components.count > 1 {
+                secondaryComponent = LocalizationComponent(languageCode: secondaryCode, localization: components[1], customPluralizationCode: nil)
+            }
+            return postbox.transaction { transaction -> Signal<Void, DownloadAndApplyLocalizationError> in
+                transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
+                    return LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: preview.languageCode, localization: primaryLocalization, customPluralizationCode: preview.customPluralizationCode), secondaryComponent: secondaryComponent)
+                })
+                
+                network.context.updateApiEnvironment { current in
+                    return current?.withUpdatedLangPackCode(preview.languageCode)
+                }
+                
+                return network.request(Api.functions.help.test())
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .complete()
+                }
+                |> mapToSignal { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+                |> introduceError(DownloadAndApplyLocalizationError.self)
+            }
+            |> introduceError(DownloadAndApplyLocalizationError.self)
+            |> switchToLatest
+        }
     }
 }
