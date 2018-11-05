@@ -814,14 +814,6 @@
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         result = _datacenterAuthInfoById[@(datacenterId)];
-/*#ifdef DEBUG
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            if (result.tempAuthKey != nil) {
-                result = [result withUpdatedTempAuthKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:result.tempAuthKey.authKey authKeyId:12345 notBound:result.tempAuthKey.notBound]];
-            }
-        });
-#endif*/
     } synchronous:true];
     
     return result;

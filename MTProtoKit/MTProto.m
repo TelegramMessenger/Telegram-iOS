@@ -338,9 +338,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [_context transportSchemeForDatacenterWithIdRequired:_datacenterId media:_media];
             }
         } else if (!_useUnauthorizedMode && [_context authInfoForDatacenterWithId:_datacenterId] == nil) {
+            if (MTLogEnabled()) {
+                MTLog(@"[MTProto#%p authInfoForDatacenterWithId:%d is nil]", self, _datacenterId);
+            }
             if ((_mtState & MTProtoStateAwaitingDatacenterAuthorization) == 0) {
                 [self setMtState:_mtState | MTProtoStateAwaitingDatacenterAuthorization];
                 
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTProto#%p requesting authInfo for %d]", self, _datacenterId);
+                }
                 [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn];
             }
         } else if (!_useUnauthorizedMode && _useTempAuthKeys && [[_context authInfoForDatacenterWithId:_datacenterId] tempAuthKeyWithType:tempAuthKeyType] == nil) {
