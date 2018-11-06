@@ -55,12 +55,12 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         return panelHeight
     }
     
-    override func animateIn(fromHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func animateIn(fromHeight: CGFloat, previousContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition) {
         self.deleteButton.alpha = 1.0
         self.actionButton.alpha = 1.0
     }
     
-    override func animateOut(toHeight: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         self.deleteButton.alpha = 0.0
         self.actionButton.alpha = 0.0
     }

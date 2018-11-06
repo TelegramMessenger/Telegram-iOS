@@ -153,6 +153,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var didPause = false
     private var isPaused = true
     
+    private var requiresDownload = false
+    
     private var item: UniversalVideoGalleryItem?
     
     private let statusDisposable = MetaDisposable()
@@ -224,14 +226,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             switch fetchStatus {
                 case .Fetching:
                     fetchControls.cancel()
-//                    if let cancel = fetchControls.with({ return $0?.cancel }) {
-//                        cancel()
-//                    }
                 case .Remote:
                     fetchControls.fetch()
-//                    if let fetch = fetchControls.with({ return $0?.fetch }) {
-//                        fetch()
-//                    }
                 case .Local:
                     break
             }
@@ -318,7 +314,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.scrubberView.setBufferingStatusSignal(videoNode.bufferingStatus)
             
-            var mediaFileStatus: Signal<MediaResourceStatus?, NoError>
+            var requiresDownload = true
+            var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
                 var file: TelegramMediaFile?
                 for m in message.media {
@@ -328,9 +325,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 if let file = file {
-                    mediaFileStatus = messageMediaFileStatus(account: item.account, messageId: message.id, file: file)
-                    |> map(Optional.init)
+                    let status = messageMediaFileStatus(account: item.account, messageId: message.id, file: file)
+                    self.scrubberView.setFetchStatusSignal(status, strings: self.strings, fileSize: file.size)
                     
+                    self.requiresDownload = !isMediaStreamable(message: message, media: file)
+                    mediaFileStatus = status |> map(Optional.init)
                     self.fetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
                             strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: item.account, message: message, file: file, userInitiated: true).start())
@@ -338,18 +337,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }, cancel: {
                         messageMediaFileCancelInteractiveFetch(account: item.account, messageId: message.id, file: file)
                     })
-                } else {
-                    mediaFileStatus = .single(nil)
                 }
-            } else {
-                mediaFileStatus = .single(nil)
             }
-//            else if case let .webPage(webPage, file) = contentInfo {
-//
-//            }
-           
-            //messageFileMediaResourceStatus(account: item.account, file: item.content., message: item.a, isRecentActions: false)
-            
+
             self.statusDisposable.set((combineLatest(videoNode.status, mediaFileStatus) |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
                 if let strongSelf = self {
                     var initialBuffering = false
@@ -399,17 +389,34 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         seekable = value.duration >= 45.0
                     }
                     
+                    var fetching = false
                     if initialBuffering {
                         strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
                     } else {
-                        strongSelf.statusNode.transitionToState(.play(.white), animated: false, completion: {})
+                        var state: RadialStatusNodeState = .play(.white)
+                        
+                        if let fetchStatus = fetchStatus {
+                            if strongSelf.requiresDownload {
+                                switch fetchStatus {
+                                    case .Remote:
+                                        state = .download(.white)
+                                    case let .Fetching(_, progress):
+                                        fetching = true
+                                        isPaused = true
+                                        state = .progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: true)
+                                    default:
+                                        break
+                                }
+                            }
+                        }
+                        strongSelf.statusNode.transitionToState(state, animated: false, completion: {})
                     }
                     
                     strongSelf.isPaused = isPaused
                     strongSelf.fetchStatus = fetchStatus
                     
                     if !item.hideControls {
-                        strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused || value == nil)
+                        strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused || value == nil) && !fetching
                     }
                     
                     if isAnimated || disablePlayerControls {
@@ -418,7 +425,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     else if isPaused {
                         if hasStarted || strongSelf.didPause || buffering {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
-                        } else if let fetchStatus = fetchStatus {
+                        } else if let fetchStatus = fetchStatus, !requiresDownload {
                             strongSelf.footerContentNode.content = .fetch(status: fetchStatus)
                         }
                     } else {
@@ -769,7 +776,26 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     @objc func statusButtonPressed() {
         if let videoNode = self.videoNode {
-            videoNode.togglePlayPause()
+            if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
+                self.toggleControlsVisibility()
+            }
+            
+            if let fetchStatus = self.fetchStatus {
+                switch fetchStatus {
+                    case .Local:
+                        videoNode.togglePlayPause()
+                    case .Remote:
+                        if self.requiresDownload {
+                            self.fetchControls?.fetch()
+                        } else {
+                            videoNode.togglePlayPause()
+                        }
+                    case .Fetching:
+                        self.fetchControls?.cancel()
+                }
+            } else {
+                videoNode.togglePlayPause()
+            }
         }
     }
     

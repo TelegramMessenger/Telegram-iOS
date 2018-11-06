@@ -263,7 +263,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                                 playbackStatus = .buffering(initial: true, whilePlaying: false)
                         }
                         
-                        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: 0, status: playbackStatus)
+                        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: self.status.seekId, status: playbackStatus)
                         updateStatus(self.status)
                     }
                 }

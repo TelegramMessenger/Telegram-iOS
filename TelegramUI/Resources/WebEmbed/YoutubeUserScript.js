@@ -31,6 +31,37 @@ function tick() {
         progress.style.opacity = "0";
     }
     
+    var pause = document.getElementsByClassName("ytp-pause-overlay")[0];
+    if (pause != null) {
+        pause.style.display = "none";
+        pause.style.opacity = "0";
+    }
+    
+    var chrome = document.getElementsByClassName("ytp-chrome-top")[0];
+    if (chrome != null) {
+        chrome.style.display = "none";
+        chrome.style.opacity = "0";
+    }
+    
+    var paid = document.getElementsByClassName("ytp-paid-content-overlay")[0];
+    if (paid != null) {
+        paid.style.display = "none";
+        paid.style.opacity = "0";
+    }
+    
+    var end = document.getElementsByClassName("html5-endscreen")[0];
+    if (end != null) {
+        end.style.display = "none";
+        end.style.opacity = "0";
+    }
+    
+    var elements = document.getElementsByClassName("ytp-ce-element");
+    for (var i = 0; i < elements.length; i++) {
+        var element = elements[i]
+        element.style.display = "none";
+        element.style.opacity = "0";
+    }
+    
     var video = document.getElementsByTagName("video")[0];
     if (video != null) {
         video.setAttribute("webkit-playsinline", "");
