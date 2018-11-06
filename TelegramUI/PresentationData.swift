@@ -159,16 +159,14 @@ private func currentPersonNameDisplayOrder() -> PresentationPersonNameOrder {
 public final class InitialPresentationDataAndSettings {
     public let presentationData: PresentationData
     public let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-    public let loggingSettings: LoggingSettings
     public let callListSettings: CallListSettings
     public let inAppNotificationSettings: InAppNotificationSettings
     public let mediaInputSettings: MediaInputSettings
     public let experimentalUISettings: ExperimentalUISettings
     
-    init(presentationData: PresentationData, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, loggingSettings: LoggingSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
+    init(presentationData: PresentationData, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
         self.presentationData = presentationData
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
-        self.loggingSettings = loggingSettings
         self.callListSettings = callListSettings
         self.inAppNotificationSettings = inAppNotificationSettings
         self.mediaInputSettings = mediaInputSettings
@@ -177,7 +175,7 @@ public final class InitialPresentationDataAndSettings {
 }
 
 public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<InitialPresentationDataAndSettings, NoError> {
-    return postbox.transaction { transaction -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LoggingSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings) in
+    return postbox.transaction { transaction -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings) in
         let themeSettings: PresentationThemeSettings
         if let current = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
             themeSettings = current
@@ -197,13 +195,6 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
-        }
-        
-        let loggingSettings: LoggingSettings
-        if let value = transaction.getPreferencesEntry(key: PreferencesKeys.loggingSettings) as? LoggingSettings {
-            loggingSettings = value
-        } else {
-            loggingSettings = LoggingSettings.defaultSettings
         }
         
         let callListSettings: CallListSettings
@@ -229,9 +220,9 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         
         let experimentalUISettings: ExperimentalUISettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.experimentalUISettings) as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
         
-        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings)
+        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings)
     }
-    |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, loggingSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings) -> InitialPresentationDataAndSettings in
+    |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings) -> InitialPresentationDataAndSettings in
         let themeValue: PresentationTheme
         
         let effectiveTheme: PresentationThemeReference
@@ -271,14 +262,14 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         }
         let stringsValue: PresentationStrings
         if let localizationSettings = localizationSettings {
-            stringsValue = PresentationStrings(languageCode: localizationSettings.languageCode, dict: dictFromLocalization(localizationSettings.localization))
+            stringsValue = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
         } else {
             stringsValue = defaultPresentationStrings
         }
         let dateTimeFormat = currentDateTimeFormat()
         let nameDisplayOrder = currentPersonNameDisplayOrder()
         let nameSortOrder = currentPersonNameSortOrder()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, loggingSettings: loggingSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -405,7 +396,7 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
             
             let stringsValue: PresentationStrings
             if let localizationSettings = localizationSettings {
-                stringsValue = PresentationStrings(languageCode: localizationSettings.languageCode, dict: dictFromLocalization(localizationSettings.localization))
+                stringsValue = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
             } else {
                 stringsValue = defaultPresentationStrings
             }

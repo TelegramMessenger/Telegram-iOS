@@ -1851,7 +1851,18 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 })
             case let .nativeInfoHeader(language):
                 let title: String
-                if !language.isEmpty, let value = strings.dict["Passport.Language.\(language)"] {
+                
+                var value: String?
+                if !language.isEmpty {
+                    let key = "Passport.Language.\(language)"
+                    if let string = strings.primaryComponent.dict[key] {
+                        value = string
+                    } else if let string = strings.secondaryComponent?.dict[key] {
+                        value = string
+                    }
+                }
+                
+                if let value = value {
                     title = strings.Passport_Identity_NativeNameTitle(value).0.uppercased()
                 } else {
                     title = strings.Passport_Identity_NativeNameGenericTitle
@@ -1877,7 +1888,18 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 })
             case let .nativeInfo(language, countryCode):
                 let text: String
-                if !language.isEmpty, let _ = strings.dict["Passport.Language.\(language)"] {
+                
+                var value: String?
+                if !language.isEmpty {
+                    let key = "Passport.Language.\(language)"
+                    if let string = strings.primaryComponent.dict[key] {
+                        value = string
+                    } else if let string = strings.secondaryComponent?.dict[key] {
+                        value = string
+                    }
+                }
+                
+                if let _ = value {
                     text = strings.Passport_Identity_NativeNameHelp
                 } else {
                     let countryName = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryCode.uppercased(), strings: strings) ?? ""

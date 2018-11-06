@@ -218,7 +218,7 @@ enum CreatePasswordState: Equatable {
     case pendingVerification(emailPattern: String)
 }
 
-func createPasswordController(account: Account, context: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping (String?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
+func createPasswordController(account: Account, context: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping ((String, String)?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
     let statePromise = ValuePromise(CreatePasswordControllerState(state: state), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePasswordControllerState(state: state))
     let updateState: ((CreatePasswordControllerState) -> CreatePasswordControllerState) -> Void = { f in
@@ -271,7 +271,7 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
                             case .none:
                                 break
                             case let .password(password, pendingEmail):
-                                if let pendingEmail = pendingEmail {
+                                if let pendingEmail = pendingEmail, let email = email {
                                     if processPasswordEmailConfirmation {
                                         updateState { state in
                                             var state = state
@@ -281,7 +281,7 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
                                             return state
                                         }
                                     }
-                                    updatePasswordEmailConfirmation(pendingEmail.pattern)
+                                    updatePasswordEmailConfirmation((email, pendingEmail.pattern))
                                 } else {
                                     completion(password, state.hintText, !state.emailText.isEmpty)
                                 }

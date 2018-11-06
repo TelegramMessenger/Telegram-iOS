@@ -26,7 +26,7 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
         
         self.titleNode.attributedText = NSAttributedString(string: "Change Language?", font: Font.medium(20.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         
-        let completionScore = localizationInfo.translatedStringCount * 100 / max(1, localizationInfo.totalStringCount)
+        let completionScore = min(100, localizationInfo.translatedStringCount * 100 / max(1, localizationInfo.totalStringCount))
         
         let text: String
         if localizationInfo.translatedStringCount == 0 {

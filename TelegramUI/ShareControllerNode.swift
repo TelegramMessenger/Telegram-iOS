@@ -446,7 +446,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
             
             if let signal = self.share?(self.inputFieldNode.text, self.controllerInteraction!.selectedPeers.map { $0.id }) {
-                self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme), fastOut: true)
+                self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
                 let timestamp = CACurrentMediaTime()
                 var wasDone = false
                 let doneImpl: (Bool) -> Void = { [weak self] shouldDelay in
@@ -565,7 +565,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                                     transition.updateAlpha(node: strongSelf.inputFieldNode, alpha: 0.0)
                                     transition.updateAlpha(node: strongSelf.actionSeparatorNode, alpha: 0.0)
                                     transition.updateAlpha(node: strongSelf.actionsBackgroundNode, alpha: 0.0)
-                                    strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme), fastOut: true)
+                                    strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
                                     loadingTimestamp = CACurrentMediaTime()
                                     if reportReady {
                                         strongSelf.ready.set(.single(true))
@@ -673,7 +673,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
         
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme), fastOut: true)
+        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
         let timestamp = CACurrentMediaTime()
         self.shareDisposable.set(signal.start(completed: { [weak self] in
             let minDelay = 0.6

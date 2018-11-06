@@ -539,7 +539,7 @@ final class SecureIdAuthController: ViewController {
             strongSelf.updateState(animated: false, { state in
                 var state = state
                 if let verificationState = state.verificationState, case .noChallenge = verificationState {
-                    state.verificationState = .noChallenge(pattern)
+                    state.verificationState = .noChallenge(pattern?.1)
                 }
                 return state
             })

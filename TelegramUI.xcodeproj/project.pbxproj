@@ -300,6 +300,7 @@
 		D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */; };
 		D0943B051FDDFDA0001522CC /* OverlayInstantVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943B041FDDFDA0001522CC /* OverlayInstantVideoNode.swift */; };
 		D0943B071FDEC529001522CC /* InstantVideoRadialStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943B061FDEC528001522CC /* InstantVideoRadialStatusNode.swift */; };
+		D0955FB521912B6000F89427 /* PresentationStrings.mapping in Resources */ = {isa = PBXBuildFile; fileRef = D0955FB32191278C00F89427 /* PresentationStrings.mapping */; };
 		D097C26820DD0A1D007BB4B8 /* PeerReportController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D097C26720DD0A1D007BB4B8 /* PeerReportController.swift */; };
 		D097C26C20DD1EA5007BB4B8 /* OverlayStatusController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D097C26B20DD1EA5007BB4B8 /* OverlayStatusController.swift */; };
 		D099D74D1EEFEE1500A3128C /* GameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D74C1EEFEE1500A3128C /* GameController.swift */; };
@@ -1634,6 +1635,7 @@
 		D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFeedNavigationInputPanelNode.swift; sourceTree = "<group>"; };
 		D0943B041FDDFDA0001522CC /* OverlayInstantVideoNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayInstantVideoNode.swift; sourceTree = "<group>"; };
 		D0943B061FDEC528001522CC /* InstantVideoRadialStatusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantVideoRadialStatusNode.swift; sourceTree = "<group>"; };
+		D0955FB32191278C00F89427 /* PresentationStrings.mapping */ = {isa = PBXFileReference; lastKnownFileType = file; name = PresentationStrings.mapping; path = TelegramUI/Resources/PresentationStrings.mapping; sourceTree = "<group>"; };
 		D096A4611EA681A90000A7AE /* PresentationsResourceCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationsResourceCache.swift; sourceTree = "<group>"; };
 		D096A4631EA683C90000A7AE /* PresentationTheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationTheme.swift; sourceTree = "<group>"; };
 		D096A47A1EA6A2F00000A7AE /* PresentationStrings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationStrings.swift; sourceTree = "<group>"; };
@@ -2624,6 +2626,7 @@
 		D0471B521EFD8EBC0074D609 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				D0955FB32191278C00F89427 /* PresentationStrings.mapping */,
 				09310D13213BC5DE0020033A /* Animations */,
 				092F368B2154AAD6001A9F49 /* Fonts */,
 				D0C12A1B1F33964900B3F66D /* ChatWallpaperBuiltin0.jpg */,
@@ -4734,6 +4737,7 @@
 				D0E9BAA21F056F4C00F079A4 /* stp_card_discover@3x.png in Resources */,
 				D0E9BAB01F056F4C00F079A4 /* stp_card_mastercard@3x.png in Resources */,
 				09310D32213ED5FC0020033A /* anim_ungroup.json in Resources */,
+				D0955FB521912B6000F89427 /* PresentationStrings.mapping in Resources */,
 				D0E9BAA31F056F4C00F079A4 /* stp_card_discover_template@2x.png in Resources */,
 				D0E9BAB51F056F4C00F079A4 /* stp_card_visa@2x.png in Resources */,
 				D0E9BA941F056F4C00F079A4 /* stp_card_amex_template@3x.png in Resources */,

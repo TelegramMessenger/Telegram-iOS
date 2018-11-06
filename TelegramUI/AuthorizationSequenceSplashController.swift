@@ -140,7 +140,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     private func activateLocalization(_ code: String) {
         let _ = (postbox.transaction { transaction -> String in
             if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
-                return current.languageCode
+                return current.primaryComponent.languageCode
             } else {
                 return "en"
             }
@@ -157,7 +157,7 @@ final class AuthorizationSequenceSplashController: ViewController {
             strongSelf.controller.isEnabled = false
             let postbox = strongSelf.postbox
             
-            strongSelf.activateLocalizationDisposable.set(downoadAndApplyLocalization(postbox: postbox, network: strongSelf.network, languageCode: code).start(completed: {
+            strongSelf.activateLocalizationDisposable.set(downloadAndApplyLocalization(postbox: postbox, network: strongSelf.network, languageCode: code).start(completed: {
                 let _ = (postbox.transaction { transaction -> PresentationStrings? in
                     let localizationSettings: LocalizationSettings?
                     if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
@@ -167,12 +167,12 @@ final class AuthorizationSequenceSplashController: ViewController {
                     }
                     let stringsValue: PresentationStrings
                     if let localizationSettings = localizationSettings {
-                        stringsValue = PresentationStrings(languageCode: localizationSettings.languageCode, dict: dictFromLocalization(localizationSettings.localization))
+                        stringsValue = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
                     } else {
                         stringsValue = defaultPresentationStrings
                     }
                     return stringsValue
-                    }
+                }
                 |> deliverOnMainQueue).start(next: { strings in
                     self?.controller.isEnabled = true
                     self?.nextPressed?(strings)

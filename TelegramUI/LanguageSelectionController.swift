@@ -330,7 +330,7 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
         var type: Int = 0
         if let (info, _) = self.applyingLanguage, info.languageCode == self.languages[indexPath.row].languageCode {
             type = 2
-        } else if self.presentationData.strings.languageCode == self.languages[indexPath.row].languageCode {
+        } else if self.presentationData.strings.primaryComponent.languageCode == self.languages[indexPath.row].languageCode {
             type = 1
         }
         
@@ -373,8 +373,8 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
                 self.tableView.reloadData()
             }
         }
-        if language.languageCode != self.presentationData.strings.languageCode {
-            self.applyingLanguage = (language, (downoadAndApplyLocalization(postbox: self.account.postbox, network: self.account.network, languageCode: language.languageCode) |> deliverOnMainQueue).start(completed: { [weak self] in
+        if language.languageCode != self.presentationData.strings.primaryComponent.languageCode {
+            self.applyingLanguage = (language, (downloadAndApplyLocalization(postbox: self.account.postbox, network: self.account.network, languageCode: language.languageCode) |> deliverOnMainQueue).start(completed: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.applyingLanguage = nil
                     strongSelf.tableView.reloadData()
