@@ -92,19 +92,65 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
     return account.postbox.transaction { transaction -> ([FoundStickerItem], CachedStickerQueryResult?) in
         var result: [FoundStickerItem] = []
         if scope.contains(.installed) {
-            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
-                if let item = item as? StickerPackItem {
-                    var stringRepresentations: [String] = []
-                    for key in item.indexKeys {
-                        key.withDataNoCopy { data in
-                            if let string = String(data: data, encoding: .utf8) {
-                                stringRepresentations.append(string)
-                            }
+            for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers) {
+                if let item = entry.contents as? SavedStickerItem {
+                    for representation in item.stringRepresentations {
+                        if representation == query {
+                            result.append(FoundStickerItem(file: item.file, stringRepresentations: item.stringRepresentations))
+                            break
                         }
                     }
-                    result.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
                 }
             }
+            
+            let currentItems = Set<MediaId>(result.map { $0.file.fileId })
+            var recentItems: [TelegramMediaFile] = []
+            var recentItemsIds = Set<MediaId>()
+            var matchingRecentItemsIds = Set<MediaId>()
+            
+            for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers) {
+                if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
+                    if !currentItems.contains(file.fileId) {
+                        for case let .Sticker(sticker) in file.attributes {
+                            if sticker.displayText == query {
+                                matchingRecentItemsIds.insert(file.fileId)
+                            }
+                            recentItemsIds.insert(file.fileId)
+                            recentItems.append(file)
+                            break
+                        }
+                    }
+                }
+            }
+            
+            var installed: [FoundStickerItem] = []
+            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
+                if let item = item as? StickerPackItem {
+                    if !currentItems.contains(item.file.fileId) {
+                        var stringRepresentations: [String] = []
+                        for key in item.indexKeys {
+                            key.withDataNoCopy { data in
+                                if let string = String(data: data, encoding: .utf8) {
+                                    stringRepresentations.append(string)
+                                }
+                            }
+                        }
+                        if !recentItemsIds.contains(item.file.fileId) {
+                            installed.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                        } else {
+                            matchingRecentItemsIds.insert(item.file.fileId)
+                        }
+                    }
+                }
+            }
+            
+            for file in recentItems {
+                if matchingRecentItemsIds.contains(file.fileId) {
+                    result.append(FoundStickerItem(file: file, stringRepresentations: [query]))
+                }
+            }
+            
+            result.append(contentsOf: installed)
         }
         
         let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult

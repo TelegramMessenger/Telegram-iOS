@@ -12,25 +12,21 @@ public enum VoiceCallP2PMode: Int32 {
 }
 
 public struct VoipConfiguration: PreferencesEntry, Equatable {
-    public var defaultP2PMode: VoiceCallP2PMode
     public var serializedData: String?
     
     public static var defaultValue: VoipConfiguration {
-        return VoipConfiguration(defaultP2PMode: .contacts, serializedData: nil)
+        return VoipConfiguration(serializedData: nil)
     }
     
-    init(defaultP2PMode: VoiceCallP2PMode, serializedData: String?) {
-        self.defaultP2PMode = defaultP2PMode
+    init(serializedData: String?) {
         self.serializedData = serializedData
     }
     
     public init(decoder: PostboxDecoder) {
-        self.defaultP2PMode = VoiceCallP2PMode(rawValue: decoder.decodeInt32ForKey("defaultP2PMode", orElse: 1)) ?? .contacts
         self.serializedData = decoder.decodeOptionalStringForKey("serializedData")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.defaultP2PMode.rawValue, forKey: "defaultP2PMode")
         if let serializedData = self.serializedData {
             encoder.encodeString(serializedData, forKey: "serializedData")
         } else {

@@ -11,10 +11,11 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
     let lastSeenPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyStatusTimestamp))
     let groupPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyChatInvite))
     let voiceCallPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneCall))
+    let voiceCallP2P = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneP2P))
     let autoremoveTimeout = account.network.request(Api.functions.account.getAccountTTL())
-    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, autoremoveTimeout)
+    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, autoremoveTimeout)
         |> retryRequest
-        |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, autoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
+        |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, autoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
             let accountTimeoutSeconds: Int32
             switch autoremoveTimeout {
                 case let .accountDaysTTL(days):
@@ -25,6 +26,7 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
             let lastSeenRules: [Api.PrivacyRule]
             let groupRules: [Api.PrivacyRule]
             let voiceRules: [Api.PrivacyRule]
+            let voiceP2PRules: [Api.PrivacyRule]
             var apiUsers: [Api.User] = []
             
             switch lastSeenPrivacy {
@@ -45,6 +47,12 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
                     voiceRules = rules
             }
             
+            switch voiceCallP2P {
+                case let .privacyRules(rules, users):
+                    apiUsers.append(contentsOf: users)
+                    voiceP2PRules = rules
+            }
+            
             let peers = apiUsers.map { TelegramUser(user: $0) }
             
             return account.postbox.transaction { transaction -> AccountPrivacySettings in
@@ -52,7 +60,7 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
                     return updated
                 })
                 
-                return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules), groupInvitations: SelectivePrivacySettings(apiRules: groupRules), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules), accountRemovalTimeout: accountTimeoutSeconds)
+                return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules), groupInvitations: SelectivePrivacySettings(apiRules: groupRules), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules), accountRemovalTimeout: accountTimeoutSeconds)
             }
         }
 }
@@ -69,6 +77,7 @@ public enum UpdateSelectiveAccountPrivacySettingsType {
     case presence
     case groupInvitations
     case voiceCalls
+    case voiceCallsP2P
     
     var apiKey: Api.InputPrivacyKey {
         switch self {
@@ -78,6 +87,8 @@ public enum UpdateSelectiveAccountPrivacySettingsType {
                 return .inputPrivacyKeyChatInvite
             case .voiceCalls:
                 return .inputPrivacyKeyPhoneCall
+            case .voiceCallsP2P:
+                return .inputPrivacyKeyPhoneP2P
         }
     }
 }

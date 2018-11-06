@@ -53,8 +53,13 @@ private final class PendingMessageContext {
     var forcedReuploadOnce: Bool = false
 }
 
+public enum PendingMessageFailureReason {
+    case flood
+}
+
 private final class PeerPendingMessagesSummaryContext {
     var messageDeliveredSubscribers = Bag<() -> Void>()
+    var messageFailedSubscribers = Bag<(PendingMessageFailureReason) -> Void>()
 }
 
 private enum PendingMessageResult {
@@ -710,8 +715,8 @@ public final class PendingMessageManager {
                 }
                 |> `catch` { error -> Signal<Void, NoError> in
                     return deferred {
-                        if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
-                            if let strongSelf = self {
+                        if let strongSelf = self {
+                            if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
                                 var allFoundAndValid = true
                                 for (message, _) in messages {
                                     if let context = strongSelf.messageContexts[message.id] {
@@ -734,6 +739,12 @@ public final class PendingMessageManager {
                                     
                                     strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
                                     return .complete()
+                                }
+                            } else if error.errorDescription.hasPrefix("PEER_FLOOD"), let message = messages.first?.0 {
+                                if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
+                                    for subscriber in context.messageFailedSubscribers.copyItems() {
+                                        subscriber(.flood)
+                                    }
                                 }
                             }
                         }
@@ -937,6 +948,12 @@ public final class PendingMessageManager {
                                 strongSelf.beginSendingMessages([messageId])
                                 return
                             }
+                        } else if error.errorDescription.hasPrefix("PEER_FLOOD") {
+                            if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
+                                for subscriber in context.messageFailedSubscribers.copyItems() {
+                                    subscriber(.flood)
+                                }
+                            }
                         }
                         let _ = (postbox.transaction { transaction -> Void in
                             transaction.updateMessage(message.id, update: { currentMessage in
@@ -1043,6 +1060,39 @@ public final class PendingMessageManager {
                         if let current = self.peerSummaryContexts[peerId] {
                             current.messageDeliveredSubscribers.remove(index)
                             if current.messageDeliveredSubscribers.isEmpty {
+                                self.peerSummaryContexts.removeValue(forKey: peerId)
+                            }
+                        }
+                    }
+                })
+            }
+            
+            return disposable
+        }
+    }
+    
+    public func failedMessageEvents(peerId: PeerId) -> Signal<PendingMessageFailureReason, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.queue.async {
+                let summaryContext: PeerPendingMessagesSummaryContext
+                if let current = self.peerSummaryContexts[peerId] {
+                    summaryContext = current
+                } else {
+                    summaryContext = PeerPendingMessagesSummaryContext()
+                    self.peerSummaryContexts[peerId] = summaryContext
+                }
+                
+                let index = summaryContext.messageFailedSubscribers.add({ reason in
+                    subscriber.putNext(reason)
+                })
+                
+                disposable.set(ActionDisposable {
+                    self.queue.async {
+                        if let current = self.peerSummaryContexts[peerId] {
+                            current.messageFailedSubscribers.remove(index)
+                            if current.messageFailedSubscribers.isEmpty {
                                 self.peerSummaryContexts.removeValue(forKey: peerId)
                             }
                         }

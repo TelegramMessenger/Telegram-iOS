@@ -85,8 +85,7 @@ private extension ReportReason {
             case .porno:
                 return .inputReportReasonPornography
             case .copyright:
-                //TODO UPDATE API REASON
-                return .inputReportReasonOther(text: "Copyright")
+                return .inputReportReasonCopyright
             case let .custom(text):
                 return .inputReportReasonOther(text: text)
         }
