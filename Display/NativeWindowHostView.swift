@@ -264,22 +264,6 @@ private final class NativeWindow: UIWindow, WindowHost {
         return self.hitTestImpl?(point, event)
     }
     
-    override func insertSubview(_ view: UIView, at index: Int) {
-        super.insertSubview(view, at: index)
-    }
-    
-    override func addSubview(_ view: UIView) {
-        super.addSubview(view)
-    }
-    
-    override func insertSubview(_ view: UIView, aboveSubview siblingSubview: UIView) {
-        if let transitionClass = NSClassFromString("UITransitionView"), view.isKind(of: transitionClass) {
-            super.insertSubview(view, aboveSubview: self.subviews.last!)
-        } else {
-            super.insertSubview(view, aboveSubview: siblingSubview)
-        }
-    }
-    
     func invalidateDeferScreenEdgeGestures() {
         self.invalidateDeferScreenEdgeGestureImpl?()
     }
