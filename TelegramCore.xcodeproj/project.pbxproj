@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09028386218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */; };
 		9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
 		9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
 		9FAA268820D457A300D26CF3 /* RemoteStorageConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EA188120D3D2B1001AEE19 /* RemoteStorageConfiguration.swift */; };
@@ -762,6 +763,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedVoipConfigurationUpdates.swift; sourceTree = "<group>"; };
 		9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentWebSessions.swift; sourceTree = "<group>"; };
 		C205FEA71EB3B75900455808 /* ExportMessageLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExportMessageLink.swift; sourceTree = "<group>"; };
 		C210DD611FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceMessageAttribute.swift; sourceTree = "<group>"; };
@@ -1478,6 +1480,7 @@
 				D0467D1420D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift */,
 				D00422D221677F4500719B67 /* ManagedAccountPresence.swift */,
 				D0A8998E217A37A000759EE6 /* NotificationAutolockReportManager.swift */,
+				09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -2275,6 +2278,7 @@
 				D02395D61F8D09A50070F5C2 /* ChannelHistoryAvailabilitySettings.swift in Sources */,
 				D019B1CC1E2E3B6A00F80DB3 /* SecretChatRekeySession.swift in Sources */,
 				D081E10A217F5ADE003CD921 /* LocalizationPreview.swift in Sources */,
+				09028386218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift in Sources */,
 				D03B0CD91D62245B00955575 /* PeerUtils.swift in Sources */,
 				D0F19F6620E6620D00EEC860 /* MultiplexedRequestManager.swift in Sources */,
 				D053B41B1F18DEF500E2D58A /* TelegramMediaExpiredContent.swift in Sources */,

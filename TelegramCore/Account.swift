@@ -1199,6 +1199,7 @@ public class Account {
             }
         }))
         self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedVoipConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedTermsOfServiceUpdates(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAppChangelog(postbox: self.postbox, network: self.network, stateManager: self.stateManager, appVersion: self.networkArguments.appVersion).start())
         self.managedOperationsDisposable.add(managedProxyInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())

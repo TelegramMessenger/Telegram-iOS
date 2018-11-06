@@ -81,7 +81,7 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
     case channelBanner(TelegramChannel?)
     case kicker(RichText)
     case table(title: RichText, rows: [InstantPageTableRow], bordered: Bool, striped: Bool)
-    case details(title: RichText, blocks: [InstantPageBlock], open: Bool)
+    case details(title: RichText, blocks: [InstantPageBlock], expanded: Bool)
     case relatedArticles(title: RichText, articles: [InstantPageRelatedArticle])
     case map(latitude: Double, longitude: Double, zoom: Int32, dimensions: CGSize, caption: InstantPageCaption)
     
@@ -156,7 +156,7 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
             case InstantPageBlockType.table.rawValue:
                 self = .table(title: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, rows: decoder.decodeObjectArrayWithDecoderForKey("r"), bordered: decoder.decodeInt32ForKey("b", orElse: 0) != 0, striped: decoder.decodeInt32ForKey("s", orElse: 0) != 0)
             case InstantPageBlockType.details.rawValue:
-                self = .details(title: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, blocks: decoder.decodeObjectArrayWithDecoderForKey("b"), open: decoder.decodeInt32ForKey("o", orElse: 0) != 0)
+                self = .details(title: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, blocks: decoder.decodeObjectArrayWithDecoderForKey("b"), expanded: decoder.decodeInt32ForKey("o", orElse: 0) != 0)
             case InstantPageBlockType.relatedArticles.rawValue:
                 self = .relatedArticles(title: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, articles: decoder.decodeObjectArrayWithDecoderForKey("a"))
             case InstantPageBlockType.map.rawValue:
@@ -318,11 +318,11 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
                 encoder.encodeObjectArray(rows, forKey: "r")
                 encoder.encodeInt32(bordered ? 1 : 0, forKey: "b")
                 encoder.encodeInt32(striped ? 1 : 0, forKey: "s")
-            case let .details(title, blocks, open):
+            case let .details(title, blocks, expanded):
                 encoder.encodeInt32(InstantPageBlockType.details.rawValue, forKey: "r")
                 encoder.encodeObject(title, forKey: "t")
                 encoder.encodeObjectArray(blocks, forKey: "b")
-                encoder.encodeInt32(open ? 1 : 0, forKey: "o")
+                encoder.encodeInt32(expanded ? 1 : 0, forKey: "o")
             case let .relatedArticles(title, articles):
                 encoder.encodeInt32(InstantPageBlockType.relatedArticles.rawValue, forKey: "r")
                 encoder.encodeObject(title, forKey: "t")
@@ -497,8 +497,8 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
-            case let .details(lhsTitle, lhsBlocks, lhsOpen):
-                if case let .details(rhsTitle, rhsBlocks, rhsOpen) = rhs, lhsTitle == rhsTitle, lhsBlocks == rhsBlocks, lhsOpen == rhsOpen {
+            case let .details(lhsTitle, lhsBlocks, lhsExpanded):
+                if case let .details(rhsTitle, rhsBlocks, rhsExpanded) = rhs, lhsTitle == rhsTitle, lhsBlocks == rhsBlocks, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
@@ -1020,7 +1020,7 @@ extension InstantPageBlock {
             case let .pageBlockOrderedList(items):
                 self = .list(items: items.map({ InstantPageListItem(apiListOrderedItem: $0) }), ordered: true)
             case let .pageBlockDetails(flags, blocks, title):
-                self = .details(title: RichText(apiText: title), blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), open: (flags & (1 << 0)) != 0)
+                self = .details(title: RichText(apiText: title), blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), expanded: (flags & (1 << 0)) != 0)
             case let .pageBlockRelatedArticles(title, articles):
                 self = .relatedArticles(title: RichText(apiText: title), articles: articles.map({ InstantPageRelatedArticle(apiRelatedArticle: $0) }))
             case let .pageBlockMap(geo, zoom, w, h, caption):
