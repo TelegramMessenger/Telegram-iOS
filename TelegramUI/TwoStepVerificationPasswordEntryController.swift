@@ -250,7 +250,7 @@ enum TwoStepVerificationPasswordEntryMode {
 
 struct TwoStepVerificationPasswordEntryResult {
     let password: String
-    let pendingEmail: (TwoStepVerificationPendingEmail, String?)?
+    let pendingEmail: PendingEmailAndValue?
 }
 
 func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepVerificationPasswordEntryMode, result: Promise<TwoStepVerificationPasswordEntryResult?>) -> ViewController {
@@ -329,7 +329,11 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         }
                         switch update {
                             case let .password(password, pendingEmail):
-                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: pendingEmail.flatMap({ ($0, email) }))))
+                                var pendingEmailAndValue: PendingEmailAndValue?
+                                if let pendingEmail = pendingEmail {
+                                    pendingEmailAndValue = PendingEmailAndValue(pendingEmail: pendingEmail, email: email)
+                                }
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: pendingEmailAndValue)))
                             case .none:
                                 break
                         }
@@ -354,7 +358,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         }
                         switch update {
                             case let .password(password, pendingEmail):
-                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: pendingEmail.flatMap({ ($0, email) }))))
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: PendingEmailAndValue(pendingEmail: pendingEmail))))
                             case .none:
                                 break
                         }

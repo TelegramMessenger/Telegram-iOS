@@ -181,10 +181,10 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
         case let .access(configuration):
             if let configuration = configuration {
                 switch configuration {
-                    case let .notSet(pendingEmail):
-                        if let (_, email) = pendingEmail {
+                    case let .notSet(pendingEmailAndValue):
+                        if let pendingEmailAndValue = pendingEmailAndValue {
                             entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
-                            if let _ = email {
+                            if pendingEmailAndValue.email != nil {
                             } else {
                                 entries.append(.pendingEmailConfirmAddress(presentationData.theme, presentationData.strings.TwoStepAuth_EmailTitle, state.emailAddress))
                             }
@@ -204,13 +204,13 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                         }
                 }
             }
-        case let .manage(_, emailSet, pendingEmail, _):
+        case let .manage(_, emailSet, pendingEmailAndValue, _):
             entries.append(.changePassword(presentationData.theme, presentationData.strings.TwoStepAuth_ChangePassword))
             entries.append(.turnPasswordOff(presentationData.theme, presentationData.strings.TwoStepAuth_RemovePassword))
             entries.append(.setupRecoveryEmail(presentationData.theme, emailSet ? presentationData.strings.TwoStepAuth_ChangeEmail : presentationData.strings.TwoStepAuth_SetupEmail))
-            if let (_, email) = pendingEmail {
+            if let pendingEmailAndValue = pendingEmailAndValue {
                 entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
-                if let _ = email {
+                if pendingEmailAndValue.email != nil {
                 } else {
                     entries.append(.pendingEmailConfirmAddress(presentationData.theme, presentationData.strings.TwoStepAuth_EmailTitle, state.emailAddress))
                 }
@@ -225,19 +225,34 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
     return entries
 }
 
+struct PendingEmailAndValue {
+    let pendingEmail: TwoStepVerificationPendingEmail
+    let email: String?
+}
+
+extension PendingEmailAndValue {
+    init?(pendingEmail: TwoStepVerificationPendingEmail?) {
+        if let pendingEmail = pendingEmail {
+            self.init(pendingEmail: pendingEmail, email: nil)
+        } else {
+            return nil
+        }
+    }
+}
+
 enum TwoStepVerificationUnlockSettingsControllerMode {
     case access
-    case manage(password: String, email: String, pendingEmail: (TwoStepVerificationPendingEmail, String?)?, hasSecureValues: Bool)
+    case manage(password: String, email: String, pendingEmail: PendingEmailAndValue?, hasSecureValues: Bool)
 }
 
 private enum TwoStepVeriticationAccessConfiguration {
-    case notSet(pendingEmail: (TwoStepVerificationPendingEmail, String?)?)
+    case notSet(pendingEmail: PendingEmailAndValue?)
     case set(hint: String, hasRecoveryEmail: Bool, hasSecureValues: Bool)
     
     init(configuration: TwoStepVerificationConfiguration) {
         switch configuration {
             case let .notSet(pendingEmail):
-                self = .notSet(pendingEmail: pendingEmail.flatMap({ ($0, nil) }))
+                self = .notSet(pendingEmail: PendingEmailAndValue(pendingEmail: pendingEmail))
             case let .set(hint, hasRecoveryEmail, _, hasSecureValues):
                 self = .set(hint: hint, hasRecoveryEmail: hasRecoveryEmail, hasSecureValues: hasSecureValues)
         }
@@ -246,7 +261,7 @@ private enum TwoStepVeriticationAccessConfiguration {
 
 private enum TwoStepVerificationUnlockSettingsControllerData {
     case access(configuration: TwoStepVeriticationAccessConfiguration?)
-    case manage(password: String, emailSet: Bool, pendingEmail: (TwoStepVerificationPendingEmail, String?)?, hasSecureValues: Bool)
+    case manage(password: String, emailSet: Bool, pendingEmail: PendingEmailAndValue?, hasSecureValues: Bool)
 }
 
 func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStepVerificationUnlockSettingsControllerMode) -> ViewController {
@@ -321,7 +336,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     return state
                 }
                 
-                replaceControllerImpl?(twoStepVerificationUnlockSettingsController(account: account, mode: .manage(password: password, email: settings.email, pendingEmail: pendingEmail.flatMap({ ($0, nil) }), hasSecureValues: settings.secureSecret != nil)))
+                replaceControllerImpl?(twoStepVerificationUnlockSettingsController(account: account, mode: .manage(password: password, email: settings.email, pendingEmail: PendingEmailAndValue(pendingEmail: pendingEmail), hasSecureValues: settings.secureSecret != nil)))
             }, error: { error in
                 updateState { state in
                     var state = state
@@ -422,7 +437,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                             
                                 updatePatternImpl = { [weak controller] pattern in
                                     if let (email, pattern) = pattern {
-                                        dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: (TwoStepVerificationPendingEmail(pattern: pattern, codeLength: nil), email)))))
+                                        dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: PendingEmailAndValue(pendingEmail: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: nil), email: email)))))
                                     } else {
                                         dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
                                     }
@@ -450,7 +465,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     
                     updatePatternImpl = { [weak controller] pattern in
                         if let (email, pattern) = pattern {
-                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: (TwoStepVerificationPendingEmail(pattern: pattern, codeLength: nil), email)))))
+                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: PendingEmailAndValue(pendingEmail: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: nil), email: email)))))
                         } else {
                             dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: nil))))
                         }
@@ -573,7 +588,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
         let _ = (dataPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { data in
-            var pendingEmailData: (TwoStepVerificationPendingEmail, String?)?
+            var pendingEmailData: PendingEmailAndValue?
             switch data {
                 case let .access(configuration):
                     guard let configuration = configuration else {
@@ -588,12 +603,12 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                 case let .manage(_, _, pendingEmail, _):
                     pendingEmailData = pendingEmail
             }
-            if let (_, knownEmail) = pendingEmailData {
+            if let pendingEmailAndValue = pendingEmailData {
                 var emailAndCode: (String, String)?
                 updateState { state in
                     var state = state
                     if !state.checking {
-                        emailAndCode = (knownEmail ?? state.emailAddress, state.emailCode)
+                        emailAndCode = (pendingEmailAndValue.email ?? state.emailAddress, state.emailCode)
                         state.checking = true
                     }
                     return state
@@ -682,8 +697,8 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     } else {
                         switch configuration {
                             case let .notSet(pendingEmail):
-                                if let (_, email) = pendingEmail {
-                                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: (email != nil || !state.emailAddress.isEmpty) && !state.emailCode.isEmpty, action: {
+                                if let pendingEmailAndValue = pendingEmail {
+                                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: (pendingEmailAndValue.email != nil || !state.emailAddress.isEmpty) && !state.emailCode.isEmpty, action: {
                                         checkEmailConfirmation()
                                     })
                                 }
@@ -701,8 +716,8 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                 if state.checking {
                     rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
                 } else {
-                    if let (_, email) = manage.pendingEmail {
-                        rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: (email != nil || !state.emailAddress.isEmpty) && !state.emailCode.isEmpty, action: {
+                    if let pendingEmailAndValue = manage.pendingEmail {
+                        rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: (pendingEmailAndValue.email != nil || !state.emailAddress.isEmpty) && !state.emailCode.isEmpty, action: {
                             checkEmailConfirmation()
                         })
                     }

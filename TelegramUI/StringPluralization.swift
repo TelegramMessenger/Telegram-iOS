@@ -2,13 +2,13 @@ import Foundation
 
 import TelegramUIPrivateModule
 
-enum PluralizationForm {
-    case zero
-    case one
-    case two
-    case few
-    case many
-    case other
+enum PluralizationForm: Int32 {
+    case zero = 0
+    case one = 1
+    case two = 2
+    case few = 3
+    case many = 4
+    case other = 5
     
     var name: String {
         switch self {
