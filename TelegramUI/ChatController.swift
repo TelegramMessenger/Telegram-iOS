@@ -1491,102 +1491,111 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         self.chatDisplayNode.peerView = self.peerView
         
         let initialData = self.chatDisplayNode.historyNode.initialData
-            |> take(1)
-            |> beforeNext { [weak self] combinedInitialData in
-                if let strongSelf = self, let combinedInitialData = combinedInitialData {
-                    if let interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
-                        var pinnedMessageId: MessageId?
-                        var peerIsBlocked: Bool = false
-                        var canReport: Bool = false
-                        var callsAvailable: Bool = true
-                        var callsPrivate: Bool = false
-                        if let cachedData = combinedInitialData.cachedData as? CachedChannelData {
-                            pinnedMessageId = cachedData.pinnedMessageId
-                            canReport = cachedData.reportStatus == .canReport
-                        } else if let cachedData = combinedInitialData.cachedData as? CachedUserData {
-                            peerIsBlocked = cachedData.isBlocked
-                            canReport = cachedData.reportStatus == .canReport
-                            callsAvailable = cachedData.callsAvailable
-                            callsPrivate = cachedData.callsPrivate
-                            pinnedMessageId = cachedData.pinnedMessageId
-                        } else if let cachedData = combinedInitialData.cachedData as? CachedGroupData {
-                            canReport = cachedData.reportStatus == .canReport
-                            pinnedMessageId = cachedData.pinnedMessageId
-                        } else if let cachedData = combinedInitialData.cachedData as? CachedSecretChatData {
-                            canReport = cachedData.reportStatus == .canReport
-                        }
-                        var pinnedMessage: Message?
-                        if let pinnedMessageId = pinnedMessageId {
-                            if let cachedDataMessages = combinedInitialData.cachedDataMessages {
-                                pinnedMessage = cachedDataMessages[pinnedMessageId]
-                            }
-                        }
-                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { updated in
-                            var updated = updated
-                        
-                            updated = updated.updatedInterfaceState({ _ in return interfaceState })
-                            
-                            updated = updated.updatedKeyboardButtonsMessage(combinedInitialData.buttonKeyboardMessage)
-                            updated = updated.updatedPinnedMessageId(pinnedMessageId)
-                            updated = updated.updatedPinnedMessage(pinnedMessage)
-                            updated = updated.updatedPeerIsBlocked(peerIsBlocked)
-                            updated = updated.updatedCanReportPeer(canReport)
-                            updated = updated.updatedCallsAvailable(callsAvailable)
-                            updated = updated.updatedCallsPrivate(callsPrivate)
-                            updated = updated.updatedTitlePanelContext({ context in
-                                if pinnedMessageId != nil {
-                                    if !context.contains(where: {
-                                        switch $0 {
-                                            case .pinnedMessage:
-                                                return true
-                                            default:
-                                                return false
-                                        }
-                                    }) {
-                                        var updatedContexts = context
-                                        updatedContexts.append(.pinnedMessage)
-                                        return updatedContexts.sorted()
-                                    } else {
-                                        return context
-                                    }
-                                } else {
-                                    if let index = context.index(where: {
-                                        switch $0 {
-                                            case .pinnedMessage:
-                                                return true
-                                            default:
-                                                return false
-                                        }
-                                    }) {
-                                        var updatedContexts = context
-                                        updatedContexts.remove(at: index)
-                                        return updatedContexts
-                                    } else {
-                                        return context
-                                    }
-                                }
-                            })
-                            if let editMessage = interfaceState.editMessage, let message = combinedInitialData.initialData?.associatedMessages[editMessage.messageId] {
-                                updated = updatedChatEditInterfaceMessagetState(state: updated, message: message)
-                            }
-                            return updated
-                        })
+        |> take(1)
+        |> beforeNext { [weak self] combinedInitialData in
+            guard let strongSelf = self, let combinedInitialData = combinedInitialData else {
+                return
+            }
+            if let interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
+                var pinnedMessageId: MessageId?
+                var peerIsBlocked: Bool = false
+                var canReport: Bool = false
+                var callsAvailable: Bool = true
+                var callsPrivate: Bool = false
+                if let cachedData = combinedInitialData.cachedData as? CachedChannelData {
+                    pinnedMessageId = cachedData.pinnedMessageId
+                    canReport = cachedData.reportStatus == .canReport
+                } else if let cachedData = combinedInitialData.cachedData as? CachedUserData {
+                    peerIsBlocked = cachedData.isBlocked
+                    canReport = cachedData.reportStatus == .canReport
+                    callsAvailable = cachedData.callsAvailable
+                    callsPrivate = cachedData.callsPrivate
+                    pinnedMessageId = cachedData.pinnedMessageId
+                } else if let cachedData = combinedInitialData.cachedData as? CachedGroupData {
+                    canReport = cachedData.reportStatus == .canReport
+                    pinnedMessageId = cachedData.pinnedMessageId
+                } else if let cachedData = combinedInitialData.cachedData as? CachedSecretChatData {
+                    canReport = cachedData.reportStatus == .canReport
+                }
+                var pinnedMessage: Message?
+                if let pinnedMessageId = pinnedMessageId {
+                    if let cachedDataMessages = combinedInitialData.cachedDataMessages {
+                        pinnedMessage = cachedDataMessages[pinnedMessageId]
                     }
-                    if let readStateData = combinedInitialData.readStateData {
-                        if case let .peer(peerId) = strongSelf.chatLocation, let peerReadStateData = readStateData[peerId], let notificationSettings = peerReadStateData.notificationSettings {
-                            var globalRemainingUnreadChatCount = peerReadStateData.totalUnreadChatCount
-                            if !notificationSettings.isRemovedFromTotalUnreadCount && peerReadStateData.unreadCount > 0 {
-                                globalRemainingUnreadChatCount -= 1
-                            }
-                            if globalRemainingUnreadChatCount > 0 {
-                                strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
+                }
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { updated in
+                    var updated = updated
+                
+                    updated = updated.updatedInterfaceState({ _ in return interfaceState })
+                    
+                    updated = updated.updatedKeyboardButtonsMessage(combinedInitialData.buttonKeyboardMessage)
+                    updated = updated.updatedPinnedMessageId(pinnedMessageId)
+                    updated = updated.updatedPinnedMessage(pinnedMessage)
+                    updated = updated.updatedPeerIsBlocked(peerIsBlocked)
+                    updated = updated.updatedCanReportPeer(canReport)
+                    updated = updated.updatedCallsAvailable(callsAvailable)
+                    updated = updated.updatedCallsPrivate(callsPrivate)
+                    updated = updated.updatedTitlePanelContext({ context in
+                        if pinnedMessageId != nil {
+                            if !context.contains(where: {
+                                switch $0 {
+                                    case .pinnedMessage:
+                                        return true
+                                    default:
+                                        return false
+                                }
+                            }) {
+                                var updatedContexts = context
+                                updatedContexts.append(.pinnedMessage)
+                                return updatedContexts.sorted()
                             } else {
-                                strongSelf.navigationItem.badge = ""
+                                return context
+                            }
+                        } else {
+                            if let index = context.index(where: {
+                                switch $0 {
+                                    case .pinnedMessage:
+                                        return true
+                                    default:
+                                        return false
+                                }
+                            }) {
+                                var updatedContexts = context
+                                updatedContexts.remove(at: index)
+                                return updatedContexts
+                            } else {
+                                return context
                             }
                         }
+                    })
+                    if let editMessage = interfaceState.editMessage, let message = combinedInitialData.initialData?.associatedMessages[editMessage.messageId] {
+                        updated = updatedChatEditInterfaceMessagetState(state: updated, message: message)
+                    }
+                    return updated
+                })
+            }
+            if let readStateData = combinedInitialData.readStateData {
+                if case let .peer(peerId) = strongSelf.chatLocation, let peerReadStateData = readStateData[peerId], let notificationSettings = peerReadStateData.notificationSettings {
+                    
+                    let inAppSettings = peerReadStateData.inAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+                    let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: peerReadStateData.totalState ?? ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:]))
+                    
+                    var globalRemainingUnreadChatCount = count
+                    if !notificationSettings.isRemovedFromTotalUnreadCount && peerReadStateData.unreadCount > 0 {
+                        if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
+                            globalRemainingUnreadChatCount -= peerReadStateData.unreadCount
+                        } else {
+                            globalRemainingUnreadChatCount -= 1
+                        }
+                    }
+                    if globalRemainingUnreadChatCount > 0 {
+                        strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
+                    } else {
+                        strongSelf.navigationItem.badge = ""
                     }
                 }
             }
+        }
         
         self.buttonKeyboardMessageDisposable = self.chatDisplayNode.historyNode.buttonKeyboardMessage.start(next: { [weak self] message in
             if let strongSelf = self {
@@ -2696,12 +2705,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         var unreadCount: Int32 = 0
                         var totalChatCount: Int32 = 0
                         
+                        var inAppSettingsValue: InAppNotificationSettings?
                         if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
                             if let count = view.count(for: .peer(peerId)) {
                                 unreadCount = count
                             }
                             if let (preferencesEntry, state) = view.total() {
                                 let inAppSettings = (preferencesEntry as? InAppNotificationSettings) ?? InAppNotificationSettings.defaultSettings
+                                inAppSettingsValue = inAppSettings
                                 let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
                                 totalChatCount = count
                             }
@@ -2712,7 +2723,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
                             var globalRemainingUnreadChatCount = totalChatCount
                             if !notificationSettings.isRemovedFromTotalUnreadCount && unreadCount > 0 {
-                                globalRemainingUnreadChatCount -= 1
+                                let inAppSettings = inAppSettingsValue ?? InAppNotificationSettings.defaultSettings
+                                if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
+                                    globalRemainingUnreadChatCount -= unreadCount
+                                } else {
+                                    globalRemainingUnreadChatCount -= 1
+                                }
                             }
                             
                             if globalRemainingUnreadChatCount > 0 {

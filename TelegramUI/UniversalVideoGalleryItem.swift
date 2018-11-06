@@ -340,7 +340,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            self.statusDisposable.set((combineLatest(videoNode.status, mediaFileStatus) |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
+            self.statusDisposable.set((combineLatest(videoNode.status, mediaFileStatus)
+            |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
                 if let strongSelf = self {
                     var initialBuffering = false
                     var buffering = false

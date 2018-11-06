@@ -15,7 +15,8 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
             } else {
                 signal = account.viewTracker.aroundMessageOfInterestHistoryViewForLocation(chatLocation, count: count, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
             }
-            return signal |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            return signal
+            |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                 let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
                 
                 let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
@@ -172,12 +173,16 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
     var cachedDataMessages: [MessageId: Message]?
     var readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData] = [:]
     var notificationSettings: PeerNotificationSettings?
+    var inAppNotificationSettings: InAppNotificationSettings?
         
     loop: for data in view.additionalData {
         switch data {
             case let .peerNotificationSettings(value):
                 notificationSettings = value
-                break loop
+            case let .preferencesEntry(key, value):
+                if key == ApplicationSpecificPreferencesKeys.inAppNotificationSettings {
+                    inAppNotificationSettings = value as? InAppNotificationSettings
+                }
             default:
                 break
         }
@@ -200,7 +205,7 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
                     case let .peer(peerId):
                         if let combinedReadStates = view.fixedReadStates {
                             if case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId] {
-                                readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalUnreadChatCount: totalUnreadState.count(for: .filtered, in: .chats, with: [.regularChatsAndPrivateGroups]), notificationSettings: notificationSettings)
+                                readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalState: totalUnreadState, inAppNotificationSettings: inAppNotificationSettings,  notificationSettings: notificationSettings)
                             }
                         }
                     case .group:

@@ -42,7 +42,8 @@ enum ChatHistoryViewUpdateType {
 
 public struct ChatHistoryCombinedInitialReadStateData {
     public let unreadCount: Int32
-    public let totalUnreadChatCount: Int32
+    public let totalState: ChatListTotalUnreadState?
+    public let inAppNotificationSettings: InAppNotificationSettings?
     public let notificationSettings: PeerNotificationSettings?
 }
 
@@ -394,6 +395,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             additionalData.append(.cachedPeerData(peerId))
             additionalData.append(.cachedPeerDataMessages(peerId))
             additionalData.append(.peerNotificationSettings(peerId))
+            additionalData.append(.preferencesEntry(ApplicationSpecificPreferencesKeys.inAppNotificationSettings))
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 additionalData.append(.cacheEntry(cachedChannelAdminIdsEntryId(peerId: peerId)))
                 additionalData.append(.peer(peerId))
