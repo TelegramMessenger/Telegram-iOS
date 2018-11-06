@@ -114,7 +114,7 @@ final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
         return panelHeight
     }
     
-    override func animateIn(fromHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func animateIn(fromHeight: CGFloat, previousContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition) {
         transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: 0.0, y: self.bounds.size.height - fromHeight))
         self.textNode.alpha = 1.0
         self.dateNode.alpha = 1.0
@@ -123,7 +123,7 @@ final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
         self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
     }
     
-    override func animateOut(toHeight: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         transition.updateFrame(node: self.textNode, frame: self.textNode.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
         self.textNode.alpha = 0.0
         self.dateNode.alpha = 0.0

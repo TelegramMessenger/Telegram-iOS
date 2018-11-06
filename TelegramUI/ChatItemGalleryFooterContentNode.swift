@@ -213,7 +213,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.dateNode.maximumNumberOfLines = 1
         self.dateNode.isLayerBacked = true
         self.dateNode.displaysAsynchronously = false
-
+        
         self.backwardButton = HighlightableButtonNode()
         self.backwardButton.isHidden = true
         self.backwardButton.setImage(backwardImage, for: [])
@@ -254,7 +254,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.addSubnode(self.textNode)
         self.addSubnode(self.authorNameNode)
         self.addSubnode(self.dateNode)
-
+        
         self.addSubnode(self.backwardButton)
         self.addSubnode(self.forwardButton)
         self.addSubnode(self.playbackControlButton)
@@ -448,9 +448,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         return panelHeight
     }
     
-    override func animateIn(fromHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func animateIn(fromHeight: CGFloat, previousContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition) {
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
-            transition.animatePositionAdditive(layer: scrubberView.layer, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
+            if let previousContentNode = previousContentNode as? ChatItemGalleryFooterContentNode, previousContentNode.scrubberView != nil {
+            } else {
+                transition.animatePositionAdditive(layer: scrubberView.layer, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
+            }
             scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         }
         transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
@@ -459,12 +462,19 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.authorNameNode.alpha = 1.0
         self.deleteButton.alpha = 1.0
         self.actionButton.alpha = 1.0
+        self.backwardButton.alpha = 1.0
+        self.forwardButton.alpha = 1.0
+        self.statusNode.alpha = 1.0
+        self.playbackControlButton.alpha = 1.0
         self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
     }
     
-    override func animateOut(toHeight: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
-            transition.updateFrame(view: scrubberView, frame: scrubberView.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
+            if let nextContentNode = nextContentNode as? ChatItemGalleryFooterContentNode, nextContentNode.scrubberView != nil {
+            } else {
+                transition.updateFrame(view: scrubberView, frame: scrubberView.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
+            }
             scrubberView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
         }
         transition.updateFrame(node: self.textNode, frame: self.textNode.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
@@ -473,6 +483,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.authorNameNode.alpha = 0.0
         self.deleteButton.alpha = 0.0
         self.actionButton.alpha = 0.0
+        self.backwardButton.alpha = 0.0
+        self.forwardButton.alpha = 0.0
+        self.statusNode.alpha = 0.0
+        self.playbackControlButton.alpha = 0.0
         self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
             completion()
         })

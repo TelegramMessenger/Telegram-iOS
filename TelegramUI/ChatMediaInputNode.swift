@@ -210,7 +210,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
                     savedStickerIds.insert(item.file.fileId.id)
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -3, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -3, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, theme: theme))
                 }
             }
         }
@@ -226,14 +226,19 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
                     if !savedStickerIds.contains(mediaId.id) {
                         let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
                         let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
-                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, theme: theme))
                         addedCount += 1
                     }
                 }
             }
         }
         
-        if peerSpecificPack == nil, case .available(_, false) = canInstallPeerSpecificPack {
+        var canManagePeerSpecificPack = false
+        if case .available(_, false) = canInstallPeerSpecificPack {
+            canManagePeerSpecificPack = true
+        }
+        
+        if peerSpecificPack == nil && canManagePeerSpecificPack {
             entries.append(.peerSpecificSetup(theme: theme, strings: strings, dismissed: false))
         }
         
@@ -244,7 +249,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
                 if let item = peerSpecificPack.items[i] as? StickerPackItem {
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, theme: theme))
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: canManagePeerSpecificPack, theme: theme))
                 }
             }
         }
@@ -252,7 +257,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
     
     for entry in view.entries {
         if let item = entry.item as? StickerPackItem {
-            entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], theme: theme))
+            entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], canManagePeerSpecificPack: false, theme: theme))
         }
     }
     

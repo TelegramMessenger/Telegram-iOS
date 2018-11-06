@@ -23,10 +23,10 @@ open class GalleryFooterContentNode: ASDisplayNode {
         return 0.0
     }
     
-    func animateIn(fromHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func animateIn(fromHeight: CGFloat, previousContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition) {
     }
     
-    func animateOut(toHeight: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         completion()
     }
 }

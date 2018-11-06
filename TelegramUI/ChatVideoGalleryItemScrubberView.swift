@@ -1,13 +1,22 @@
 import Foundation
+import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
+import TelegramCore
+import Postbox
+import Display
+
+private let textFont = Font.regular(13.0)
 
 final class ChatVideoGalleryItemScrubberView: UIView {
     private let leftTimestampNode: MediaPlayerTimeTextNode
     private let rightTimestampNode: MediaPlayerTimeTextNode
+    private let fileSizeNode: ASTextNode
     private let scrubberNode: MediaPlayerScrubbingNode
     
     private var playbackStatus: MediaPlayerStatus?
+    
+    private var fetchStatusDisposable = MetaDisposable()
     
     var hideWhenDurationIsUnknown = false {
         didSet {
@@ -39,6 +48,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.rightTimestampNode.alignment = .right
         self.rightTimestampNode.mode = .reversed
         
+        self.fileSizeNode = ASTextNode()
+        self.fileSizeNode.maximumNumberOfLines = 1
+        self.fileSizeNode.isLayerBacked = true
+        self.fileSizeNode.displaysAsynchronously = false
+        
         super.init(frame: frame)
         
         self.scrubberNode.seek = { [weak self] timestamp in
@@ -69,6 +83,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.addSubnode(self.scrubberNode)
         self.addSubnode(self.leftTimestampNode)
         self.addSubnode(self.rightTimestampNode)
+        self.addSubnode(self.fileSizeNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -93,6 +108,33 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.scrubberNode.bufferingStatus = status
     }
     
+    func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, fileSize: Int?) {
+        if let fileSize = fileSize {
+            if let fetchStatus = fetchStatus {
+                self.fetchStatusDisposable.set((fetchStatus
+                |> deliverOnMainQueue).start(next: { [weak self] status in
+                    if let strongSelf = self {
+                        var text: String
+                        switch status {
+                            case .Remote:
+                                text = dataSizeString(fileSize, forceDecimal: true)
+                            case let .Fetching(_, progress):
+                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true), dataSizeString(fileSize, forceDecimal: true)).0
+                            default:
+                                text = ""
+                        }
+                        strongSelf.fileSizeNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .white)
+                        strongSelf.layoutSubviews()
+                    }
+                }))
+            } else {
+                self.fileSizeNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true), font: textFont, textColor: .white)
+            }
+        } else {
+            self.fileSizeNode.attributedText = nil
+        }
+    }
+    
     override func layoutSubviews() {
         super.layoutSubviews()
         
@@ -106,6 +148,8 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.leftTimestampNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 22.0), size: CGSize(width: 60.0, height: 20.0))
         self.rightTimestampNode.frame = CGRect(origin: CGPoint(x: size.width - 60.0 - 6.0, y: 22.0), size: CGSize(width: 60.0, height: 20.0))
         
+        let fileSize = self.fileSizeNode.measure(size)
+        self.fileSizeNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - fileSize.width) / 2.0), y: 22.0), size: fileSize)
         self.scrubberNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: size.width - 6.0 * 2.0, height: scrubberHeight))
     }
 }
