@@ -6,12 +6,12 @@ import AsyncDisplayKit
 import Postbox
 
 final class ShareControllerInteraction {
-    var foundPeers: [Peer] = []
+    var foundPeers: [RenderedPeer] = []
     var selectedPeerIds = Set<PeerId>()
-    var selectedPeers: [Peer] = []
-    let togglePeer: (Peer, Bool) -> Void
+    var selectedPeers: [RenderedPeer] = []
+    let togglePeer: (RenderedPeer, Bool) -> Void
     
-    init(togglePeer: @escaping (Peer, Bool) -> Void) {
+    init(togglePeer: @escaping (RenderedPeer, Bool) -> Void) {
         self.togglePeer = togglePeer
     }
 }
@@ -136,7 +136,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             if let strongSelf = self {
                 if let (_, peer, search) = strongSelf.currentState {
                     if let actualPeer = peer.peers[peer.peerId] {
-                    strongSelf.controllerInteraction?.togglePeer(actualPeer, search)
+                        strongSelf.controllerInteraction?.togglePeer(peer, search)
                     }
                 }
             }

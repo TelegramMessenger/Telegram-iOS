@@ -106,19 +106,19 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
 
 private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let index: Int32
-    let peer: Peer
+    let peer: RenderedPeer
     let theme: PresentationTheme
     let strings: PresentationStrings
     
     var stableId: Int64 {
-        return self.peer.id.toInt64()
+        return self.peer.peerId.toInt64()
     }
     
     static func ==(lhs: ShareSearchPeerEntry, rhs: ShareSearchPeerEntry) -> Bool {
         if lhs.index != rhs.index {
             return false
         }
-        if !arePeersEqual(lhs.peer, rhs.peer) {
+        if lhs.peer != rhs.peer {
             return false
         }
         return true
@@ -129,7 +129,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: RenderedPeer(peer: self.peer), controllerInteraction: interfaceInteraction, search: true)
+        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: peer, controllerInteraction: interfaceInteraction, search: true)
     }
 }
 
@@ -243,53 +243,49 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                     
                     return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers)
-                        |> map { accountPeer, foundLocalPeers, foundRemotePeers -> [ShareSearchPeerEntry]? in
-                            var entries: [ShareSearchPeerEntry] = []
-                            var index: Int32 = 0
-                            
-                            var existingPeerIds = Set<PeerId>()
-                            
-                            if strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
-                                if !existingPeerIds.contains(accountPeer.id) {
-                                    existingPeerIds.insert(accountPeer.id)
-                                    entries.append(ShareSearchPeerEntry(index: index, peer: accountPeer, theme: theme, strings: strings))
+                    |> map { accountPeer, foundLocalPeers, foundRemotePeers -> [ShareSearchPeerEntry]? in
+                        var entries: [ShareSearchPeerEntry] = []
+                        var index: Int32 = 0
+                        
+                        var existingPeerIds = Set<PeerId>()
+                        
+                        if strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
+                            if !existingPeerIds.contains(accountPeer.id) {
+                                existingPeerIds.insert(accountPeer.id)
+                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), theme: theme, strings: strings))
+                                index += 1
+                            }
+                        }
+                        
+                        for renderedPeer in foundLocalPeers {
+                            if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
+                                if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(peer) {
+                                    existingPeerIds.insert(renderedPeer.peerId)
+                                    entries.append(ShareSearchPeerEntry(index: index, peer: renderedPeer, theme: theme, strings: strings))
                                     index += 1
                                 }
                             }
-                            
-                            for renderedPeer in foundLocalPeers {
-                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, peer.id.namespace != Namespaces.Peer.SecretChat {
-                                    if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                                        existingPeerIds.insert(peer.id)
-                                        var associatedPeer: Peer?
-                                        if let associatedPeerId = peer.associatedPeerId {
-                                            associatedPeer = renderedPeer.peers[associatedPeerId]
-                                        }
-                                        entries.append(ShareSearchPeerEntry(index: index, peer: peer, theme: theme, strings: strings))
-                                        index += 1
-                                    }
-                                }
+                        }
+                        
+                        for foundPeer in foundRemotePeers.0 {
+                            let peer = foundPeer.peer
+                            if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
+                                existingPeerIds.insert(peer.id)
+                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: foundPeer.peer), theme: theme, strings: strings))
+                                index += 1
                             }
-                            
-                            for foundPeer in foundRemotePeers.0 {
-                                let peer = foundPeer.peer
-                                if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                                    existingPeerIds.insert(peer.id)
-                                    entries.append(ShareSearchPeerEntry(index: index, peer: foundPeer.peer, theme: theme, strings: strings))
-                                    index += 1
-                                }
+                        }
+                        
+                        for foundPeer in foundRemotePeers.1 {
+                            let peer = foundPeer.peer
+                            if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
+                                existingPeerIds.insert(peer.id)
+                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: peer), theme: theme, strings: strings))
+                                index += 1
                             }
-                            
-                            for foundPeer in foundRemotePeers.1 {
-                                let peer = foundPeer.peer
-                                if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                                    existingPeerIds.insert(peer.id)
-                                    entries.append(ShareSearchPeerEntry(index: index, peer: peer, theme: theme, strings: strings))
-                                    index += 1
-                                }
-                            }
-                            
-                            return entries
+                        }
+                        
+                        return entries
                     }
                 } else {
                     return .single(nil)
@@ -298,28 +294,28 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         let previousSearchItems = Atomic<[ShareSearchPeerEntry]?>(value: nil)
         self.searchDisposable.set((foundItems
-            |> deliverOnMainQueue).start(next: { [weak self] entries in
-                if let strongSelf = self {
-                    let previousEntries = previousSearchItems.swap(entries)
-                    strongSelf.entries = entries ?? []
-                    
-                    let firstTime = previousEntries == nil
-                    let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
-                    strongSelf.enqueueTransition(transition, firstTime: firstTime)
-                    
-                    if (previousEntries == nil) != (entries == nil) {
-                        if previousEntries == nil {
-                            strongSelf.recentGridNode.isHidden = true
-                            strongSelf.contentGridNode.isHidden = false
-                            strongSelf.transitionToContentGridLayout()
-                        } else {
-                            strongSelf.recentGridNode.isHidden = false
-                            strongSelf.contentGridNode.isHidden = true
-                            strongSelf.transitionToRecentGridLayout()
-                        }
+        |> deliverOnMainQueue).start(next: { [weak self] entries in
+            if let strongSelf = self {
+                let previousEntries = previousSearchItems.swap(entries)
+                strongSelf.entries = entries ?? []
+                
+                let firstTime = previousEntries == nil
+                let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
+                strongSelf.enqueueTransition(transition, firstTime: firstTime)
+                
+                if (previousEntries == nil) != (entries == nil) {
+                    if previousEntries == nil {
+                        strongSelf.recentGridNode.isHidden = true
+                        strongSelf.contentGridNode.isHidden = false
+                        strongSelf.transitionToContentGridLayout()
+                    } else {
+                        strongSelf.recentGridNode.isHidden = false
+                        strongSelf.contentGridNode.isHidden = true
+                        strongSelf.transitionToRecentGridLayout()
                     }
                 }
-            }))
+            }
+        }))
         
         self.searchNode.textUpdated = { [weak self] text in
             self?.searchQuery.set(text)
@@ -414,7 +410,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         var scrollToItem: GridNodeScrollToItem?
         if !self.contentGridNode.isHidden, let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {
             self.ensurePeerVisibleOnLayout = nil
-            if let index = self.entries.index(where: { $0.peer.id == ensurePeerVisibleOnLayout }) {
+            if let index = self.entries.index(where: { $0.peer.peerId == ensurePeerVisibleOnLayout }) {
                 scrollToItem = GridNodeScrollToItem(index: index, position: .visible, transition: transition, directionHint: .up, adjustForSection: false)
             }
         }

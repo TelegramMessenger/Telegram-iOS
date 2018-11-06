@@ -47,6 +47,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     private var status: FileMediaResourceMediaStatus?
     private let playbackStatusDisposable = MetaDisposable()
+    private let fetchedThumbnailDisposable = MetaDisposable()
     
     private var shouldAcquireVideoContext: Bool {
         if case .visible = self.visibility {
@@ -97,6 +98,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     deinit {
         self.fetchDisposable.dispose()
         self.playbackStatusDisposable.dispose()
+        self.fetchedThumbnailDisposable.dispose()
     }
     
     override func didLoad() {
@@ -286,6 +288,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.status = status.mediaStatus
                             strongSelf.updateStatus()
                         }))
+                    }
+                    
+                    if let updatedFile = updatedFile, updatedMedia {
+                        if let resource = updatedFile.previewRepresentations.first?.resource {
+                            strongSelf.fetchedThumbnailDisposable.set(fetchedMediaResource(postbox: item.account.postbox, reference: FileMediaReference.message(message: MessageReference(item.message), media: updatedFile).resourceReference(resource)).start())
+                        } else {
+                            strongSelf.fetchedThumbnailDisposable.set(nil)
+                        }
                     }
                     
                     dateAndStatusApply(false)

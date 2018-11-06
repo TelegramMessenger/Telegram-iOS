@@ -133,7 +133,7 @@ final class SelectablePeerNode: ASDisplayNode {
             self.currentSelected = selected
             
             if let attributedText = self.textNode.attributedText {
-                self.textNode.attributedText = NSAttributedString(string: attributedText.string, font: textFont, textColor: selected ? self.theme.selectedTextColor : self.theme.textColor, paragraphAlignment: .center)
+                self.textNode.attributedText = NSAttributedString(string: attributedText.string, font: textFont, textColor: selected ? self.theme.selectedTextColor : (self.peer?.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor), paragraphAlignment: .center)
             }
             
             if selected {

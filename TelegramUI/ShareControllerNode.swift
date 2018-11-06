@@ -142,20 +142,20 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer, search in
             if let strongSelf = self {
                 var added = false
-                if strongSelf.controllerInteraction!.selectedPeerIds.contains(peer.id) {
-                    strongSelf.controllerInteraction!.selectedPeerIds.remove(peer.id)
-                    strongSelf.controllerInteraction!.selectedPeers = strongSelf.controllerInteraction!.selectedPeers.filter({ $0.id != peer.id })
+                if strongSelf.controllerInteraction!.selectedPeerIds.contains(peer.peerId) {
+                    strongSelf.controllerInteraction!.selectedPeerIds.remove(peer.peerId)
+                    strongSelf.controllerInteraction!.selectedPeers = strongSelf.controllerInteraction!.selectedPeers.filter({ $0.peerId != peer.peerId })
                 } else {
-                    strongSelf.controllerInteraction!.selectedPeerIds.insert(peer.id)
+                    strongSelf.controllerInteraction!.selectedPeerIds.insert(peer.peerId)
                     strongSelf.controllerInteraction!.selectedPeers.append(peer)
                     
-                    strongSelf.contentNode?.setEnsurePeerVisibleOnLayout(peer.id)
+                    strongSelf.contentNode?.setEnsurePeerVisibleOnLayout(peer.peerId)
                     added = true
                 }
                 
                 if search && added {
                     strongSelf.controllerInteraction!.foundPeers = strongSelf.controllerInteraction!.foundPeers.filter { otherPeer in
-                        return peer.id != otherPeer.id
+                        return peer.peerId != otherPeer.peerId
                     }
                     strongSelf.controllerInteraction!.foundPeers.append(peer)
                     strongSelf.peersContentNode?.updateFoundPeers()
@@ -445,7 +445,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
             transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
             
-            if let signal = self.share?(self.inputFieldNode.text, self.controllerInteraction!.selectedPeers.map { $0.id }) {
+            if let signal = self.share?(self.inputFieldNode.text, self.controllerInteraction!.selectedPeers.map { $0.peerId }) {
                 self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
                 let timestamp = CACurrentMediaTime()
                 var wasDone = false

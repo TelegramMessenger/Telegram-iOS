@@ -1394,8 +1394,9 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                 }
                 telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
-                if true || initialThumbnailContextFittingSize.width < arguments.drawingSize.width * 0.5 {
-                    let thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                let thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                
+                if thumbnailContextFittingSize.width > thumbnailContextSize.width {
                     let additionalContextSize = thumbnailContextFittingSize
                     let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
                     additionalBlurContext.withFlippedContext { c in

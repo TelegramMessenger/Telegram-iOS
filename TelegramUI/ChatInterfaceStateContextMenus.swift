@@ -215,14 +215,14 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 } else if let group = messages[0].peers[messages[0].id.peerId] as? TelegramGroup {
                     if !isAction {
                         if group.flags.contains(.adminsEnabled) {
-                            canPin = true
-                        } else {
                             switch group.role {
                                 case .creator, .admin:
                                     canPin = true
                                 default:
                                     canPin = false
                             }
+                        } else {
+                            canPin = true
                         }
                     }
                 } else if let _ = messages[0].peers[messages[0].id.peerId] as? TelegramUser, chatPresentationInterfaceState.explicitelyCanPinMessages {

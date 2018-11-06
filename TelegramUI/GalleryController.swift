@@ -132,7 +132,7 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                     if file.isVideo {
                         let content: UniversalVideoContent
                         if file.isAnimated {
-                            content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: true, enableSound: false)
+                            content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: true, loopVideo: true, enableSound: false)
                         } else {
                             if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
                                 content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
@@ -307,7 +307,7 @@ class GalleryController: ViewController {
         |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, NoError> in
             switch source {
                 case .peerMessagesAtId:
-                    if !streamSingleVideo, let tags = tagsForMessage(message!) {
+                    if let tags = tagsForMessage(message!) {
                         let view = account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), index: .message(MessageIndex(message!)), anchorIndex: .message(MessageIndex(message!)), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
                         
                         return view

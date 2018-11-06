@@ -124,9 +124,9 @@ final class HorizontalPeerItemNode: ListViewItemNode {
             let itemTheme: SelectablePeerNodeTheme
             switch item.mode {
                 case .list:
-                    itemTheme = SelectablePeerNodeTheme(textColor: item.theme.list.itemPrimaryTextColor, secretTextColor: .green, selectedTextColor: item.theme.list.itemAccentColor, checkBackgroundColor: item.theme.list.plainBackgroundColor, checkFillColor: item.theme.list.itemAccentColor, checkColor: item.theme.list.plainBackgroundColor)
+                    itemTheme = SelectablePeerNodeTheme(textColor: item.theme.list.itemPrimaryTextColor, secretTextColor: item.theme.chatList.secretTitleColor, selectedTextColor: item.theme.list.itemAccentColor, checkBackgroundColor: item.theme.list.plainBackgroundColor, checkFillColor: item.theme.list.itemAccentColor, checkColor: item.theme.list.plainBackgroundColor)
                 case .actionSheet:
-                    itemTheme = SelectablePeerNodeTheme(textColor: item.theme.actionSheet.primaryTextColor, secretTextColor: .green, selectedTextColor: item.theme.actionSheet.controlAccentColor, checkBackgroundColor: item.theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: item.theme.actionSheet.controlAccentColor, checkColor: item.theme.actionSheet.opaqueItemBackgroundColor)
+                    itemTheme = SelectablePeerNodeTheme(textColor: item.theme.actionSheet.primaryTextColor, secretTextColor: item.theme.chatList.secretTitleColor, selectedTextColor: item.theme.actionSheet.controlAccentColor, checkBackgroundColor: item.theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: item.theme.actionSheet.controlAccentColor, checkColor: item.theme.actionSheet.opaqueItemBackgroundColor)
             }
             let currentBadgeBackgroundImage: UIImage?
             let badgeAttributedString: NSAttributedString

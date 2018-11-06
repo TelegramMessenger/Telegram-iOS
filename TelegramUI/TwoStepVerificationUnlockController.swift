@@ -183,14 +183,15 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                 switch configuration {
                     case let .notSet(pendingEmailAndValue):
                         if let pendingEmailAndValue = pendingEmailAndValue {
-                            entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
+                            /*entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
                             if pendingEmailAndValue.email != nil {
                             } else {
                                 entries.append(.pendingEmailConfirmAddress(presentationData.theme, presentationData.strings.TwoStepAuth_EmailTitle, state.emailAddress))
                             }
                             entries.append(.pendingEmailConfirmCode(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.emailCode))
-                            //entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmail.pattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
-                            entries.append(.pendingEmailInfo(presentationData.theme, "[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
+                             entries.append(.pendingEmailInfo(presentationData.theme, "[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
+                             */
+                            entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmailAndValue.pendingEmail.pattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
                         } else {
                             entries.append(.passwordSetup(presentationData.theme, presentationData.strings.TwoStepAuth_SetPassword))
                             entries.append(.passwordSetupInfo(presentationData.theme, presentationData.strings.TwoStepAuth_SetPasswordHelp))
@@ -209,14 +210,14 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
             entries.append(.turnPasswordOff(presentationData.theme, presentationData.strings.TwoStepAuth_RemovePassword))
             entries.append(.setupRecoveryEmail(presentationData.theme, emailSet ? presentationData.strings.TwoStepAuth_ChangeEmail : presentationData.strings.TwoStepAuth_SetupEmail))
             if let pendingEmailAndValue = pendingEmailAndValue {
-                entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
+                /*entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
                 if pendingEmailAndValue.email != nil {
                 } else {
                     entries.append(.pendingEmailConfirmAddress(presentationData.theme, presentationData.strings.TwoStepAuth_EmailTitle, state.emailAddress))
                 }
-                entries.append(.pendingEmailConfirmCode(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.emailCode))
-                //entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmail.pattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
-                //entries.append(.pendingEmailInfo(presentationData.theme, "[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
+                entries.append(.pendingEmailConfirmCode(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.emailCode))*/
+                //entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmailAndValue.pendingEmail.pattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
+                entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
             } else {
                 entries.append(.passwordInfo(presentationData.theme, presentationData.strings.TwoStepAuth_GenericHelp))
             }
@@ -697,11 +698,12 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     } else {
                         switch configuration {
                             case let .notSet(pendingEmail):
-                                if let pendingEmailAndValue = pendingEmail {
+                                /*if let pendingEmailAndValue = pendingEmail {
                                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: (pendingEmailAndValue.email != nil || !state.emailAddress.isEmpty) && !state.emailCode.isEmpty, action: {
                                         checkEmailConfirmation()
                                     })
-                                }
+                                }*/
+                                break
                             case .set:
                                 rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: true, action: {
                                     arguments.checkPassword()
@@ -716,11 +718,11 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                 if state.checking {
                     rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
                 } else {
-                    if let pendingEmailAndValue = manage.pendingEmail {
+                    /*if let pendingEmailAndValue = manage.pendingEmail {
                         rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: (pendingEmailAndValue.email != nil || !state.emailAddress.isEmpty) && !state.emailCode.isEmpty, action: {
                             checkEmailConfirmation()
                         })
-                    }
+                    }*/
                 }
         }
         

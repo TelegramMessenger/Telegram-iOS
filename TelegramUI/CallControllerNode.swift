@@ -313,6 +313,8 @@ final class CallControllerNode: ASDisplayNode {
             self.containerNode.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3, removeOnCompletion: false, completion: { _ in
                 completion()
             })
+        } else {
+            completion()
         }
     }
     

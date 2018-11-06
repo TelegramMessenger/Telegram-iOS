@@ -60,7 +60,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let controllerInteraction: ShareControllerInteraction
     
     private let accountPeer: Peer
-    private let foundPeers = Promise<[Peer]>([])
+    private let foundPeers = Promise<[RenderedPeer]>([])
     
     private let disposable = MetaDisposable()
     private var entries: [SharePeerEntry] = []
@@ -100,8 +100,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             index += 1
             
             for peer in foundPeers.reversed() {
-                entries.append(SharePeerEntry(index: index, peer: RenderedPeer(peer: peer), theme: theme, strings: strings))
-                existingPeerIds.insert(peer.id)
+                entries.append(SharePeerEntry(index: index, peer: peer, theme: theme, strings: strings))
+                existingPeerIds.insert(peer.peerId)
                 index += 1
             }
             
@@ -325,10 +325,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         if !self.controllerInteraction.selectedPeers.isEmpty {
             subtitleText = self.controllerInteraction.selectedPeers.reduce("", { string, peer in
                 let text: String
-                if peer.id == self.accountPeer.id {
+                if peer.peerId == self.accountPeer.id {
                     text = self.strings.DialogList_SavedMessages
                 } else {
-                    text = peer.displayTitle
+                    text = peer.chatMainPeer?.displayTitle ?? ""
                 }
                 
                 if !string.isEmpty {

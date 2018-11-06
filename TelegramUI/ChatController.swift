@@ -295,12 +295,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 }
             }
             
-            if case .stream = mode {
-                strongSelf.debugStreamSingleVideo(message.id)
-                return true
-            }
-            
-            return openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+            return openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, stream: mode == .stream, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -2565,10 +2560,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     } else if let group = peer as? TelegramGroup {
                         if group.flags.contains(.adminsEnabled) {
                             switch group.role {
-                            case .creator, .admin:
-                                canManagePin = true
-                            default:
-                                canManagePin = false
+                                case .creator, .admin:
+                                    canManagePin = true
+                                default:
+                                    canManagePin = false
                             }
                         } else {
                             canManagePin = true
@@ -4194,7 +4189,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 }
             }
             
-            if case let .peer(peerId) = self.chatLocation, messageLocation.messageId.peerId == peerId {
+            if case let .peer(peerId) = self.chatLocation, messageLocation.messageId.peerId != peerId {
+                if let navigationController = self.navigationController as? NavigationController {
+                    navigateToChatController(navigationController: navigationController, account: self.account, chatLocation: .peer(messageLocation.messageId.peerId), messageId: messageLocation.messageId)
+                }
+            } else if case let .peer(peerId) = self.chatLocation, messageLocation.messageId.peerId == peerId {
                 if let fromIndex = fromIndex {
                     if let _ = fromId, rememberInStack {
                         self.historyNavigationStack.add(fromIndex)
@@ -4216,36 +4215,72 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         }
                         let historyView = chatHistoryViewForLocation(.InitialSearch(location: searchLocation, count: 50), account: self.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                         let signal = historyView
-                        |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
+                        |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                             switch historyView {
                                 case .Loading:
-                                    return .complete()
+                                    return .single((nil, true))
                                 case let .HistoryView(view, _, _, _, _):
                                     for entry in view.entries {
                                         if case let .MessageEntry(message, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {
-                                                return .single(MessageIndex(message))
+                                                return .single((MessageIndex(message), false))
                                             }
                                         }
                                     }
                                     if case let .index(index) = searchLocation {
-                                        return .single(index)
+                                        return .single((index, false))
                                     }
-                                    return .single(nil)
+                                    return .single((nil, false))
                             }
                         }
-                        |> take(1)
+                        |> take(until: { index in
+                            return SignalTakeAction(passthrough: true, complete: !index.1)
+                        })
+                        
+                        var cancelImpl: (() -> Void)?
+                        let presentationData = self.presentationData
+                        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                                cancelImpl?()
+                            }))
+                            self?.present(controller, in: .window(.root))
+                            return ActionDisposable { [weak controller] in
+                                Queue.mainQueue().async() {
+                                    controller?.dismiss()
+                                }
+                            }
+                        }
+                        |> runOn(Queue.mainQueue())
+                        |> delay(0.15, queue: Queue.mainQueue())
+                        let progressDisposable = MetaDisposable()
+                        var progressStarted = false
                         self.messageIndexDisposable.set((signal
+                        |> afterDisposed {
+                            Queue.mainQueue().async {
+                                progressDisposable.dispose()
+                            }
+                        }
                         |> deliverOnMainQueue).start(next: { [weak self] index in
-                            if let strongSelf = self, let index = index {
+                            if let strongSelf = self, let index = index.0 {
                                 strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                                 completion?()
+                            } else if index.1 {
+                                if !progressStarted {
+                                    progressStarted = true
+                                progressDisposable.set(progressSignal.start())
+                                }
                             }
                         }, completed: { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.loadingMessage.set(false)
                             }
                         }))
+                        cancelImpl = { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.loadingMessage.set(false)
+                                strongSelf.messageIndexDisposable.set(nil)
+                            }
+                        }
                     }
                 } else {
                     completion?()

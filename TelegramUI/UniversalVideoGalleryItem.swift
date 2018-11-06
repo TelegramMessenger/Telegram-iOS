@@ -374,7 +374,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 initialBuffering = true
                                 //buffering = true
                                 isPaused = !whilePlaying
-                                if let content = item.content as? NativeVideoContent, !content.streamVideo {
+                                var isStreaming = false
+                                if let fetchStatus = strongSelf.fetchStatus {
+                                    switch fetchStatus {
+                                        case .Local:
+                                            break
+                                        default:
+                                            isStreaming = true
+                                    }
+                                }
+                                if let content = item.content as? NativeVideoContent, !isStreaming {
                                     initialBuffering = false
                                     if !content.enableSound {
                                         isPaused = false

@@ -102,7 +102,7 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
             video: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
             file: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
             voiceMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 1 * 1024 * 1024),
-            videoMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 1 * 1024 * 1024),
+            videoMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 4 * 1024 * 1024),
             saveDownloadedPhotos: false
         )
         return AutomaticMediaDownloadSettings(masterEnabled: true, peers: AutomaticMediaDownloadPeers(
@@ -202,10 +202,14 @@ private func categoryForPeerAndMedia(settings: AutomaticMediaDownloadSettings, p
             switch attribute {
                 case let .Video(_, _, flags):
                     if flags.contains(.instantRoundVideo) {
-                        return (categories.videoMessage, file.size.flatMap(Int32.init))
+                        var category = categories.videoMessage
+                        category.sizeLimit = max(category.sizeLimit, 4 * 1024 * 1024)
+                        return (category, file.size.flatMap(Int32.init))
                     } else {
                         if file.isAnimated {
-                            return (categories.videoMessage, file.size.flatMap(Int32.init))
+                            var category = categories.videoMessage
+                            category.sizeLimit = max(category.sizeLimit, 1 * 1024 * 1024)
+                            return (category, file.size.flatMap(Int32.init))
                         } else {
                             return (categories.video, file.size.flatMap(Int32.init))
                         }
