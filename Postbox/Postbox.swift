@@ -2545,6 +2545,8 @@ public final class Postbox {
                     additionalDataEntries.append(.peerNotificationSettings(self.peerNotificationSettingsTable.getEffective(notificationPeerId)))
                 case let .cacheEntry(entryId):
                     additionalDataEntries.append(.cacheEntry(entryId, self.retrieveItemCacheEntry(id: entryId)))
+                case let .preferencesEntry(key):
+                    additionalDataEntries.append(.preferencesEntry(key, self.preferencesTable.get(key: key)))
                 case let .peerIsContact(peerId):
                     let value: Bool
                     if let contactPeer = self.peerTable.get(peerId), let associatedPeerId = contactPeer.associatedPeerId {
