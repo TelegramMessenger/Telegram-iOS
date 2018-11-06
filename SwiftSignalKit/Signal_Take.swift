@@ -28,6 +28,36 @@ public func take<T, E>(_ count: Int) -> (Signal<T, E>) -> Signal<T, E> {
     }
 }
 
+public struct SignalTakeAction {
+    public let passthrough: Bool
+    public let complete: Bool
+    
+    public init(passthrough: Bool, complete: Bool) {
+        self.passthrough = passthrough
+        self.complete = complete
+    }
+}
+
+public func take<T, E>(until: @escaping (T) -> SignalTakeAction) -> (Signal<T, E>) -> Signal<T, E> {
+    return { signal in
+        return Signal { subscriber in
+            return signal.start(next: { next in
+                let action = until(next)
+                if action.passthrough {
+                    subscriber.putNext(next)
+                }
+                if action.complete {
+                    subscriber.putCompletion()
+                }
+            }, error: { error in
+                subscriber.putError(error)
+            }, completed: {
+                subscriber.putCompletion()
+            })
+        }
+    }
+}
+
 public func last<T, E>(signal: Signal<T, E>) -> Signal<T?, E> {
     return Signal { subscriber in
         let value = Atomic<T?>(value: nil)
