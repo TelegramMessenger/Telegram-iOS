@@ -140,7 +140,6 @@ private enum PreferencesKeyValues: Int32 {
     case suggestedLocalization = 3
     case limitsConfiguration = 4
     case proxySettings = 5
-    case loggingSettings = 6
     case coreSettings = 7
     case contentPrivacySettings = 8
     case networkSettings = 9
@@ -192,12 +191,6 @@ public struct PreferencesKeys {
         return key
     }()
     
-    public static let loggingSettings: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.loggingSettings.rawValue)
-        return key
-    }()
-    
     public static let coreSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.coreSettings.rawValue)
@@ -231,6 +224,18 @@ public struct PreferencesKeys {
     public static let appChangelogState: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.appChangelogState.rawValue)
+        return key
+    }()
+}
+
+private enum SharedDataKeyValues: Int32 {
+    case loggingSettings = 0
+}
+
+public struct SharedDataKeys {
+    public static let loggingSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.loggingSettings.rawValue)
         return key
     }()
 }
