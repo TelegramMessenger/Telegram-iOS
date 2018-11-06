@@ -244,6 +244,9 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
     func updateIsVisible(_ isVisible: Bool) {
     }
     
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    }
+    
     @objc func buttonPressed() {
         if let _ = self.playbackState {
             self.account.telegramApplicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: self.playlistType)

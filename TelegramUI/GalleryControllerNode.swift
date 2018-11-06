@@ -163,7 +163,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                     strongSelf.currentThumbnailContainerNode = node
                     if let node = node {
                         strongSelf.insertSubnode(node, aboveSubnode: strongSelf.footerNode)
-                        if let (navigationHeight, layout) = strongSelf.containerLayout {
+                        if let (navigationHeight, layout) = strongSelf.containerLayout, !strongSelf.areControlsHidden {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
                             node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             node.animateIn(fromLeft: fromLeft)

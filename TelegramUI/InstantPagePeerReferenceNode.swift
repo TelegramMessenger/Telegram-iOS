@@ -171,6 +171,9 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         }
     }
     
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    }
+    
     private func applyThemeAndStrings(themeUpdated: Bool) {
         if let peer = self.peer {
             self.nameNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: self.theme.panelPrimaryColor)

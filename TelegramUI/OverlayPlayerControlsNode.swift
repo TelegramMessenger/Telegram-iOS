@@ -222,13 +222,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     
                     displayData = value.item.displayData
                     
-                    let baseColor: UIColor
-                    if strongSelf.theme.list.itemPrimaryTextColor.isEqual(strongSelf.theme.list.itemAccentColor) {
-                        baseColor = strongSelf.theme.list.controlSecondaryColor
-                    } else {
-                        baseColor = strongSelf.theme.list.itemPrimaryTextColor
-                    }
-                    
+                    let baseColor = strongSelf.theme.list.itemSecondaryTextColor                    
                     if value.order != strongSelf.currentOrder {
                         strongSelf.updateOrder?(value.order)
                         strongSelf.currentOrder = value.order

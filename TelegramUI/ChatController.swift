@@ -109,6 +109,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     private let messageContextDisposable = MetaDisposable()
     private let controllerNavigationDisposable = MetaDisposable()
     private let sentMessageEventsDisposable = MetaDisposable()
+    private let failedMessageEventsDisposable = MetaDisposable()
     private let messageActionCallbackDisposable = MetaDisposable()
     private let editMessageDisposable = MetaDisposable()
     private let enqueueMediaMessageDisposable = MetaDisposable()
@@ -738,50 +739,41 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             if let strongSelf = self {
                 strongSelf.commitPurposefulAction()
                 
-                func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<Peer?, NoError> {
-                    return postbox.transaction { transaction -> Peer? in
-                        guard let peer = transaction.getPeer(peerId) else {
-                            return nil
-                        }
-                        if let peer = peer as? TelegramSecretChat {
-                            return transaction.getPeer(peer.regularPeerId)
+                let _ = (account.viewTracker.peerView(peerId)
+                |> take(1)
+                |> map { view -> Peer? in
+                    return peerViewMainPeer(view)
+                }
+                |> deliverOnMainQueue).start(next: { peer in
+                    guard let peer = peer else {
+                        return
+                    }
+                    
+                    if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData, cachedUserData.callsPrivate {
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        return
+                    }
+                    
+                    let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: false)
+                    if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
+                        if currentPeerId == peer.id {
+                            account.telegramApplicationContext.navigateToCurrentCall?()
                         } else {
-                            return peer
+                            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                            let _ = (account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                                return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
+                                } |> deliverOnMainQueue).start(next: { peer, current in
+                                    if let peer = peer, let current = current {
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                            let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
+                                        })]), in: .window(.root))
+                                    }
+                                })
                         }
                     }
-                }
-                
-                let _ = (getUserPeer(postbox: strongSelf.account.postbox, peerId: peerId)
-                    |> deliverOnMainQueue).start(next: { peer in
-                        guard let peer = peer else {
-                            return
-                        }
-                        
-                        if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData, cachedUserData.callsPrivate {
-                            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                            
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                            return
-                        }
-                        
-                        let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: false)
-                        if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                            if currentPeerId == peer.id {
-                                account.telegramApplicationContext.navigateToCurrentCall?()
-                            } else {
-                                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                                let _ = (account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                                    return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
-                                    } |> deliverOnMainQueue).start(next: { peer, current in
-                                        if let peer = peer, let current = current {
-                                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                                let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
-                                            })]), in: .window(.root))
-                                        }
-                                    })
-                            }
-                        }
-                    })
+                })
             }
         }, longTap: { [weak self] action in
             if let strongSelf = self {
@@ -1438,6 +1430,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         self.messageContextDisposable.dispose()
         self.controllerNavigationDisposable.dispose()
         self.sentMessageEventsDisposable.dispose()
+        self.failedMessageEventsDisposable.dispose()
         self.messageActionCallbackDisposable.dispose()
         self.editMessageDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
@@ -2049,6 +2042,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             }
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
+                strongSelf.commitPurposefulAction()
                 if let forwardMessageIdsSet = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds {
                     let forwardMessageIds = Array(forwardMessageIdsSet).sorted()
                     strongSelf.forwardMessages(messageIds: forwardMessageIds)
@@ -2056,11 +2050,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             }
         }, forwardMessages: { [weak self] messages in
             if let strongSelf = self, !messages.isEmpty {
+                strongSelf.commitPurposefulAction()
                 let forwardMessageIds = messages.map { $0.id }.sorted()
                 strongSelf.forwardMessages(messageIds: forwardMessageIds)
             }
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
+                strongSelf.commitPurposefulAction()
                 let _ = (strongSelf.account.postbox.transaction { transaction -> [Message] in
                     var messages: [Message] = []
                     for id in selectedIds {
@@ -2784,6 +2780,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         
                         if inAppNotificationSettings.playSounds {
                             serviceSoundManager.playMessageDeliveredSound()
+                        }
+                    }
+                }))
+            
+                self.failedMessageEventsDisposable.set((self.account.pendingMessageManager.failedMessageEvents(peerId: peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] reason in
+                    if let strongSelf = self {
+                        switch reason {
+                            case .flood:
+                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Generic_ErrorMoreInfo, action: {
+                                    self?.openPeerMention("spambot", navigation: .chat(textInputState: nil, messageId: nil))
+                                }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         }
                     }
                 }))
@@ -4493,7 +4501,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         }
     }
     
-    private func openPeerMention(_ name: String) {
+    private func openPeerMention(_ name: String, navigation: ChatControllerInteractionNavigateToPeer = .default) {
         let disposable: MetaDisposable
         if let resolvePeerByNameDisposable = self.resolvePeerByNameDisposable {
             disposable = resolvePeerByNameDisposable
@@ -4531,7 +4539,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         }
         disposable.set((resolveSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peerId in
             if let strongSelf = self {
-                strongSelf.openResolved(.peer(peerId, .default))
+                strongSelf.openResolved(.peer(peerId, navigation))
             }
         }))
     }
@@ -4739,7 +4747,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         guard let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view else {
             return nil
         }
-        if let peer = self.presentationInterfaceState.renderedPeer?.peer, peer.smallProfileImage != nil {
+        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer, peer.smallProfileImage != nil {
             let galleryController = AvatarGalleryController(account: self.account, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
             }, synchronousLoad: true)
             galleryController.setHintWillBePresentedInPreviewingContext(true)

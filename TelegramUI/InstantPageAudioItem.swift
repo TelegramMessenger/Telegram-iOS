@@ -6,6 +6,7 @@ import AsyncDisplayKit
 final class InstantPageAudioItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
+    let separatesTiles: Bool = false
     let medias: [InstantPageMedia]
     
     let media: InstantPageMedia
@@ -18,7 +19,7 @@ final class InstantPageAudioItem: InstantPageItem {
         self.medias = [media]
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageAudioNode(account: account, strings: strings, theme: theme, webPage: self.webpage, media: self.media, openMedia: openMedia)
     }
     

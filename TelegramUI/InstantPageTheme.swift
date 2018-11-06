@@ -39,6 +39,7 @@ enum InstantPageTextCategoryType {
     case paragraph
     case caption
     case table
+    case article
 }
 
 struct InstantPageTextCategories {
@@ -48,6 +49,7 @@ struct InstantPageTextCategories {
     let paragraph: InstantPageTextAttributes
     let caption: InstantPageTextAttributes
     let table: InstantPageTextAttributes
+    let article: InstantPageTextAttributes
     
     func attributes(type: InstantPageTextCategoryType, link: Bool) -> InstantPageTextAttributes {
         switch type {
@@ -63,11 +65,13 @@ struct InstantPageTextCategories {
                 return self.caption.withUnderline(link)
             case .table:
                 return self.table.withUnderline(link)
+            case .article:
+                return self.article.withUnderline(link)
         }
     }
     
     func withUpdatedFontStyles(sizeMultiplier: CGFloat, forceSerif: Bool) -> InstantPageTextCategories {
-        return InstantPageTextCategories(kicker: self.kicker.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), header: self.header.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), subheader: self.subheader.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), paragraph: self.paragraph.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), caption: self.caption.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), table: self.table.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif))
+        return InstantPageTextCategories(kicker: self.kicker.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), header: self.header.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), subheader: self.subheader.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), paragraph: self.paragraph.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), caption: self.caption.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), table: self.table.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), article: self.article.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif))
     }
 }
 
@@ -128,7 +132,8 @@ private let lightTheme = InstantPageTheme(
         subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: .black),
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: .black),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x79828b)),
-        table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: .black)
+        table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: .black),
+        article: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 17.0, lineSpacingFactor: 1.0), color: .black)
     ),
     serif: false,
     codeBlockBackgroundColor: UIColor(rgb: 0xf5f8fc),
@@ -154,7 +159,8 @@ private let sepiaTheme = InstantPageTheme(
         subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0x4f321d)),
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x4f321d)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x927e6b)),
-        table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x4f321d))
+        table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x4f321d)),
+        article: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x4f321d))
     ),
     serif: false,
     codeBlockBackgroundColor: UIColor(rgb: 0xefe7d6),
@@ -180,7 +186,8 @@ private let grayTheme = InstantPageTheme(
         subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0xcecece)),
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xcecece)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xa0a0a0)),
-        table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xcecece))
+        table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xcecece)),
+        article: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xcecece))
     ),
     serif: false,
     codeBlockBackgroundColor: UIColor(rgb: 0x555556),
@@ -206,7 +213,8 @@ private let darkTheme = InstantPageTheme(
         subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: UIColor(rgb: 0xb0b0b0)),
         paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xb0b0b0)),
         caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0x6a6a6a)),
-        table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xb0b0b0))
+        table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xb0b0b0)),
+        article: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 17.0, lineSpacingFactor: 1.0), color: UIColor(rgb: 0xb0b0b0))
     ),
     serif: false,
     codeBlockBackgroundColor: UIColor(rgb: 0x131313),

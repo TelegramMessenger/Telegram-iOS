@@ -7,6 +7,7 @@ final class InstantPageSlideshowItem: InstantPageItem {
     var frame: CGRect
     let webPage: TelegramMediaWebpage
     let wantsNode: Bool = true
+    let separatesTiles: Bool = false
     let medias: [InstantPageMedia]
     
     init(frame: CGRect, webPage: TelegramMediaWebpage, medias: [InstantPageMedia]) {
@@ -15,7 +16,7 @@ final class InstantPageSlideshowItem: InstantPageItem {
         self.medias = medias
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageSlideshowNode(account: account, theme: theme, webPage: webPage, medias: self.medias, openMedia: openMedia)
     }
     

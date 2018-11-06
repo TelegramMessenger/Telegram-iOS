@@ -125,8 +125,9 @@ final class OngoingCallContext {
     private let audioSessionDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
     
-    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
+    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?) {
         let _ = setupLogs
+        OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
         self.internalId = internalId
         self.callSessionManager = callSessionManager

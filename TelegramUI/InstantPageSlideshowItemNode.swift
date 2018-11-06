@@ -426,6 +426,9 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
         self.pagerNode.internalIsVisible = isVisible
     }
     
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    }
+    
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
     }
 }

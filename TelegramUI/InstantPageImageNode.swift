@@ -91,6 +91,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     func updateIsVisible(_ isVisible: Bool) {    
     }
     
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    }
+    
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
         if self.theme.imageEmptyColor != theme.imageEmptyColor {
             self.theme = theme

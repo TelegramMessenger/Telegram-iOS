@@ -604,7 +604,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconInstantIncoming(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
                         }
                         titleColor = presentationData.theme.theme.chat.bubble.incomingAccentTextColor
-                        
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
                         titleHighlightedColor = bubbleColor.fill
                     } else {
@@ -614,9 +613,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconInstantOutgoing(presentationData.theme.theme)!
                             buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconInstantOutgoing(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
                         }
-                        let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
-                        
                         titleColor = presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                        let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
                         titleHighlightedColor = bubbleColor.fill
                     }
                     let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, buttonIconImage, buttonHighlightedIconImage, actionTitle, titleColor, titleHighlightedColor)

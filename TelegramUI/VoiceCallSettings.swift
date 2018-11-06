@@ -11,7 +11,7 @@ public enum VoiceCallDataSaving: Int32 {
 
 public struct VoiceCallSettings: PreferencesEntry, Equatable {
     public var dataSaving: VoiceCallDataSaving
-    public var p2pMode: VoiceCallP2PMode?
+    public var legacyP2PMode: VoiceCallP2PMode?
     public var enableSystemIntegration: Bool
     
     public static var defaultSettings: VoiceCallSettings {
@@ -20,23 +20,23 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
     
     init(dataSaving: VoiceCallDataSaving, p2pMode: VoiceCallP2PMode?, enableSystemIntegration: Bool) {
         self.dataSaving = dataSaving
-        self.p2pMode = p2pMode
+        self.legacyP2PMode = p2pMode
         self.enableSystemIntegration = enableSystemIntegration
     }
     
     public init(decoder: PostboxDecoder) {
         self.dataSaving = VoiceCallDataSaving(rawValue: decoder.decodeInt32ForKey("ds", orElse: 0))!
         if let value = decoder.decodeOptionalInt32ForKey("p2pMode") {
-            self.p2pMode = VoiceCallP2PMode(rawValue: value) ?? .contacts
+            self.legacyP2PMode = VoiceCallP2PMode(rawValue: value)
         } else {
-            self.p2pMode = nil
+            self.legacyP2PMode = nil
         }
         self.enableSystemIntegration = decoder.decodeInt32ForKey("enableSystemIntegration", orElse: 1) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.dataSaving.rawValue, forKey: "ds")
-        if let p2pMode = self.p2pMode {
+        if let p2pMode = self.legacyP2PMode {
             encoder.encodeInt32(p2pMode.rawValue, forKey: "p2pMode")
         } else {
             encoder.encodeNil(forKey: "p2pMode")
@@ -56,7 +56,7 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
         if lhs.dataSaving != rhs.dataSaving {
             return false
         }
-        if lhs.p2pMode != rhs.p2pMode {
+        if lhs.legacyP2PMode != rhs.legacyP2PMode {
             return false
         }
         if lhs.enableSystemIntegration != rhs.enableSystemIntegration {

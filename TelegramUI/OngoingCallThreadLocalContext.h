@@ -50,6 +50,7 @@ typedef NS_ENUM(int32_t, OngoingCallNetworkType) {
 @interface OngoingCallThreadLocalContext : NSObject
 
 + (void)setupLoggingFunction:(void (* _Nullable)(NSString * _Nullable))loggingFunction;
++ (void)applyServerConfig:(NSString * _Nullable)data;
 
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallState);
 @property (nonatomic, copy) void (^ _Nullable callEnded)(NSString * _Nullable debugLog, int64_t bytesSentWifi, int64_t bytesReceivedWifi, int64_t bytesSentMobile, int64_t bytesReceivedMobile);

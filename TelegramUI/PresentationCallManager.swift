@@ -4,19 +4,6 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
-private func p2pAllowed(settings: (VoiceCallSettings, VoipConfiguration)?, isContact: Bool) -> Bool {
-    var mode: VoiceCallP2PMode? = settings?.0.p2pMode
-    if mode == nil {
-        mode = settings?.1.defaultP2PMode
-    }
-    switch (mode ?? .contacts, isContact) {
-        case (.always, _), (.contacts, true):
-            return true
-        default:
-            return false
-    }
-}
-
 private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, settings: VoiceCallSettings?) -> CallKitIntegration?  {
     let enabled = settings?.enableSystemIntegration ?? true
     return enabled ? integration : nil
@@ -198,6 +185,25 @@ public final class PresentationCallManager {
             let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
             if let strongSelf = self {
                 strongSelf.callSettings = (callSettings, configuration)
+                
+                if let legacyP2PMode = callSettings.legacyP2PMode {
+                    _ = updateVoiceCallSettingsSettingsInteractively(postbox: postbox, { settings -> VoiceCallSettings in
+                        var settings = settings
+                        settings.legacyP2PMode = nil
+                        return settings
+                    }).start()
+                    
+                    let settings: SelectivePrivacySettings
+                    switch legacyP2PMode {
+                        case .always:
+                            settings = .enableEveryone(disableFor: Set<PeerId>())
+                        case .contacts:
+                            settings = .enableContacts(enableFor: Set<PeerId>(), disableFor: Set<PeerId>())
+                        case .never:
+                            settings = .disableEveryone(enableFor: Set<PeerId>())
+                    }
+                    _ = updateSelectiveAccountPrivacySettings(account: account, type: .voiceCallsP2P, settings: settings).start()
+                }
             }
         })
     }
@@ -213,7 +219,7 @@ public final class PresentationCallManager {
     private func ringingStatesUpdated(_ ringingStates: [(Peer, CallSessionRingingState, Bool)], currentNetworkType: NetworkType, enableCallKit: Bool) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil {
-                let call = PresentationCall(account: self.account, audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: enableCallKit ? self.callKitIntegration : nil, getDeviceAccessData: self.getDeviceAccessData, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, allowP2P: p2pAllowed(settings: self.callSettings, isContact: firstState.2), proxyServer: self.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: self.networkType)
+                let call = PresentationCall(account: self.account, audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: enableCallKit ? self.callKitIntegration : nil, serializedData: self.callSettings?.1.serializedData, getDeviceAccessData: self.getDeviceAccessData, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, proxyServer: self.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: self.networkType)
                 self.currentCall = call
                 self.currentCallPromise.set(.single(call))
                 self.hasActiveCallsPromise.set(true)
@@ -312,7 +318,7 @@ public final class PresentationCallManager {
                         currentCall.rejectBusy()
                     }
                  
-                    let call = PresentationCall(account: strongSelf.account, audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings?.0), getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, allowP2P: p2pAllowed(settings: strongSelf.callSettings, isContact: isContact), proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: strongSelf.networkType)
+                    let call = PresentationCall(account: strongSelf.account, audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings?.0), serializedData: strongSelf.callSettings?.1.serializedData, getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: strongSelf.networkType)
                     strongSelf.currentCall = call
                     strongSelf.currentCallPromise.set(.single(call))
                     strongSelf.hasActiveCallsPromise.set(true)

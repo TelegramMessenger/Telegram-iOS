@@ -5,6 +5,7 @@ import AsyncDisplayKit
 
 final class InstantPageAnchorItem: InstantPageItem {
     let wantsNode: Bool = false
+    let separatesTiles: Bool = false
     let medias: [InstantPageMedia] = []
 
     let anchor: String
@@ -22,7 +23,7 @@ final class InstantPageAnchorItem: InstantPageItem {
     func drawInTile(context: CGContext) {
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return nil
     }
     

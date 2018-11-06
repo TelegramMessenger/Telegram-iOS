@@ -29,6 +29,7 @@ final class InstantPageImageItem: InstantPageItem {
     let fit: Bool
     
     let wantsNode: Bool = true
+    let separatesTiles: Bool = false
     
     init(frame: CGRect, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute] = [], url: InstantPageUrlItem? = nil, interactive: Bool, roundCorners: Bool, fit: Bool) {
         self.frame = frame
@@ -41,7 +42,7 @@ final class InstantPageImageItem: InstantPageItem {
         self.fit = fit
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageImageNode(account: account, theme: theme, webPage: self.webPage, media: self.media, attributes: self.attributes, url: self.url, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia, openUrl: openUrl)
     }
     

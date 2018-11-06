@@ -75,6 +75,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     case currentSessionInfo(PresentationTheme, String)
     case pendingSessionsHeader(PresentationTheme, String)
     case pendingSession(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
+    case pendingSessionsInfo(PresentationTheme, String)
     case otherSessionsHeader(PresentationTheme, String)
     case session(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
     case website(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool)
@@ -83,7 +84,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         switch self {
             case .currentSessionHeader, .currentSession, .terminateOtherSessions, .terminateAllWebSessions, .currentSessionInfo:
                 return RecentSessionsSection.currentSession.rawValue
-            case .pendingSessionsHeader, .pendingSession:
+            case .pendingSessionsHeader, .pendingSession, .pendingSessionsInfo:
                 return RecentSessionsSection.pendingSessions.rawValue
             case .otherSessionsHeader, .session, .website:
                 return RecentSessionsSection.otherSessions.rawValue
@@ -106,8 +107,10 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return .index(5)
             case let .pendingSession(_, _, _, _, session, _, _, _):
                 return .session(session.hash)
-            case .otherSessionsHeader:
+            case .pendingSessionsInfo:
                 return .index(6)
+            case .otherSessionsHeader:
+                return .index(7)
             case let .session(_, _, _, _, session, _, _, _):
                 return .session(session.hash)
             case let .website(_, _, _, _, website, _, _, _, _):
@@ -149,6 +152,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 }
             case let .pendingSession(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsSession, lhsEnabled, lhsEditing, lhsRevealed):
                 if case let .pendingSession(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsSession, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsSession == rhsSession, lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
+                    return true
+                } else {
+                    return false
+                }
+            case let .pendingSessionsInfo(lhsTheme, lhsText):
+                if case let .pendingSessionsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -244,14 +253,16 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .pendingSessionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .otherSessionsHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .pendingSession(_, theme, strings, dateTimeFormat, session, enabled, editing, revealed):
                 return ItemListRecentSessionItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                     arguments.setSessionIdWithRevealedOptions(previousId, id)
                 }, removeSession: { id in
                     arguments.removeSession(id)
                 })
+            case let .pendingSessionsInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .otherSessionsHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .session(_, theme, strings, dateTimeFormat, session, enabled, editing, revealed):
                 return ItemListRecentSessionItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, session: session, enabled: enabled, editable: true, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                     arguments.setSessionIdWithRevealedOptions(previousId, id)
@@ -339,14 +350,14 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
         
             let filteredPendingSessions: [RecentAccountSession] = sessions.filter({ $0.flags.contains(.passwordPending) })
             if !filteredPendingSessions.isEmpty {
-                entries.append(.pendingSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_PasswordPending))
-                
+                entries.append(.pendingSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_IncompleteAttempts))
                 for i in 0 ..< filteredPendingSessions.count {
                     if !existingSessionIds.contains(filteredPendingSessions[i].hash) {
                         existingSessionIds.insert(filteredPendingSessions[i].hash)
                         entries.append(.pendingSession(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredPendingSessions[i], enabled: state.removingSessionId != filteredPendingSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredPendingSessions[i].hash))
                     }
                 }
+                entries.append(.pendingSessionsInfo(presentationData.theme, presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
             }
             
             entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
@@ -425,38 +436,53 @@ public func recentSessionsController(account: Account) -> ViewController {
             }
         }
     }, removeSession: { sessionId in
-        updateState {
-            return $0.withUpdatedRemovingSessionId(sessionId)
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
         }
-        
-        let applySessions: Signal<Void, NoError> = sessionsPromise.get()
-            |> filter { $0 != nil }
-            |> take(1)
-            |> deliverOnMainQueue
-            |> mapToSignal { sessions -> Signal<Void, NoError> in
-                if let sessions = sessions {
-                    var updatedSessions = sessions
-                    for i in 0 ..< updatedSessions.count {
-                        if updatedSessions[i].hash == sessionId {
-                            updatedSessions.remove(at: i)
-                            break
-                        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.AuthSessions_TerminateSession, color: .destructive, action: {
+                    dismissAction()
+                    
+                    updateState {
+                        return $0.withUpdatedRemovingSessionId(sessionId)
                     }
-                    sessionsPromise.set(.single(updatedSessions))
-                }
-                
-                return .complete()
-        }
-        
-        removeSessionDisposable.set((terminateAccountSession(account: account, hash: sessionId) |> then((applySessions |> mapError { _ in TerminateSessionError.generic })) |> deliverOnMainQueue).start(error: { _ in
-            updateState {
-                return $0.withUpdatedRemovingSessionId(nil)
-            }
-        }, completed: {
-            updateState {
-                return $0.withUpdatedRemovingSessionId(nil)
-            }
-        }))
+                    
+                    let applySessions: Signal<Void, NoError> = sessionsPromise.get()
+                    |> filter { $0 != nil }
+                    |> take(1)
+                    |> deliverOnMainQueue
+                    |> mapToSignal { sessions -> Signal<Void, NoError> in
+                        if let sessions = sessions {
+                            var updatedSessions = sessions
+                            for i in 0 ..< updatedSessions.count {
+                                if updatedSessions[i].hash == sessionId {
+                                    updatedSessions.remove(at: i)
+                                    break
+                                }
+                            }
+                            sessionsPromise.set(.single(updatedSessions))
+                        }
+                        
+                        return .complete()
+                    }
+                    
+                    removeSessionDisposable.set((terminateAccountSession(account: account, hash: sessionId) |> then((applySessions |> mapError { _ in TerminateSessionError.generic })) |> deliverOnMainQueue).start(error: { _ in
+                        updateState {
+                            return $0.withUpdatedRemovingSessionId(nil)
+                        }
+                    }, completed: {
+                        updateState {
+                            return $0.withUpdatedRemovingSessionId(nil)
+                        }
+                    }))
+                })
+            ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, terminateOtherSessions: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)

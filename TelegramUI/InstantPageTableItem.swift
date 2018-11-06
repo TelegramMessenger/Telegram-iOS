@@ -100,6 +100,7 @@ final class InstantPageTableItem: InstantPageItem {
     let horizontalInset: CGFloat
     let medias: [InstantPageMedia] = []
     let wantsNode: Bool = true
+    let separatesTiles: Bool = false
     
     let theme: InstantPageTheme
     
@@ -166,7 +167,7 @@ final class InstantPageTableItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return InstantPageTableNode(item: self, account: account, strings: strings, theme: theme)
     }
     
@@ -227,7 +228,7 @@ final class InstantPageTableContentNode: ASDisplayNode {
         for cell in self.item.cells {
             for item in cell.additionalItems {
                 if item.wantsNode {
-                    if let node = item.node(account: account, strings: strings, theme: theme, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }) {
+                    if let node = item.node(account: account, strings: strings, theme: theme, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }, currentExpandedDetails: nil) {
                         node.frame = item.frame.offsetBy(dx: cell.frame.minX, dy: cell.frame.minY)
                         self.addSubnode(node)
                     }
@@ -290,7 +291,9 @@ final class InstantPageTableNode: ASScrollNode, InstantPageNode {
     }
     
     func updateIsVisible(_ isVisible: Bool) {
-        
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
     }
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
@@ -298,7 +301,6 @@ final class InstantPageTableNode: ASScrollNode, InstantPageNode {
     }
     
     func updateHiddenMedia(media: InstantPageMedia?) {
-        
     }
     
     func update(strings: PresentationStrings, theme: InstantPageTheme) {

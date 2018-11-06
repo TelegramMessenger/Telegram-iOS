@@ -674,25 +674,30 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             let detailsIndex = detailsIndexCounter
             detailsIndexCounter += 1
             
+            var subDetailsIndex = 0
+            
             var previousBlock: InstantPageBlock?
             for subBlock in blocks {
-                let subLayout = layoutInstantPageBlock(webpage: webpage, rtl: rtl, block: subBlock, boundingWidth: boundingWidth - horizontalInset * 2.0, horizontalInset: 0.0, safeInset: 0.0, isCover: false, previousItems: subitems, fillToWidthAndHeight: false, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, detailsIndexCounter: &detailsIndexCounter, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, webEmbedHeights: webEmbedHeights)
+                let subLayout = layoutInstantPageBlock(webpage: webpage, rtl: rtl, block: subBlock, boundingWidth: boundingWidth, horizontalInset: horizontalInset, safeInset: safeInset, isCover: false, previousItems: subitems, fillToWidthAndHeight: false, media: media, mediaIndexCounter: &mediaIndexCounter, embedIndexCounter: &embedIndexCounter, detailsIndexCounter: &subDetailsIndex, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, webEmbedHeights: webEmbedHeights)
                 
                 let spacing = spacingBetweenBlocks(upper: previousBlock, lower: subBlock)
-                let blockItems = subLayout.flattenedItemsWithOrigin(CGPoint(x: horizontalInset, y: contentSize.height + spacing))
+                let blockItems = subLayout.flattenedItemsWithOrigin(CGPoint(x: 0.0, y: contentSize.height + spacing))
                 subitems.append(contentsOf: blockItems)
                 contentSize.height += subLayout.contentSize.height + spacing
                 previousBlock = subBlock
             }
             
-            let closingSpacing = spacingBetweenBlocks(upper: previousBlock, lower: nil)
-            contentSize.height += closingSpacing
+            if !blocks.isEmpty {
+                let closingSpacing = spacingBetweenBlocks(upper: previousBlock, lower: nil)
+                contentSize.height += closingSpacing
+            }
             
             let styleStack = InstantPageTextStyleStack()
             setupStyleStack(styleStack, theme: theme, category: .paragraph, link: false)
+            styleStack.push(.lineSpacingFactor(0.685))
             let detailsItem = layoutDetailsItem(theme: theme, title: attributedStringForRichText(title, styleStack: styleStack), boundingWidth: boundingWidth, items: subitems, contentSize: contentSize, safeInset: safeInset, rtl: rtl, initiallyExpanded: expanded, index: detailsIndex)
-            
             return InstantPageLayout(origin: CGPoint(), contentSize: detailsItem.frame.size, items: [detailsItem])
+        
         case let .relatedArticles(title, articles):
             var contentSize = CGSize(width: boundingWidth, height: 0.0)
             var items: [InstantPageItem] = []
@@ -713,7 +718,16 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                     cover = media[coverId] as? TelegramMediaImage
                 }
                 
-                let item = InstantPageArticleItem(frame: CGRect(origin: CGPoint(x: 0, y: contentSize.height), size: CGSize(width: boundingWidth, height: 93.0)), webPage: webpage, title: article.title ?? "", description: article.description ?? "", cover: cover, url: article.url, webpageId: article.webpageId)
+                var styleStack = InstantPageTextStyleStack()
+                setupStyleStack(styleStack, theme: theme, category: .article, link: false)
+                let title = attributedStringForRichText(.plain(article.title ?? ""), styleStack: styleStack)
+                
+                styleStack = InstantPageTextStyleStack()
+                setupStyleStack(styleStack, theme: theme, category: .caption, link: false)
+                let description = attributedStringForRichText(.plain(article.description ?? ""), styleStack: styleStack)
+                
+                let item = layoutArticleItem(theme: theme, webPage: webpage, title: title, description: description, cover: cover, url: article.url, webpageId: article.webpageId, boundingWidth: boundingWidth, rtl: rtl)
+                item.frame = item.frame.offsetBy(dx: 0.0, dy: contentSize.height)
                 contentSize.height += item.frame.height
                 items.append(item)
                 

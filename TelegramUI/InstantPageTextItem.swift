@@ -57,6 +57,7 @@ final class InstantPageTextItem: InstantPageItem {
     var alignment: NSTextAlignment = .natural
     let medias: [InstantPageMedia] = []
     let wantsNode: Bool = false
+    let separatesTiles: Bool = false
     var selectable: Bool = true
     
     var containsRTL: Bool {
@@ -309,7 +310,7 @@ final class InstantPageTextItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return nil
     }
     
@@ -427,7 +428,7 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
     }
 }
 
-func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false) -> ([InstantPageItem], CGSize) {
+func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0) -> ([InstantPageItem], CGSize) {
     if string.length == 0 {
         return ([], CGSize())
     }
@@ -490,9 +491,23 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             }
         }
         if lineCharacterCount > 0 {
-            let line = CTTypesetterCreateLineWithOffset(typesetter, CFRangeMake(lastIndex, lineCharacterCount), 100.0)
-            let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+            var line = CTTypesetterCreateLineWithOffset(typesetter, CFRangeMake(lastIndex, lineCharacterCount), 100.0)
+            var lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
             let lineRange = NSMakeRange(lastIndex, lineCharacterCount)
+            
+            var stop = false
+            if maxNumberOfLines > 0 && lines.count == maxNumberOfLines - 1 {
+                let attributes = string.attributes(at: lastIndex + lineCharacterCount - 1, effectiveRange: nil)
+                if let truncateString = CFAttributedStringCreate(nil, "\u{2026}" as CFString, attributes as CFDictionary) {
+                    let truncateToken = CTLineCreateWithAttributedString(truncateString)
+                    let tokenWidth = CGFloat(CTLineGetTypographicBounds(truncateToken, nil, nil, nil) + 3.0)
+                    if let truncatedLine = CTLineCreateTruncatedLine(line, Double(lineWidth - tokenWidth), .end, truncateToken) {
+                        lineWidth += tokenWidth
+                        line = truncatedLine
+                    }
+                }
+                stop = true
+            }
             
             var strikethroughItems: [InstantPageTextStrikethroughItem] = []
             var markedItems: [InstantPageTextMarkedItem] = []
@@ -563,8 +578,12 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             currentLineOrigin.y += fontLineHeight + fontLineSpacing + extraDescent
             
             lastIndex += lineCharacterCount
+            
+            if stop {
+                break
+            }
         } else {
-            break;
+            break
         }
     }
     

@@ -56,6 +56,9 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
         }
     }
     
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    }
+    
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
     }
     

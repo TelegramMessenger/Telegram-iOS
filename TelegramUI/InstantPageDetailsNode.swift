@@ -5,7 +5,6 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-private let detailsHeaderHeight: CGFloat = 44.0
 private let detailsInset: CGFloat = 17.0
 private let titleInset: CGFloat = 22.0
 
@@ -14,6 +13,10 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
     private let strings: PresentationStrings
     private let theme: InstantPageTheme
     
+    private let openMedia: (InstantPageMedia) -> Void
+    private let openPeer: (PeerId) -> Void
+    private let openUrl: (InstantPageUrlItem) -> Void
+    
     var currentLayoutTiles: [InstantPageTile] = []
     var currentLayoutItemsWithNodes: [InstantPageItem] = []
     var distanceThresholdGroupCount: [Int: Int] = [:]
@@ -21,13 +24,25 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
     var visibleTiles: [Int: InstantPageTileNode] = [:]
     var visibleItemsWithNodes: [Int: InstantPageNode] = [:]
     
+    var currentWebEmbedHeights: [Int : CGFloat] = [:]
+    var currentExpandedDetails: [Int : Bool]?
+    var currentDetailsItems: [InstantPageDetailsItem] = []
+    
+    var requestLayoutUpdate: (() -> Void)?
+    
     var currentLayout: InstantPageLayout
     let contentSize: CGSize
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize) {
+    private var previousVisibleBounds: CGRect?
+    
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
+        
+        self.openMedia = openMedia
+        self.openPeer = openPeer
+        self.openUrl = openUrl
         
         self.currentLayout = InstantPageLayout(origin: CGPoint(), contentSize: contentSize, items: items)
         self.contentSize = contentSize
@@ -45,9 +60,13 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
         
         let currentLayoutTiles = instantPageTilesFromLayout(currentLayout, boundingWidth: contentSize.width)
         
+        var currentDetailsItems: [InstantPageDetailsItem] = []
         var currentLayoutItemsWithViews: [InstantPageItem] = []
         var distanceThresholdGroupCount: [Int : Int] = [:]
         
+        var expandedDetails: [Int : Bool] = [:]
+        
+        var detailsIndex = -1
         for item in self.currentLayout.items {
             if item.wantsNode {
                 currentLayoutItemsWithViews.append(item)
@@ -60,21 +79,41 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
                     }
                     distanceThresholdGroupCount[Int(group)] = count + 1
                 }
+                if let detailsItem = item as? InstantPageDetailsItem {
+                    detailsIndex += 1
+                    expandedDetails[detailsIndex] = detailsItem.initiallyExpanded
+                    currentDetailsItems.append(detailsItem)
+                }
             }
+        }
+        
+        if self.currentExpandedDetails == nil {
+            self.currentExpandedDetails = expandedDetails
         }
         
         self.currentLayoutTiles = currentLayoutTiles
         self.currentLayoutItemsWithNodes = currentLayoutItemsWithViews
+        self.currentDetailsItems = currentDetailsItems
         self.distanceThresholdGroupCount = distanceThresholdGroupCount
     }
     
-    func updateVisibleItems() {
+    var effectiveContentSize: CGSize {
+        var contentSize = self.contentSize
+        for item in self.currentDetailsItems {
+            let expanded = self.currentExpandedDetails?[item.index] ?? item.initiallyExpanded
+            contentSize.height += -item.frame.height + (expanded ? self.effectiveSizeForDetails(item).height : item.titleHeight)
+        }
+        return contentSize
+    }
+    
+    func updateVisibleItems(visibleBounds: CGRect, animated: Bool = false) {
         var visibleTileIndices = Set<Int>()
         var visibleItemIndices = Set<Int>()
         
-        let visibleBounds = self.bounds // self.scrollNode.view.bounds
-        
+        self.previousVisibleBounds = visibleBounds
+    
         var topNode: ASDisplayNode?
+        let topTileNode = topNode
         if let scrollSubnodes = self.subnodes {
             for node in scrollSubnodes.reversed() {
                 if let node = node as? InstantPageTileNode {
@@ -84,32 +123,27 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
             }
         }
         
-        var tileIndex = -1
-        for tile in self.currentLayoutTiles {
-            tileIndex += 1
-            var tileVisibleFrame = tile.frame
-            tileVisibleFrame.origin.y -= 400.0
-            tileVisibleFrame.size.height += 400.0 * 2.0
-            if tileVisibleFrame.intersects(visibleBounds) {
-                visibleTileIndices.insert(tileIndex)
-                
-                if visibleTiles[tileIndex] == nil {
-                    let tileNode = InstantPageTileNode(tile: tile, backgroundColor: .clear)
-                    tileNode.frame = tile.frame
-                    if let topNode = topNode {
-                        self.insertSubnode(tileNode, aboveSubnode: topNode)
-                    } else {
-                        self.insertSubnode(tileNode, at: 0)
-                    }
-                    topNode = tileNode
-                    self.visibleTiles[tileIndex] = tileNode
-                }
-            }
+        var collapseOffset: CGFloat = 0.0
+        let transition: ContainedViewLayoutTransition
+        if animated {
+            transition = .animated(duration: 0.3, curve: .spring)
+        } else {
+            transition = .immediate
         }
         
         var itemIndex = -1
+        var embedIndex = -1
+        var detailsIndex = -1
+        
         for item in self.currentLayoutItemsWithNodes {
             itemIndex += 1
+            if item is InstantPageWebEmbedItem {
+                embedIndex += 1
+            }
+            if item is InstantPageDetailsItem {
+                detailsIndex += 1
+            }
+            
             var itemThreshold: CGFloat = 0.0
             if let group = item.distanceThresholdGroup() {
                 var count: Int = 0
@@ -118,10 +152,19 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
                 }
                 itemThreshold = item.distanceThresholdWithGroupCount(count)
             }
-            var itemFrame = item.frame
-            itemFrame.origin.y -= itemThreshold
-            itemFrame.size.height += itemThreshold * 2.0
-            if visibleBounds.intersects(itemFrame) {
+            
+            var itemFrame = item.frame.offsetBy(dx: 0.0, dy: -collapseOffset)
+            var thresholdedItemFrame = itemFrame
+            thresholdedItemFrame.origin.y -= itemThreshold
+            thresholdedItemFrame.size.height += itemThreshold * 2.0
+            
+            if let detailsItem = item as? InstantPageDetailsItem, let expanded = self.currentExpandedDetails?[detailsIndex] {
+                let height = expanded ? self.effectiveSizeForDetails(detailsItem).height : detailsItem.titleHeight
+                collapseOffset += itemFrame.height - height
+                itemFrame = CGRect(origin: itemFrame.origin, size: CGSize(width: itemFrame.width, height: height))
+            }
+            
+            if visibleBounds.intersects(thresholdedItemFrame) {
                 visibleItemIndices.insert(itemIndex)
                 
                 var itemNode = self.visibleItemsWithNodes[itemIndex]
@@ -134,28 +177,82 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
                 }
                 
                 if itemNode == nil {
-                    if let itemNode = item.node(account: self.account, strings: self.strings, theme: self.theme, openMedia: { [weak self] media in
-                        //self?.openMedia(media)
+                    let itemIndex = itemIndex
+                    let embedIndex = embedIndex
+                    let detailsIndex = detailsIndex
+                    if let newNode = item.node(account: self.account, strings: self.strings, theme: theme, openMedia: { [weak self] media in
+                        self?.openMedia(media)
                     }, openPeer: { [weak self] peerId in
-                        //self?.openPeer(peerId)
+                        self?.openPeer(peerId)
                     }, openUrl: { [weak self] url in
-                        //self?.openUrl(url)
+                        self?.openUrl(url)
                     }, updateWebEmbedHeight: { [weak self] height in
-                        //self?.updateWebEmbedHeight(key, height)
-                    }, updateDetailsExpanded: { _ in
-                    }) {
-                        itemNode.frame = item.frame
+                        //self?.updateWebEmbedHeight(embedIndex, height)
+                    }, updateDetailsExpanded: { [weak self] expanded in
+                        self?.updateDetailsExpanded(detailsIndex, expanded)
+                    }, currentExpandedDetails: self.currentExpandedDetails) {
+                        newNode.frame = itemFrame
+                        newNode.updateLayout(size: itemFrame.size, transition: transition)
+//                        if case let .animated(duration, _) = transition {
+//                            newNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+//                        }
                         if let topNode = topNode {
-                            self.insertSubnode(itemNode, aboveSubnode: topNode)
+                            self.insertSubnode(newNode, aboveSubnode: topNode)
                         } else {
-                            self.insertSubnode(itemNode, at: 0)
+                            self.insertSubnode(newNode, at: 0)
                         }
-                        topNode = itemNode
-                        self.visibleItemsWithNodes[itemIndex] = itemNode
+                        topNode = newNode
+                        self.visibleItemsWithNodes[itemIndex] = newNode
+                        itemNode = newNode
+                        
+                        if let itemNode = itemNode as? InstantPageDetailsNode {
+                            itemNode.requestLayoutUpdate = { [weak self] in
+                                self?.requestLayoutUpdate?()
+                            }
+                        }
                     }
                 } else {
-                    if (itemNode as! ASDisplayNode).frame != item.frame {
-                        (itemNode as! ASDisplayNode).frame = item.frame
+                    if (itemNode as! ASDisplayNode).frame != itemFrame {
+                        transition.updateFrame(node: (itemNode as! ASDisplayNode), frame: itemFrame)
+                        itemNode?.updateLayout(size: itemFrame.size, transition: transition)
+                    }
+                }
+                
+                if let itemNode = itemNode as? InstantPageDetailsNode {
+                    itemNode.updateVisibleItems(visibleBounds: visibleBounds.offsetBy(dx: -itemNode.frame.minX, dy: -itemNode.frame.minY), animated: animated)
+                }
+            }
+        }
+        
+        topNode = topTileNode
+        
+        var tileIndex = -1
+        for tile in self.currentLayoutTiles {
+            tileIndex += 1
+            
+            let tileFrame = effectiveFrameForTile(tile)
+            var tileVisibleFrame = tileFrame
+            tileVisibleFrame.origin.y -= 400.0
+            tileVisibleFrame.size.height += 400.0 * 2.0
+            if tileVisibleFrame.intersects(visibleBounds) {
+                visibleTileIndices.insert(tileIndex)
+                
+                if self.visibleTiles[tileIndex] == nil {
+                    let tileNode = InstantPageTileNode(tile: tile, backgroundColor: theme.pageBackgroundColor)
+                    tileNode.frame = tileFrame
+//                    if case let .animated(duration, _) = transition {
+//                        tileNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+//                    }
+                    if let topNode = topNode {
+                        self.insertSubnode(tileNode, aboveSubnode: topNode)
+                    } else {
+                        self.insertSubnode(tileNode, at: 0)
+                    }
+                    topNode = tileNode
+                    self.visibleTiles[tileIndex] = tileNode
+                } else {
+                    if visibleTiles[tileIndex]!.frame != tileFrame {
+                        transition.updateFrame(node: self.visibleTiles[tileIndex]!, frame: tileFrame)
                     }
                 }
             }
@@ -189,6 +286,152 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
             self.visibleItemsWithNodes.removeValue(forKey: index)
         }
     }
+    
+    private func updateWebEmbedHeight(_ index: Int, _ height: CGFloat) {
+//        let currentHeight = self.currentWebEmbedHeights[index]
+//        if height != currentHeight {
+//            if let currentHeight = currentHeight, currentHeight > height {
+//                return
+//            }
+//            self.currentWebEmbedHeights[index] = height
+//
+//            let signal: Signal<Void, NoError> = (.complete() |> delay(0.08, queue: Queue.mainQueue()))
+//            self.updateLayoutDisposable.set(signal.start(completed: { [weak self] in
+//                if let strongSelf = self {
+//                    strongSelf.updateLayout()
+//                    strongSelf.updateVisibleItems()
+//                }
+//            }))
+//        }
+    }
+    
+    private func updateDetailsExpanded(_ index: Int, _ expanded: Bool) {
+        if var currentExpandedDetails = self.currentExpandedDetails {
+            currentExpandedDetails[index] = expanded
+            self.currentExpandedDetails = currentExpandedDetails
+        }
+        self.requestLayoutUpdate?()
+    }
+    
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
+        for (_, itemNode) in self.visibleItemsWithNodes {
+            if let transitionNode = itemNode.transitionNode(media: media) {
+                return transitionNode
+            }
+        }
+        return nil
+    }
+    
+    func updateHiddenMedia(media: InstantPageMedia?) {
+        for (_, itemNode) in self.visibleItemsWithNodes {
+            itemNode.updateHiddenMedia(media: media)
+        }
+    }
+    
+    private func tableContentOffset(item: InstantPageTableItem) -> CGPoint {
+        var contentOffset = CGPoint()
+        for (_, itemNode) in self.visibleItemsWithNodes {
+            if let itemNode = itemNode as? InstantPageTableNode, itemNode.item === item {
+                contentOffset = itemNode.contentOffset
+                break
+            }
+        }
+        return contentOffset
+    }
+    
+    private func effectiveSizeForDetails(_ item: InstantPageDetailsItem) -> CGSize {
+        for (_, itemNode) in self.visibleItemsWithNodes {
+            if let detailsNode = itemNode as? InstantPageDetailsNode, detailsNode.item === item {
+                return CGSize(width: item.frame.width, height: detailsNode.effectiveContentSize.height + item.titleHeight)
+            }
+        }
+        return item.frame.size
+    }
+    
+    private func effectiveFrameForTile(_ tile: InstantPageTile) -> CGRect {
+        let layoutOrigin = tile.frame.origin
+        var origin = layoutOrigin
+        for item in self.currentDetailsItems {
+            let expanded = self.currentExpandedDetails?[item.index] ?? item.initiallyExpanded
+            if layoutOrigin.y >= item.frame.maxY {
+                let height = expanded ? self.effectiveSizeForDetails(item).height : item.titleHeight
+                origin.y += height - item.frame.height
+            }
+        }
+        return CGRect(origin: origin, size: tile.frame.size)
+    }
+    
+    private func effectiveFrameForItem(_ item: InstantPageItem) -> CGRect {
+        let layoutOrigin = item.frame.origin
+        var origin = layoutOrigin
+        
+        for item in self.currentDetailsItems {
+            let expanded = self.currentExpandedDetails?[item.index] ?? item.initiallyExpanded
+            if layoutOrigin.y >= item.frame.maxY {
+                let height = expanded ? self.effectiveSizeForDetails(item).height : item.titleHeight
+                origin.y += height - item.frame.height
+            }
+        }
+        
+        if let item = item as? InstantPageDetailsItem {
+            let expanded = self.currentExpandedDetails?[item.index] ?? item.initiallyExpanded
+            let height = expanded ? self.effectiveSizeForDetails(item).height : item.titleHeight
+            return CGRect(origin: origin, size: CGSize(width: item.frame.width, height: height))
+        } else {
+            return CGRect(origin: origin, size: item.frame.size)
+        }
+    }
+    
+    func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
+        for item in self.currentLayout.items {
+            let itemFrame = self.effectiveFrameForItem(item)
+            if itemFrame.contains(location) {
+                if let item = item as? InstantPageTextItem, item.selectable {
+                    return (item, CGPoint(x: itemFrame.minX - item.frame.minX, y: itemFrame.minY - item.frame.minY))
+                } else if let item = item as? InstantPageTableItem {
+                    let contentOffset = tableContentOffset(item: item)
+                    if let (textItem, parentOffset) = item.textItemAtLocation(location.offsetBy(dx: -itemFrame.minX + contentOffset.x, dy: -itemFrame.minY)) {
+                        return (textItem, itemFrame.origin.offsetBy(dx: parentOffset.x - contentOffset.x, dy: parentOffset.y))
+                    }
+                } else if let item = item as? InstantPageDetailsItem {
+                    for (_, itemNode) in self.visibleItemsWithNodes {
+                        if let itemNode = itemNode as? InstantPageDetailsNode, itemNode.item === item {
+                            if let (textItem, parentOffset) = itemNode.textItemAtLocation(location.offsetBy(dx: -itemFrame.minX, dy: -itemFrame.minY)) {
+                                return (textItem, itemFrame.origin.offsetBy(dx: parentOffset.x, dy: parentOffset.y))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    
+    
+    func tapActionAtPoint(_ point: CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction {
+        for item in self.currentLayout.items {
+            let frame = self.effectiveFrameForItem(item)
+            if frame.contains(point) {
+                if item is InstantPagePeerReferenceItem {
+                    return .fail
+                } else if item is InstantPageAudioItem {
+                    return .fail
+                } else if item is InstantPageArticleItem {
+                    return .fail
+                } else if item is InstantPageFeedbackItem {
+                    return .fail
+                } else if let item = item as? InstantPageDetailsItem {
+                    for (_, itemNode) in self.visibleItemsWithNodes {
+                        if let itemNode = itemNode as? InstantPageDetailsNode, itemNode.item === item {
+                            return itemNode.tapActionAtPoint(point.offsetBy(dx: -itemNode.frame.minX, dy: -itemNode.frame.minY))
+                        }
+                    }
+                }
+                break
+            }
+        }
+        return .waitForSingleTap
+    }
 }
 
 final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
@@ -204,12 +447,14 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let buttonNode: HighlightableButtonNode
     private let arrowNode: InstantPageDetailsArrowNode
     private let separatorNode: ASDisplayNode
-    private let contentNode: InstantPageDetailsContentNode
+    let contentNode: InstantPageDetailsContentNode
     
     private let updateExpanded: (Bool) -> Void
     var expanded: Bool
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, updateDetailsExpanded: @escaping (Bool) -> Void) {
+    var requestLayoutUpdate: (() -> Void)?
+    
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
@@ -225,39 +470,31 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         
         self.buttonNode = HighlightableButtonNode()
         
-        self.titleTile = InstantPageTile(frame: CGRect(x: 0.0, y: 0.0, width: frame.width, height: detailsHeaderHeight))
+        self.titleTile = InstantPageTile(frame: CGRect(x: 0.0, y: 0.0, width: frame.width, height: item.titleHeight))
+        self.titleTile.items.append(contentsOf: item.titleItems)
         self.titleTileNode = InstantPageTileNode(tile: self.titleTile, backgroundColor: .clear)
-    
-        let titleItems = layoutTextItemWithString(item.title, boundingWidth: frame.size.width - detailsInset * 2.0 - titleInset, offset: CGPoint(x: detailsInset + titleInset, y: 0.0)).0
-        var offset: CGFloat?
-        for var item in titleItems {
-            var itemOffset = floorToScreenPixels((detailsHeaderHeight - item.frame.height) / 2.0)
-            if item is InstantPageTextItem {
-                offset = itemOffset
-            } else if let offset = offset {
-                itemOffset = offset
-            }
-            item.frame = item.frame.offsetBy(dx: 0.0, dy: itemOffset)
-        }
-        self.titleTile.items.append(contentsOf: titleItems)
         
-        self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: item.initiallyExpanded)
+        if let expanded = currentlyExpanded {
+            self.expanded = expanded
+        } else {
+            self.expanded = item.initiallyExpanded
+        }
+        
+        self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: self.expanded)
         self.separatorNode = ASDisplayNode()
         
-        self.contentNode = InstantPageDetailsContentNode(account: account, strings: strings, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height))
-        
-        self.expanded = item.initiallyExpanded
+        self.contentNode = InstantPageDetailsContentNode(account: account, strings: strings, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, openPeer: openPeer, openUrl: openUrl)
         
         super.init()
         
         self.clipsToBounds = true
         
+        self.addSubnode(self.contentNode)
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.titleTileNode)
         self.addSubnode(self.arrowNode)
         self.addSubnode(self.separatorNode)
-        self.addSubnode(self.contentNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
@@ -280,6 +517,10 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
             }
         }
         
+        self.contentNode.requestLayoutUpdate = { [weak self] in
+            self?.requestLayoutUpdate?()
+        }
+        
         self.update(strings: strings, theme: theme)
     }
     
@@ -293,11 +534,10 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.updateExpanded(expanded)
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        let size = layout.size
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let inset = detailsInset + self.item.safeInset
         
-        let lineSize = CGSize(width: frame.width - inset, height: UIScreenPixel)
+        let lineSize = CGSize(width: self.frame.width - inset, height: UIScreenPixel)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: item.rtl ? 0.0 : inset, y: size.height - lineSize.height), size: lineSize))
     }
     
@@ -308,15 +548,10 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         let inset = detailsInset + self.item.safeInset
         
         self.titleTileNode.frame = self.titleTile.frame
-        self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: detailsHeaderHeight + UIScreenPixel))
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: detailsHeaderHeight))
-        self.arrowNode.frame = CGRect(x: inset, y: floorToScreenPixels((detailsHeaderHeight - 8.0) / 2.0) + 1.0, width: 13.0, height: 8.0)
-        self.contentNode.frame = CGRect(x: 0.0, y: detailsHeaderHeight, width: size.width, height: self.item.frame.height - detailsHeaderHeight)
-        
-        let lineSize = CGSize(width: frame.width - inset, height: UIScreenPixel)
-        self.separatorNode.frame = CGRect(origin: CGPoint(x: item.rtl ? 0.0 : inset, y: size.height - lineSize.height), size: lineSize)
-        
-        self.contentNode.updateVisibleItems()
+        self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: self.item.titleHeight + UIScreenPixel))
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: self.item.titleHeight))
+        self.arrowNode.frame = CGRect(x: inset, y: floorToScreenPixels((self.item.titleHeight - 8.0) / 2.0) + 1.0, width: 13.0, height: 8.0)
+        self.contentNode.frame = CGRect(x: 0.0, y: self.item.titleHeight, width: size.width, height: self.item.frame.height - self.item.titleHeight)
     }
     
     func updateIsVisible(_ isVisible: Bool) {
@@ -324,17 +559,52 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     }
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
-        return nil
+        return self.contentNode.transitionNode(media: media)
     }
     
     func updateHiddenMedia(media: InstantPageMedia?) {
-        
+        self.contentNode.updateHiddenMedia(media: media)
     }
     
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
         self.arrowNode.color = theme.controlColor
         self.separatorNode.backgroundColor = theme.controlColor
         self.highlightedBackgroundNode.backgroundColor = theme.panelHighlightedBackgroundColor
+    }
+    
+    func updateVisibleItems(visibleBounds: CGRect, animated: Bool) {
+        if self.bounds.height > self.item.titleHeight {
+            self.contentNode.updateVisibleItems(visibleBounds: visibleBounds.offsetBy(dx: -self.contentNode.frame.minX, dy: -self.contentNode.frame.minY), animated: animated)
+        }
+    }
+    
+    func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
+        if self.titleTileNode.frame.contains(location) {
+            for case let item as InstantPageTextItem in self.item.titleItems {
+                if item.frame.contains(location) {
+                    return (item, self.titleTileNode.frame.origin)
+                }
+            }
+        }
+        else if let (textItem, parentOffset) = self.contentNode.textItemAtLocation(location.offsetBy(dx: -self.contentNode.frame.minX, dy: -self.contentNode.frame.minY)) {
+            return (textItem, self.contentNode.frame.origin.offsetBy(dx: parentOffset.x, dy: parentOffset.y))
+        }
+        return nil
+    }
+    
+    func tapActionAtPoint(_ point: CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction {
+        if self.titleTileNode.frame.contains(point) {
+            if self.item.linkSelectionRects(at: point).isEmpty {
+                return .fail
+            }
+        } else if self.contentNode.frame.contains(point) {
+            return self.contentNode.tapActionAtPoint(_: point.offsetBy(dx: -self.contentNode.frame.minX, dy: -self.contentNode.frame.minY))
+        }
+        return .waitForSingleTap
+    }
+    
+    var effectiveContentSize: CGSize {
+        return self.contentNode.effectiveContentSize
     }
 }
 

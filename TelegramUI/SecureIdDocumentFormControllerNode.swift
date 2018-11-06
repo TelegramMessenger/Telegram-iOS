@@ -569,7 +569,7 @@ struct SecureIdDocumentFormState: FormControllerInnerState {
                     result.append(.entry(SecureIdDocumentFormEntry.expiryDate(document.expiryDate, expiryDateError)))
                 }
                 
-                if (self.selfieRequired || self.requestOptionalData) || self.frontSideRequired || self.backSideRequired {
+                if ((self.selfieRequired || self.requestOptionalData) && identity.document != nil) || self.frontSideRequired || self.backSideRequired {
                     let type = identity.document?.type
                     
                     if let last = result.last, case .spacer = last {

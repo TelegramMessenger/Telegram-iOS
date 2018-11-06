@@ -81,7 +81,9 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     }
     
     func updateIsVisible(_ isVisible: Bool) {
-        
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
     }
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
@@ -89,7 +91,6 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     }
     
     func updateHiddenMedia(media: InstantPageMedia?) {
-        
     }
     
     func update(strings: PresentationStrings, theme: InstantPageTheme) {

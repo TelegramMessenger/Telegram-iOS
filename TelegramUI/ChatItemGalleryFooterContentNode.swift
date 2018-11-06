@@ -58,9 +58,26 @@ private let playImage = generateImage(CGSize(width: 15.0, height: 18.0), rotated
 private let titleFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
-enum ChatItemGalleryFooterContent {
+enum ChatItemGalleryFooterContent: Equatable {
     case info
     case playback(paused: Bool, seekable: Bool)
+    
+    static func ==(lhs: ChatItemGalleryFooterContent, rhs: ChatItemGalleryFooterContent) -> Bool {
+        switch lhs {
+            case .info:
+                if case .info = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .playback(lhsPaused, lhsSeekable):
+                if case let .playback(rhsPaused, rhsSeekable) = rhs, lhsPaused == rhsPaused, lhsSeekable == rhsSeekable {
+                    return true
+                } else {
+                    return false
+                }
+            }
+    }
 }
 
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
@@ -95,7 +112,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     var content: ChatItemGalleryFooterContent = .info {
         didSet {
-            //if self.content != oldValue {
+            if self.content != oldValue {
                 switch self.content {
                     case .info:
                         self.authorNameNode.isHidden = false
@@ -111,7 +128,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         self.playbackControlButton.isHidden = false
                         self.playbackControlButton.setImage(paused ? playImage : pauseImage, for: [])
                 }
-            //}
+            }
         }
     }
     
@@ -332,11 +349,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
-            let bottomInset: CGFloat = 8.0
+            let bottomInset: CGFloat = 2.0
             panelHeight += 34.0 + topInset + bottomInset
-            textFrame.origin.y += 34.0 + topInset + bottomInset
             
-            scrubberView.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: CGSize(width: width - sideInset * 2.0, height: 34.0))
+            scrubberView.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset + textFrame.maxY), size: CGSize(width: width - sideInset * 2.0, height: 34.0))
         }
         
         self.textNode.frame = textFrame
@@ -364,7 +380,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     }
     
     override func animateIn(fromHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: 0.0, y: self.bounds.size.height - fromHeight))
+        if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
+            transition.animatePositionAdditive(layer: scrubberView.layer, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
+            scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
+        transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
         self.textNode.alpha = 1.0
         self.dateNode.alpha = 1.0
         self.authorNameNode.alpha = 1.0
@@ -374,6 +394,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     }
     
     override func animateOut(toHeight: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
+            transition.updateFrame(view: scrubberView, frame: scrubberView.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
+            scrubberView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+        }
         transition.updateFrame(node: self.textNode, frame: self.textNode.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
         self.textNode.alpha = 0.0
         self.dateNode.alpha = 0.0

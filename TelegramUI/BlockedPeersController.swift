@@ -217,38 +217,44 @@ public func blockedPeersController(account: Account) -> ViewController {
         controller.peerSelected = { [weak controller] peerId in
             if let strongController = controller {
                 strongController.inProgress = true
-                let applyPeers: Signal<Void, NoError> = peersPromise.get()
-                |> filter { $0 != nil }
+                
+                let _ = (account.viewTracker.peerView(peerId)
                 |> take(1)
-                |> mapToSignal { peers -> Signal<([Peer]?, Peer?), NoError> in
-                    return account.postbox.transaction { transaction -> ([Peer]?, Peer?) in
-                        return (peers, transaction.getPeer(peerId))
-                    }
+                |> map { view -> Peer? in
+                    return peerViewMainPeer(view)
                 }
-                |> deliverOnMainQueue
-                |> mapToSignal { peers, peer -> Signal<Void, NoError> in
-                    if let peers = peers, let peer = peer {
-                        var updatedPeers = peers
-                        for i in 0 ..< updatedPeers.count {
-                            if updatedPeers[i].id == peerId {
-                                updatedPeers.remove(at: i)
-                                break
+                |> deliverOnMainQueue).start(next: { peer in
+                    let applyPeers: Signal<Void, NoError> = peersPromise.get()
+                    |> filter { $0 != nil }
+                    |> take(1)
+                    |> map { peers -> ([Peer]?, Peer?) in
+                        return (peers, peer)
+                    }
+                    |> deliverOnMainQueue
+                    |> mapToSignal { peers, peer -> Signal<Void, NoError> in
+                        if let peers = peers, let peer = peer {
+                            var updatedPeers = peers
+                            for i in 0 ..< updatedPeers.count {
+                                if updatedPeers[i].id == peer.id {
+                                    updatedPeers.remove(at: i)
+                                    break
+                                }
                             }
+                            updatedPeers.insert(peer, at: 0)
+                            peersPromise.set(.single(updatedPeers))
                         }
-                        updatedPeers.insert(peer, at: 0)
-                        peersPromise.set(.single(updatedPeers))
+                        
+                        return .complete()
                     }
-                    
-                    return .complete()
-                }
-                removePeerDisposable.set((requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: true) |> then(applyPeers) |> deliverOnMainQueue).start(error: { _ in
-                    
-                }, completed: {
-                    if let strongController = controller {
-                        strongController.inProgress = false
-                        strongController.dismiss()
+                    if let peer = peer {
+                        removePeerDisposable.set((requestUpdatePeerIsBlocked(account: account, peerId: peer.id, isBlocked: true) |> then(applyPeers) |> deliverOnMainQueue).start(completed: {
+                            if let strongController = controller {
+                                strongController.inProgress = false
+                                strongController.dismiss()
+                            }
+                        }))
                     }
-                }))
+                })
             }
         }
         presentControllerImpl?(controller, nil)
@@ -272,7 +278,6 @@ public func blockedPeersController(account: Account) -> ViewController {
                     }
                     peersPromise.set(.single(updatedPeers))
                 }
-                
                 return .complete()
         }
         

@@ -2,22 +2,26 @@ import Foundation
 import Postbox
 import TelegramCore
 import AsyncDisplayKit
+import Display
 
 final class InstantPageDetailsItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
+    let separatesTiles: Bool = true
     let medias: [InstantPageMedia] = []
 
-    let title: NSAttributedString
+    let titleItems: [InstantPageItem]
+    let titleHeight: CGFloat
     let items: [InstantPageItem]
     let safeInset: CGFloat
     let rtl: Bool
-    var initiallyExpanded: Bool
+    let initiallyExpanded: Bool
     let index: Int
     
-    init(frame: CGRect, title: NSAttributedString, items: [InstantPageItem], safeInset: CGFloat, rtl: Bool, initiallyExpanded: Bool, index: Int) {
+    init(frame: CGRect, titleItems: [InstantPageItem], titleHeight: CGFloat, items: [InstantPageItem], safeInset: CGFloat, rtl: Bool, initiallyExpanded: Bool, index: Int) {
         self.frame = frame
-        self.title = title
+        self.titleItems = titleItems
+        self.titleHeight = titleHeight
         self.items = items
         self.safeInset = safeInset
         self.rtl = rtl
@@ -25,8 +29,12 @@ final class InstantPageDetailsItem: InstantPageItem {
         self.index = index
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageDetailsNode(account: account, strings: strings, theme: theme, item: self, updateDetailsExpanded: updateDetailsExpanded)
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+        var expanded: Bool?
+        if let expandedDetails = currentExpandedDetails, let currentlyExpanded = expandedDetails[self.index] {
+            expanded = currentlyExpanded
+        }
+        return InstantPageDetailsNode(account: account, strings: strings, theme: theme, item: self, openMedia: openMedia, openPeer: openPeer, openUrl: openUrl, currentlyExpanded: expanded, updateDetailsExpanded: updateDetailsExpanded)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {
@@ -46,21 +54,48 @@ final class InstantPageDetailsItem: InstantPageItem {
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
-        if count > 3 {
-            return 1000.0
-        } else {
-            return CGFloat.greatestFiniteMagnitude
-        }
+        return CGFloat.greatestFiniteMagnitude
     }
     
     func drawInTile(context: CGContext) {
     }
     
     func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+        if point.y < self.titleHeight {
+            for item in self.titleItems {
+                if item.frame.contains(point) {
+                    let rects = item.linkSelectionRects(at: point.offsetBy(dx: -item.frame.minX, dy: -item.frame.minY))
+                    return rects.map { $0.offsetBy(dx: item.frame.minX, dy: item.frame.minY) }
+                }
+            }
+        } else {
+            for item in self.items {
+                if item.frame.contains(point) {
+                    let rects = item.linkSelectionRects(at: point.offsetBy(dx: 0.0, dy: -self.titleHeight))
+                    return rects.map { $0.offsetBy(dx: item.frame.minX, dy: item.frame.minY + self.titleHeight) }
+                }
+            }
+        }
         return []
     }
 }
 
 func layoutDetailsItem(theme: InstantPageTheme, title: NSAttributedString, boundingWidth: CGFloat, items: [InstantPageItem], contentSize: CGSize, safeInset: CGFloat, rtl: Bool, initiallyExpanded: Bool, index: Int) -> InstantPageDetailsItem {
-    return InstantPageDetailsItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: contentSize.height + 44.0), title: title, items: items, safeInset: safeInset, rtl: rtl, initiallyExpanded: initiallyExpanded, index: index)
+    let detailsInset: CGFloat = 17.0 + safeInset
+    let titleInset: CGFloat = 22.0
+    
+    let (titleItems, titleSize) = layoutTextItemWithString(title, boundingWidth: boundingWidth - detailsInset * 2.0 - titleInset, offset: CGPoint(x: detailsInset + titleInset, y: 0.0))
+    let titleHeight = max(44.0, titleSize.height + 26.0)
+    var offset: CGFloat?
+    for var item in titleItems {
+        var itemOffset = floorToScreenPixels((titleHeight - item.frame.height) / 2.0)
+        if item is InstantPageTextItem {
+            offset = itemOffset
+        } else if let offset = offset {
+            itemOffset = offset
+        }
+        item.frame = item.frame.offsetBy(dx: 0.0, dy: itemOffset)
+    }
+    
+    return InstantPageDetailsItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: contentSize.height + titleHeight), titleItems: titleItems, titleHeight: titleHeight, items: items, safeInset: safeInset, rtl: rtl, initiallyExpanded: initiallyExpanded, index: index)
 }

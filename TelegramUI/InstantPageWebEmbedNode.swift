@@ -2,6 +2,7 @@ import Foundation
 import TelegramCore
 import WebKit
 import AsyncDisplayKit
+import Display
 
 private class WeakInstantPageWebEmbedNodeMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
@@ -117,6 +118,9 @@ final class InstantPageWebEmbedNode: ASDisplayNode, InstantPageNode {
     }
     
     func updateIsVisible(_ isVisible: Bool) {
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
     }
     
     func update(strings: PresentationStrings, theme: InstantPageTheme) {

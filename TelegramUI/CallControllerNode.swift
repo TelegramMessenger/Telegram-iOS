@@ -426,12 +426,12 @@ final class CallControllerNode: ASDisplayNode {
                 let point = recognizer.location(in: recognizer.view)
                 if self.statusNode.frame.contains(point) {
                     let timestamp = CACurrentMediaTime()
-                    if self.debugTapCounter.0 < timestamp - 0.4 {
+                    if self.debugTapCounter.0 < timestamp - 0.75 {
                         self.debugTapCounter.0 = timestamp
                         self.debugTapCounter.1 = 0
                     }
                     
-                    if self.debugTapCounter.0 >= timestamp - 0.4 {
+                    if self.debugTapCounter.0 >= timestamp - 0.75 {
                         self.debugTapCounter.0 = timestamp
                         self.debugTapCounter.1 += 1
                     }
@@ -568,6 +568,8 @@ final private class CallDebugNode: ASDisplayNode {
     private let dimNode: ASDisplayNode
     private let textNode: ASTextNode
     
+    private let timestamp = CACurrentMediaTime()
+    
     public var dismiss: (() -> Void)?
     
     init(signal: Signal<(String, String), NoError>) {
@@ -607,7 +609,9 @@ final private class CallDebugNode: ASDisplayNode {
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        self.dismiss?()
+        if CACurrentMediaTime() - self.timestamp > 1.0 {
+            self.dismiss?()
+        }
     }
     
     override func layout() {
