@@ -317,7 +317,7 @@
 		D0A24D281F92C27100584D24 /* DefaultDarkAccentPresentationTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A24D271F92C27100584D24 /* DefaultDarkAccentPresentationTheme.swift */; };
 		D0A723541FC3B40E0094D167 /* RadialCheckContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A723531FC3B40E0094D167 /* RadialCheckContentNode.swift */; };
 		D0A8998D217A294100759EE6 /* SaveIncomingMediaController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8998C217A294100759EE6 /* SaveIncomingMediaController.swift */; };
-		D0A8BBA11F61EE83000F03FD /* UniversalVideoCalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8BBA01F61EE83000F03FD /* UniversalVideoCalleryItem.swift */; };
+		D0A8BBA11F61EE83000F03FD /* UniversalVideoGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8BBA01F61EE83000F03FD /* UniversalVideoGalleryItem.swift */; };
 		D0AA29AE1F72770D00C050AC /* ChatListItemStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA29AD1F72770D00C050AC /* ChatListItemStrings.swift */; };
 		D0AA840C1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA840B1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift */; };
 		D0ACCB1A1EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB191EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift */; };
@@ -1665,7 +1665,7 @@
 		D0A723531FC3B40E0094D167 /* RadialCheckContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialCheckContentNode.swift; sourceTree = "<group>"; };
 		D0A749961E3AA25200AD786E /* NotificationSoundSelection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationSoundSelection.swift; sourceTree = "<group>"; };
 		D0A8998C217A294100759EE6 /* SaveIncomingMediaController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveIncomingMediaController.swift; sourceTree = "<group>"; };
-		D0A8BBA01F61EE83000F03FD /* UniversalVideoCalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalVideoCalleryItem.swift; sourceTree = "<group>"; };
+		D0A8BBA01F61EE83000F03FD /* UniversalVideoGalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalVideoGalleryItem.swift; sourceTree = "<group>"; };
 		D0AA29AD1F72770D00C050AC /* ChatListItemStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListItemStrings.swift; sourceTree = "<group>"; };
 		D0AA840B1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPlayerControlsNode.swift; sourceTree = "<group>"; };
 		D0AB0BB01D6718DA002C78E7 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
@@ -4305,7 +4305,7 @@
 				D0575AFB1EA104A6006F2541 /* PeerAvatarImageGalleryItem.swift */,
 				D0104F291F471DA6004E4881 /* InstantImageGalleryItem.swift */,
 				D0104F2B1F471EEB004E4881 /* InstantPageGalleryFooterContentNode.swift */,
-				D0A8BBA01F61EE83000F03FD /* UniversalVideoCalleryItem.swift */,
+				D0A8BBA01F61EE83000F03FD /* UniversalVideoGalleryItem.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -4909,7 +4909,7 @@
 				D0EC6CDC1EB9F58800EBF1C3 /* TelegramAccountAuxiliaryMethods.swift in Sources */,
 				D01BAA1A1ECC8E0D00295217 /* CallListControllerNode.swift in Sources */,
 				D0EC6CDD1EB9F58800EBF1C3 /* PresentationCallManager.swift in Sources */,
-				D0A8BBA11F61EE83000F03FD /* UniversalVideoCalleryItem.swift in Sources */,
+				D0A8BBA11F61EE83000F03FD /* UniversalVideoGalleryItem.swift in Sources */,
 				D0EC6CDE1EB9F58800EBF1C3 /* ComponentsThemes.swift in Sources */,
 				D0642EFC1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift in Sources */,
 				D03AA4E5202DF8840056C405 /* StickerPreviewPeekContent.swift in Sources */,

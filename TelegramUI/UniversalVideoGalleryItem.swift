@@ -126,6 +126,11 @@ private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode
     }
 }
 
+private struct FetchControls {
+    let fetch: () -> Void
+    let cancel: () -> Void
+}
+
 final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let account: Account
     private let strings: PresentationStrings
@@ -151,6 +156,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var item: UniversalVideoGalleryItem?
     
     private let statusDisposable = MetaDisposable()
+    
+    private let fetchDisposable = MetaDisposable()
+    private var fetchStatus: MediaResourceStatus?
+    private var fetchControls: FetchControls?
     
     var playbackCompleted: (() -> Void)?
     
@@ -205,6 +214,26 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongVideoNode.seek(min(duration, timestamp + 15.0))
                     }
                 })
+            }
+        }
+        
+        self.footerContentNode.fetchControl = { [weak self] in
+            guard let strongSelf = self, let fetchStatus = strongSelf.fetchStatus, let fetchControls = strongSelf.fetchControls else {
+                return
+            }
+            switch fetchStatus {
+                case .Fetching:
+                    fetchControls.cancel()
+//                    if let cancel = fetchControls.with({ return $0?.cancel }) {
+//                        cancel()
+//                    }
+                case .Remote:
+                    fetchControls.fetch()
+//                    if let fetch = fetchControls.with({ return $0?.fetch }) {
+//                        fetch()
+//                    }
+                case .Local:
+                    break
             }
         }
     }
@@ -289,7 +318,39 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.scrubberView.setBufferingStatusSignal(videoNode.bufferingStatus)
             
-            self.statusDisposable.set((videoNode.status |> deliverOnMainQueue).start(next: { [weak self] value in
+            var mediaFileStatus: Signal<MediaResourceStatus?, NoError>
+            if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+                var file: TelegramMediaFile?
+                for m in message.media {
+                    if let m = m as? TelegramMediaFile, m.isVideo {
+                        file = m
+                        break
+                    }
+                }
+                if let file = file {
+                    mediaFileStatus = messageMediaFileStatus(account: item.account, messageId: message.id, file: file)
+                    |> map(Optional.init)
+                    
+                    self.fetchControls = FetchControls(fetch: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: item.account, message: message, file: file, userInitiated: true).start())
+                        }
+                    }, cancel: {
+                        messageMediaFileCancelInteractiveFetch(account: item.account, messageId: message.id, file: file)
+                    })
+                } else {
+                    mediaFileStatus = .single(nil)
+                }
+            } else {
+                mediaFileStatus = .single(nil)
+            }
+//            else if case let .webPage(webPage, file) = contentInfo {
+//
+//            }
+           
+            //messageFileMediaResourceStatus(account: item.account, file: item.content., message: item.a, isRecentActions: false)
+            
+            self.statusDisposable.set((combineLatest(videoNode.status, mediaFileStatus) |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
                 if let strongSelf = self {
                     var initialBuffering = false
                     var buffering = false
@@ -311,7 +372,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 isPaused = false
                             case let .buffering(_, whilePlaying):
                                 initialBuffering = true
-                                buffering = true
+                                //buffering = true
                                 isPaused = !whilePlaying
                                 if let content = item.content as? NativeVideoContent, !content.streamVideo {
                                     initialBuffering = false
@@ -336,6 +397,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     
                     strongSelf.isPaused = isPaused
+                    strongSelf.fetchStatus = fetchStatus
                     
                     if !item.hideControls {
                         strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused || value == nil)
@@ -347,8 +409,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     else if isPaused {
                         if hasStarted || strongSelf.didPause || buffering {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
-                        } else {
-                            strongSelf.footerContentNode.content = .info
+                        } else if let fetchStatus = fetchStatus {
+                            strongSelf.footerContentNode.content = .fetch(status: fetchStatus)
                         }
                     } else {
                         strongSelf.footerContentNode.content = .playback(paused: false, seekable: seekable)

@@ -807,25 +807,25 @@ final class ListMessageFileItemNode: ListMessageNode {
     func progressPressed() {
         if let resourceStatus = self.resourceStatus {
             switch resourceStatus {
-            case let .fetchStatus(fetchStatus):
-                switch fetchStatus {
-                case .Fetching:
-                    if let cancel = self.fetchControls.with({ return $0?.cancel }) {
-                        cancel()
+                case let .fetchStatus(fetchStatus):
+                    switch fetchStatus {
+                        case .Fetching:
+                            if let cancel = self.fetchControls.with({ return $0?.cancel }) {
+                                cancel()
+                            }
+                        case .Remote:
+                            if let fetch = self.fetchControls.with({ return $0?.fetch }) {
+                                fetch()
+                            }
+                        case .Local:
+                            if let item = self.item, let controllerInteraction = self.controllerInteraction {
+                                let _ = controllerInteraction.openMessage(item.message, .default)
+                            }
+                        }
+                case .playbackStatus:
+                    if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext {
+                        applicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause))
                     }
-                case .Remote:
-                    if let fetch = self.fetchControls.with({ return $0?.fetch }) {
-                        fetch()
-                    }
-                case .Local:
-                    if let item = self.item, let controllerInteraction = self.controllerInteraction {
-                        let _ = controllerInteraction.openMessage(item.message, .default)
-                    }
-                }
-            case .playbackStatus:
-                if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext {
-                    applicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause))
-                }
             }
         }
     }

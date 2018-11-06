@@ -55,17 +55,26 @@ private let playImage = generateImage(CGSize(width: 15.0, height: 18.0), rotated
     context.translateBy(x: -(diameter - size.width) / 2.0 - 1.5, y: -(diameter - size.height) / 2.0)
 })
 
+private let cloudFetchIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: UIColor.white)
+
 private let titleFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
 enum ChatItemGalleryFooterContent: Equatable {
     case info
+    case fetch(status: MediaResourceStatus)
     case playback(paused: Bool, seekable: Bool)
     
     static func ==(lhs: ChatItemGalleryFooterContent, rhs: ChatItemGalleryFooterContent) -> Bool {
         switch lhs {
             case .info:
                 if case .info = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .fetch(lhsStatus):
+                if case let .fetch(rhsStatus) = rhs, lhsStatus == rhsStatus {
                     return true
                 } else {
                     return false
@@ -95,6 +104,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let forwardButton: HighlightableButtonNode
     private let playbackControlButton: HighlightableButtonNode
     
+    private let statusButtonNode: HighlightTrackingButtonNode
+    private let statusNode: RadialStatusNode
+    
     private var currentMessageText: NSAttributedString?
     private var currentAuthorNameText: String?
     private var currentDateText: String?
@@ -106,6 +118,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     var playbackControl: (() -> Void)?
     var seekBackward: (() -> Void)?
     var seekForward: (() -> Void)?
+    
+    var fetchControl: (() -> Void)?
     
     var openUrl: ((String) -> Void)?
     var openUrlOptions: ((String) -> Void)?
@@ -120,6 +134,34 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         self.backwardButton.isHidden = true
                         self.forwardButton.isHidden = true
                         self.playbackControlButton.isHidden = true
+                        self.statusButtonNode.isHidden = true
+                        self.statusNode.isHidden = true
+                    case let .fetch(status):
+                        self.authorNameNode.isHidden = true
+                        self.dateNode.isHidden = true
+                        self.backwardButton.isHidden = true
+                        self.forwardButton.isHidden = true
+                        self.playbackControlButton.isHidden = true
+                        self.statusButtonNode.isHidden = false
+                        self.statusNode.isHidden = false
+                        
+                        var statusState: RadialStatusNodeState = .none
+                        switch status {
+                            case let .Fetching(isActive, progress):
+                                var adjustedProgress = progress
+                                if isActive {
+                                    adjustedProgress = max(adjustedProgress, 0.027)
+                                }
+                                statusState = .cloudProgress(color: UIColor.white, strokeBackgroundColor: UIColor.white.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
+                            case .Local:
+                                break
+                            case .Remote:
+                                if let image = cloudFetchIcon {
+                                    statusState = .customIcon(image)
+                                }
+                        }
+                        self.statusNode.transitionToState(statusState, completion: {})
+                        self.statusButtonNode.isUserInteractionEnabled = statusState != .none
                     case let .playback(paused, seekable):
                         self.authorNameNode.isHidden = true
                         self.dateNode.isHidden = true
@@ -127,6 +169,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         self.forwardButton.isHidden = !seekable
                         self.playbackControlButton.isHidden = false
                         self.playbackControlButton.setImage(paused ? playImage : pauseImage, for: [])
+                        self.statusButtonNode.isHidden = true
+                        self.statusNode.isHidden = true
                 }
             }
         }
@@ -181,6 +225,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.playbackControlButton = HighlightableButtonNode()
         self.playbackControlButton.isHidden = true
         
+        self.statusButtonNode = HighlightTrackingButtonNode()
+        self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
+        self.statusNode.isUserInteractionEnabled = false
+        
         super.init()
         
         self.textNode.highlightAttributeAction = { attributes in
@@ -211,12 +259,28 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.addSubnode(self.forwardButton)
         self.addSubnode(self.playbackControlButton)
         
+        self.addSubnode(self.statusNode)
+        self.addSubnode(self.statusButtonNode)
+        
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
         
         self.backwardButton.addTarget(self, action: #selector(self.backwardButtonPressed), forControlEvents: .touchUpInside)
         self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), forControlEvents: .touchUpInside)
         self.playbackControlButton.addTarget(self, action: #selector(self.playbackControlPressed), forControlEvents: .touchUpInside)
+        
+        self.statusButtonNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.statusNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.statusNode.alpha = 0.4
+                } else {
+                    strongSelf.statusNode.alpha = 1.0
+                    strongSelf.statusNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        self.statusButtonNode.addTarget(self, action: #selector(self.statusPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -364,6 +428,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0) + 66.0, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
         self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        
+        let statusSize = CGSize(width: 28.0, height: 28.0)
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floor((width - statusSize.width) / 2.0), y: panelHeight - bottomInset - statusSize.height - 8.0), size: statusSize))
+        
+        self.statusButtonNode.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
         let authorNameSize = self.authorNameNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
         let dateSize = self.dateNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
@@ -676,5 +745,25 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc func forwardButtonPressed() {
         self.seekForward?()
+    }
+    
+    @objc private func statusPressed() {
+        self.fetchControl?()
+//        guard let item = self.item, let fetchStatus = self.fetchStatus else {
+//            return
+//        }
+//
+//        switch fetchStatus {
+//        case .Fetching:
+//            if let cancel = self.fetchControls.with({ return $0?.cancel }) {
+//                cancel()
+//            }
+//        case .Remote:
+//            if let fetch = self.fetchControls.with({ return $0?.fetch }) {
+//                fetch()
+//            }
+//        case .Local:
+//            break
+//        }
     }
 }
