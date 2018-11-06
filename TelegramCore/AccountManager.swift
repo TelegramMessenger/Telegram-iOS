@@ -240,6 +240,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
 }
 
 public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager) -> Signal<Void, NoError> {
+    Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
     return accountManager.transaction { transaction -> Void in
         let currentId = transaction.getCurrentId()
         if let currentId = currentId {
@@ -319,6 +320,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 disposable.dispose()
             }
             for (id, disposable) in beginList {
+                Logger.shared.log("managedCleanupAccounts", "cleanup \(id)")
                 disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods).start())
             }
             

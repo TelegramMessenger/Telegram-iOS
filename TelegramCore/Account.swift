@@ -876,6 +876,7 @@ public class Account {
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, accountPeerId: peerId, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, localInputActivityManager: self.localInputActivityManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
         
         self.network.loggedOut = { [weak self] in
+            Logger.shared.log("Account", "network logged out")
             if let strongSelf = self {
                 strongSelf._loggedOut.set(true)
                 strongSelf.callSessionManager.dropAll()

@@ -687,6 +687,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     }
     
     public func requestMessageServiceAuthorizationRequired(_ requestMessageService: MTRequestMessageService!) {
+        Logger.shared.log("Network", "requestMessageServiceAuthorizationRequired")
         self.loggedOut?()
     }
     

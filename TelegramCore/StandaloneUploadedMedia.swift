@@ -89,8 +89,8 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
     }
 }
 
-public func standaloneUploadedFile(account: Account, peerId: PeerId, text: String, source: MultipartUploadSource, mimeType: String, attributes: [TelegramMediaFileAttribute]) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: source, encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes)), hintFileSize: nil, hintFileIsLarge: false)
+public func standaloneUploadedFile(account: Account, peerId: PeerId, text: String, source: MultipartUploadSource, mimeType: String, attributes: [TelegramMediaFileAttribute], hintFileIsLarge: Bool) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
+    return multipartUpload(network: account.network, postbox: account.postbox, source: source, encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes)), hintFileSize: nil, hintFileIsLarge: hintFileIsLarge)
         |> mapError { _ -> StandaloneUploadMediaError in return .generic }
         |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
             switch next {
