@@ -152,6 +152,8 @@ public enum DeviceMetrics: CaseIterable {
                     return CGSize(width: screenSize.height, height: screenSize.width - 10.0)
                 case .iPhone6:
                     return CGSize(width: screenSize.height, height: screenSize.width - 22.0)
+                case .iPhone6Plus:
+                    return CGSize(width: screenSize.height, height: screenSize.width - 22.0)
                 case .iPhoneX:
                     return CGSize(width: screenSize.height, height: screenSize.width + 48.0)
                 case .iPhoneXSMax:
@@ -165,6 +167,8 @@ public enum DeviceMetrics: CaseIterable {
                     return CGSize(width: screenSize.width, height: screenSize.height - 50.0)
                 case .iPhone6:
                     return CGSize(width: screenSize.width, height: screenSize.height - 97.0)
+                case .iPhone6Plus:
+                    return CGSize(width: screenSize.width, height: screenSize.height - 95.0)
                 case .iPhoneX:
                     return CGSize(width: screenSize.width, height: screenSize.height - 154.0)
                 case .iPhoneXSMax:
