@@ -22,7 +22,7 @@ namespace tgvoip{
 			virtual void Stop() override;
 			void SetDataCallback(std::function<void(int16_t*, size_t)> c);
 		private:
-			void RunThread(void*);
+			void RunThread();
 			bool running=false;
 			bool recording=false;
 			Thread* thread;
@@ -38,7 +38,7 @@ namespace tgvoip{
 			virtual bool IsPlaying() override;
 			void SetDataCallback(std::function<void(int16_t*, size_t)> c);
 		private:
-			void RunThread(void*);
+			void RunThread();
 			bool running=false;
 			bool playing=false;
 			Thread* thread;

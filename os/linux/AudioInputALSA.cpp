@@ -54,7 +54,7 @@ void AudioInputALSA::Start(){
 		return;
 
 	isRecording=true;
-	thread=new Thread(new MethodPointer<AudioInputALSA>(&AudioInputALSA::RunThread, this), NULL);
+	thread=new Thread(std::bind(&AudioInputALSA::RunThread, this));
 	thread->SetName("AudioInputALSA");
 	thread->Start();
 }
@@ -69,7 +69,7 @@ void AudioInputALSA::Stop(){
 	thread=NULL;
 }
 
-void AudioInputALSA::RunThread(void* arg){
+void AudioInputALSA::RunThread(){
 	unsigned char buffer[BUFFER_SIZE*2];
 	snd_pcm_sframes_t frames;
 	while(isRecording){

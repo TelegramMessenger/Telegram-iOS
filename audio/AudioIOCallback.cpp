@@ -34,7 +34,7 @@ AudioOutput* AudioIOCallback::GetOutput(){
 #pragma mark - Input
 
 AudioInputCallback::AudioInputCallback(){
-	thread=new Thread(new MethodPointer<AudioInputCallback>(&AudioInputCallback::RunThread, this), NULL);
+	thread=new Thread(std::bind(&AudioInputCallback::RunThread, this));
 	thread->SetName("AudioInputCallback");
 }
 
@@ -60,7 +60,7 @@ void AudioInputCallback::SetDataCallback(std::function<void(int16_t*, size_t)> c
 	dataCallback=c;
 }
 
-void AudioInputCallback::RunThread(void*){
+void AudioInputCallback::RunThread(){
 	int16_t buf[960];
 	while(running){
 		double t=VoIPController::GetCurrentTime();
@@ -76,7 +76,7 @@ void AudioInputCallback::RunThread(void*){
 #pragma mark - Output
 
 AudioOutputCallback::AudioOutputCallback(){
-	thread=new Thread(new MethodPointer<AudioOutputCallback>(&AudioOutputCallback::RunThread, this), NULL);
+	thread=new Thread(std::bind(&AudioOutputCallback::RunThread, this));
 	thread->SetName("AudioOutputCallback");
 }
 
@@ -106,7 +106,7 @@ void AudioOutputCallback::SetDataCallback(std::function<void(int16_t*, size_t)> 
 	dataCallback=c;
 }
 
-void AudioOutputCallback::RunThread(void*){
+void AudioOutputCallback::RunThread(){
 	int16_t buf[960];
 	while(running){
 		double t=VoIPController::GetCurrentTime();
