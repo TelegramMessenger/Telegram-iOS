@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <netinet/tcp.h>
 #include "../../logging.h"
