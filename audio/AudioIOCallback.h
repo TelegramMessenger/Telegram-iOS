@@ -7,7 +7,7 @@
 #ifndef LIBTGVOIP_AUDIO_IO_CALLBACK
 #define LIBTGVOIP_AUDIO_IO_CALLBACK
 
-#include <AudioIO.h>
+#include "AudioIO.h"
 #include <functional>
 
 #include "../threading.h"
