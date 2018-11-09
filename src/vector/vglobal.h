@@ -259,6 +259,15 @@ public:
         return uint((a << 24) | (pr << 16) | (pg << 8) | (pb));
     }
 
+    uint premulARGB(float opacity) const
+    {
+        int alpha = a * opacity;
+        int pr = (r * alpha) / 255;
+        int pg = (g * alpha) / 255;
+        int pb = (b * alpha) / 255;
+        return uint((alpha << 24) | (pr << 16) | (pg << 8) | (pb));
+    }
+
 public:
     uchar a;
     uchar r;

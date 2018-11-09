@@ -17,6 +17,8 @@ public:
     enum class Type { Linear, Radial };
     VGradient(VGradient::Type type);
     void setStops(const VGradientStops &stops);
+    void setAlpha(float alpha) {mAlpha = alpha;}
+    float alpha() const {return mAlpha;}
     VGradient() = default;
 
 public:
@@ -25,6 +27,7 @@ public:
     VGradient::Spread    mSpread;
     VGradient::Mode      mMode;
     VGradientStops       mStops;
+    float                mAlpha{1.0};
     union {
         struct {
             float x1, y1, x2, y2;

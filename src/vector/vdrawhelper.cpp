@@ -15,17 +15,16 @@ public:
 
     typedef std::unordered_multimap<uint64_t, std::shared_ptr<const CacheInfo>>
          VGradientColorTableHash;
-    bool generateGradientColorTable(const VGradientStops &stops,
+    bool generateGradientColorTable(const VGradientStops &stops, float alpha,
                                     uint32_t *colorTable, int size);
     inline const std::shared_ptr<const CacheInfo> getBuffer(
         const VGradient &gradient)
     {
         uint64_t                         hash_val = 0;
         std::shared_ptr<const CacheInfo> info;
-
         const VGradientStops &stops = gradient.mStops;
         for (uint i = 0; i < stops.size() && i <= 2; i++)
-            hash_val += stops[i].second.premulARGB();
+            hash_val += (stops[i].second.premulARGB() * gradient.alpha());
 
         cacheAccess.lock();
 
@@ -72,7 +71,7 @@ protected:
         }
         auto cache_entry = std::make_shared<CacheInfo>(gradient.mStops);
         cache_entry->alpha = generateGradientColorTable(
-            gradient.mStops, cache_entry->buffer32, VGradient::colorTableSize);
+            gradient.mStops, gradient.alpha(), cache_entry->buffer32, VGradient::colorTableSize);
         cache.insert(std::make_pair(hash_val, cache_entry));
         return cache_entry;
     }
@@ -81,7 +80,7 @@ protected:
     std::mutex              cacheAccess;
 };
 
-bool VGradientCache::generateGradientColorTable(const VGradientStops &stops,
+bool VGradientCache::generateGradientColorTable(const VGradientStops &stops, float opacity,
                                                 uint32_t *colorTable, int size)
 {
     int                  dist, idist, pos = 0, i;
@@ -91,10 +90,12 @@ bool VGradientCache::generateGradientColorTable(const VGradientStops &stops,
     uint32_t             curColor, nextColor;
     float                delta, t, incr, fpos;
 
+    if (!vCompare(opacity, 1.0f)) alpha = true;
+
     start = stops.data();
     curr = start;
     if (!curr->second.isOpaque()) alpha = true;
-    curColor = curr->second.premulARGB();
+    curColor = curr->second.premulARGB(opacity);
     incr = 1.0 / (float)size;
     fpos = 1.5 * incr;
 
@@ -111,7 +112,7 @@ bool VGradientCache::generateGradientColorTable(const VGradientStops &stops,
         next = (start + i + 1);
         delta = 1 / (next->first - curr->first);
         if (!next->second.isOpaque()) alpha = true;
-        nextColor = next->second.premulARGB();
+        nextColor = next->second.premulARGB(opacity);
         while (fpos < next->first && pos < size) {
             t = (fpos - curr->first) * delta;
             dist = (int)(255 * t);

@@ -851,6 +851,7 @@ void LOTGFillItem::updateContent(int frameNo)
 
 void LOTGFillItem::updateRenderNode()
 {
+    mGradient->setAlpha(parentAlpha());
     mDrawable->setBrush(VBrush(mGradient.get()));
     mDrawable->setFillRule(mFillRule);
 }
@@ -926,6 +927,7 @@ void LOTGStrokeItem::updateContent(int frameNo)
 void LOTGStrokeItem::updateRenderNode()
 {
     float scale = getScale(mGradient->mMatrix);
+    mGradient->setAlpha(parentAlpha());
     mDrawable->setBrush(VBrush(mGradient.get()));
     mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
                             mWidth * scale);
