@@ -26,7 +26,7 @@ JitterBuffer::JitterBuffer(MediaStreamItf *out, uint32_t step):bufferPool(JITTER
 		maxMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_40", 15);
 		maxUsedSlots=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_40", 30);
 	}else{
-		minMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_60", 1);
+		minMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_60", 2);
 		maxMinDelay=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_60", 10);
 		maxUsedSlots=(uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_60", 20);
 	}
@@ -51,9 +51,8 @@ JitterBuffer::~JitterBuffer(){
 }
 
 void JitterBuffer::SetMinPacketCount(uint32_t count){
-	if(minDelay==count)
-		return;
 	minDelay=count;
+	minMinDelay=count;
 	//Reset();
 }
 
@@ -110,6 +109,26 @@ size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetI
 	pkt.buffer=buffer;
 	pkt.size=len;
 	MutexGuard m(mutex);
+	if(first){
+		first=false;
+		unsigned int delay=GetCurrentDelay();
+		if(GetCurrentDelay()>5){
+			LOGW("jitter: delay too big upon start (%u), dropping packets", delay);
+			while(delay>GetMinPacketCount()){
+				for(int i=0;i<JITTER_SLOT_COUNT;i++){
+					if(slots[i].timestamp==nextTimestamp){
+						if(slots[i].buffer){
+    						bufferPool.Reuse(slots[i].buffer);
+    						slots[i].buffer=NULL;
+						}
+						break;
+					}
+				}
+				Advance();
+				delay--;
+			}
+		}
+	}
 	int result=GetInternal(&pkt, offsetInSteps, advance);
 	if(outstandingDelayChange!=0){
 		if(outstandingDelayChange<0){
@@ -173,7 +192,7 @@ int JitterBuffer::GetInternal(jitter_packet_t* pkt, int offset, bool advance){
 		return JR_OK;
 	}
 
-	//LOGV("jitter: found no packet for timestamp %lld (last put = %d, lost = %d)", (long long int)timestampToGet, lastPutTimestamp, lostCount);
+	LOGV("jitter: found no packet for timestamp %lld (last put = %d, lost = %d)", (long long int)timestampToGet, lastPutTimestamp, lostCount);
 
 	if(advance)
 		Advance();
@@ -223,6 +242,7 @@ void JitterBuffer::PutInternal(jitter_packet_t* pkt, bool overwriteExisting){
 		wasReset=false;
 		outstandingDelayChange=0;
 		nextTimestamp=(int64_t)(((int64_t)pkt->timestamp)-step*minDelay);
+		first=true;
 		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%f)", (long long int)nextTimestamp, step, minDelay);
 	}
 	

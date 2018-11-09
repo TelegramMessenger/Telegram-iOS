@@ -5,8 +5,13 @@
 //
 
 #include "DarwinSpecific.h"
+#include "../../VoIPController.h"
 
 #import <Foundation/Foundation.h>
+#if TARGET_OS_IOS
+#import <CoreTelephony/CTTelephonyNetworkInfo.h>
+#import <CoreTelephony/CTCarrier.h>
+#endif
 
 using namespace tgvoip;
 
@@ -61,4 +66,19 @@ void DarwinSpecific::SetCurrentThreadPriority(int priority){
 		}
 		[NSThread setThreadPriority:p];
 	}
+}
+
+CellularCarrierInfo DarwinSpecific::GetCarrierInfo(){
+	CellularCarrierInfo info;
+#if TARGET_OS_IOS
+	CTTelephonyNetworkInfo* netinfo=[CTTelephonyNetworkInfo new];
+	CTCarrier* carrier=[netinfo subscriberCellularProvider];
+	if(carrier && [carrier carrierName]){
+    	info.name=[[carrier carrierName] cStringUsingEncoding:NSUTF8StringEncoding];
+    	info.mcc=[[carrier mobileCountryCode] cStringUsingEncoding:NSUTF8StringEncoding];
+    	info.mnc=[[carrier mobileNetworkCode] cStringUsingEncoding:NSUTF8StringEncoding];
+    	info.countryCode=[[[carrier isoCountryCode] uppercaseString] cStringUsingEncoding:NSUTF8StringEncoding];
+	}
+#endif
+	return info;
 }

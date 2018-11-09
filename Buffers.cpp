@@ -14,7 +14,7 @@
 
 using namespace tgvoip;
 
-#pragma mark -- BufferInputStream
+#pragma mark - BufferInputStream
 
 BufferInputStream::BufferInputStream(unsigned char* data, size_t length){
 	this->buffer=data;
@@ -116,7 +116,7 @@ void BufferInputStream::EnsureEnoughRemaining(size_t need){
 	}
 }
 
-#pragma mark -- BufferOutputStream
+#pragma mark - BufferOutputStream
 
 BufferOutputStream::BufferOutputStream(size_t size){
 	buffer=(unsigned char*) malloc(size);
@@ -171,14 +171,20 @@ void BufferOutputStream::WriteInt16(int16_t i){
 	offset+=2;
 }
 
-void BufferOutputStream::WriteBytes(unsigned char *bytes, size_t count){
+void BufferOutputStream::WriteBytes(const unsigned char *bytes, size_t count){
 	this->ExpandBufferIfNeeded(count);
 	memcpy(buffer+offset, bytes, count);
 	offset+=count;
 }
 
-void BufferOutputStream::WriteBytes(Buffer &buffer){
+void BufferOutputStream::WriteBytes(const Buffer &buffer){
 	WriteBytes(*buffer, buffer.Length());
+}
+
+void BufferOutputStream::WriteBytes(const Buffer &buffer, size_t offset, size_t count){
+	if(offset+count>buffer.Length())
+		throw std::out_of_range("offset out of buffer bounds");
+	WriteBytes(*buffer+offset, count);
 }
 
 unsigned char *BufferOutputStream::GetBuffer(){
@@ -215,7 +221,7 @@ void BufferOutputStream::Rewind(size_t numBytes){
 	offset-=numBytes;
 }
 
-#pragma mark -- BufferPool
+#pragma mark - BufferPool
 
 BufferPool::BufferPool(unsigned int size, unsigned int count){
 	assert(count<=64);
@@ -266,5 +272,5 @@ size_t BufferPool::GetBufferCount(){
 	return (size_t) bufferCount;
 }
 
-#pragma mark -- Buffer
+#pragma mark - Buffer
 

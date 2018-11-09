@@ -40,15 +40,11 @@ tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source, bool needSecondary):que
 		secondaryEncoder=opus_encoder_create(48000, 1, OPUS_APPLICATION_VOIP, NULL);
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_COMPLEXITY(10));
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
-		opus_encoder_ctl(secondaryEncoder, OPUS_SET_VBR(0));
-		opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
+		//opus_encoder_ctl(secondaryEncoder, OPUS_SET_VBR(0));
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_BITRATE(8000));
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_INBAND_FEC(1));
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_PACKET_LOSS_PERC(15));
-
-		opus_int32 delay, ecDelay;
-		opus_encoder_ctl(secondaryEncoder, OPUS_GET_LOOKAHEAD(&ecDelay));
-		opus_encoder_ctl(enc, OPUS_GET_LOOKAHEAD(&delay));
+		opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
 	}else{
 		secondaryEncoder=NULL;
 	}
@@ -64,7 +60,7 @@ void tgvoip::OpusEncoder::Start(){
 	if(running)
 		return;
 	running=true;
-	thread=new Thread(new MethodPointer<tgvoip::OpusEncoder>(&tgvoip::OpusEncoder::RunThread, this), NULL);
+	thread=new Thread(std::bind(&tgvoip::OpusEncoder::RunThread, this));
 	thread->SetName("OpusEncoder");
 	thread->Start();
 	thread->SetMaxPriority();
@@ -135,7 +131,7 @@ void tgvoip::OpusEncoder::SetEchoCanceller(EchoCanceller* aec){
 	echoCanceller=aec;
 }
 
-void tgvoip::OpusEncoder::RunThread(void* arg){
+void tgvoip::OpusEncoder::RunThread(){
 	unsigned char buf[960*2];
 	uint32_t bufferedCount=0;
 	uint32_t packetsPerFrame=frameDuration/20;
@@ -183,7 +179,6 @@ void tgvoip::OpusEncoder::SetPacketLoss(int percent){
 	else if(currentBitrate<=mediumCorrectionBitrate)
 		multiplier=mediumCorrectionMultiplier;
 	opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC((int)(percent*multiplier)));
-	opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(percent>17 ? OPUS_AUTO : OPUS_BANDWIDTH_FULLBAND));
 }
 
 int tgvoip::OpusEncoder::GetPacketLoss(){

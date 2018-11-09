@@ -47,38 +47,39 @@ using namespace tgvoip;
 using namespace tgvoip::audio;
 using namespace std;
 
-shared_ptr<AudioIO> AudioIO::Create(){
+AudioIO* AudioIO::Create(){
 	std::string inputDevice="default", outputDevice="default";
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
-	return std::make_shared<AudioIOCallback>();
+	return new AudioIOCallback();
 #elif defined(__ANDROID__)
-	return std::make_shared<ContextlessAudioIO<AudioInputAndroid, AudioOutputAndroid>>();
+	return new ContextlessAudioIO<AudioInputAndroid, AudioOutputAndroid>();
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX
 	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
-		return std::make_shared<ContextlessAudioIO<AudioInputAudioUnitLegacy, AudioOutputAudioUnitLegacy>>(inputDevice, outputDevice);
+		return new ContextlessAudioIO<AudioInputAudioUnitLegacy, AudioOutputAudioUnitLegacy>(inputDevice, outputDevice);
 
 #endif
-	return std::make_shared<AudioUnitIO>();
+	return new AudioUnitIO();
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
 	if(LOBYTE(LOWORD(GetVersion()))<6)
-		return std::make_shared<ContextlessAudioIO<AudioInputWave, AudioOutputWave>>(inputDevice, outputDevice);
+		return new ContextlessAudioIO<AudioInputWave, AudioOutputWave>(inputDevice, outputDevice);
 #endif
-	return std::make_shared<ContextlessAudioIO<AudioInputWASAPI, AudioOutputWASAPI>>(inputDevice, outputDevice);
+	return new ContextlessAudioIO<AudioInputWASAPI, AudioOutputWASAPI>(inputDevice, outputDevice);
 #elif defined(__linux__)
 #ifndef WITHOUT_ALSA
 #ifndef WITHOUT_PULSE
 	if(AudioPulse::Load()){
-		std::shared_ptr<AudioIO> io=std::make_shared<AudioPulse>(inputDevice, outputDevice);
+		AudioIO* io=new AudioPulse(inputDevice, outputDevice);
 		if(!io->Failed() && io->GetInput()->IsInitialized() && io->GetOutput()->IsInitialized())
 			return io;
 		LOGW("PulseAudio available but not working; trying ALSA");
+		delete io;
 	}
 #endif
-	return std::make_shared<ContextlessAudioIO<AudioInputALSA, AudioOutputALSA>>(inputDevice, outputDevice);
+	return new ContextlessAudioIO<AudioInputALSA, AudioOutputALSA>(inputDevice, outputDevice);
 #else
-	return std::make_shared<AudioPulse>(inputDevice, outputDevice);
+	return new AudioPulse(inputDevice, outputDevice);
 #endif
 #endif
 }

@@ -11,11 +11,13 @@
 #include "Buffers.h"
 #include "BlockingQueue.h"
 #include "MediaStreamItf.h"
+#include "utils.h"
 
 namespace tgvoip{
 class EchoCanceller{
 
 public:
+	TGVOIP_DISALLOW_COPY_AND_ASSIGN(EchoCanceller);
 	EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC);
 	virtual ~EchoCanceller();
 	virtual void Start();
@@ -31,7 +33,7 @@ private:
 	bool enableNS;
 	bool isOn;
 #ifndef TGVOIP_NO_DSP
-	void RunBufferFarendThread(void* arg);
+	void RunBufferFarendThread();
 	bool didBufferFarend;
 	Mutex aecMutex;
 	void* aec;

@@ -189,6 +189,10 @@
 		69A6DE1C1E95ECF000000E69 /* wav_file.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DE181E95ECF000000E69 /* wav_file.h */; };
 		69A6DE1D1E95ECF000000E69 /* wav_header.cc in Sources */ = {isa = PBXBuildFile; fileRef = 69A6DE191E95ECF000000E69 /* wav_header.cc */; };
 		69A6DE1E1E95ECF000000E69 /* wav_header.h in Headers */ = {isa = PBXBuildFile; fileRef = 69A6DE1A1E95ECF000000E69 /* wav_header.h */; };
+		69DD8D01218CD401001E8140 /* VideoRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 69DD8CFD218CD400001E8140 /* VideoRenderer.h */; };
+		69DD8D02218CD401001E8140 /* VideoRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69DD8CFE218CD400001E8140 /* VideoRenderer.cpp */; };
+		69DD8D03218CD401001E8140 /* VideoSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69DD8CFF218CD400001E8140 /* VideoSource.cpp */; };
+		69DD8D04218CD401001E8140 /* VideoSource.h in Headers */ = {isa = PBXBuildFile; fileRef = 69DD8D00218CD400001E8140 /* VideoSource.h */; };
 		69E357B020F88955002E163B /* AudioIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E357A720F88954002E163B /* AudioIO.cpp */; };
 		69E357B120F88955002E163B /* AudioIO.h in Headers */ = {isa = PBXBuildFile; fileRef = 69E357AF20F88954002E163B /* AudioIO.h */; };
 		69FB0B2D20F6860E00827817 /* MessageThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FB0B2420F6860D00827817 /* MessageThread.cpp */; };
@@ -433,6 +437,10 @@
 		69A6DE181E95ECF000000E69 /* wav_file.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wav_file.h; sourceTree = "<group>"; };
 		69A6DE191E95ECF000000E69 /* wav_header.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = wav_header.cc; sourceTree = "<group>"; };
 		69A6DE1A1E95ECF000000E69 /* wav_header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wav_header.h; sourceTree = "<group>"; };
+		69DD8CFD218CD400001E8140 /* VideoRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoRenderer.h; sourceTree = "<group>"; };
+		69DD8CFE218CD400001E8140 /* VideoRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoRenderer.cpp; sourceTree = "<group>"; };
+		69DD8CFF218CD400001E8140 /* VideoSource.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoSource.cpp; sourceTree = "<group>"; };
+		69DD8D00218CD400001E8140 /* VideoSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoSource.h; sourceTree = "<group>"; };
 		69E357A720F88954002E163B /* AudioIO.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioIO.cpp; sourceTree = "<group>"; };
 		69E357AF20F88954002E163B /* AudioIO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioIO.h; sourceTree = "<group>"; };
 		69F842361E67540700C110F7 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -500,6 +508,7 @@
 				692AB8C81E6759DD00706ACC /* VoIPController.h */,
 				692AB8C91E6759DD00706ACC /* VoIPServerConfig.cpp */,
 				692AB8CA1E6759DD00706ACC /* VoIPServerConfig.h */,
+				69DD8CFC218CD400001E8140 /* video */,
 				69A6DCFE1E95EC7700000E69 /* webrtc_dsp */,
 			);
 			name = libtgvoip;
@@ -857,6 +866,17 @@
 			path = source;
 			sourceTree = "<group>";
 		};
+		69DD8CFC218CD400001E8140 /* video */ = {
+			isa = PBXGroup;
+			children = (
+				69DD8CFD218CD400001E8140 /* VideoRenderer.h */,
+				69DD8CFE218CD400001E8140 /* VideoRenderer.cpp */,
+				69DD8CFF218CD400001E8140 /* VideoSource.cpp */,
+				69DD8D00218CD400001E8140 /* VideoSource.h */,
+			);
+			path = video;
+			sourceTree = "<group>";
+		};
 		69F8422C1E67540700C110F7 = {
 			isa = PBXGroup;
 			children = (
@@ -898,6 +918,7 @@
 				692AB8EC1E6759DD00706ACC /* OpusDecoder.h in Headers */,
 				69A6DE1E1E95ECF000000E69 /* wav_header.h in Headers */,
 				69A6DD981E95EC7700000E69 /* checks.h in Headers */,
+				69DD8D04218CD401001E8140 /* VideoSource.h in Headers */,
 				692AB8E81E6759DD00706ACC /* logging.h in Headers */,
 				69A6DDED1E95EC7700000E69 /* analog_agc.h in Headers */,
 				69A6DE081E95EC7800000E69 /* delay_estimator_internal.h in Headers */,
@@ -906,6 +927,7 @@
 				69A6DDAE1E95EC7700000E69 /* complex_fft_tables.h in Headers */,
 				692AB8FF1E6759DD00706ACC /* TGLogWrapper.h in Headers */,
 				69791A4E1EE8262400BB85FB /* NetworkSocketPosix.h in Headers */,
+				69DD8D01218CD401001E8140 /* VideoRenderer.h in Headers */,
 				692AB9051E6759DD00706ACC /* VoIPServerConfig.h in Headers */,
 				6998617C2095292A00B68BEC /* PacketReassembler.h in Headers */,
 				69A6DDF31E95EC7700000E69 /* defines.h in Headers */,
@@ -1111,6 +1133,7 @@
 				69A6DDE31E95EC7700000E69 /* echo_cancellation.cc in Sources */,
 				69A6DDD71E95EC7700000E69 /* sqrt_of_one_minus_x_squared.c in Sources */,
 				69791A4D1EE8262400BB85FB /* NetworkSocketPosix.cpp in Sources */,
+				69DD8D02218CD401001E8140 /* VideoRenderer.cpp in Sources */,
 				692AB8D81E6759DD00706ACC /* CongestionControl.cpp in Sources */,
 				69A6DDCD1E95EC7700000E69 /* resample_by_2.c in Sources */,
 				69A6DDE51E95EC7700000E69 /* aecm_core.cc in Sources */,
@@ -1139,6 +1162,7 @@
 				69A6DDB01E95EC7700000E69 /* cross_correlation.c in Sources */,
 				69791A571EE8272A00BB85FB /* Resampler.cpp in Sources */,
 				69A6DE0B1E95EC7800000E69 /* ooura_fft.cc in Sources */,
+				69DD8D03218CD401001E8140 /* VideoSource.cpp in Sources */,
 				69A6DDB21E95EC7700000E69 /* division_operations.c in Sources */,
 				69A6DDCA1E95EC7700000E69 /* refl_coef_to_lpc.c in Sources */,
 				69A6DDD21E95EC7700000E69 /* spl_inl.c in Sources */,

@@ -8,6 +8,7 @@
 #define LIBTGVOIP_NETWORKSOCKETPOSIX_H
 
 #include "../../NetworkSocket.h"
+#include "../../Buffers.h"
 #include <vector>
 #include <sys/select.h>
 #include <pthread.h>
@@ -29,30 +30,31 @@ class NetworkSocketPosix : public NetworkSocket{
 public:
 	NetworkSocketPosix(NetworkProtocol protocol);
 	virtual ~NetworkSocketPosix();
-	virtual void Send(NetworkPacket* packet);
-	virtual void Receive(NetworkPacket* packet);
-	virtual void Open();
-	virtual void Close();
-	virtual void Connect(NetworkAddress* address, uint16_t port);
-	virtual std::string GetLocalInterfaceInfo(IPv4Address* v4addr, IPv6Address* v6addr);
-	virtual void OnActiveInterfaceChanged();
-	virtual uint16_t GetLocalPort();
+	virtual void Send(NetworkPacket* packet) override;
+	virtual void Receive(NetworkPacket* packet) override;
+	virtual void Open() override;
+	virtual void Close() override;
+	virtual void Connect(const NetworkAddress* address, uint16_t port) override;
+	virtual std::string GetLocalInterfaceInfo(IPv4Address* v4addr, IPv6Address* v6addr) override;
+	virtual void OnActiveInterfaceChanged() override;
+	virtual uint16_t GetLocalPort() override;
 
 	static std::string V4AddressToString(uint32_t address);
-	static std::string V6AddressToString(unsigned char address[16]);
+	static std::string V6AddressToString(const unsigned char address[16]);
 	static uint32_t StringToV4Address(std::string address);
 	static void StringToV6Address(std::string address, unsigned char* out);
 	static IPv4Address* ResolveDomainName(std::string name);
-	static bool Select(std::vector<NetworkSocket*>& readFds, std::vector<NetworkSocket*>& errorFds, SocketSelectCanceller* canceller);
+	static bool Select(std::vector<NetworkSocket*>& readFds, std::vector<NetworkSocket*>& writeFds, std::vector<NetworkSocket*>& errorFds, SocketSelectCanceller* canceller);
 
-	virtual NetworkAddress *GetConnectedAddress();
+	virtual NetworkAddress *GetConnectedAddress() override;
 
-	virtual uint16_t GetConnectedPort();
+	virtual uint16_t GetConnectedPort() override;
 
-	virtual void SetTimeouts(int sendTimeout, int recvTimeout);
+	virtual void SetTimeouts(int sendTimeout, int recvTimeout) override;
+	virtual bool OnReadyToSend() override;
 
 protected:
-	virtual void SetMaxPriority();
+	virtual void SetMaxPriority() override;
 
 private:
 	static int GetDescriptorFromSocket(NetworkSocket* socket);
@@ -67,6 +69,7 @@ private:
 	IPv6Address lastRecvdV6;
 	NetworkAddress* tcpConnectedAddress;
 	uint16_t tcpConnectedPort;
+	Buffer* pendingOutgoingPacket=NULL;
 };
 
 }

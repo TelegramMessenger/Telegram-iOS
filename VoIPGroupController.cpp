@@ -38,15 +38,16 @@ VoIPGroupController::~VoIPGroupController(){
 }
 
 void VoIPGroupController::SetGroupCallInfo(unsigned char *encryptionKey, unsigned char *reflectorGroupTag, unsigned char *reflectorSelfTag, unsigned char *reflectorSelfSecret, unsigned char* reflectorSelfTagHash, int32_t selfUserID, IPv4Address reflectorAddress, IPv6Address reflectorAddressV6, uint16_t reflectorPort){
-	shared_ptr<Endpoint> e=make_shared<Endpoint>();
-	e->address=reflectorAddress;
-	e->v6address=reflectorAddressV6;
-	e->port=reflectorPort;
-	memcpy(e->peerTag, reflectorGroupTag, 16);
-	e->type=Endpoint::TYPE_UDP_RELAY;
-	endpoints.push_back(e);
+	Endpoint e;
+	e.address=reflectorAddress;
+	e.v6address=reflectorAddressV6;
+	e.port=reflectorPort;
+	memcpy(e.peerTag, reflectorGroupTag, 16);
+	e.type=Endpoint::Type::UDP_RELAY;
+	e.id=FOURCC('G','R','P','R');
+	endpoints[e.id]=e;
 	groupReflector=e;
-	currentEndpoint=e;
+	currentEndpoint=e.id;
 
 	memcpy(this->encryptionKey, encryptionKey, 256);
 	memcpy(this->reflectorSelfTag, reflectorSelfTag, 16);
@@ -217,7 +218,7 @@ void VoIPGroupController::SendInit(){
 	SendRecentPacketsRequest();
 }
 
-void VoIPGroupController::ProcessIncomingPacket(NetworkPacket &packet, shared_ptr<Endpoint> srcEndpoint){
+void VoIPGroupController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcEndpoint){
 	//LOGD("Received incoming packet from %s:%u, %u bytes", packet.address->ToString().c_str(), packet.port, packet.length);
 	if(packet.length<17 || packet.length>2000){
 		LOGW("Received packet has wrong length %d", (int)packet.length);
@@ -302,7 +303,7 @@ void VoIPGroupController::ProcessIncomingPacket(NetworkPacket &packet, shared_pt
 					if(state!=STATE_ESTABLISHED)
 						SetState(STATE_ESTABLISHED);
 					if(!audioInput){
-						StartAudio();
+						InitializeAudio();
 						if(state!=STATE_FAILED){
 							//	audioOutput->Start();
 						}
@@ -429,7 +430,7 @@ void VoIPGroupController::ProcessIncomingPacket(NetworkPacket &packet, shared_pt
 				break;
 		}
 		int i;
-		//if(srcEndpoint->type==Endpoint::TYPE_UDP_RELAY && srcEndpoint!=peerPreferredRelay){
+		//if(srcEndpoint->type==Endpoint::Type::UDP_RELAY && srcEndpoint!=peerPreferredRelay){
 		//	peerPreferredRelay=srcEndpoint;
 		//}
 		for(i=0;i<count;i++){
@@ -460,7 +461,7 @@ void VoIPGroupController::ProcessIncomingPacket(NetworkPacket &packet, shared_pt
 	}
 }
 
-void VoIPGroupController::SendUdpPing(shared_ptr<Endpoint> endpoint){
+void VoIPGroupController::SendUdpPing(Endpoint& endpoint){
 
 }
 
@@ -525,8 +526,8 @@ void VoIPGroupController::SendSpecialReflectorRequest(unsigned char *data, size_
 	out.WriteBytes(buf, 16);
 
 	NetworkPacket pkt={0};
-	pkt.address=&groupReflector->address;
-	pkt.port=groupReflector->port;
+	pkt.address=&groupReflector.address;
+	pkt.port=groupReflector.port;
 	pkt.protocol=PROTO_UDP;
 	pkt.data=out.GetBuffer();
 	pkt.length=out.GetLength();
@@ -536,9 +537,9 @@ void VoIPGroupController::SendSpecialReflectorRequest(unsigned char *data, size_
 void VoIPGroupController::SendRelayPings(){
 	//LOGV("Send relay pings 2");
 	double currentTime=GetCurrentTime();
-	if(currentTime-groupReflector->lastPingTime>=0.25){
+	if(currentTime-groupReflector.lastPingTime>=0.25){
 		SendRecentPacketsRequest();
-		groupReflector->lastPingTime=currentTime;
+		groupReflector.lastPingTime=currentTime;
 	}
 }
 
@@ -589,10 +590,10 @@ void VoIPGroupController::WritePacketHeader(uint32_t seq, BufferOutputStream *s,
 	}
 }
 
-void VoIPGroupController::SendPacket(unsigned char *data, size_t len, shared_ptr<Endpoint> ep, PendingOutgoingPacket& srcPacket){
+void VoIPGroupController::SendPacket(unsigned char *data, size_t len, Endpoint& ep, PendingOutgoingPacket& srcPacket){
 	if(stopping)
 		return;
-	if(ep->type==Endpoint::TYPE_TCP_RELAY && !useTCP)
+	if(ep.type==Endpoint::Type::TCP_RELAY && !useTCP)
 		return;
 	BufferOutputStream out(len+128);
 	//LOGV("send group packet %u", len);
@@ -652,11 +653,11 @@ void VoIPGroupController::SendPacket(unsigned char *data, size_t len, shared_ptr
 		stats.bytesSentWifi+=(uint64_t)out.GetLength();
 
 	NetworkPacket pkt={0};
-	pkt.address=(NetworkAddress*)&ep->address;
-	pkt.port=ep->port;
+	pkt.address=(NetworkAddress*)&ep.address;
+	pkt.port=ep.port;
 	pkt.length=out.GetLength();
 	pkt.data=out.GetBuffer();
-	pkt.protocol=ep->type==Endpoint::TYPE_TCP_RELAY ? PROTO_TCP : PROTO_UDP;
+	pkt.protocol=ep.type==Endpoint::Type::TCP_RELAY ? PROTO_TCP : PROTO_UDP;
 	ActuallySendPacket(pkt, ep);
 }
 
@@ -746,26 +747,27 @@ void VoIPGroupController::SerializeAndUpdateOutgoingStreams(){
 std::string VoIPGroupController::GetDebugString(){
 	std::string r="Remote endpoints: \n";
 	char buffer[2048];
-	for(shared_ptr<Endpoint>& endpoint:endpoints){
+	for(pair<const int64_t, Endpoint>& _endpoint:endpoints){
+		Endpoint& endpoint=_endpoint.second;
 		const char* type;
-		switch(endpoint->type){
-			case Endpoint::TYPE_UDP_P2P_INET:
+		switch(endpoint.type){
+			case Endpoint::Type::UDP_P2P_INET:
 				type="UDP_P2P_INET";
 				break;
-			case Endpoint::TYPE_UDP_P2P_LAN:
+			case Endpoint::Type::UDP_P2P_LAN:
 				type="UDP_P2P_LAN";
 				break;
-			case Endpoint::TYPE_UDP_RELAY:
+			case Endpoint::Type::UDP_RELAY:
 				type="UDP_RELAY";
 				break;
-			case Endpoint::TYPE_TCP_RELAY:
+			case Endpoint::Type::TCP_RELAY:
 				type="TCP_RELAY";
 				break;
 			default:
 				type="UNKNOWN";
 				break;
 		}
-		snprintf(buffer, sizeof(buffer), "%s:%u %dms [%s%s]\n", endpoint->address.ToString().c_str(), endpoint->port, (int)(endpoint->averageRTT*1000), type, currentEndpoint==endpoint ? ", IN_USE" : "");
+		snprintf(buffer, sizeof(buffer), "%s:%u %dms [%s%s]\n", endpoint.address.ToString().c_str(), endpoint.port, (int)(endpoint.averageRTT*1000), type, currentEndpoint==endpoint.id ? ", IN_USE" : "");
 		r+=buffer;
 	}
 	double avgLate[3];

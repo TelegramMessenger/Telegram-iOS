@@ -26,13 +26,16 @@
 #define IS_MOBILE_NETWORK(x) (x==NET_TYPE_GPRS || x==NET_TYPE_EDGE || x==NET_TYPE_3G || x==NET_TYPE_HSPA || x==NET_TYPE_LTE || x==NET_TYPE_OTHER_MOBILE)
 
 #define PROTOCOL_NAME 0x50567247 // "GrVP" in little endian (reversed here)
-#define PROTOCOL_VERSION 6
+#define PROTOCOL_VERSION 7
 #define MIN_PROTOCOL_VERSION 3
 
 #define STREAM_DATA_FLAG_LEN16 0x40
 #define STREAM_DATA_FLAG_HAS_MORE_FLAGS 0x80
-#define STREAM_DATA_XFLAG_KEYFRAME 0x01
-#define STREAM_DATA_XFLAG_FRAGMENTED 0x02
+// Since the data can't be larger than the MTU anyway,
+// 5 top bits of data length are allocated for these flags
+#define STREAM_DATA_XFLAG_KEYFRAME (1 << 15)
+#define STREAM_DATA_XFLAG_FRAGMENTED (1 << 14)
+#define STREAM_DATA_XFLAG_EXTRA_FEC (1 << 13)
 
 #define STREAM_TYPE_AUDIO 1
 #define STREAM_TYPE_VIDEO 2
@@ -105,6 +108,11 @@
 inline bool seqgt(uint32_t s1, uint32_t s2){
 	return ((s1>s2) && (s1-s2<=SEQ_MAX/2)) || ((s1<s2) && (s2-s1>SEQ_MAX/2));
 }
+
+#define NEED_RATE_FLAG_SHITTY_INTERNET_MODE 1
+#define NEED_RATE_FLAG_UDP_NA 2
+#define NEED_RATE_FLAG_UDP_BAD 4
+#define NEED_RATE_FLAG_RECONNECTING 8
 
 
 #endif //TGVOIP_PRIVATEDEFINES_H

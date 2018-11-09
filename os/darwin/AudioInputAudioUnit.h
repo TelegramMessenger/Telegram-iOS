@@ -9,6 +9,7 @@
 
 #include <AudioUnit/AudioUnit.h>
 #include "../../audio/AudioInput.h"
+#include "../../utils.h"
 
 namespace tgvoip{ namespace audio{
 class AudioUnitIO;
@@ -16,6 +17,7 @@ class AudioUnitIO;
 class AudioInputAudioUnit : public AudioInput{
 
 public:
+	TGVOIP_DISALLOW_COPY_AND_ASSIGN(AudioInputAudioUnit);
 	AudioInputAudioUnit(std::string deviceID, AudioUnitIO* io);
 	virtual ~AudioInputAudioUnit();
 	virtual void Start();

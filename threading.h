@@ -7,31 +7,7 @@
 #ifndef __THREADING_H
 #define __THREADING_H
 
-namespace tgvoip{
-	class MethodPointerBase{
-	public:
-		virtual ~MethodPointerBase(){
-
-		}
-		virtual void Invoke(void* arg)=0;
-	};
-
-	template<typename T> class MethodPointer : public MethodPointerBase{
-	public:
-		MethodPointer(void (T::*method)(void*), T* obj){
-			this->method=method;
-			this->obj=obj;
-		}
-
-		virtual void Invoke(void* arg){
-			(obj->*method)(arg);
-		}
-
-	private:
-		void (T::*method)(void*);
-		T* obj;
-	};
-}
+#include <functional>
 
 #if defined(_POSIX_THREADS) || defined(_POSIX_VERSION) || defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
 
@@ -73,12 +49,13 @@ namespace tgvoip{
 
 	class Thread{
 	public:
-		Thread(MethodPointerBase* entry, void* arg) : entry(entry), arg(arg){
+		Thread(std::function<void()> entry) : entry(entry){
 			name=NULL;
+			thread=0;
 		}
 
 		virtual ~Thread(){
-			delete entry;
+
 		}
 
 		void Start(){
@@ -124,11 +101,10 @@ namespace tgvoip{
 				}
 #endif
 			}
-			self->entry->Invoke(self->arg);
+			self->entry();
 			return NULL;
 		}
-		MethodPointerBase* entry;
-		void* arg;
+		std::function<void()> entry;
 		pthread_t thread;
 		const char* name;
 		bool maxPriority=false;
@@ -244,13 +220,12 @@ namespace tgvoip{
 
 	class Thread{
 	public:
-		Thread(MethodPointerBase* entry, void* arg) : entry(entry), arg(arg){
+		Thread(std::function<void()> entry) : entry(entry){
 			name=NULL;
 			thread=NULL;
 		}
 
 		~Thread(){
-			delete entry;
 		}
 
 		void Start(){
@@ -309,11 +284,10 @@ namespace tgvoip{
 					RaiseException(MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info);
 				}__except(EXCEPTION_EXECUTE_HANDLER){}
 			}
-			self->entry->Invoke(self->arg);
+			self->entry();
 			return 0;
 		}
-		MethodPointerBase* entry;
-		void* arg;
+		std::function<void()> entry;
 		HANDLE thread;
 		DWORD id;
 		const char* name;

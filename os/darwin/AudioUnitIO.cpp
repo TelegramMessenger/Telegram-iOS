@@ -125,12 +125,12 @@ AudioUnitIO::~AudioUnitIO(){
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
 	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioUnitIO::DefaultDeviceChangedCallback, this);
 #endif
-	delete input;
-	delete output;
 	AudioOutputUnitStop(unit);
 	AudioUnitUninitialize(unit);
 	AudioComponentInstanceDispose(unit);
 	free(inBufferList.mBuffers[0].mData);
+	delete input;
+	delete output;
 }
 
 OSStatus AudioUnitIO::BufferCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData){

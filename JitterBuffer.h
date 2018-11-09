@@ -42,7 +42,7 @@ public:
 
 private:
 	struct jitter_packet_t{
-		unsigned char* buffer;
+		unsigned char* buffer=NULL;
 		size_t size;
 		uint32_t timestamp;
 		bool isEC;
@@ -87,6 +87,7 @@ private:
 	int outstandingDelayChange=0;
 	unsigned int dontChangeDelay=0;
 	double avgDelay=0;
+	bool first=true;
 #ifdef TGVOIP_DUMP_JITTER_STATS
 	FILE* dump;
 #endif

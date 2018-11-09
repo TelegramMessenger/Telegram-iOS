@@ -4,9 +4,9 @@
 // you should have received with this source code distribution.
 //
 
-#include "NetworkSocketWinsock.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include "NetworkSocketWinsock.h"
 #if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
 
 #else
@@ -15,6 +15,8 @@
 #include <assert.h>
 #include "../../logging.h"
 #include "../../VoIPController.h"
+#include "WindowsSpecific.h"
+#include "../../Buffers.h"
 
 using namespace tgvoip;
 
@@ -37,11 +39,17 @@ NetworkSocketWinsock::NetworkSocketWinsock(NetworkProtocol protocol) : NetworkSo
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	LOGD("Initialized winsock, version %d.%d", wsaData.wHighVersion, wsaData.wVersion);
 	tcpConnectedAddress=NULL;
+
+	if(protocol==PROTO_TCP)
+		timeout=10.0;
+	lastSuccessfulOperationTime=VoIPController::GetCurrentTime();
 }
 
 NetworkSocketWinsock::~NetworkSocketWinsock(){
 	if(tcpConnectedAddress)
 		delete tcpConnectedAddress;
+	if(pendingOutgoingPacket)
+		delete pendingOutgoingPacket;
 }
 
 void NetworkSocketWinsock::SetMaxPriority(){
@@ -49,7 +57,7 @@ void NetworkSocketWinsock::SetMaxPriority(){
 }
 
 void NetworkSocketWinsock::Send(NetworkPacket *packet){
-	if(!packet || !packet->address){
+	if(!packet || (protocol==PROTO_UDP && !packet->address)){
 		LOGW("tried to send null packet");
 		return;
 	}
@@ -122,12 +130,49 @@ void NetworkSocketWinsock::Send(NetworkPacket *packet){
 		res=send(fd, (const char*)packet->data, packet->length, 0);
 	}
 	if(res==SOCKET_ERROR){
-		LOGE("error sending: %d", WSAGetLastError());
-		if(errno==ENETUNREACH && !isV4Available && VoIPController::GetCurrentTime()<switchToV6at){
-			switchToV6at=VoIPController::GetCurrentTime();
-			LOGI("Network unreachable, trying NAT64");
+		int error=WSAGetLastError();
+		if(error==WSAEWOULDBLOCK){
+			if(pendingOutgoingPacket){
+				LOGE("Got EAGAIN but there's already a pending packet");
+				failed=true;
+			}else{
+				LOGV("Socket %d not ready to send", fd);
+				pendingOutgoingPacket=new Buffer(packet->length);
+				pendingOutgoingPacket->CopyFrom(packet->data, 0, packet->length);
+				readyToSend=false;
+			}
+		}else{
+			LOGE("error sending: %d / %s", error, WindowsSpecific::GetErrorMessage(error).c_str());
+			if(error==WSAENETUNREACH && !isV4Available && VoIPController::GetCurrentTime()<switchToV6at){
+				switchToV6at=VoIPController::GetCurrentTime();
+				LOGI("Network unreachable, trying NAT64");
+			}
+		}
+	}else if(res<packet->length && protocol==PROTO_TCP){
+		if(pendingOutgoingPacket){
+			LOGE("send returned less than packet length but there's already a pending packet");
+			failed=true;
+		}else{
+			LOGV("Socket %d not ready to send", fd);
+			pendingOutgoingPacket=new Buffer(packet->length-res);
+			pendingOutgoingPacket->CopyFrom(packet->data+res, 0, packet->length-res);
+			readyToSend=false;
 		}
 	}
+}
+
+bool NetworkSocketWinsock::OnReadyToSend(){
+	if(pendingOutgoingPacket){
+		NetworkPacket pkt={0};
+		pkt.data=**pendingOutgoingPacket;
+		pkt.length=pendingOutgoingPacket->Length();
+		Send(&pkt);
+		delete pendingOutgoingPacket;
+		pendingOutgoingPacket=NULL;
+		return false;
+	}
+	readyToSend=true;
+	return true;
 }
 
 void NetworkSocketWinsock::Receive(NetworkPacket *packet){
@@ -139,7 +184,8 @@ void NetworkSocketWinsock::Receive(NetworkPacket *packet){
 			if(res!=SOCKET_ERROR)
 				packet->length=(size_t) res;
 			else{
-				LOGE("error receiving %d", WSAGetLastError());
+				int error=WSAGetLastError();
+				LOGE("error receiving %d / %s", error, WindowsSpecific::GetErrorMessage(error).c_str());
 				packet->length=0;
 				return;
 			}
@@ -176,7 +222,8 @@ void NetworkSocketWinsock::Receive(NetworkPacket *packet){
 	}else if(protocol==PROTO_TCP){
 		int res=recv(fd, (char*)packet->data, packet->length, 0);
 		if(res==SOCKET_ERROR){
-			LOGE("Error receiving from TCP socket: %d", WSAGetLastError());
+			int error=WSAGetLastError();
+			LOGE("Error receiving from TCP socket: %d / %s", error, WindowsSpecific::GetErrorMessage(error).c_str());
 			failed=true;
 		}else{
 			packet->length=(size_t)res;
@@ -207,6 +254,9 @@ void NetworkSocketWinsock::Open(){
 				return;
 			}
 		}
+
+		u_long one=1;
+		ioctlsocket(fd, FIONBIO, &one);
 
 		SetMaxPriority();
 
@@ -407,7 +457,7 @@ std::string NetworkSocketWinsock::V4AddressToString(uint32_t address){
 	return std::string(buf);
 }
 
-std::string NetworkSocketWinsock::V6AddressToString(unsigned char *address){
+std::string NetworkSocketWinsock::V6AddressToString(const unsigned char *address){
 	char buf[INET6_ADDRSTRLEN];
 	sockaddr_in6 addr;
 	ZeroMemory(&addr, sizeof(addr));
@@ -455,9 +505,9 @@ void NetworkSocketWinsock::StringToV6Address(std::string address, unsigned char 
 	memcpy(out, addr.sin6_addr.s6_addr, 16);
 }
 
-void NetworkSocketWinsock::Connect(NetworkAddress *address, uint16_t port){
-	IPv4Address* v4addr=dynamic_cast<IPv4Address*>(address);
-	IPv6Address* v6addr=dynamic_cast<IPv6Address*>(address);
+void NetworkSocketWinsock::Connect(const NetworkAddress *address, uint16_t port){
+	const IPv4Address* v4addr=dynamic_cast<const IPv4Address*>(address);
+	const IPv6Address* v6addr=dynamic_cast<const IPv6Address*>(address);
 	sockaddr_in v4;
 	sockaddr_in6 v6;
 	sockaddr* addr=NULL;
@@ -482,11 +532,13 @@ void NetworkSocketWinsock::Connect(NetworkAddress *address, uint16_t port){
 		return;
 	}
 	fd=socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
-	if(fd==0){
+	if(fd==INVALID_SOCKET){
 		LOGE("Error creating TCP socket: %d", WSAGetLastError());
 		failed=true;
 		return;
 	}
+	u_long one=1;
+	ioctlsocket(fd, FIONBIO, &one);
 	int opt=1;
 	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const char*)&opt, sizeof(opt));
 	DWORD timeout=5000;
@@ -495,10 +547,13 @@ void NetworkSocketWinsock::Connect(NetworkAddress *address, uint16_t port){
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 	int res=connect(fd, (const sockaddr*) addr, addrLen);
 	if(res!=0){
-		LOGW("error connecting TCP socket to %s:%u: %d", address->ToString().c_str(), port, WSAGetLastError());
-		closesocket(fd);
-		failed=true;
-		return;
+		int error=WSAGetLastError();
+		if(error!=WSAEINPROGRESS && error!=WSAEWOULDBLOCK){
+			LOGW("error connecting TCP socket to %s:%u: %d / %s", address->ToString().c_str(), port, error, WindowsSpecific::GetErrorMessage(error).c_str());
+			closesocket(fd);
+			failed=true;
+			return;
+		}
 	}
 	tcpConnectedAddress=v4addr ? (NetworkAddress*)new IPv4Address(*v4addr) : (NetworkAddress*)new IPv6Address(*v6addr);
 	tcpConnectedPort=port;
@@ -540,9 +595,10 @@ void NetworkSocketWinsock::SetTimeouts(int sendTimeout, int recvTimeout){
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 }
 
-bool NetworkSocketWinsock::Select(std::vector<NetworkSocket *> &readFds, std::vector<NetworkSocket *> &errorFds, SocketSelectCanceller* _canceller){
+bool NetworkSocketWinsock::Select(std::vector<NetworkSocket*> &readFds, std::vector<NetworkSocket*>& writeFds, std::vector<NetworkSocket*> &errorFds, SocketSelectCanceller* _canceller){
 	fd_set readSet;
 	fd_set errorSet;
+	fd_set writeSet;
 	SocketSelectCancellerWin32* canceller=dynamic_cast<SocketSelectCancellerWin32*>(_canceller);
 	timeval timeout={0, 10000};
 	bool anyFailed=false;
@@ -550,6 +606,7 @@ bool NetworkSocketWinsock::Select(std::vector<NetworkSocket *> &readFds, std::ve
 
 	do{
 		FD_ZERO(&readSet);
+		FD_ZERO(&writeSet);
 		FD_ZERO(&errorSet);
 
 		for(std::vector<NetworkSocket*>::iterator itr=readFds.begin();itr!=readFds.end();++itr){
@@ -561,6 +618,14 @@ bool NetworkSocketWinsock::Select(std::vector<NetworkSocket *> &readFds, std::ve
 			FD_SET(sfd, &readSet);
 		}
 
+		for(NetworkSocket*& s:writeFds){
+			int sfd=GetDescriptorFromSocket(s);
+			if(sfd==0){
+				LOGW("can't select on one of sockets because it's not a NetworkSocketWinsock instance");
+				continue;
+			}
+			FD_SET(sfd, &writeSet);
+		}
 
 		for(std::vector<NetworkSocket*>::iterator itr=errorFds.begin();itr!=errorFds.end();++itr){
 			int sfd=GetDescriptorFromSocket(*itr);
@@ -568,12 +633,16 @@ bool NetworkSocketWinsock::Select(std::vector<NetworkSocket *> &readFds, std::ve
 				LOGW("can't select on one of sockets because it's not a NetworkSocketWinsock instance");
 				continue;
 			}
+			if((*itr)->timeout>0 && VoIPController::GetCurrentTime()-(*itr)->lastSuccessfulOperationTime>(*itr)->timeout){
+				LOGW("Socket %d timed out", sfd);
+				(*itr)->failed=true;
+			}
 			anyFailed |= (*itr)->IsFailed();
 			FD_SET(sfd, &errorSet);
 		}
 		if(canceller && canceller->canceled)
 			break;
-		res=select(0, &readSet, NULL, &errorSet, &timeout);
+		res=select(0, &readSet, &writeSet, &errorSet, &timeout);
 		//LOGV("select result %d", res);
 		if(res==SOCKET_ERROR)
 			LOGE("SELECT ERROR %d", WSAGetLastError());
@@ -591,8 +660,24 @@ bool NetworkSocketWinsock::Select(std::vector<NetworkSocket *> &readFds, std::ve
 	std::vector<NetworkSocket*>::iterator itr=readFds.begin();
 	while(itr!=readFds.end()){
 		int sfd=GetDescriptorFromSocket(*itr);
-		if(sfd==0 || !FD_ISSET(sfd, &readSet)){
+		if(FD_ISSET(sfd, &readSet))
+			(*itr)->lastSuccessfulOperationTime=VoIPController::GetCurrentTime();
+		if(sfd==0 || !FD_ISSET(sfd, &readSet) || !(*itr)->OnReadyToReceive()){
 			itr=readFds.erase(itr);
+		}else{
+			++itr;
+		}
+	}
+
+	itr=writeFds.begin();
+	while(itr!=writeFds.end()){
+		int sfd=GetDescriptorFromSocket(*itr);
+		if(FD_ISSET(sfd, &writeSet)){
+			(*itr)->lastSuccessfulOperationTime=VoIPController::GetCurrentTime();
+			LOGI("Socket %d is ready to send", sfd);
+		}
+		if(sfd==0 || !FD_ISSET(sfd, &writeSet) || !(*itr)->OnReadyToSend()){
+			itr=writeFds.erase(itr);
 		}else{
 			++itr;
 		}

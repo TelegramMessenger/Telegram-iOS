@@ -12,6 +12,7 @@
 #include <vector>
 
 namespace tgvoip {
+class Buffer;
 
 class SocketSelectCancellerWin32 : public SocketSelectCanceller{
 friend class NetworkSocketWinsock;
@@ -34,20 +35,18 @@ public:
 	virtual std::string GetLocalInterfaceInfo(IPv4Address* v4addr, IPv6Address* v6addr);
 	virtual void OnActiveInterfaceChanged();
 	virtual uint16_t GetLocalPort();
-	virtual void Connect(NetworkAddress* address, uint16_t port);
+	virtual void Connect(const NetworkAddress* address, uint16_t port);
 
 	static std::string V4AddressToString(uint32_t address);
-	static std::string V6AddressToString(unsigned char address[16]);
+	static std::string V6AddressToString(const unsigned char address[16]);
 	static uint32_t StringToV4Address(std::string address);
 	static void StringToV6Address(std::string address, unsigned char* out);
 	static IPv4Address* ResolveDomainName(std::string name);
-	static bool Select(std::vector<NetworkSocket*>& readFds, std::vector<NetworkSocket*>& errorFds, SocketSelectCanceller* canceller);
-
+	static bool Select(std::vector<NetworkSocket*>& readFds, std::vector<NetworkSocket*>& writeFds, std::vector<NetworkSocket*>& errorFds, SocketSelectCanceller* canceller);
 	virtual NetworkAddress *GetConnectedAddress();
-
 	virtual uint16_t GetConnectedPort();
-
 	virtual void SetTimeouts(int sendTimeout, int recvTimeout);
+	virtual bool OnReadyToSend() override;
 
 protected:
 	virtual void SetMaxPriority();
@@ -65,6 +64,7 @@ private:
 	bool closing;
 	NetworkAddress* tcpConnectedAddress;
 	uint16_t tcpConnectedPort;
+	Buffer* pendingOutgoingPacket=NULL;
 };
 
 }

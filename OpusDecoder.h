@@ -14,6 +14,7 @@
 #include "Buffers.h"
 #include "EchoCanceller.h"
 #include "JitterBuffer.h"
+#include "utils.h"
 #include <stdio.h>
 #include <vector>
 #include <memory>
@@ -23,6 +24,7 @@ struct OpusDecoder;
 namespace tgvoip{
 class OpusDecoder {
 public:
+	TGVOIP_DISALLOW_COPY_AND_ASSIGN(OpusDecoder);
 	virtual void Start();
 
 	virtual void Stop();
@@ -43,7 +45,7 @@ public:
 private:
 	void Initialize(bool isAsync, bool needEC);
 	static size_t Callback(unsigned char* data, size_t len, void* param);
-	void RunThread(void* param);
+	void RunThread();
 	int DecodeNextFrame();
 	::OpusDecoder* dec;
 	::OpusDecoder* ecDec;

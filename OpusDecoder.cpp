@@ -158,7 +158,7 @@ void tgvoip::OpusDecoder::Start(){
 	if(!async)
 		return;
 	running=true;
-	thread=new Thread(new MethodPointer<tgvoip::OpusDecoder>(&tgvoip::OpusDecoder::RunThread, this), NULL);
+	thread=new Thread(std::bind(&tgvoip::OpusDecoder::RunThread, this));
 	thread->SetName("opus_decoder");
 	thread->SetMaxPriority();
 	thread->Start();
@@ -173,7 +173,7 @@ void tgvoip::OpusDecoder::Stop(){
 	delete thread;
 }
 
-void tgvoip::OpusDecoder::RunThread(void* param){
+void tgvoip::OpusDecoder::RunThread(){
 	int i;
 	LOGI("decoder: packets per frame %d", packetsPerFrame);
 	while(running){

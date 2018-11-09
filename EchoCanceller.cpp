@@ -78,7 +78,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		farendBufferPool=new BufferPool(960*2, 10);
 		running=true;
 
-		bufferFarendThread=new Thread(new MethodPointer<EchoCanceller>(&EchoCanceller::RunBufferFarendThread, this), NULL);
+		bufferFarendThread=new Thread(std::bind(&EchoCanceller::RunBufferFarendThread, this));
 		bufferFarendThread->Start();
 	}else{
 		aec=NULL;
@@ -180,7 +180,7 @@ void EchoCanceller::SpeakerOutCallback(unsigned char* data, size_t len){
 }
 
 #ifndef TGVOIP_NO_DSP
-void EchoCanceller::RunBufferFarendThread(void* arg){
+void EchoCanceller::RunBufferFarendThread(){
 	while(running){
 		int16_t* samplesIn=farendQueue->GetBlocking();
 		if(samplesIn){

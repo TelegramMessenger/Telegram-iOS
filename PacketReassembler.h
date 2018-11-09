@@ -5,24 +5,26 @@
 #ifndef TGVOIP_PACKETREASSEMBLER_H
 #define TGVOIP_PACKETREASSEMBLER_H
 
-#include "MediaStreamItf.h"
+#include <vector>
+#include <functional>
+
+#include "Buffers.h"
 
 namespace tgvoip {
-	class PacketReassembler : public MediaStreamItf{
+	class PacketReassembler{
 	public:
 		PacketReassembler();
 		virtual ~PacketReassembler();
 
-		void Start(){};
-		void Stop(){};
-
 		void Reset();
-		void AddPacket(unsigned char* data, size_t offset, size_t len, uint32_t pts);
+		void AddFragment(Buffer pkt, unsigned int fragmentIndex, unsigned int fragmentCount, uint32_t pts);
+		void SetCallback(std::function<void(Buffer packet, uint32_t pts)> callback);
 
 	private:
-		unsigned char* buffer;
-		size_t currentSize;
-		size_t finalSize;
+		uint32_t currentTimestamp;
+		unsigned int currentPacketPartCount=0;
+		std::vector<Buffer> parts;
+		std::function<void(Buffer, uint32_t)> callback;
 	};
 }
 

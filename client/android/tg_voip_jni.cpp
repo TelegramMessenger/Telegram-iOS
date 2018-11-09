@@ -15,7 +15,10 @@
 #include <libtgvoip/os/android/AudioInputOpenSLES.h>
 #include <libtgvoip/os/android/AudioInputAndroid.h>
 #include <libtgvoip/os/android/AudioOutputAndroid.h>
+#include <libtgvoip/os/android/VideoSourceAndroid.h>
+#include <libtgvoip/os/android/VideoRendererAndroid.h>
 #include <libtgvoip/audio/Resampler.h>
+#include <libtgvoip/os/android/JNIUtilities.h>
 
 #ifdef TGVOIP_HAS_CONFIG
 #include <tgvoip_config.h>
@@ -33,7 +36,7 @@ jmethodID groupCallKeySentMethod=NULL;
 jmethodID callUpgradeRequestReceivedMethod=NULL;
 jclass jniUtilitiesClass=NULL;
 
-struct impl_data_android_t{
+struct ImplDataAndroid{
 	jobject javaObject;
 };
 
@@ -45,179 +48,449 @@ struct impl_data_android_t{
 #define TGVOIP_PEER_TAG_VARIABLE_NAME "peer_tag"
 #endif
 
-#ifndef TGVOIP_FUNC
-#define TGVOIP_FUNC(RETURN_TYPE, NAME, ...)          \
-  extern "C" {                                       \
-  JNIEXPORT RETURN_TYPE                              \
-      Java_org_telegram_messenger_voip_##NAME(       \
-          JNIEnv *env, ##__VA_ARGS__);               \
-  }                                                  \
-  JNIEXPORT RETURN_TYPE                              \
-      Java_org_telegram_messenger_voip_##NAME(       \
-          JNIEnv *env, ##__VA_ARGS__)
+#ifndef TGVOIP_ENDPOINT_CLASS
+#define TGVOIP_ENDPOINT_CLASS "org/telegram/tgnet/TLRPC$TL_phoneConnection"
 #endif
 
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
 namespace tgvoip {
+#pragma mark - Callbacks
+
 	void updateConnectionState(VoIPController *cntrlr, int state){
-		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
-		if(!impl->javaObject)
-			return;
-		JNIEnv *env=NULL;
-		bool didAttach=false;
-		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
-		if(!env){
-			sharedJVM->AttachCurrentThread(&env, NULL);
-			didAttach=true;
-		}
-
-		if(setStateMethod)
-			env->CallVoidMethod(impl->javaObject, setStateMethod, state);
-
-		if(didAttach){
-			sharedJVM->DetachCurrentThread();
-		}
+		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
+		jni::AttachAndCallVoidMethod(setStateMethod, impl->javaObject, state);
 	}
 
 	void updateSignalBarCount(VoIPController *cntrlr, int count){
-		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
-		if(!impl->javaObject)
-			return;
-		JNIEnv *env=NULL;
-		bool didAttach=false;
-		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
-		if(!env){
-			sharedJVM->AttachCurrentThread(&env, NULL);
-			didAttach=true;
-		}
-
-		if(setSignalBarsMethod)
-			env->CallVoidMethod(impl->javaObject, setSignalBarsMethod, count);
-
-		if(didAttach){
-			sharedJVM->DetachCurrentThread();
-		}
+		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
+		jni::AttachAndCallVoidMethod(setSignalBarsMethod, impl->javaObject, count);
 	}
 
 	void updateGroupCallStreams(VoIPGroupController *cntrlr, unsigned char *streams, size_t len){
-		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
 		if(!impl->javaObject)
 			return;
-		JNIEnv *env=NULL;
-		bool didAttach=false;
-		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
-		if(!env){
-			sharedJVM->AttachCurrentThread(&env, NULL);
-			didAttach=true;
-		}
-
-		if(setSelfStreamsMethod){
-			jbyteArray jstreams=env->NewByteArray(len);
-			jbyte *el=env->GetByteArrayElements(jstreams, NULL);
-			memcpy(el, streams, len);
-			env->ReleaseByteArrayElements(jstreams, el, 0);
-			env->CallVoidMethod(impl->javaObject, setSelfStreamsMethod, jstreams);
-		}
-
-
-		if(didAttach){
-			sharedJVM->DetachCurrentThread();
-		}
+		jni::DoWithJNI([streams, len, &impl](JNIEnv* env){
+			if(setSelfStreamsMethod){
+				jbyteArray jstreams=env->NewByteArray(static_cast<jsize>(len));
+				jbyte *el=env->GetByteArrayElements(jstreams, NULL);
+				memcpy(el, streams, len);
+				env->ReleaseByteArrayElements(jstreams, el, 0);
+				env->CallVoidMethod(impl->javaObject, setSelfStreamsMethod, jstreams);
+			}
+		});
 	}
 
 	void groupCallKeyReceived(VoIPController *cntrlr, const unsigned char *key){
-		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
+		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
 		if(!impl->javaObject)
 			return;
-		JNIEnv *env=NULL;
-		bool didAttach=false;
-		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
-		if(!env){
-			sharedJVM->AttachCurrentThread(&env, NULL);
-			didAttach=true;
-		}
-
-		if(groupCallKeyReceivedMethod){
-			jbyteArray jkey=env->NewByteArray(256);
-			jbyte *el=env->GetByteArrayElements(jkey, NULL);
-			memcpy(el, key, 256);
-			env->ReleaseByteArrayElements(jkey, el, 0);
-			env->CallVoidMethod(impl->javaObject, groupCallKeyReceivedMethod, jkey);
-		}
-
-		if(didAttach){
-			sharedJVM->DetachCurrentThread();
-		}
+		jni::DoWithJNI([key, &impl](JNIEnv* env){
+			if(groupCallKeyReceivedMethod){
+				jbyteArray jkey=env->NewByteArray(256);
+				jbyte *el=env->GetByteArrayElements(jkey, NULL);
+				memcpy(el, key, 256);
+				env->ReleaseByteArrayElements(jkey, el, 0);
+				env->CallVoidMethod(impl->javaObject, groupCallKeyReceivedMethod, jkey);
+			}
+		});
 	}
 
 	void groupCallKeySent(VoIPController *cntrlr){
-		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
-		if(!impl->javaObject)
-			return;
-		JNIEnv *env=NULL;
-		bool didAttach=false;
-		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
-		if(!env){
-			sharedJVM->AttachCurrentThread(&env, NULL);
-			didAttach=true;
-		}
-
-		if(groupCallKeySentMethod){
-			env->CallVoidMethod(impl->javaObject, groupCallKeySentMethod);
-		}
-
-		if(didAttach){
-			sharedJVM->DetachCurrentThread();
-		}
+		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
+		jni::AttachAndCallVoidMethod(groupCallKeySentMethod, impl->javaObject);
 	}
 
 	void callUpgradeRequestReceived(VoIPController* cntrlr){
-		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
-		if(!impl->javaObject)
-			return;
-		JNIEnv *env=NULL;
-		bool didAttach=false;
-		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
-		if(!env){
-			sharedJVM->AttachCurrentThread(&env, NULL);
-			didAttach=true;
-		}
-
-		if(groupCallKeySentMethod){
-			env->CallVoidMethod(impl->javaObject, callUpgradeRequestReceivedMethod);
-		}
-
-		if(didAttach){
-			sharedJVM->DetachCurrentThread();
-		}
+		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
+		jni::AttachAndCallVoidMethod(callUpgradeRequestReceivedMethod, impl->javaObject);
 	}
 
 	void updateParticipantAudioState(VoIPGroupController *cntrlr, int32_t userID, bool enabled){
-		impl_data_android_t *impl=(impl_data_android_t *) cntrlr->implData;
-		if(!impl->javaObject)
-			return;
-		JNIEnv *env=NULL;
-		bool didAttach=false;
-		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
-		if(!env){
-			sharedJVM->AttachCurrentThread(&env, NULL);
-			didAttach=true;
-		}
+		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
+		jni::AttachAndCallVoidMethod(setParticipantAudioEnabledMethod, impl->javaObject, userID, enabled);
+	}
 
-		if(setParticipantAudioEnabledMethod){
-			env->CallVoidMethod(impl->javaObject, setParticipantAudioEnabledMethod, userID, enabled);
+#pragma mark - VoIPController
+
+	jlong VoIPController_nativeInit(JNIEnv* env, jobject thiz) {
+		ImplDataAndroid* impl=(ImplDataAndroid*) malloc(sizeof(ImplDataAndroid));
+		impl->javaObject=env->NewGlobalRef(thiz);
+		VoIPController* cntrlr=new VoIPController();
+		cntrlr->implData=impl;
+		VoIPController::Callbacks callbacks;
+		callbacks.connectionStateChanged=updateConnectionState;
+		callbacks.signalBarCountChanged=updateSignalBarCount;
+		callbacks.groupCallKeyReceived=groupCallKeyReceived;
+		callbacks.groupCallKeySent=groupCallKeySent;
+		callbacks.upgradeToGroupCallRequested=callUpgradeRequestReceived;
+		cntrlr->SetCallbacks(callbacks);
+		return (jlong)(intptr_t)cntrlr;
+	}
+
+	void VoIPController_nativeStart(JNIEnv* env, jobject thiz, jlong inst){
+		((VoIPController*)(intptr_t)inst)->Start();
+	}
+
+	void VoIPController_nativeConnect(JNIEnv* env, jobject thiz, jlong inst){
+		((VoIPController*)(intptr_t)inst)->Connect();
+	}
+
+	void VoIPController_nativeSetProxy(JNIEnv* env, jobject thiz, jlong inst, jstring _address, jint port, jstring _username, jstring _password){
+		((VoIPController*)(intptr_t)inst)->SetProxy(PROXY_SOCKS5, jni::JavaStringToStdString(env, _address), (uint16_t)port, jni::JavaStringToStdString(env, _username), jni::JavaStringToStdString(env, _password));
+	}
+
+	void VoIPController_nativeSetEncryptionKey(JNIEnv* env, jobject thiz, jlong inst, jbyteArray key, jboolean isOutgoing){
+		jbyte* akey=env->GetByteArrayElements(key, NULL);
+		((VoIPController*)(intptr_t)inst)->SetEncryptionKey((char *) akey, isOutgoing);
+		env->ReleaseByteArrayElements(key, akey, JNI_ABORT);
+	}
+
+	void VoIPController_nativeSetRemoteEndpoints(JNIEnv* env, jobject thiz, jlong inst, jobjectArray endpoints, jboolean allowP2p, jboolean tcp, jint connectionMaxLayer){
+		size_t len=(size_t) env->GetArrayLength(endpoints);
+		std::vector<Endpoint> eps;
+		/*public String ip;
+			public String ipv6;
+			public int port;
+			public byte[] peer_tag;*/
+		jclass epClass=env->GetObjectClass(env->GetObjectArrayElement(endpoints, 0));
+		jfieldID ipFld=env->GetFieldID(epClass, "ip", "Ljava/lang/String;");
+		jfieldID ipv6Fld=env->GetFieldID(epClass, "ipv6", "Ljava/lang/String;");
+		jfieldID portFld=env->GetFieldID(epClass, "port", "I");
+		jfieldID peerTagFld=env->GetFieldID(epClass, TGVOIP_PEER_TAG_VARIABLE_NAME, "[B");
+		jfieldID idFld=env->GetFieldID(epClass, "id", "J");
+		int i;
+		for(i=0;i<len;i++){
+			jobject endpoint=env->GetObjectArrayElement(endpoints, i);
+			jstring ip=(jstring) env->GetObjectField(endpoint, ipFld);
+			jstring ipv6=(jstring) env->GetObjectField(endpoint, ipv6Fld);
+			jint port=env->GetIntField(endpoint, portFld);
+			jlong id=env->GetLongField(endpoint, idFld);
+			jbyteArray peerTag=(jbyteArray) env->GetObjectField(endpoint, peerTagFld);
+			IPv4Address v4addr(jni::JavaStringToStdString(env, ip));
+			IPv6Address v6addr("::0");
+			if(ipv6 && env->GetStringLength(ipv6)){
+				v6addr=IPv6Address(jni::JavaStringToStdString(env, ipv6));
+			}
+			unsigned char pTag[16];
+			if(peerTag && env->GetArrayLength(peerTag)){
+				jbyte* peerTagBytes=env->GetByteArrayElements(peerTag, NULL);
+				memcpy(pTag, peerTagBytes, 16);
+				env->ReleaseByteArrayElements(peerTag, peerTagBytes, JNI_ABORT);
+			}
+			eps.push_back(Endpoint((int64_t)id, (uint16_t)port, v4addr, v6addr, tcp ? Endpoint::Type::TCP_RELAY : Endpoint::Type::UDP_RELAY, pTag));
 		}
+		((VoIPController*)(intptr_t)inst)->SetRemoteEndpoints(eps, allowP2p, connectionMaxLayer);
+	}
+
+	void VoIPController_nativeSetNativeBufferSize(JNIEnv* env, jclass thiz, jint size){
+		AudioOutputOpenSLES::nativeBufferSize=(unsigned int) size;
+		AudioInputOpenSLES::nativeBufferSize=(unsigned int) size;
+	}
+
+	void VoIPController_nativeRelease(JNIEnv* env, jobject thiz, jlong inst){
+		//env->DeleteGlobalRef(AudioInputAndroid::jniClass);
+
+		VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
+		ImplDataAndroid* impl=(ImplDataAndroid*)ctlr->implData;
+		ctlr->Stop();
+		delete ctlr;
+		env->DeleteGlobalRef(impl->javaObject);
+		free(impl);
+	}
+
+	jstring VoIPController_nativeGetDebugString(JNIEnv* env, jobject thiz, jlong inst){
+		std::string str=((VoIPController*)(intptr_t)inst)->GetDebugString();
+		return env->NewStringUTF(str.c_str());
+	}
+
+	void VoIPController_nativeSetNetworkType(JNIEnv* env, jobject thiz, jlong inst, jint type){
+		((VoIPController*)(intptr_t)inst)->SetNetworkType(type);
+	}
+
+	void VoIPController_nativeSetMicMute(JNIEnv* env, jobject thiz, jlong inst, jboolean mute){
+		((VoIPController*)(intptr_t)inst)->SetMicMute(mute);
+	}
+
+	void VoIPController_nativeSetConfig(JNIEnv* env, jobject thiz, jlong inst, jdouble recvTimeout, jdouble initTimeout, jint dataSavingMode, jboolean enableAEC, jboolean enableNS, jboolean enableAGC, jstring logFilePath, jstring statsDumpPath){
+		VoIPController::Config cfg;
+		cfg.initTimeout=initTimeout;
+		cfg.recvTimeout=recvTimeout;
+		cfg.dataSaving=dataSavingMode;
+		cfg.enableAEC=enableAEC;
+		cfg.enableNS=enableNS;
+		cfg.enableAGC=enableAGC;
+		cfg.enableCallUpgrade=false;
+		if(logFilePath){
+			cfg.logFilePath=jni::JavaStringToStdString(env, logFilePath);
+		}
+		if(statsDumpPath){
+			cfg.statsDumpFilePath=jni::JavaStringToStdString(env, statsDumpPath);
+		}
+		((VoIPController*)(intptr_t)inst)->SetConfig(cfg);
+	}
+
+	void VoIPController_nativeDebugCtl(JNIEnv* env, jobject thiz, jlong inst, jint request, jint param){
+		((VoIPController*)(intptr_t)inst)->DebugCtl(request, param);
+	}
+
+	jstring VoIPController_nativeGetVersion(JNIEnv* env, jclass clasz){
+		return env->NewStringUTF(VoIPController::GetVersion());
+	}
+
+	jlong VoIPController_nativeGetPreferredRelayID(JNIEnv* env, jclass clasz, jlong inst){
+		return ((VoIPController*)(intptr_t)inst)->GetPreferredRelayID();
+	}
+
+	jint VoIPController_nativeGetLastError(JNIEnv* env, jclass clasz, jlong inst){
+		return ((VoIPController*)(intptr_t)inst)->GetLastError();
+	}
+
+	void VoIPController_nativeGetStats(JNIEnv* env, jclass clasz, jlong inst, jobject stats){
+		VoIPController::TrafficStats _stats;
+		((VoIPController*)(intptr_t)inst)->GetStats(&_stats);
+		jclass cls=env->GetObjectClass(stats);
+		env->SetLongField(stats, env->GetFieldID(cls, "bytesSentWifi", "J"), _stats.bytesSentWifi);
+		env->SetLongField(stats, env->GetFieldID(cls, "bytesSentMobile", "J"), _stats.bytesSentMobile);
+		env->SetLongField(stats, env->GetFieldID(cls, "bytesRecvdWifi", "J"), _stats.bytesRecvdWifi);
+		env->SetLongField(stats, env->GetFieldID(cls, "bytesRecvdMobile", "J"), _stats.bytesRecvdMobile);
+	}
+
+	jstring VoIPController_nativeGetDebugLog(JNIEnv* env, jobject thiz, jlong inst){
+		VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
+		std::string log=ctlr->GetDebugLog();
+		return env->NewStringUTF(log.c_str());
+	}
+
+	void VoIPController_nativeSetAudioOutputGainControlEnabled(JNIEnv* env, jclass clasz, jlong inst, jboolean enabled){
+		((VoIPController*)(intptr_t)inst)->SetAudioOutputGainControlEnabled(enabled);
+	}
+
+	void VoIPController_nativeSetEchoCancellationStrength(JNIEnv* env, jclass cls, jlong inst, jint strength){
+		((VoIPController*)(intptr_t)inst)->SetEchoCancellationStrength(strength);
+	}
+
+	jint VoIPController_nativeGetPeerCapabilities(JNIEnv* env, jclass cls, jlong inst){
+		return ((VoIPController*)(intptr_t)inst)->GetPeerCapabilities();
+	}
+
+	void VoIPController_nativeSendGroupCallKey(JNIEnv* env, jclass cls, jlong inst, jbyteArray _key){
+		jbyte* key=env->GetByteArrayElements(_key, NULL);
+		((VoIPController*)(intptr_t)inst)->SendGroupCallKey((unsigned char *) key);
+		env->ReleaseByteArrayElements(_key, key, JNI_ABORT);
+	}
+
+	void VoIPController_nativeRequestCallUpgrade(JNIEnv* env, jclass cls, jlong inst){
+		((VoIPController*)(intptr_t)inst)->RequestCallUpgrade();
+	}
+
+	void VoIPController_nativeSetVideoSource(JNIEnv* env, jobject thiz, jlong inst, jlong source){
+		((VoIPController*)(intptr_t)inst)->SetVideoSource((video::VideoSource*)(intptr_t)source);
+	}
+
+	void VoIPController_nativeSetVideoRenderer(JNIEnv* env, jobject thiz, jlong inst, jlong renderer){
+		((VoIPController*)(intptr_t)inst)->SetVideoRenderer((video::VideoRenderer*)(intptr_t)renderer);
+	}
+
+	jboolean VoIPController_nativeNeedRate(JNIEnv* env, jclass cls, jlong inst){
+		return static_cast<jboolean>(((VoIPController*)(intptr_t)inst)->NeedRate());
+	}
+
+#pragma mark - AudioRecordJNI
+
+	void AudioRecordJNI_nativeCallback(JNIEnv* env, jobject thiz, jobject buffer){
+		jlong inst=env->GetLongField(thiz, audioRecordInstanceFld);
+		AudioInputAndroid* in=(AudioInputAndroid*)(intptr_t)inst;
+		in->HandleCallback(env, buffer);
+	}
+
+#pragma mark - AudioTrackJNI
+
+	void AudioTrackJNI_nativeCallback(JNIEnv* env, jobject thiz, jbyteArray buffer){
+		jlong inst=env->GetLongField(thiz, audioTrackInstanceFld);
+		AudioOutputAndroid* in=(AudioOutputAndroid*)(intptr_t)inst;
+		in->HandleCallback(env, buffer);
+	}
+
+#pragma mark - VoIPServerConfig
+
+	void VoIPServerConfig_nativeSetConfig(JNIEnv* env, jclass clasz, jobjectArray keys, jobjectArray values){
+		std::map<std::string, std::string> config;
+		int len=env->GetArrayLength(keys);
+		int i;
+		for(i=0;i<len;i++){
+			jstring jkey=(jstring)env->GetObjectArrayElement(keys, i);
+			jstring jval=(jstring)env->GetObjectArrayElement(values, i);
+			if(jkey==NULL|| jval==NULL)
+				continue;
+			config[jni::JavaStringToStdString(env, jkey)]=jni::JavaStringToStdString(env, jval);
+		}
+		ServerConfig::GetSharedInstance()->Update(config);
+	}
+
+#pragma mark - Resampler
+
+	jint Resampler_convert44to48(JNIEnv* env, jclass cls, jobject from, jobject to){
+		return (jint)tgvoip::audio::Resampler::Convert44To48((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
+	}
+
+	jint Resampler_convert48to44(JNIEnv* env, jclass cls, jobject from, jobject to){
+		return (jint)tgvoip::audio::Resampler::Convert48To44((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
+	}
+
+#pragma mark - VoIPGroupController
+
+#ifndef TGVOIP_NO_GROUP_CALLS
+	jlong VoIPGroupController_nativeInit(JNIEnv* env, jobject thiz, jint timeDifference){
+		ImplDataAndroid* impl=(ImplDataAndroid*) malloc(sizeof(ImplDataAndroid));
+		impl->javaObject=env->NewGlobalRef(thiz);
+		VoIPGroupController* cntrlr=new VoIPGroupController(timeDifference);
+		cntrlr->implData=impl;
+
+		VoIPGroupController::Callbacks callbacks;
+		callbacks.connectionStateChanged=updateConnectionState;
+		callbacks.updateStreams=updateGroupCallStreams;
+		callbacks.participantAudioStateChanged=updateParticipantAudioState;
+		callbacks.signalBarCountChanged=NULL;
+		cntrlr->SetCallbacks(callbacks);
+
+		return (jlong)(intptr_t)cntrlr;
+	}
+
+	void VoIPGroupController_nativeSetGroupCallInfo(JNIEnv* env, jclass cls, jlong inst, jbyteArray _encryptionKey, jbyteArray _reflectorGroupTag, jbyteArray _reflectorSelfTag, jbyteArray _reflectorSelfSecret, jbyteArray _reflectorSelfTagHash, jint selfUserID, jstring reflectorAddress, jstring reflectorAddressV6, jint reflectorPort){
+		VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
+		jbyte* encryptionKey=env->GetByteArrayElements(_encryptionKey, NULL);
+		jbyte* reflectorGroupTag=env->GetByteArrayElements(_reflectorGroupTag, NULL);
+		jbyte* reflectorSelfTag=env->GetByteArrayElements(_reflectorSelfTag, NULL);
+		jbyte* reflectorSelfSecret=env->GetByteArrayElements(_reflectorSelfSecret, NULL);
+		jbyte* reflectorSelfTagHash=env->GetByteArrayElements(_reflectorSelfTagHash, NULL);
 
 
-		if(didAttach){
-			sharedJVM->DetachCurrentThread();
+		const char* ipChars=env->GetStringUTFChars(reflectorAddress, NULL);
+		std::string ipLiteral(ipChars);
+		IPv4Address v4addr(ipLiteral);
+		IPv6Address v6addr("::0");
+		env->ReleaseStringUTFChars(reflectorAddress, ipChars);
+		if(reflectorAddressV6 && env->GetStringLength(reflectorAddressV6)){
+			const char* ipv6Chars=env->GetStringUTFChars(reflectorAddressV6, NULL);
+			v6addr=IPv6Address(ipv6Chars);
+			env->ReleaseStringUTFChars(reflectorAddressV6, ipv6Chars);
 		}
+		ctlr->SetGroupCallInfo((unsigned char *) encryptionKey, (unsigned char *) reflectorGroupTag, (unsigned char *) reflectorSelfTag, (unsigned char *) reflectorSelfSecret, (unsigned char*) reflectorSelfTagHash, selfUserID, v4addr, v6addr, (uint16_t)reflectorPort);
+
+		env->ReleaseByteArrayElements(_encryptionKey, encryptionKey, JNI_ABORT);
+		env->ReleaseByteArrayElements(_reflectorGroupTag, reflectorGroupTag, JNI_ABORT);
+		env->ReleaseByteArrayElements(_reflectorSelfTag, reflectorSelfTag, JNI_ABORT);
+		env->ReleaseByteArrayElements(_reflectorSelfSecret, reflectorSelfSecret, JNI_ABORT);
+		env->ReleaseByteArrayElements(_reflectorSelfTagHash, reflectorSelfTagHash, JNI_ABORT);
+	}
+
+	void VoIPGroupController_nativeAddGroupCallParticipant(JNIEnv* env, jclass cls, jlong inst, jint userID, jbyteArray _memberTagHash, jbyteArray _streams){
+		VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
+		jbyte* memberTagHash=env->GetByteArrayElements(_memberTagHash, NULL);
+		jbyte* streams=_streams ? env->GetByteArrayElements(_streams, NULL) : NULL;
+
+		ctlr->AddGroupCallParticipant(userID, (unsigned char *) memberTagHash, (unsigned char *) streams, (size_t) env->GetArrayLength(_streams));
+
+		env->ReleaseByteArrayElements(_memberTagHash, memberTagHash, JNI_ABORT);
+		if(_streams)
+			env->ReleaseByteArrayElements(_streams, streams, JNI_ABORT);
+
+	}
+
+	void VoIPGroupController_nativeRemoveGroupCallParticipant(JNIEnv* env, jclass cls, jlong inst, jint userID){
+		VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
+		ctlr->RemoveGroupCallParticipant(userID);
+	}
+
+	jfloat VoIPGroupController_nativeGetParticipantAudioLevel(JNIEnv* env, jclass cls, jlong inst, jint userID){
+		return ((VoIPGroupController*)(intptr_t)inst)->GetParticipantAudioLevel(userID);
+	}
+
+	void VoIPGroupController_nativeSetParticipantVolume(JNIEnv* env, jclass cls, jlong inst, jint userID, jfloat volume){
+		((VoIPGroupController*)(intptr_t)inst)->SetParticipantVolume(userID, volume);
+	}
+
+	jbyteArray VoIPGroupController_getInitialStreams(JNIEnv* env, jclass cls){
+		unsigned char buf[1024];
+		size_t len=VoIPGroupController::GetInitialStreams(buf, sizeof(buf));
+		jbyteArray arr=env->NewByteArray(len);
+		jbyte* arrElems=env->GetByteArrayElements(arr, NULL);
+		memcpy(arrElems, buf, len);
+		env->ReleaseByteArrayElements(arr, arrElems, 0);
+		return arr;
+	}
+
+	void VoIPGroupController_nativeSetParticipantStreams(JNIEnv* env, jclass cls, jlong inst, jint userID, jbyteArray _streams){
+		jbyte* streams=env->GetByteArrayElements(_streams, NULL);
+
+		((VoIPGroupController*)(intptr_t)inst)->SetParticipantStreams(userID, (unsigned char *) streams, (size_t) env->GetArrayLength(_streams));
+
+		env->ReleaseByteArrayElements(_streams, streams, JNI_ABORT);
+	}
+#endif
+
+#pragma mark - VideoSource
+
+	jlong VideoSource_nativeInit(JNIEnv* env, jobject thiz){
+		return (jlong)(intptr_t)new video::VideoSourceAndroid(env->NewGlobalRef(thiz));
+	}
+
+	void VideoSource_nativeRelease(JNIEnv* env, jobject thiz, jlong inst){
+		delete (video::VideoSource*)(intptr_t)inst;
+	}
+
+	void VideoSource_nativeSetVideoStreamParameters(JNIEnv* env, jobject thiz, jlong inst, jobjectArray _csd, jint width, jint height){
+		std::vector<Buffer> csd;
+		for(int i=0;i<env->GetArrayLength(_csd);i++){
+			jobject _buf=env->GetObjectArrayElement(_csd, i);
+			size_t len=static_cast<size_t>(env->GetDirectBufferCapacity(_buf));
+			Buffer buf(len);
+			buf.CopyFrom(env->GetDirectBufferAddress(_buf), 0, len);
+			csd.push_back(std::move(buf));
+		}
+		((video::VideoSourceAndroid*)(intptr_t)inst)->SetStreamParameters(std::move(csd), width, height);
+	}
+
+	void VideoSource_nativeSendFrame(JNIEnv* env, jobject thiz, jlong inst, jobject buffer, jint offset, jint length, jint flags){
+		size_t bufsize=(size_t)env->GetDirectBufferCapacity(buffer);
+		Buffer buf(static_cast<size_t>(length));
+		buf.CopyFrom(env->GetDirectBufferAddress(buffer)+offset, 0, static_cast<size_t>(length));
+		((video::VideoSourceAndroid*)(intptr_t)inst)->SendFrame(std::move(buf), static_cast<uint32_t>(flags));
+	}
+
+#pragma mark - VideoRenderer
+
+	jlong VideoRenderer_nativeInit(JNIEnv* env, jobject thiz){
+		return (jlong)(intptr_t)new video::VideoRendererAndroid(env->NewGlobalRef(thiz));
 	}
 }
 
-TGVOIP_FUNC(jlong, VoIPController_nativeInit, jobject thiz, jint systemVersion) {
+extern "C" void tgvoipRegisterNatives(JNIEnv* env){
+	jclass controller=env->FindClass(TGVOIP_PACKAGE_PATH "/VoIPController");
+	jclass groupController=env->FindClass(TGVOIP_PACKAGE_PATH "/VoIPGroupController");
+	if(env->ExceptionCheck()){
+		env->ExceptionClear(); // is returning NULL from FindClass not enough?
+	}
+	jclass audioRecordJNI=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioRecordJNI");
+	jclass audioTrackJNI=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioTrackJNI");
+	jclass serverConfig=env->FindClass(TGVOIP_PACKAGE_PATH "/VoIPServerConfig");
+	jclass resampler=env->FindClass(TGVOIP_PACKAGE_PATH "/Resampler");
+	jclass videoSource=env->FindClass(TGVOIP_PACKAGE_PATH "/VideoSource");
+	if(env->ExceptionCheck()){
+		env->ExceptionClear(); // is returning NULL from FindClass not enough?
+	}
+	jclass videoRenderer=env->FindClass(TGVOIP_PACKAGE_PATH "/VideoRenderer");
+	if(env->ExceptionCheck()){
+		env->ExceptionClear(); // is returning NULL from FindClass not enough?
+	}
+	assert(controller && audioRecordJNI && audioTrackJNI && serverConfig && resampler);
+
+	audioRecordInstanceFld=env->GetFieldID(audioRecordJNI, "nativeInst", "J");
+	audioTrackInstanceFld=env->GetFieldID(audioTrackJNI, "nativeInst", "J");
+
 	env->GetJavaVM(&sharedJVM);
 	if(!AudioInputAndroid::jniClass){
 		jclass cls=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioRecordJNI");
@@ -233,360 +506,115 @@ TGVOIP_FUNC(jlong, VoIPController_nativeInit, jobject thiz, jint systemVersion) 
 		AudioOutputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
 		AudioOutputAndroid::startMethod=env->GetMethodID(cls, "start", "()V");
 		AudioOutputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
+
+		if(videoRenderer){
+			video::VideoRendererAndroid::decodeAndDisplayMethod=env->GetMethodID(videoRenderer, "decodeAndDisplay", "(Ljava/nio/ByteBuffer;IJ)V");
+			video::VideoRendererAndroid::resetMethod=env->GetMethodID(videoRenderer, "reset", "(III[[B)V");
+		}
 	}
 
-	jclass thisClass=env->FindClass(TGVOIP_PACKAGE_PATH "/VoIPController");
-	setStateMethod=env->GetMethodID(thisClass, "handleStateChange", "(I)V");
-	setSignalBarsMethod=env->GetMethodID(thisClass, "handleSignalBarsChange", "(I)V");
-	groupCallKeyReceivedMethod=env->GetMethodID(thisClass, "groupCallKeyReceived", "([B)V");
-	groupCallKeySentMethod=env->GetMethodID(thisClass, "groupCallKeySent", "()V");
-	callUpgradeRequestReceivedMethod=env->GetMethodID(thisClass, "callUpgradeRequestReceived", "()V");
+	setStateMethod=env->GetMethodID(controller, "handleStateChange", "(I)V");
+	setSignalBarsMethod=env->GetMethodID(controller, "handleSignalBarsChange", "(I)V");
+	groupCallKeyReceivedMethod=env->GetMethodID(controller, "groupCallKeyReceived", "([B)V");
+	groupCallKeySentMethod=env->GetMethodID(controller, "groupCallKeySent", "()V");
+	callUpgradeRequestReceivedMethod=env->GetMethodID(controller, "callUpgradeRequestReceived", "()V");
 
 	if(!jniUtilitiesClass)
 		jniUtilitiesClass=(jclass) env->NewGlobalRef(env->FindClass(TGVOIP_PACKAGE_PATH "/JNIUtilities"));
 
-	impl_data_android_t* impl=(impl_data_android_t*) malloc(sizeof(impl_data_android_t));
-	impl->javaObject=env->NewGlobalRef(thiz);
-	VoIPController* cntrlr=new VoIPController();
-	cntrlr->implData=impl;
-	VoIPController::Callbacks callbacks;
-	callbacks.connectionStateChanged=updateConnectionState;
-	callbacks.signalBarCountChanged=updateSignalBarCount;
-	callbacks.groupCallKeyReceived=groupCallKeyReceived;
-	callbacks.groupCallKeySent=groupCallKeySent;
-	callbacks.upgradeToGroupCallRequested=callUpgradeRequestReceived;
-	cntrlr->SetCallbacks(callbacks);
-	return (jlong)(intptr_t)cntrlr;
-}
+	// VoIPController
+	JNINativeMethod controllerMethods[]={
+			{"nativeInit", "()J", (void*)&tgvoip::VoIPController_nativeInit},
+			{"nativeStart", "(J)V", (void*)&tgvoip::VoIPController_nativeStart},
+			{"nativeConnect", "(J)V", (void*)&tgvoip::VoIPController_nativeConnect},
+			{"nativeSetProxy", "(JLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", (void*)&tgvoip::VoIPController_nativeSetProxy},
+			{"nativeSetEncryptionKey", "(J[BZ)V", (void*)&tgvoip::VoIPController_nativeSetEncryptionKey},
+			{"nativeSetRemoteEndpoints", "(J[L" TGVOIP_ENDPOINT_CLASS ";ZZI)V", (void*)&tgvoip::VoIPController_nativeSetRemoteEndpoints},
+			{"nativeSetNativeBufferSize", "(I)V", (void*)&tgvoip::VoIPController_nativeSetNativeBufferSize},
+			{"nativeRelease", "(J)V", (void*)&tgvoip::VoIPController_nativeRelease},
+			{"nativeGetDebugString", "(J)Ljava/lang/String;", (void*)&tgvoip::VoIPController_nativeGetDebugString},
+			{"nativeSetNetworkType", "(JI)V", (void*)&tgvoip::VoIPController_nativeSetNetworkType},
+			{"nativeSetMicMute", "(JZ)V", (void*)&tgvoip::VoIPController_nativeSetMicMute},
+			{"nativeSetConfig", "(JDDIZZZLjava/lang/String;Ljava/lang/String;)V", (void*)&tgvoip::VoIPController_nativeSetConfig},
+			{"nativeDebugCtl", "(JII)V", (void*)&tgvoip::VoIPController_nativeDebugCtl},
+			{"nativeGetVersion", "()Ljava/lang/String;", (void*)&tgvoip::VoIPController_nativeGetVersion},
+			{"nativeGetPreferredRelayID", "(J)J", (void*)&tgvoip::VoIPController_nativeGetPreferredRelayID},
+			{"nativeGetLastError", "(J)I", (void*)&tgvoip::VoIPController_nativeGetLastError},
+			{"nativeGetStats", "(JL" TGVOIP_PACKAGE_PATH "/VoIPController$Stats;)V", (void*)&tgvoip::VoIPController_nativeGetStats},
+			{"nativeGetDebugLog", "(J)Ljava/lang/String;", (void*)&tgvoip::VoIPController_nativeGetDebugLog},
+			{"nativeSetAudioOutputGainControlEnabled", "(JZ)V", (void*)&tgvoip::VoIPController_nativeSetAudioOutputGainControlEnabled},
+			{"nativeSetEchoCancellationStrength", "(JI)V", (void*)&tgvoip::VoIPController_nativeSetEchoCancellationStrength},
+			{"nativeGetPeerCapabilities", "(J)I", (void*)&tgvoip::VoIPController_nativeGetPeerCapabilities},
+			{"nativeSendGroupCallKey", "(J[B)V", (void*)&tgvoip::VoIPController_nativeSendGroupCallKey},
+			{"nativeRequestCallUpgrade", "(J)V", (void*)&tgvoip::VoIPController_nativeRequestCallUpgrade},
+			{"nativeNeedRate", "(J)Z", (void*)&tgvoip::VoIPController_nativeNeedRate},
+			//{"nativeSetVideoSource", "(JJ)V", (void*)&tgvoip::VoIPController_nativeSetVideoSource},
+			//{"nativeSetVideoRenderer", "(JJ)V", (void*)&tgvoip::VoIPController_nativeSetVideoRenderer}
+	};
+	env->RegisterNatives(controller, controllerMethods, sizeof(controllerMethods)/sizeof(JNINativeMethod));
 
-TGVOIP_FUNC(void, VoIPController_nativeStart, jobject thiz, jlong inst){
-	((VoIPController*)(intptr_t)inst)->Start();
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeConnect, jobject thiz, jlong inst){
-	((VoIPController*)(intptr_t)inst)->Connect();
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetProxy, jobject thiz, jlong inst, jstring _address, jint port, jstring _username, jstring _password){
-	const char* address=env->GetStringUTFChars(_address, NULL);
-	const char* username=_username ? env->GetStringUTFChars(_username, NULL) : NULL;
-	const char* password=_password ? env->GetStringUTFChars(_password, NULL) : NULL;
-	((VoIPController*)(intptr_t)inst)->SetProxy(PROXY_SOCKS5, address, (uint16_t)port, username ? username : "", password ? password : "");
-	env->ReleaseStringUTFChars(_address, address);
-	if(username)
-		env->ReleaseStringUTFChars(_username, username);
-	if(password)
-		env->ReleaseStringUTFChars(_password, password);
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetEncryptionKey, jobject thiz, jlong inst, jbyteArray key, jboolean isOutgoing){
-	jbyte* akey=env->GetByteArrayElements(key, NULL);
-	((VoIPController*)(intptr_t)inst)->SetEncryptionKey((char *) akey, isOutgoing);
-	env->ReleaseByteArrayElements(key, akey, JNI_ABORT);
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetRemoteEndpoints, jobject thiz, jlong inst, jobjectArray endpoints, jboolean allowP2p, jboolean tcp, jint connectionMaxLayer){
-	size_t len=(size_t) env->GetArrayLength(endpoints);
-//	voip_endpoint_t* eps=(voip_endpoint_t *) malloc(sizeof(voip_endpoint_t)*len);
-	std::vector<Endpoint> eps;
-	/*public String ip;
-		public String ipv6;
-		public int port;
-		public byte[] peer_tag;*/
-	jclass epClass=env->GetObjectClass(env->GetObjectArrayElement(endpoints, 0));
-	jfieldID ipFld=env->GetFieldID(epClass, "ip", "Ljava/lang/String;");
-	jfieldID ipv6Fld=env->GetFieldID(epClass, "ipv6", "Ljava/lang/String;");
-	jfieldID portFld=env->GetFieldID(epClass, "port", "I");
-	jfieldID peerTagFld=env->GetFieldID(epClass, TGVOIP_PEER_TAG_VARIABLE_NAME, "[B");
-	jfieldID idFld=env->GetFieldID(epClass, "id", "J");
-	int i;
-	for(i=0;i<len;i++){
-		jobject endpoint=env->GetObjectArrayElement(endpoints, i);
-		jstring ip=(jstring) env->GetObjectField(endpoint, ipFld);
-		jstring ipv6=(jstring) env->GetObjectField(endpoint, ipv6Fld);
-		jint port=env->GetIntField(endpoint, portFld);
-		jlong id=env->GetLongField(endpoint, idFld);
-		jbyteArray peerTag=(jbyteArray) env->GetObjectField(endpoint, peerTagFld);
-		const char* ipChars=env->GetStringUTFChars(ip, NULL);
-		std::string ipLiteral(ipChars);
-		IPv4Address v4addr(ipLiteral);
-		IPv6Address v6addr("::0");
-		env->ReleaseStringUTFChars(ip, ipChars);
-		if(ipv6 && env->GetStringLength(ipv6)){
-			const char* ipv6Chars=env->GetStringUTFChars(ipv6, NULL);
-			v6addr=IPv6Address(ipv6Chars);
-			env->ReleaseStringUTFChars(ipv6, ipv6Chars);
-		}
-		unsigned char pTag[16];
-		if(peerTag && env->GetArrayLength(peerTag)){
-			jbyte* peerTagBytes=env->GetByteArrayElements(peerTag, NULL);
-			memcpy(pTag, peerTagBytes, 16);
-			env->ReleaseByteArrayElements(peerTag, peerTagBytes, JNI_ABORT);
-		}
-		eps.push_back(Endpoint((int64_t)id, (uint16_t)port, v4addr, v6addr, (char) (tcp ? Endpoint::TYPE_TCP_RELAY : Endpoint::TYPE_UDP_RELAY), pTag));
-	}
-	((VoIPController*)(intptr_t)inst)->SetRemoteEndpoints(eps, allowP2p, connectionMaxLayer);
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetNativeBufferSize, jclass thiz, jint size){
-	AudioOutputOpenSLES::nativeBufferSize=(unsigned int) size;
-	AudioInputOpenSLES::nativeBufferSize=(unsigned int) size;
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeRelease, jobject thiz, jlong inst){
-	//env->DeleteGlobalRef(AudioInputAndroid::jniClass);
-
-	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
-	impl_data_android_t* impl=(impl_data_android_t*)ctlr->implData;
-	ctlr->Stop();
-	delete ctlr;
-	env->DeleteGlobalRef(impl->javaObject);
-	free(impl);
-}
-
-
-TGVOIP_FUNC(void, AudioRecordJNI_nativeCallback, jobject thiz, jobject buffer){
-	if(!audioRecordInstanceFld)
-		audioRecordInstanceFld=env->GetFieldID(env->GetObjectClass(thiz), "nativeInst", "J");
-
-	jlong inst=env->GetLongField(thiz, audioRecordInstanceFld);
-	AudioInputAndroid* in=(AudioInputAndroid*)(intptr_t)inst;
-	in->HandleCallback(env, buffer);
-}
-
-TGVOIP_FUNC(void, AudioTrackJNI_nativeCallback, jobject thiz, jbyteArray buffer){
-	if(!audioTrackInstanceFld)
-		audioTrackInstanceFld=env->GetFieldID(env->GetObjectClass(thiz), "nativeInst", "J");
-
-	jlong inst=env->GetLongField(thiz, audioTrackInstanceFld);
-	AudioOutputAndroid* in=(AudioOutputAndroid*)(intptr_t)inst;
-	in->HandleCallback(env, buffer);
-}
-
-TGVOIP_FUNC(jstring, VoIPController_nativeGetDebugString, jobject thiz, jlong inst){
-	std::string str=((VoIPController*)(intptr_t)inst)->GetDebugString();
-	return env->NewStringUTF(str.c_str());
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetNetworkType, jobject thiz, jlong inst, jint type){
-	((VoIPController*)(intptr_t)inst)->SetNetworkType(type);
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetMicMute, jobject thiz, jlong inst, jboolean mute){
-	((VoIPController*)(intptr_t)inst)->SetMicMute(mute);
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetConfig, jobject thiz, jlong inst, jdouble recvTimeout, jdouble initTimeout, jint dataSavingMode, jboolean enableAEC, jboolean enableNS, jboolean enableAGC, jstring logFilePath, jstring statsDumpPath){
-	VoIPController::Config cfg;
-	cfg.initTimeout=initTimeout;
-	cfg.recvTimeout=recvTimeout;
-	cfg.dataSaving=dataSavingMode;
-	cfg.enableAEC=enableAEC;
-	cfg.enableNS=enableNS;
-	cfg.enableAGC=enableAGC;
-	cfg.enableCallUpgrade=false;
-	if(logFilePath){
-		char* path=(char *) env->GetStringUTFChars(logFilePath, NULL);
-		cfg.logFilePath=std::string(path);
-		env->ReleaseStringUTFChars(logFilePath, path);
-	}
-	if(statsDumpPath){
-		char* path=(char *) env->GetStringUTFChars(statsDumpPath, NULL);
-		cfg.statsDumpFilePath=std::string(path);
-		env->ReleaseStringUTFChars(logFilePath, path);
-	}
-	((VoIPController*)(intptr_t)inst)->SetConfig(cfg);
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeDebugCtl, jobject thiz, jlong inst, jint request, jint param){
-	((VoIPController*)(intptr_t)inst)->DebugCtl(request, param);
-}
-
-TGVOIP_FUNC(jstring, VoIPController_nativeGetVersion, jclass clasz){
-	return env->NewStringUTF(VoIPController::GetVersion());
-}
-
-TGVOIP_FUNC(jlong, VoIPController_nativeGetPreferredRelayID, jclass clasz, jlong inst){
-	return ((VoIPController*)(intptr_t)inst)->GetPreferredRelayID();
-}
-
-TGVOIP_FUNC(jint, VoIPController_nativeGetLastError, jclass clasz, jlong inst){
-	return ((VoIPController*)(intptr_t)inst)->GetLastError();
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeGetStats, jclass clasz, jlong inst, jobject stats){
-	VoIPController::TrafficStats _stats;
-	((VoIPController*)(intptr_t)inst)->GetStats(&_stats);
-	jclass cls=env->GetObjectClass(stats);
-	env->SetLongField(stats, env->GetFieldID(cls, "bytesSentWifi", "J"), _stats.bytesSentWifi);
-	env->SetLongField(stats, env->GetFieldID(cls, "bytesSentMobile", "J"), _stats.bytesSentMobile);
-	env->SetLongField(stats, env->GetFieldID(cls, "bytesRecvdWifi", "J"), _stats.bytesRecvdWifi);
-	env->SetLongField(stats, env->GetFieldID(cls, "bytesRecvdMobile", "J"), _stats.bytesRecvdMobile);
-}
-
-TGVOIP_FUNC(void, VoIPServerConfig_nativeSetConfig, jclass clasz, jobjectArray keys, jobjectArray values){
-	std::map<std::string, std::string> config;
-	int len=env->GetArrayLength(keys);
-	int i;
-	for(i=0;i<len;i++){
-		jstring jkey=(jstring)env->GetObjectArrayElement(keys, i);
-		jstring jval=(jstring)env->GetObjectArrayElement(values, i);
-		if(jkey==NULL|| jval==NULL)
-			continue;
-		const char* ckey=env->GetStringUTFChars(jkey, NULL);
-		const char* cval=env->GetStringUTFChars(jval, NULL);
-		std::string key(ckey);
-		std::string val(cval);
-		env->ReleaseStringUTFChars(jkey, ckey);
-		env->ReleaseStringUTFChars(jval, cval);
-		config[key]=val;
-	}
-	ServerConfig::GetSharedInstance()->Update(config);
-}
-
-TGVOIP_FUNC(jstring, VoIPController_nativeGetDebugLog, jobject thiz, jlong inst){
-	VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
-	std::string log=ctlr->GetDebugLog();
-	return env->NewStringUTF(log.c_str());
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetAudioOutputGainControlEnabled, jclass clasz, jlong inst, jboolean enabled){
-	((VoIPController*)(intptr_t)inst)->SetAudioOutputGainControlEnabled(enabled);
-}
-
-TGVOIP_FUNC(void, VoIPController_nativeSetEchoCancellationStrength, jclass cls, jlong inst, jint strength){
-	((VoIPController*)(intptr_t)inst)->SetEchoCancellationStrength(strength);
-}
-
-TGVOIP_FUNC(jint, Resampler_convert44to48, jclass cls, jobject from, jobject to){
-	return tgvoip::audio::Resampler::Convert44To48((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
-}
-
-TGVOIP_FUNC(jint, Resampler_convert48to44, jclass cls, jobject from, jobject to){
-	return tgvoip::audio::Resampler::Convert48To44((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
-}
-
+	// VoIPGroupController
 #ifndef TGVOIP_NO_GROUP_CALLS
-TGVOIP_FUNC(jlong, VoIPGroupController_nativeInit, jobject thiz, jint timeDifference){
-	env->GetJavaVM(&sharedJVM);
-	if(!AudioInputAndroid::jniClass){
-		jclass cls=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioRecordJNI");
-		AudioInputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);
-		AudioInputAndroid::initMethod=env->GetMethodID(cls, "init", "(IIII)V");
-		AudioInputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
-		AudioInputAndroid::startMethod=env->GetMethodID(cls, "start", "()Z");
-		AudioInputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
+	if(groupController){
+		setStateMethod=env->GetMethodID(groupController, "handleStateChange", "(I)V");
+		setParticipantAudioEnabledMethod=env->GetMethodID(groupController, "setParticipantAudioEnabled", "(IZ)V");
+		setSelfStreamsMethod=env->GetMethodID(groupController, "setSelfStreams", "([B)V");
 
-		cls=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioTrackJNI");
-		AudioOutputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);
-		AudioOutputAndroid::initMethod=env->GetMethodID(cls, "init", "(IIII)V");
-		AudioOutputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
-		AudioOutputAndroid::startMethod=env->GetMethodID(cls, "start", "()V");
-		AudioOutputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
+		JNINativeMethod groupControllerMethods[]={
+				{"nativeInit", "(I)J", (void*)&tgvoip::VoIPGroupController_nativeInit},
+				{"nativeSetGroupCallInfo", "(J[B[B[B[B[BILjava/lang/String;Ljava/lang/String;I)V", (void*)&tgvoip::VoIPGroupController_nativeSetGroupCallInfo},
+				{"nativeAddGroupCallParticipant", "(JI[B[B)V", (void*)&tgvoip::VoIPGroupController_nativeAddGroupCallParticipant},
+				{"nativeRemoveGroupCallParticipant", "(JI)V", (void*)&tgvoip::VoIPGroupController_nativeRemoveGroupCallParticipant},
+				{"nativeGetParticipantAudioLevel", "(JI)F", (void*)&tgvoip::VoIPGroupController_nativeGetParticipantAudioLevel},
+				{"nativeSetParticipantVolume", "(JIF)V", (void*)&tgvoip::VoIPGroupController_nativeSetParticipantVolume},
+				{"getInitialStreams", "()[B", (void*)&tgvoip::VoIPGroupController_getInitialStreams},
+				{"nativeSetParticipantStreams", "(JI[B)V", (void*)&tgvoip::VoIPGroupController_nativeSetParticipantStreams}
+		};
+		env->RegisterNatives(groupController, groupControllerMethods, sizeof(groupControllerMethods)/sizeof(JNINativeMethod));
 	}
-
-	setStateMethod=env->GetMethodID(env->GetObjectClass(thiz), "handleStateChange", "(I)V");
-	setParticipantAudioEnabledMethod=env->GetMethodID(env->GetObjectClass(thiz), "setParticipantAudioEnabled", "(IZ)V");
-	setSelfStreamsMethod=env->GetMethodID(env->GetObjectClass(thiz), "setSelfStreams", "([B)V");
-
-	impl_data_android_t* impl=(impl_data_android_t*) malloc(sizeof(impl_data_android_t));
-	impl->javaObject=env->NewGlobalRef(thiz);
-	VoIPGroupController* cntrlr=new VoIPGroupController(timeDifference);
-	cntrlr->implData=impl;
-
-	VoIPGroupController::Callbacks callbacks;
-	callbacks.connectionStateChanged=updateConnectionState;
-	callbacks.updateStreams=updateGroupCallStreams;
-	callbacks.participantAudioStateChanged=updateParticipantAudioState;
-	callbacks.signalBarCountChanged=NULL;
-	cntrlr->SetCallbacks(callbacks);
-
-	return (jlong)(intptr_t)cntrlr;
-}
-
-TGVOIP_FUNC(void, VoIPGroupController_nativeSetGroupCallInfo, jclass cls, jlong inst, jbyteArray _encryptionKey, jbyteArray _reflectorGroupTag, jbyteArray _reflectorSelfTag, jbyteArray _reflectorSelfSecret, jbyteArray _reflectorSelfTagHash, jint selfUserID, jstring reflectorAddress, jstring reflectorAddressV6, jint reflectorPort){
-	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
-	jbyte* encryptionKey=env->GetByteArrayElements(_encryptionKey, NULL);
-	jbyte* reflectorGroupTag=env->GetByteArrayElements(_reflectorGroupTag, NULL);
-	jbyte* reflectorSelfTag=env->GetByteArrayElements(_reflectorSelfTag, NULL);
-	jbyte* reflectorSelfSecret=env->GetByteArrayElements(_reflectorSelfSecret, NULL);
-	jbyte* reflectorSelfTagHash=env->GetByteArrayElements(_reflectorSelfTagHash, NULL);
-
-
-	const char* ipChars=env->GetStringUTFChars(reflectorAddress, NULL);
-	std::string ipLiteral(ipChars);
-	IPv4Address v4addr(ipLiteral);
-	IPv6Address v6addr("::0");
-	env->ReleaseStringUTFChars(reflectorAddress, ipChars);
-	if(reflectorAddressV6 && env->GetStringLength(reflectorAddressV6)){
-		const char* ipv6Chars=env->GetStringUTFChars(reflectorAddressV6, NULL);
-		v6addr=IPv6Address(ipv6Chars);
-		env->ReleaseStringUTFChars(reflectorAddressV6, ipv6Chars);
-	}
-	ctlr->SetGroupCallInfo((unsigned char *) encryptionKey, (unsigned char *) reflectorGroupTag, (unsigned char *) reflectorSelfTag, (unsigned char *) reflectorSelfSecret, (unsigned char*) reflectorSelfTagHash, selfUserID, v4addr, v6addr, (uint16_t)reflectorPort);
-
-	env->ReleaseByteArrayElements(_encryptionKey, encryptionKey, JNI_ABORT);
-	env->ReleaseByteArrayElements(_reflectorGroupTag, reflectorGroupTag, JNI_ABORT);
-	env->ReleaseByteArrayElements(_reflectorSelfTag, reflectorSelfTag, JNI_ABORT);
-	env->ReleaseByteArrayElements(_reflectorSelfSecret, reflectorSelfSecret, JNI_ABORT);
-	env->ReleaseByteArrayElements(_reflectorSelfTagHash, reflectorSelfTagHash, JNI_ABORT);
-}
-
-TGVOIP_FUNC(void, VoIPGroupController_nativeAddGroupCallParticipant, jclass cls, jlong inst, jint userID, jbyteArray _memberTagHash, jbyteArray _streams){
-	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
-	jbyte* memberTagHash=env->GetByteArrayElements(_memberTagHash, NULL);
-	jbyte* streams=_streams ? env->GetByteArrayElements(_streams, NULL) : NULL;
-
-	ctlr->AddGroupCallParticipant(userID, (unsigned char *) memberTagHash, (unsigned char *) streams, (size_t) env->GetArrayLength(_streams));
-
-	env->ReleaseByteArrayElements(_memberTagHash, memberTagHash, JNI_ABORT);
-	if(_streams)
-		env->ReleaseByteArrayElements(_streams, streams, JNI_ABORT);
-
-}
-
-TGVOIP_FUNC(void, VoIPGroupController_nativeRemoveGroupCallParticipant, jclass cls, jlong inst, jint userID){
-	VoIPGroupController* ctlr=((VoIPGroupController*)(intptr_t)inst);
-	ctlr->RemoveGroupCallParticipant(userID);
-}
-
-TGVOIP_FUNC(jfloat, VoIPGroupController_nativeGetParticipantAudioLevel, jclass cls, jlong inst, jint userID){
-	return ((VoIPGroupController*)(intptr_t)inst)->GetParticipantAudioLevel(userID);
-}
-
-TGVOIP_FUNC(void, VoIPGroupController_nativeSetParticipantVolume, jclass cls, jlong inst, jint userID, jfloat volume){
-	((VoIPGroupController*)(intptr_t)inst)->SetParticipantVolume(userID, volume);
-}
-
-TGVOIP_FUNC(jbyteArray, VoIPGroupController_getInitialStreams, jclass cls){
-	unsigned char buf[1024];
-	size_t len=VoIPGroupController::GetInitialStreams(buf, sizeof(buf));
-	jbyteArray arr=env->NewByteArray(len);
-	jbyte* arrElems=env->GetByteArrayElements(arr, NULL);
-	memcpy(arrElems, buf, len);
-	env->ReleaseByteArrayElements(arr, arrElems, 0);
-	return arr;
-}
-
-TGVOIP_FUNC(void, VoIPGroupController_nativeSetParticipantStreams, jclass cls, jlong inst, jint userID, jbyteArray _streams){
-	jbyte* streams=env->GetByteArrayElements(_streams, NULL);
-
-	((VoIPGroupController*)(intptr_t)inst)->SetParticipantStreams(userID, (unsigned char *) streams, (size_t) env->GetArrayLength(_streams));
-
-	env->ReleaseByteArrayElements(_streams, streams, JNI_ABORT);
-}
 #endif
 
-TGVOIP_FUNC(jint, VoIPController_nativeGetPeerCapabilities, jclass cls, jlong inst){
-	return ((VoIPController*)(intptr_t)inst)->GetPeerCapabilities();
-}
+	// AudioRecordJNI
+	JNINativeMethod audioRecordMethods[]={
+			{"nativeCallback", "(Ljava/nio/ByteBuffer;)V", (void*)&tgvoip::AudioRecordJNI_nativeCallback}
+	};
+	env->RegisterNatives(audioRecordJNI, audioRecordMethods, sizeof(audioRecordMethods)/sizeof(JNINativeMethod));
 
-TGVOIP_FUNC(void, VoIPController_nativeSendGroupCallKey, jclass cls, jlong inst, jbyteArray _key){
-	jbyte* key=env->GetByteArrayElements(_key, NULL);
-	((VoIPController*)(intptr_t)inst)->SendGroupCallKey((unsigned char *) key);
-	env->ReleaseByteArrayElements(_key, key, JNI_ABORT);
-}
+	// AudioTrackJNI
+	JNINativeMethod audioTrackMethods[]={
+			{"nativeCallback", "([B)V", (void*)&tgvoip::AudioTrackJNI_nativeCallback}
+	};
+	env->RegisterNatives(audioTrackJNI, audioTrackMethods, sizeof(audioTrackMethods)/sizeof(JNINativeMethod));
 
-TGVOIP_FUNC(void, VoIPController_nativeRequestCallUpgrade, jclass cls, jlong inst){
-	((VoIPController*)(intptr_t)inst)->RequestCallUpgrade();
+	// VoIPServerConfig
+	JNINativeMethod serverConfigMethods[]={
+			{"nativeSetConfig", "([Ljava/lang/String;[Ljava/lang/String;)V", (void*)&tgvoip::VoIPServerConfig_nativeSetConfig}
+	};
+	env->RegisterNatives(serverConfig, serverConfigMethods, sizeof(serverConfigMethods)/sizeof(JNINativeMethod));
+
+	// Resampler
+	JNINativeMethod resamplerMethods[]={
+			{"convert44to48", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)I", (void*)&tgvoip::Resampler_convert44to48},
+			{"convert48to44", "(Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)I", (void*)&tgvoip::Resampler_convert48to44}
+	};
+	env->RegisterNatives(resampler, resamplerMethods, sizeof(resamplerMethods)/sizeof(JNINativeMethod));
+
+	if(videoSource){
+		// VideoSource
+		JNINativeMethod videoSourceMethods[]={
+				{"nativeInit",                     "()J",                          (void *) &tgvoip::VideoSource_nativeInit},
+				{"nativeRelease",                  "(J)V",                         (void *) &tgvoip::VideoSource_nativeRelease},
+				{"nativeSetVideoStreamParameters", "(J[Ljava/nio/ByteBuffer;II)V", (void *) &tgvoip::VideoSource_nativeSetVideoStreamParameters},
+				{"nativeSendFrame",                "(JLjava/nio/ByteBuffer;III)V", (void *) &tgvoip::VideoSource_nativeSendFrame}
+		};
+		env->RegisterNatives(videoSource, videoSourceMethods, sizeof(videoSourceMethods)/sizeof(JNINativeMethod));
+	}
+
+	if(videoRenderer){
+		// VideoRenderer
+		JNINativeMethod videoRendererMethods[]={
+				{"nativeInit", "()J", (void *) &tgvoip::VideoRenderer_nativeInit}
+		};
+		env->RegisterNatives(videoRenderer, videoRendererMethods, sizeof(videoRendererMethods)/sizeof(JNINativeMethod));
+	}
 }

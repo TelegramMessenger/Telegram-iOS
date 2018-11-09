@@ -18,7 +18,7 @@
 
 using namespace tgvoip;
 
-MessageThread::MessageThread() : Thread(new MethodPointer<MessageThread>(&MessageThread::Run, this), NULL){
+MessageThread::MessageThread() : Thread(std::bind(&MessageThread::Run, this)){
 
 	SetName("MessageThread");
 
@@ -54,7 +54,7 @@ void MessageThread::Stop(){
 	}
 }
 
-void MessageThread::Run(void* arg){
+void MessageThread::Run(){
 	queueMutex.Lock();
 	while(running){
 		double currentTime=VoIPController::GetCurrentTime();

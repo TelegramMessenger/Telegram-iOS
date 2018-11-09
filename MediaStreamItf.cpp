@@ -39,9 +39,9 @@ void AudioMixer::SetOutput(MediaStreamItf* output){
 void AudioMixer::Start(){
 	assert(!running);
 	running=true;
-	thread=new Thread(new MethodPointer<AudioMixer>(&AudioMixer::RunThread, this), NULL);
-	thread->Start();
+	thread=new Thread(std::bind(&AudioMixer::RunThread, this));
 	thread->SetName("AudioMixer");
+	thread->Start();
 }
 
 void AudioMixer::Stop(){
@@ -104,7 +104,7 @@ void AudioMixer::SetInputVolume(std::shared_ptr<MediaStreamItf> input, float vol
 	}
 }
 
-void AudioMixer::RunThread(void* arg){
+void AudioMixer::RunThread(){
 	LOGV("AudioMixer thread started");
 	while(running){
 		semaphore.Acquire();

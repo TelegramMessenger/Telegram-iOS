@@ -57,8 +57,9 @@ namespace tgvoip{
 		void WriteInt64(int64_t i);
 		void WriteInt32(int32_t i);
 		void WriteInt16(int16_t i);
-		void WriteBytes(unsigned char* bytes, size_t count);
-		void WriteBytes(Buffer& buffer);
+		void WriteBytes(const unsigned char* bytes, size_t count);
+		void WriteBytes(const Buffer& buffer);
+		void WriteBytes(const Buffer& buffer, size_t offset, size_t count);
 		unsigned char* GetBuffer();
 		size_t GetLength();
 		void Reset();
@@ -112,7 +113,7 @@ namespace tgvoip{
 				data=NULL;
 			length=capacity;
 		};
-		Buffer(const Buffer& other)=delete;
+		Buffer(const Buffer& other)=delete; // use Buffer::CopyOf to copy contents explicitly
 		Buffer(Buffer&& other) noexcept {
 			data=other.data;
 			length=other.length;
@@ -158,7 +159,7 @@ namespace tgvoip{
 		const unsigned char* operator*() const{
 			return data;
 		}
-		void CopyFrom(Buffer& other, size_t count, size_t srcOffset=0, size_t dstOffset=0){
+		void CopyFrom(const Buffer& other, size_t count, size_t srcOffset=0, size_t dstOffset=0){
 			if(!other.data)
 				throw std::invalid_argument("CopyFrom can't copy from NULL");
 			if(other.length<srcOffset+count || length<dstOffset+count)
@@ -174,8 +175,13 @@ namespace tgvoip{
 			data=(unsigned char *) realloc(data, newSize);
 			length=newSize;
 		}
-		size_t Length(){
+		size_t Length() const{
 			return length;
+		}
+		static Buffer CopyOf(const Buffer& other){
+			Buffer buf(other.length);
+			buf.CopyFrom(other, other.length);
+			return buf;
 		}
 	private:
 		unsigned char* data;

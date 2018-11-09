@@ -29,7 +29,7 @@ public:
 	size_t InvokeCallback(unsigned char* data, size_t length);
 
 private:
-	size_t (*callback)(unsigned char*, size_t, void*);
+	size_t (*callback)(unsigned char*, size_t, void*)=NULL;
 	void* callbackParam;
 };
 
@@ -45,7 +45,7 @@ private:
 		void SetInputVolume(std::shared_ptr<MediaStreamItf> input, float volumeDB);
 		void SetEchoCanceller(EchoCanceller* aec);
 	private:
-		void RunThread(void* arg);
+		void RunThread();
 		struct MixerInput{
 			std::shared_ptr<MediaStreamItf> source;
 			float multiplier;

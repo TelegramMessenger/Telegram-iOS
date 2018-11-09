@@ -65,6 +65,10 @@
           '<(tgvoip_src_loc)/MessageThread.h',
           '<(tgvoip_src_loc)/audio/AudioIO.cpp',
           '<(tgvoip_src_loc)/audio/AudioIO.h',
+          '<(tgvoip_src_loc)/video/VideoSource.cpp',
+          '<(tgvoip_src_loc)/video/VideoSource.h',
+          '<(tgvoip_src_loc)/video/VideoRenderer.cpp',
+          '<(tgvoip_src_loc)/video/VideoRenderer.h',
 
           # Windows
           '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.cpp',
@@ -77,6 +81,8 @@
           '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.h',
           '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.cpp',
           '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.h',
+          '<(tgvoip_src_loc)/os/windows/WindowsSpecific.cpp',
+          '<(tgvoip_src_loc)/os/windows/WindowsSpecific.h',
 
           # macOS
           '<(tgvoip_src_loc)/os/darwin/AudioInputAudioUnit.cpp',

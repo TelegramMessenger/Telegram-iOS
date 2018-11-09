@@ -6,12 +6,14 @@
 #define LIBTGVOIP_MESSAGETHREAD_H
 
 #include "threading.h"
+#include "utils.h"
 #include <vector>
 #include <functional>
 
 namespace tgvoip{
 	class MessageThread : public Thread{
 	public:
+		TGVOIP_DISALLOW_COPY_AND_ASSIGN(MessageThread);
 		MessageThread();
 		virtual ~MessageThread();
 		uint32_t Post(std::function<void()> func, double delay=0, double interval=0);
@@ -30,7 +32,7 @@ namespace tgvoip{
 			std::function<void()> func;
 		};
 
-		void Run(void* arg);
+		void Run();
 		void InsertMessageInternal(Message& m);
 
 		bool running=true;

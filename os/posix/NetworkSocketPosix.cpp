@@ -40,11 +40,17 @@ NetworkSocketPosix::NetworkSocketPosix(NetworkProtocol protocol) : NetworkSocket
 
 	tcpConnectedAddress=NULL;
 	tcpConnectedPort=0;
+
+	if(protocol==PROTO_TCP)
+		timeout=10.0;
+	lastSuccessfulOperationTime=VoIPController::GetCurrentTime();
 }
 
 NetworkSocketPosix::~NetworkSocketPosix(){
 	if(tcpConnectedAddress)
 		delete tcpConnectedAddress;
+	if(pendingOutgoingPacket)
+		delete pendingOutgoingPacket;
 }
 
 void NetworkSocketPosix::SetMaxPriority(){
@@ -55,12 +61,12 @@ void NetworkSocketPosix::SetMaxPriority(){
 		LOGE("error setting darwin-specific net priority: %d / %s", errno, strerror(errno));
 	}
 #elif defined(__linux__)
-	int prio=5;
+	int prio=6;
 	int res=setsockopt(fd, SOL_SOCKET, SO_PRIORITY, &prio, sizeof(prio));
 	if(res<0){
 		LOGE("error setting priority: %d / %s", errno, strerror(errno));
 	}
-	prio=6 << 5;
+	prio=46 << 2;
 	res=setsockopt(fd, SOL_IP, IP_TOS, &prio, sizeof(prio));
 	if(res<0){
 		LOGE("error setting ip tos: %d / %s", errno, strerror(errno));
@@ -136,13 +142,49 @@ void NetworkSocketPosix::Send(NetworkPacket *packet){
 	}else{
 		res=send(fd, packet->data, packet->length, 0);
 	}
-	if(res<0){
-		LOGE("error sending: %d / %s", errno, strerror(errno));
-		if(errno==ENETUNREACH && !isV4Available && VoIPController::GetCurrentTime()<switchToV6at){
-			switchToV6at=VoIPController::GetCurrentTime();
-			LOGI("Network unreachable, trying NAT64");
+	if(res<=0){
+		if(errno==EAGAIN || errno==EWOULDBLOCK){
+			if(pendingOutgoingPacket){
+				LOGE("Got EAGAIN but there's already a pending packet");
+				failed=true;
+			}else{
+				LOGV("Socket %d not ready to send", fd);
+				pendingOutgoingPacket=new Buffer(packet->length);
+				pendingOutgoingPacket->CopyFrom(packet->data, 0, packet->length);
+				readyToSend=false;
+			}
+		}else{
+    		LOGE("error sending: %d / %s", errno, strerror(errno));
+    		if(errno==ENETUNREACH && !isV4Available && VoIPController::GetCurrentTime()<switchToV6at){
+    			switchToV6at=VoIPController::GetCurrentTime();
+    			LOGI("Network unreachable, trying NAT64");
+    		}
+		}
+	}else if(res!=packet->length && packet->protocol==PROTO_TCP){
+		if(pendingOutgoingPacket){
+			LOGE("send returned less than packet length but there's already a pending packet");
+			failed=true;
+		}else{
+			LOGV("Socket %d not ready to send", fd);
+			pendingOutgoingPacket=new Buffer(packet->length-res);
+			pendingOutgoingPacket->CopyFrom(packet->data+res, 0, packet->length-res);
+			readyToSend=false;
 		}
 	}
+}
+
+bool NetworkSocketPosix::OnReadyToSend(){
+	if(pendingOutgoingPacket){
+		NetworkPacket pkt={0};
+		pkt.data=**pendingOutgoingPacket;
+		pkt.length=pendingOutgoingPacket->Length();
+		Send(&pkt);
+		delete pendingOutgoingPacket;
+		pendingOutgoingPacket=NULL;
+		return false;
+	}
+	readyToSend=true;
+	return true;
 }
 
 void NetworkSocketPosix::Receive(NetworkPacket *packet){
@@ -209,6 +251,7 @@ void NetworkSocketPosix::Open(){
 	}
 
 	SetMaxPriority();
+	fcntl(fd, F_SETFL, O_NONBLOCK);
 
 	int tries=0;
 	sockaddr_in6 addr;
@@ -256,12 +299,12 @@ void NetworkSocketPosix::Close(){
     }
 }
 
-void NetworkSocketPosix::Connect(NetworkAddress *address, uint16_t port){
-	IPv4Address* v4addr=dynamic_cast<IPv4Address*>(address);
-	IPv6Address* v6addr=dynamic_cast<IPv6Address*>(address);
-	sockaddr_in v4;
-	sockaddr_in6 v6;
-	sockaddr* addr=NULL;
+void NetworkSocketPosix::Connect(const NetworkAddress *address, uint16_t port){
+	const IPv4Address* v4addr=dynamic_cast<const IPv4Address*>(address);
+	const IPv6Address* v6addr=dynamic_cast<const IPv6Address*>(address);
+	struct sockaddr_in v4={0};
+	struct sockaddr_in6 v6={0};
+	struct sockaddr* addr=NULL;
 	size_t addrLen=0;
 	if(v4addr){
 		v4.sin_family=AF_INET;
@@ -296,8 +339,9 @@ void NetworkSocketPosix::Connect(NetworkAddress *address, uint16_t port){
 	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 	timeout.tv_sec=60;
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	fcntl(fd, F_SETFL, O_NONBLOCK);
 	int res=connect(fd, (const sockaddr*) addr, addrLen);
-	if(res!=0){
+	if(res!=0 && errno!=EINVAL && errno!=EINPROGRESS){
 		LOGW("error connecting TCP socket to %s:%u: %d / %s; %d / %s", address->ToString().c_str(), port, res, strerror(res), errno, strerror(errno));
 		close(fd);
 		failed=true;
@@ -399,7 +443,7 @@ std::string NetworkSocketPosix::V4AddressToString(uint32_t address){
 	return std::string(buf);
 }
 
-std::string NetworkSocketPosix::V6AddressToString(unsigned char *address){
+std::string NetworkSocketPosix::V6AddressToString(const unsigned char *address){
 	char buf[INET6_ADDRSTRLEN];
 	in6_addr addr;
 	memcpy(addr.s6_addr, address, 16);
@@ -456,10 +500,12 @@ void NetworkSocketPosix::SetTimeouts(int sendTimeout, int recvTimeout){
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 }
 
-bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vector<NetworkSocket *> &errorFds, SocketSelectCanceller* _canceller){
+bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vector<NetworkSocket*>& writeFds, std::vector<NetworkSocket *> &errorFds, SocketSelectCanceller* _canceller){
 	fd_set readSet;
+	fd_set writeSet;
 	fd_set errorSet;
 	FD_ZERO(&readSet);
+	FD_ZERO(&writeSet);
 	FD_ZERO(&errorSet);
 	SocketSelectCancellerPosix* canceller=dynamic_cast<SocketSelectCancellerPosix*>(_canceller);
 	if(canceller)
@@ -467,8 +513,8 @@ bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vect
 
 	int maxfd=canceller ? canceller->pipeRead : 0;
 
-	for(std::vector<NetworkSocket*>::iterator itr=readFds.begin();itr!=readFds.end();++itr){
-		int sfd=GetDescriptorFromSocket(*itr);
+	for(NetworkSocket*& s:readFds){
+		int sfd=GetDescriptorFromSocket(s);
 		if(sfd==0){
 			LOGW("can't select on one of sockets because it's not a NetworkSocketPosix instance");
 			continue;
@@ -478,21 +524,36 @@ bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vect
 			maxfd=sfd;
 	}
 
-	bool anyFailed=false;
-
-	for(std::vector<NetworkSocket*>::iterator itr=errorFds.begin();itr!=errorFds.end();++itr){
-		int sfd=GetDescriptorFromSocket(*itr);
+	for(NetworkSocket*& s:writeFds){
+		int sfd=GetDescriptorFromSocket(s);
 		if(sfd==0){
 			LOGW("can't select on one of sockets because it's not a NetworkSocketPosix instance");
 			continue;
 		}
-		anyFailed |= (*itr)->IsFailed();
+		FD_SET(sfd, &writeSet);
+		if(maxfd<sfd)
+			maxfd=sfd;
+	}
+
+	bool anyFailed=false;
+
+	for(NetworkSocket*& s:errorFds){
+		int sfd=GetDescriptorFromSocket(s);
+		if(sfd==0){
+			LOGW("can't select on one of sockets because it's not a NetworkSocketPosix instance");
+			continue;
+		}
+		if(s->timeout>0 && VoIPController::GetCurrentTime()-s->lastSuccessfulOperationTime>s->timeout){
+			LOGW("Socket %d timed out", sfd);
+			s->failed=true;
+		}
+		anyFailed |= s->IsFailed();
 		FD_SET(sfd, &errorSet);
 		if(maxfd<sfd)
 			maxfd=sfd;
 	}
 
-	select(maxfd+1, &readSet, NULL, &errorSet, NULL);
+	select(maxfd+1, &readSet, &writeSet, &errorSet, NULL);
 
 	if(canceller && FD_ISSET(canceller->pipeRead, &readSet) && !anyFailed){
 		char c;
@@ -500,16 +561,33 @@ bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vect
 		return false;
 	}else if(anyFailed){
 		FD_ZERO(&readSet);
-		FD_ZERO(&errorSet);
+		FD_ZERO(&writeSet);
 	}
 
 	std::vector<NetworkSocket*>::iterator itr=readFds.begin();
 	while(itr!=readFds.end()){
 		int sfd=GetDescriptorFromSocket(*itr);
-		if(sfd==0 || !FD_ISSET(sfd, &readSet)){
+		if(FD_ISSET(sfd, &readSet))
+			(*itr)->lastSuccessfulOperationTime=VoIPController::GetCurrentTime();
+		if(sfd==0 || !FD_ISSET(sfd, &readSet) || !(*itr)->OnReadyToReceive()){
 			itr=readFds.erase(itr);
 		}else{
 			++itr;
+		}
+	}
+
+	itr=writeFds.begin();
+	while(itr!=writeFds.end()){
+		int sfd=GetDescriptorFromSocket(*itr);
+		if(sfd==0 || !FD_ISSET(sfd, &writeSet)){
+			itr=writeFds.erase(itr);
+		}else{
+			LOGV("Socket %d is ready to send", sfd);
+			(*itr)->lastSuccessfulOperationTime=VoIPController::GetCurrentTime();
+			if((*itr)->OnReadyToSend())
+				++itr;
+			else
+				itr=writeFds.erase(itr);
 		}
 	}
 
@@ -522,9 +600,9 @@ bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vect
 			++itr;
 		}
 	}
-	//LOGV("select fds left: read=%d, error=%d", readFds.size(), errorFds.size());
+	//LOGV("select fds left: read=%d, write=%d, error=%d", (int)readFds.size(), (int)writeFds.size(), (int)errorFds.size());
 
-	return readFds.size()>0 || errorFds.size()>0;
+	return readFds.size()>0 || errorFds.size()>0 || writeFds.size()>0;
 }
 
 SocketSelectCancellerPosix::SocketSelectCancellerPosix(){

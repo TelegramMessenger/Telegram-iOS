@@ -13,6 +13,7 @@
 #include "BlockingQueue.h"
 #include "Buffers.h"
 #include "EchoCanceller.h"
+#include "utils.h"
 
 #include <stdint.h>
 
@@ -21,6 +22,7 @@ struct OpusEncoder;
 namespace tgvoip{
 class OpusEncoder{
 public:
+	TGVOIP_DISALLOW_COPY_AND_ASSIGN(OpusEncoder);
 	OpusEncoder(MediaStreamItf* source, bool needSecondary);
 	virtual ~OpusEncoder();
 	virtual void Start();
@@ -38,7 +40,7 @@ public:
 
 private:
 	static size_t Callback(unsigned char* data, size_t len, void* param);
-	void RunThread(void* arg);
+	void RunThread();
 	void Encode(unsigned char* data, size_t len);
 	void InvokeCallback(unsigned char* data, size_t length, unsigned char* secondaryData, size_t secondaryLength);
 	MediaStreamItf* source;
