@@ -65,7 +65,7 @@ void VoIPControllerWrapper::SetPublicEndpoints(const Platform::Array<libtgvoip::
 		libtgvoip::Endpoint^ _ep = endpoints[i];
 		tgvoip::Endpoint ep;
 		ep.id = _ep->id;
-		ep.type = tgvoip::Endpoint::TYPE_UDP_RELAY;
+		ep.type = tgvoip::Endpoint::Type::UDP_RELAY;
 		char buf[128];
 		if (_ep->ipv4){
 			WideCharToMultiByte(CP_UTF8, 0, _ep->ipv4->Data(), -1, buf, sizeof(buf), NULL, NULL);

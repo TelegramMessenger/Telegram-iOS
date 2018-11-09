@@ -247,9 +247,12 @@
     <ClInclude Include="os\windows\AudioOutputWASAPI.h" />
     <ClInclude Include="os\windows\NetworkSocketWinsock.h" />
     <ClInclude Include="os\windows\WindowsSandboxUtils.h" />
+    <ClInclude Include="os\windows\WindowsSpecific.h" />
     <ClInclude Include="PacketReassembler.h" />
     <ClInclude Include="threading.h" />
     <ClInclude Include="utils.h" />
+    <ClInclude Include="video\VideoRenderer.h" />
+    <ClInclude Include="video\VideoSource.h" />
     <ClInclude Include="VoIPController.h" />
     <ClInclude Include="os\windows\CXWrapper.h" />
     <ClInclude Include="VoIPServerConfig.h" />
@@ -332,7 +335,10 @@
     <ClCompile Include="os\windows\AudioOutputWASAPI.cpp" />
     <ClCompile Include="os\windows\NetworkSocketWinsock.cpp" />
     <ClCompile Include="os\windows\WindowsSandboxUtils.cpp" />
+    <ClCompile Include="os\windows\WindowsSpecific.cpp" />
     <ClCompile Include="PacketReassembler.cpp" />
+    <ClCompile Include="video\VideoRenderer.cpp" />
+    <ClCompile Include="video\VideoSource.cpp" />
     <ClCompile Include="VoIPController.cpp" />
     <ClCompile Include="os\windows\CXWrapper.cpp" />
     <ClCompile Include="VoIPGroupController.cpp" />
