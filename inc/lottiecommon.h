@@ -71,6 +71,12 @@ typedef enum
     GradientRadial
 } LOTGradientType;
 
+typedef struct
+{
+    float         pos;
+    unsigned char r, g, b, a;
+}GradientStop;
+
 typedef struct LOTNode {
 
 #define ChangeFlagNone 0x0000
@@ -101,6 +107,8 @@ typedef struct LOTNode {
 
     struct {
         LOTGradientType type;
+        GradientStop *stopPtr;
+        unsigned int stopCount;
         struct {
             float x, y;
         } start, end, center, focal;

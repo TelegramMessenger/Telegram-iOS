@@ -992,9 +992,34 @@ void LOTRepeaterItem::update(int /*frameNo*/, const VMatrix &/*parentMatrix*/,
 
 void LOTRepeaterItem::renderList(std::vector<VDrawable *> &/*list*/) {}
 
+static void updateGStops(LOTNode *n, const VGradient *grad)
+{
+    if (grad->mStops.size() != n->mGradient.stopCount) {
+        if (n->mGradient.stopCount)
+            free(n->mGradient.stopPtr);
+        n->mGradient.stopCount = grad->mStops.size();
+        n->mGradient.stopPtr = (GradientStop *) malloc(n->mGradient.stopCount * sizeof(GradientStop));
+    }
+
+    GradientStop *ptr = n->mGradient.stopPtr;
+    for (const auto &i : grad->mStops) {
+        ptr->pos = i.first;
+        ptr->a = i.second.alpha() * grad->alpha();
+        ptr->r = i.second.red();
+        ptr->g = i.second.green();
+        ptr->b = i.second.blue();
+        ptr++;
+    }
+
+}
+
 void LOTDrawable::sync()
 {
-    if (!mCNode) mCNode = std::make_unique<LOTNode>();
+    if (!mCNode) {
+        mCNode = std::make_unique<LOTNode>();
+        mCNode->mGradient.stopPtr = nullptr;
+        mCNode->mGradient.stopCount = 0;
+    }
 
     mCNode->mFlag = ChangeFlagNone;
     if (mFlag & DirtyState::None) return;
@@ -1077,6 +1102,7 @@ void LOTDrawable::sync()
         mCNode->mGradient.start.y = mBrush.mGradient->linear.y1;
         mCNode->mGradient.end.x = mBrush.mGradient->linear.x2;
         mCNode->mGradient.end.y = mBrush.mGradient->linear.y2;
+        updateGStops(mCNode.get(), mBrush.mGradient);
         break;
     case VBrush::Type::RadialGradient:
         mCNode->mType = LOTBrushType::BrushGradient;
@@ -1087,6 +1113,7 @@ void LOTDrawable::sync()
         mCNode->mGradient.focal.y = mBrush.mGradient->radial.fy;
         mCNode->mGradient.cradius = mBrush.mGradient->radial.cradius;
         mCNode->mGradient.fradius = mBrush.mGradient->radial.fradius;
+        updateGStops(mCNode.get(), mBrush.mGradient);
         break;
     default:
         break;
