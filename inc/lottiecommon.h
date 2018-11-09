@@ -71,11 +71,11 @@ typedef enum
     GradientRadial
 } LOTGradientType;
 
-typedef struct
+typedef struct LOTGradientStop
 {
     float         pos;
     unsigned char r, g, b, a;
-}GradientStop;
+} LOTGradientStop;
 
 typedef struct LOTNode {
 
@@ -107,7 +107,7 @@ typedef struct LOTNode {
 
     struct {
         LOTGradientType type;
-        GradientStop *stopPtr;
+        LOTGradientStop *stopPtr;
         unsigned int stopCount;
         struct {
             float x, y;
@@ -117,7 +117,7 @@ typedef struct LOTNode {
     } mGradient;
 
     int       mFlag;
-    LOTBrushType mType;
+    LOTBrushType mBrushType;
     LOTFillRule  mFillRule;
 } LOTNode;
 

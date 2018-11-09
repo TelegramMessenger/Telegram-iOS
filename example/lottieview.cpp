@@ -60,7 +60,7 @@ void LottieView::createVgNode(LOTNode *node, Efl_VG *parent)
         //evas_vg_shape_stroke_meter_limit_set(shape, node->mStroke.meterLimit);
     }
     // update paint info
-    if (node->mType == LOTBrushType::BrushSolid) {
+    if (node->mBrushType == LOTBrushType::BrushSolid) {
         int r = (node->mColor.r * node->mColor.a)/255;
         int g = (node->mColor.g * node->mColor.a)/255;
         int b = (node->mColor.b * node->mColor.a)/255;
@@ -71,7 +71,7 @@ void LottieView::createVgNode(LOTNode *node, Efl_VG *parent)
            evas_vg_node_color_set(shape, r, g, b, a);
         }
 
-    } else if (node->mType == LOTBrushType::BrushGradient) {
+    } else if (node->mBrushType == LOTBrushType::BrushGradient) {
         //TODO fill the gradient info
     }
 }

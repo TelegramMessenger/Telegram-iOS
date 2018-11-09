@@ -998,10 +998,10 @@ static void updateGStops(LOTNode *n, const VGradient *grad)
         if (n->mGradient.stopCount)
             free(n->mGradient.stopPtr);
         n->mGradient.stopCount = grad->mStops.size();
-        n->mGradient.stopPtr = (GradientStop *) malloc(n->mGradient.stopCount * sizeof(GradientStop));
+        n->mGradient.stopPtr = (LOTGradientStop *) malloc(n->mGradient.stopCount * sizeof(LOTGradientStop));
     }
 
-    GradientStop *ptr = n->mGradient.stopPtr;
+    LOTGradientStop *ptr = n->mGradient.stopPtr;
     for (const auto &i : grad->mStops) {
         ptr->pos = i.first;
         ptr->a = i.second.alpha() * grad->alpha();
@@ -1089,14 +1089,14 @@ void LOTDrawable::sync()
 
     switch (mBrush.type()) {
     case VBrush::Type::Solid:
-        mCNode->mType = LOTBrushType::BrushSolid;
+        mCNode->mBrushType = LOTBrushType::BrushSolid;
         mCNode->mColor.r = mBrush.mColor.r;
         mCNode->mColor.g = mBrush.mColor.g;
         mCNode->mColor.b = mBrush.mColor.b;
         mCNode->mColor.a = mBrush.mColor.a;
         break;
     case VBrush::Type::LinearGradient:
-        mCNode->mType = LOTBrushType::BrushGradient;
+        mCNode->mBrushType = LOTBrushType::BrushGradient;
         mCNode->mGradient.type = LOTGradientType::GradientLinear;
         mCNode->mGradient.start.x = mBrush.mGradient->linear.x1;
         mCNode->mGradient.start.y = mBrush.mGradient->linear.y1;
@@ -1105,7 +1105,7 @@ void LOTDrawable::sync()
         updateGStops(mCNode.get(), mBrush.mGradient);
         break;
     case VBrush::Type::RadialGradient:
-        mCNode->mType = LOTBrushType::BrushGradient;
+        mCNode->mBrushType = LOTBrushType::BrushGradient;
         mCNode->mGradient.type = LOTGradientType::GradientRadial;
         mCNode->mGradient.center.x = mBrush.mGradient->radial.cx;
         mCNode->mGradient.center.y = mBrush.mGradient->radial.cy;
