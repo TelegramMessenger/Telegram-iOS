@@ -14,6 +14,9 @@
     <Filter Include="webrtc_dsp">
       <UniqueIdentifier>{3b15701a-65dd-4d52-92d4-a7b64a73b293}</UniqueIdentifier>
     </Filter>
+    <Filter Include="video">
+      <UniqueIdentifier>{e4d2de92-03ad-43d9-8861-d69f64610ba5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VoIPController.cpp" />
@@ -277,6 +280,15 @@
     <ClCompile Include="audio\AudioIO.cpp">
       <Filter>audio</Filter>
     </ClCompile>
+    <ClCompile Include="os\windows\WindowsSpecific.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="video\VideoRenderer.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="video\VideoSource.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VoIPController.h" />
@@ -496,5 +508,14 @@
       <Filter>audio</Filter>
     </ClInclude>
     <ClInclude Include="utils.h" />
+    <ClInclude Include="os\windows\WindowsSpecific.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="video\VideoRenderer.h">
+      <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="video\VideoSource.h">
+      <Filter>video</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
