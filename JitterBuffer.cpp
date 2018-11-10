@@ -51,6 +51,7 @@ JitterBuffer::~JitterBuffer(){
 }
 
 void JitterBuffer::SetMinPacketCount(uint32_t count){
+	LOGI("jitter: set min packet count %u", count);
 	minDelay=count;
 	minMinDelay=count;
 	//Reset();

@@ -1477,7 +1477,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				if(stm->type==STREAM_TYPE_AUDIO){
 					stm->jitterBuffer=make_shared<JitterBuffer>(nullptr, stm->frameDuration);
 					if(stm->frameDuration>50)
-						stm->jitterBuffer->SetMinPacketCount((uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_initial_delay_60", 3));
+						stm->jitterBuffer->SetMinPacketCount((uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_initial_delay_60", 2));
 					else if(stm->frameDuration>30)
 						stm->jitterBuffer->SetMinPacketCount((uint32_t) ServerConfig::GetSharedInstance()->GetInt("jitter_initial_delay_40", 4));
 					else
