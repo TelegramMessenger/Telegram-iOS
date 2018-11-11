@@ -29,6 +29,7 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
     private let rightActionButton: HighlightableButtonNode
     
     private var isEnabled = true
+    private var clearOnce: Bool = false
     
     init(theme: PresentationTheme, kind: SetupTwoStepVerificationStateKind, title: String, subtitle: String, inputType: SetupTwoStepVerificationInputType, placeholder: String, text: String, isPassword: Bool, textUpdated: @escaping (String) -> Void, returnPressed: @escaping () -> Void, leftAction: SetupTwoStepVerificationContentAction?, rightAction: SetupTwoStepVerificationContentAction?) {
         self.leftAction = leftAction
@@ -153,8 +154,23 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
         self.inputNode.textField.becomeFirstResponder()
     }
     
+    func dataEntryError() {
+        self.clearOnce = true
+    }
+    
     @objc private func inputNodeTextChanged(_ textField: UITextField) {
         self.textUpdated(textField.text ?? "")
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if self.clearOnce {
+            self.clearOnce = false
+            if range.length > string.count {
+                textField.text = ""
+                return false
+            }
+        }
+        return true
     }
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
