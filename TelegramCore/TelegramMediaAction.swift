@@ -282,6 +282,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return nil
         case let .messageActionSecureValuesSent(types):
             return TelegramMediaAction(action: .botSentSecureValues(types: types.map(SentSecureValueType.init)))
+        case .messageActionContactSignUp:
+            return TelegramMediaAction(action: .peerJoined)
     }
 }
 

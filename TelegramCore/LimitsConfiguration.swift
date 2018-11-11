@@ -5,20 +5,21 @@ import Foundation
     import Postbox
 #endif
 
-public final class LimitsConfiguration: PreferencesEntry {
-    public let maxGroupMemberCount: Int32
-    public let maxSupergroupMemberCount: Int32
-    public let maxMessageForwardBatchSize: Int32
-    public let maxSavedGifCount: Int32
-    public let maxRecentStickerCount: Int32
-    public let maxMessageEditingInterval: Int32
-    public let maxMediaCaptionLength: Int32
+public struct LimitsConfiguration: Equatable, PreferencesEntry {
+    public var maxGroupMemberCount: Int32
+    public var maxSupergroupMemberCount: Int32
+    public var maxMessageForwardBatchSize: Int32
+    public var maxSavedGifCount: Int32
+    public var maxRecentStickerCount: Int32
+    public var maxMessageEditingInterval: Int32
+    public var maxMediaCaptionLength: Int32
+    public var canRemoveIncomingMessagesInPrivateChats: Bool
     
     public static var defaultValue: LimitsConfiguration {
-        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 5000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000)
+        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 5000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000, canRemoveIncomingMessagesInPrivateChats: false)
     }
     
-    init(maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32, maxMediaCaptionLength: Int32) {
+    init(maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32, maxMediaCaptionLength: Int32, canRemoveIncomingMessagesInPrivateChats: Bool) {
         self.maxGroupMemberCount = maxGroupMemberCount
         self.maxSupergroupMemberCount = maxSupergroupMemberCount
         self.maxMessageForwardBatchSize = maxMessageForwardBatchSize
@@ -26,6 +27,7 @@ public final class LimitsConfiguration: PreferencesEntry {
         self.maxRecentStickerCount = maxRecentStickerCount
         self.maxMessageEditingInterval = maxMessageEditingInterval
         self.maxMediaCaptionLength = maxMediaCaptionLength
+        self.canRemoveIncomingMessagesInPrivateChats = canRemoveIncomingMessagesInPrivateChats
     }
     
     public init(decoder: PostboxDecoder) {
@@ -36,6 +38,7 @@ public final class LimitsConfiguration: PreferencesEntry {
         self.maxRecentStickerCount = decoder.decodeInt32ForKey("maxRecentStickerCount", orElse: 20)
         self.maxMessageEditingInterval = decoder.decodeInt32ForKey("maxMessageEditingInterval", orElse: 2 * 24 * 60 * 60)
         self.maxMediaCaptionLength = decoder.decodeInt32ForKey("maxMediaCaptionLength", orElse: 1000)
+        self.canRemoveIncomingMessagesInPrivateChats = decoder.decodeInt32ForKey("canRemoveIncomingMessagesInPrivateChats", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -46,34 +49,14 @@ public final class LimitsConfiguration: PreferencesEntry {
         encoder.encodeInt32(self.maxRecentStickerCount, forKey: "maxRecentStickerCount")
         encoder.encodeInt32(self.maxMessageEditingInterval, forKey: "maxMessageEditingInterval")
         encoder.encodeInt32(self.maxMediaCaptionLength, forKey: "maxMediaCaptionLength")
+        encoder.encodeInt32(self.canRemoveIncomingMessagesInPrivateChats ? 1 : 0, forKey: "canRemoveIncomingMessagesInPrivateChats")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
         guard let to = to as? LimitsConfiguration else {
             return false
         }
-        if self.maxGroupMemberCount != to.maxGroupMemberCount {
-            return false
-        }
-        if self.maxSupergroupMemberCount != to.maxSupergroupMemberCount {
-            return false
-        }
-        if self.maxMessageForwardBatchSize != to.maxMessageForwardBatchSize {
-            return false
-        }
-        if self.maxSavedGifCount != to.maxSavedGifCount {
-            return false
-        }
-        if self.maxRecentStickerCount != to.maxRecentStickerCount {
-            return false
-        }
-        if self.maxMessageEditingInterval != to.maxMessageEditingInterval {
-            return false
-        }
-        if self.maxMediaCaptionLength != to.maxMediaCaptionLength {
-            return false
-        }
-        return true
+        return self == to
     }
 }
 

@@ -146,6 +146,7 @@ private enum PreferencesKeyValues: Int32 {
     case remoteStorageConfiguration = 10
     case voipConfiguration = 11
     case appChangelogState = 12
+    case localizationListState = 13
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -224,6 +225,12 @@ public struct PreferencesKeys {
     public static let appChangelogState: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.appChangelogState.rawValue)
+        return key
+    }()
+    
+    public static let localizationListState: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.localizationListState.rawValue)
         return key
     }()
 }

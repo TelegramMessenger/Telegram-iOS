@@ -950,7 +950,7 @@ extension InstantPageTableRow {
 extension InstantPageRelatedArticle {
     convenience init(apiRelatedArticle: Api.PageRelatedArticle) {
         switch apiRelatedArticle {
-            case let .pageRelatedArticle(flags, url, webpageId, title, description, photoId):
+            case let .pageRelatedArticle(flags, url, webpageId, title, description, photoId, author, publishedDate):
                 var posterPhotoId: MediaId?
                 if let photoId = photoId {
                     posterPhotoId = MediaId(namespace: Namespaces.Media.CloudImage, id: photoId)

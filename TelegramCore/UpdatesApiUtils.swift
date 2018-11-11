@@ -281,8 +281,6 @@ extension Api.Update {
                     case let .chatParticipantsForbidden(_, chatId, _):
                         return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)]
                 }
-            case let .updateContactRegistered(userId, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)]
             case let .updateDeleteChannelMessages(channelId, _, _, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateNewChannelMessage(message, _, _):

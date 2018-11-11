@@ -101,13 +101,6 @@ private func locallyGeneratedMessageTimestampsFromUpdateGroups(_ groups: [Update
                             messageTimestamps[peerId]!.append((Namespaces.Message.Local, date))
                         }
                     }
-                case let .updateContactRegistered(userId, date):
-                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                    if messageTimestamps[peerId] == nil {
-                        messageTimestamps[peerId] = [(Namespaces.Message.Local, date)]
-                    } else {
-                        messageTimestamps[peerId]!.append((Namespaces.Message.Local, date))
-                    }
                 default:
                     break
             }
@@ -305,13 +298,6 @@ private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.u
                         } else {
                             messageTimestamps[peerId]!.append((Namespaces.Message.Local, date))
                         }
-                    }
-                case let .updateContactRegistered(userId, date):
-                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                    if messageTimestamps[peerId] == nil {
-                        messageTimestamps[peerId] = [(Namespaces.Message.Local, date)]
-                    } else {
-                        messageTimestamps[peerId]!.append((Namespaces.Message.Local, date))
                     }
                 default:
                     break
@@ -920,25 +906,6 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                 } else {
                     updatedState.addDisplayAlert(text)
                 }
-            case let .updateContactRegistered(userId, date):
-                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                
-                var alreadyStored = false
-                if let storedMessages = updatedState.storedMessagesByPeerIdAndTimestamp[peerId] {
-                    for index in storedMessages {
-                        if index.timestamp == date {
-                            alreadyStored = true
-                            break
-                        }
-                    }
-                }
-                
-                if alreadyStored {
-                    Logger.shared.log("State", "skipping joined message at \(date) for \(peerId): already stored")
-                } else {
-                    let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [TelegramMediaAction(action: .peerJoined)])
-                    updatedState.addMessages([message], location: .UpperHistoryBlock)
-            }
             case let .updateReadChannelInbox(channelId, maxId):
                 updatedState.readInbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadChannelOutbox(channelId, maxId):

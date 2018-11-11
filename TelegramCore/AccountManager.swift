@@ -89,6 +89,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SynchronizeSavedStickersOperation.self, f: { SynchronizeSavedStickersOperation(decoder: $0) })
     declareEncodable(CacheStorageSettings.self, f: { CacheStorageSettings(decoder: $0) })
     declareEncodable(LocalizationSettings.self, f: { LocalizationSettings(decoder: $0) })
+    declareEncodable(LocalizationListState.self, f: { LocalizationListState(decoder: $0) })
     declareEncodable(ProxySettings.self, f: { ProxySettings(decoder: $0) })
     declareEncodable(NetworkSettings.self, f: { NetworkSettings(decoder: $0) })
     declareEncodable(RemoteStorageConfiguration.self, f: { RemoteStorageConfiguration(decoder: $0) })
@@ -207,20 +208,20 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
                             initialKind = .authorized
                     }
                     let updatedKind = postbox.stateView()
-                        |> map { view -> Bool in
-                            let kind: AccountKind
-                            if view.state is AuthorizedAccountState {
-                                kind = .authorized
-                            } else {
-                                kind = .unauthorized
-                            }
-                            if kind != initialKind {
-                                return true
-                            } else {
-                                return false
-                            }
+                    |> map { view -> Bool in
+                        let kind: AccountKind
+                        if view.state is AuthorizedAccountState {
+                            kind = .authorized
+                        } else {
+                            kind = .unauthorized
                         }
-                        |> distinctUntilChanged
+                        if kind != initialKind {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    |> distinctUntilChanged
                     
                     return Signal { subscriber in
                         subscriber.putNext(accountResult)
@@ -242,28 +243,27 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
 public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager) -> Signal<Void, NoError> {
     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
     return accountManager.transaction { transaction -> Void in
-        let currentId = transaction.getCurrentId()
-        if let currentId = currentId {
-            transaction.updateRecord(currentId, { current in
-                if let current = current {
-                    var found = false
-                    for attribute in current.attributes {
-                        if attribute is LoggedOutAccountAttribute {
-                            found = true
-                            break
-                        }
+        transaction.updateRecord(id, { current in
+            if let current = current {
+                var found = false
+                for attribute in current.attributes {
+                    if attribute is LoggedOutAccountAttribute {
+                        found = true
+                        break
                     }
-                    if found {
-                        return current
-                    } else {
-                        return AccountRecord(id: current.id, attributes: current.attributes + [LoggedOutAccountAttribute()], temporarySessionId: nil)
-                    }
-                } else {
-                    return nil
                 }
-            })
-            let id = transaction.createRecord([])
-            transaction.setCurrentId(id)
+                if found {
+                    return current
+                } else {
+                    return AccountRecord(id: current.id, attributes: current.attributes + [LoggedOutAccountAttribute()], temporarySessionId: nil)
+                }
+            } else {
+                return nil
+            }
+        })
+        if transaction.getCurrentId() == id {
+            let updatedId = transaction.createRecord([])
+            transaction.setCurrentId(updatedId)
         }
     }
 }
@@ -285,14 +285,15 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
             var beginList: [(AccountRecordId, MetaDisposable)] = []
             let _ = loggedOutAccounts.modify { disposables in
-                let validIds = Set(view.records.filter {
-                    for attribute in $0.attributes {
+                var validIds = Set<AccountRecordId>()
+                outer: for record in view.records {
+                    for attribute in record.attributes {
                         if attribute is LoggedOutAccountAttribute {
-                            return true
+                            validIds.insert(record.id)
+                            continue outer
                         }
                     }
-                    return false
-                }.map { $0.id })
+                }
                 
                 var disposables = disposables
                 
@@ -320,7 +321,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 disposable.dispose()
             }
             for (id, disposable) in beginList {
-                Logger.shared.log("managedCleanupAccounts", "cleanup \(id)")
+                Logger.shared.log("managedCleanupAccounts", "cleanup \(id), current is \(String(describing: view.currentRecord?.id))")
                 disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods).start())
             }
             

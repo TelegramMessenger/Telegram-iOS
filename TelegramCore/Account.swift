@@ -185,10 +185,14 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
     }
     
     return SeedConfiguration(initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat], peerSummaryCounterTags: { peer in
-        if let peer = peer as? TelegramChannel, let addressName = peer.addressName, !addressName.isEmpty {
+        if let peer = peer as? TelegramChannel {
             switch peer.info {
                 case .group:
-                    return [.publicGroups]
+                    if let addressName = peer.addressName, !addressName.isEmpty {
+                        return [.publicGroups]
+                    } else {
+                        return [.regularChatsAndPrivateGroups]
+                    }
                 case .broadcast:
                     return [.channels]
             }

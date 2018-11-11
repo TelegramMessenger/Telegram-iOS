@@ -35,9 +35,11 @@ private final class ContactSyncManagerImpl {
     private var nextId: Int32 = 0
     private var operations: [ContactSyncOperation] = []
     
+    private var lastContactPresencesRequestTimestamp: Double?
     private var reimportAttempts: [TelegramDeviceContactImportIdentifier: Double] = [:]
     
     private let importableContactsDisposable = MetaDisposable()
+    private let significantStateUpdateCompletedDisposable = MetaDisposable()
     
     init(queue: Queue, postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager) {
         self.queue = queue
@@ -60,6 +62,36 @@ private final class ContactSyncManagerImpl {
             strongSelf.addOperation(.waitForUpdatedState)
             strongSelf.addOperation(.updatePresences)
             strongSelf.addOperation(.sync(importableContacts: importableContacts))
+        }))
+        self.significantStateUpdateCompletedDisposable.set((self.stateManager.significantStateUpdateCompleted
+        |> deliverOn(self.queue)).start(next: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            let shouldUpdate: Bool
+            if let lastContactPresencesRequestTimestamp = strongSelf.lastContactPresencesRequestTimestamp {
+                if timestamp > lastContactPresencesRequestTimestamp + 30.0 * 60.0 {
+                    shouldUpdate = true
+                } else {
+                    shouldUpdate = false
+                }
+            } else {
+                shouldUpdate = true
+            }
+            if shouldUpdate {
+                strongSelf.lastContactPresencesRequestTimestamp = timestamp
+                var found = false
+                for operation in strongSelf.operations {
+                    if case .updatePresences = operation.content {
+                        found = true
+                        break
+                    }
+                }
+                if !found {
+                    strongSelf.addOperation(.updatePresences)
+                }
+            }
         }))
     }
     
