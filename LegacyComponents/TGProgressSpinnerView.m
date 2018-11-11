@@ -35,7 +35,7 @@
         //static dispatch_once_t onceToken;
         UIImage *arcImage = nil;
         //dispatch_once(&onceToken, ^{
-            CGRect rect = CGRectMake(0.0f, 0.0f, 48.0f, 48.0f);
+            CGRect rect = CGRectMake(0.0f, 0.0f, frame.size.width, frame.size.height);
             UIGraphicsBeginImageContextWithOptions(rect.size, false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
             
@@ -168,6 +168,9 @@
     CGPoint centerPoint = CGPointMake(rect.size.width / 2.0f, rect.size.height / 2.0f);
     CGFloat lineWidth = 4.0f;
     CGFloat inset = 3.0f;
+    if (rect.size.width < 44.0) {
+        inset = 0.0f;
+    }
     
     UIColor *foregroundColor = _light ? UIColorRGB(0x5a5a5a) : [UIColor whiteColor];
     CGContextSetFillColorWithColor(context, foregroundColor.CGColor);

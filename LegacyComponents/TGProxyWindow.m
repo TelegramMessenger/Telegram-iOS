@@ -36,6 +36,8 @@ static bool TGProxyWindowIsLight = true;
 @interface TGProxyWindowController ()
 {
     bool _light;
+    NSString *_text;
+    bool _shieldIcon;
     UIVisualEffectView *_effectView;
     UIView *_backgroundView;
     TGProxySpinnerView *_spinner;
@@ -51,13 +53,15 @@ static bool TGProxyWindowIsLight = true;
 @implementation TGProxyWindowController
 
 - (instancetype)init {
-    return [self initWithLight:TGProxyWindowIsLight];
+    return [self initWithLight:TGProxyWindowIsLight text:TGLocalized(@"SocksProxySetup.ProxyEnabled") shield:true];
 }
 
-- (instancetype)initWithLight:(bool)light {
+- (instancetype)initWithLight:(bool)light text:(NSString *)text shield:(bool)shield {
     self = [super init];
     if (self != nil) {
         _light = light;
+        _text = text;
+        _shieldIcon = shield;
     }
     return self;
 }
@@ -72,8 +76,15 @@ static bool TGProxyWindowIsLight = true;
 }
 
 - (void)updateLayout {
+    CGSize spinnerSize = CGSizeMake(48.0, 48.0);
+    CGSize containerSize = CGSizeMake(156.0, 176.0);
+    if (!_shieldIcon) {
+        containerSize = CGSizeMake(207.0, 177.0);
+        spinnerSize = CGSizeMake(40.0, 40.0);
+    }
+    CGRect spinnerFrame = CGRectMake((containerSize.width - spinnerSize.width) / 2.0f, _shieldIcon ? 40.0f : 45.0, spinnerSize.width, spinnerSize.height);
     if (_containerView == nil) {
-        _containerView = [[UIView alloc] initWithFrame:CGRectMake(CGFloor(self.view.frame.size.width - 156) / 2, CGFloor(self.view.frame.size.height - 176) / 2, 156, 176)];
+        _containerView = [[UIView alloc] initWithFrame:CGRectMake(CGFloor(self.view.frame.size.width - containerSize.width) / 2, CGFloor(self.view.frame.size.height - containerSize.height) / 2, containerSize.width, containerSize.height)];
         _containerView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
         _containerView.alpha = 0.0f;
         _containerView.clipsToBounds = true;
@@ -99,11 +110,25 @@ static bool TGProxyWindowIsLight = true;
         
         UIColor *color = _light ? UIColorRGB(0x5a5a5a) : [UIColor whiteColor];
         
-        _shield = [[UIImageView alloc] initWithImage:generateShieldImage(color)];
-        _shield.frame = CGRectMake((_containerView.frame.size.width - _shield.frame.size.width) / 2.0f, 23.0f, _shield.frame.size.width, _shield.frame.size.height);
+        UIImage *image = nil;
+        if (_shield) {
+            image = generateShieldImage(color);
+        } else {
+            CGSize size = CGSizeMake(66.0, 66.0);
+            UIGraphicsBeginImageContextWithOptions(size, false, 0.0);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            CGContextSetStrokeColorWithColor(context, color.CGColor);
+            CGFloat lineWidth = 4.0f;
+            CGContextSetLineWidth(context, lineWidth);
+            CGContextStrokeEllipseInRect(context, CGRectMake(lineWidth / 2.0f, lineWidth / 2.0f, size.width - lineWidth, size.height - lineWidth));
+            image = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+        }
+        _shield = [[UIImageView alloc] initWithImage:image];
+        _shield.frame = CGRectMake((_containerView.frame.size.width - _shield.frame.size.width) / 2.0f, _shieldIcon ? 23.0f : 30.0, _shield.frame.size.width, _shield.frame.size.height);
         [_containerView addSubview:_shield];
         
-        _spinner = [[TGProxySpinnerView alloc] initWithFrame:CGRectMake((_containerView.frame.size.width - 48.0f) / 2.0f, 40.0f, 48.0f, 48.0f) light:_light];
+        _spinner = [[TGProxySpinnerView alloc] initWithFrame:spinnerFrame light:_light];
         [_containerView addSubview:_spinner];
         
         NSMutableParagraphStyle *style = [[NSMutableParagraphStyle alloc] init];
@@ -112,7 +137,7 @@ static bool TGProxyWindowIsLight = true;
         style.alignment = NSTextAlignmentCenter;
         
         NSDictionary *attributes = @{NSForegroundColorAttributeName:_light ? UIColorRGB(0x5a5a5a) : [UIColor whiteColor], NSFontAttributeName:TGMediumSystemFontOfSize(17.0f), NSParagraphStyleAttributeName:style};
-        NSAttributedString *string = [[NSAttributedString alloc] initWithString:TGLocalized(@"SocksProxySetup.ProxyEnabled") attributes:attributes];
+        NSAttributedString *string = [[NSAttributedString alloc] initWithString:_text attributes:attributes];
         
         UILabel *label = [[UILabel alloc] init];
         label.font = TGSystemFontOfSize(15.0f);
@@ -124,11 +149,11 @@ static bool TGProxyWindowIsLight = true;
         label.frame = CGRectMake((_containerView.frame.size.width - label.frame.size.width) / 2.0f, _containerView.frame.size.height - label.frame.size.height - 18.0f, label.frame.size.width, label.frame.size.height);
         [_containerView addSubview:label];
     } else {
-        _containerView.frame = CGRectMake(CGFloor(self.view.frame.size.width - 156) / 2, CGFloor(self.view.frame.size.height - 176) / 2, 156, 176);
+        _containerView.frame = CGRectMake(CGFloor(self.view.frame.size.width - containerSize.width) / 2, CGFloor(self.view.frame.size.height - containerSize.width) / 2, containerSize.width, containerSize.height);
         _effectView.frame = _containerView.bounds;
         _backgroundView.frame = _containerView.bounds;
-        _spinner.frame = CGRectMake((_containerView.frame.size.width - 48.0f) / 2.0f, 40.0f, 48.0f, 48.0f);
-        _shield.frame = CGRectMake((_containerView.frame.size.width - _shield.frame.size.width) / 2.0f, 23.0f, _shield.frame.size.width, _shield.frame.size.height);
+        _spinner.frame = spinnerFrame;
+        _shield.frame = CGRectMake((_containerView.frame.size.width - _shield.frame.size.width) / 2.0f, _shieldIcon ? 23.0f : 30.0, _shield.frame.size.width, _shield.frame.size.height);
         [_label sizeToFit];
         _label.frame = CGRectMake((_containerView.frame.size.width - _label.frame.size.width) / 2.0f, _containerView.frame.size.height - _label.frame.size.height - 18.0f, _label.frame.size.width, _label.frame.size.height);
     }
@@ -330,6 +355,9 @@ static bool TGProxyWindowIsLight = true;
     CGPoint centerPoint = CGPointMake(rect.size.width / 2.0f, rect.size.height / 2.0f);
     CGFloat lineWidth = 4.0f;
     CGFloat inset = 3.0f;
+    if (rect.size.width < 44.0) {
+        inset = 0.0f;
+    }
     
     UIColor *foregroundColor = _light ? UIColorRGB(0x5a5a5a) : [UIColor whiteColor];
     CGContextSetFillColorWithColor(context, foregroundColor.CGColor);
@@ -359,6 +387,10 @@ static bool TGProxyWindowIsLight = true;
         CGPoint s = CGPointMake(inset + 5.0f, centerPoint.y + 1.0f);
         CGPoint p1 = CGPointMake(10.0f, 10.0f);
         CGPoint p2 = CGPointMake(23.0f, -23.0f);
+        if (rect.size.width < 44.0) {
+            p1 = CGPointMake(9.0f, 9.0f);
+            p2 = CGPointMake(23.0f, -23.0f);
+        }
         
         if (firstSegment < 1.0f)
         {
@@ -368,6 +400,9 @@ static bool TGProxyWindowIsLight = true;
         else
         {
             CGFloat secondSegment = (_checkValue - 0.33f) * 1.5f;
+            if (rect.size.width < 44.0) {
+                secondSegment = (_checkValue - 0.33f) * 1.35f;
+            }
             CGContextMoveToPoint(context, s.x + p1.x + p2.x * secondSegment, s.y + p1.y + p2.y * secondSegment);
             CGContextAddLineToPoint(context, s.x + p1.x, s.y + p1.y);
             CGContextAddLineToPoint(context, s.x, s.y);
