@@ -149,8 +149,10 @@ final class SecureIdAuthController: ViewController {
                         var state = state
                         if data.currentPasswordDerivation != nil {
                             state.verificationState = .passwordChallenge(hint: data.currentHint ?? "", state: .none, hasRecoveryEmail: data.hasRecovery)
+                        } else if let unconfirmedEmailPattern = data.unconfirmedEmailPattern {
+                            state.verificationState = .noChallenge(.awaitingConfirmation(password: nil, emailPattern: unconfirmedEmailPattern, codeLength: nil))
                         } else {
-                            state.verificationState = .noChallenge(data.unconfirmedEmailPattern)
+                            state.verificationState = .noChallenge(.notSet)
                         }
                         return state
                     }
@@ -504,7 +506,7 @@ final class SecureIdAuthController: ViewController {
                         }
                         strongSelf.updateState(animated: false, { state in
                             var state = state
-                            state.verificationState = .noChallenge(nil)
+                            state.verificationState = .noChallenge(.notSet)
                             return state
                         })
                         controller?.view.endEditing(true)
@@ -520,10 +522,65 @@ final class SecureIdAuthController: ViewController {
     }
     
     private func setupPassword() {
-        guard let verificationState = self.state.verificationState, case let .noChallenge(emailPattern) = verificationState else {
+        guard let verificationState = self.state.verificationState, case let .noChallenge(noChallengeState) = verificationState else {
             return
         }
-        var completionImpl: ((String, String, Bool) -> Void)?
+        let initialState: SetupTwoStepVerificationInitialState
+        switch noChallengeState {
+            case .notSet:
+                initialState = .createPassword
+            case let .awaitingConfirmation(password, emailPattern, codeLength):
+                initialState = .confirmEmail(password: password, hasSecureValues: false, pattern: emailPattern, codeLength: codeLength)
+        }
+        let controller = SetupTwoStepVerificationController(account: self.account, initialState: initialState, stateUpdated: { [weak self] update, shouldDismiss, controller in
+            guard let strongSelf = self else {
+                return
+            }
+            switch update {
+                case .noPassword:
+                    strongSelf.updateState(animated: false, { state in
+                        var state = state
+                        if let verificationState = state.verificationState, case .noChallenge = verificationState {
+                            state.verificationState = .noChallenge(.notSet)
+                        }
+                        return state
+                    })
+                    if shouldDismiss {
+                        controller.dismiss()
+                    }
+                case let .awaitingEmailConfirmation(password, pattern, codeLength):
+                    strongSelf.updateState(animated: false, { state in
+                        var state = state
+                        if let verificationState = state.verificationState, case .noChallenge = verificationState {
+                            state.verificationState = .noChallenge(.awaitingConfirmation(password: password, emailPattern: pattern, codeLength: codeLength))
+                        }
+                        return state
+                    })
+                    if shouldDismiss {
+                        controller.dismiss()
+                    }
+                case let .passwordSet(password, hasRecoveryEmail, _):
+                    strongSelf.updateState(animated: false, { state in
+                        var state = state
+                        state.verificationState = .passwordChallenge(hint: "", state: .none, hasRecoveryEmail: hasRecoveryEmail)
+                        return state
+                    })
+                    if let password = password {
+                        strongSelf.checkPassword(password: password, inBackground: true, completion: { [weak controller] in
+                            controller?.dismiss()
+                            if let strongSelf = self {
+                                strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.TwoStepAuth_EnabledSuccess)), in: .window(.root))
+                            }
+                        })
+                    } else if shouldDismiss {
+                        controller.dismiss()
+                        strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.TwoStepAuth_EnabledSuccess)), in: .window(.root))
+                    }
+            }
+        })
+        self.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        
+        /*var completionImpl: ((String, String, Bool) -> Void)?
         let state: CreatePasswordState
         if let emailPattern = emailPattern {
             state = .pendingVerification(emailPattern: emailPattern)
@@ -559,7 +616,7 @@ final class SecureIdAuthController: ViewController {
                 controller?.dismiss()
             })
         }
-        self.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        self.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))*/
     }
     
     @objc private func grantAccess() {

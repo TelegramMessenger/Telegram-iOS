@@ -15,8 +15,13 @@ enum SecureIdAuthPasswordChallengeState {
     case invalid
 }
 
+enum SecureIdAuthControllerVerificationNoChallengeState: Equatable {
+    case notSet
+    case awaitingConfirmation(password: String?, emailPattern: String, codeLength: Int32?)
+}
+
 enum SecureIdAuthControllerVerificationState: Equatable {
-    case noChallenge(String?)
+    case noChallenge(SecureIdAuthControllerVerificationNoChallengeState)
     case passwordChallenge(hint: String, state: SecureIdAuthPasswordChallengeState, hasRecoveryEmail: Bool)
     case verified(SecureIdAccessContext)
 }

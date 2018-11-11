@@ -334,7 +334,7 @@ func languageSuggestionController(account: Account, suggestedLocalization: Sugge
     
     var dismissImpl: ((Bool) -> Void)?
     let contentNode = LanguageSuggestionAlertContentNode(theme: theme, strings: strings, englishStrings: englishStrings, suggestedLocalization: localization, openSelection: {
-        dismissImpl?(false)
+        dismissImpl?(true)
         openSelection()
     }, applyLocalization: { languageCode, startActivity in
         if languageCode == currentLanguageCode {

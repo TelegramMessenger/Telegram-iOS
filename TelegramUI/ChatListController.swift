@@ -556,7 +556,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             let signal = self.account.postbox.transaction { transaction -> (String, SuggestedLocalizationEntry?) in
                 let languageCode: String
                 if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
-                    languageCode = current.primaryComponent.languageCode
+                    let code = current.primaryComponent.languageCode
+                    let rawSuffix = "-raw"
+                    if code.hasSuffix(rawSuffix) {
+                        languageCode = String(code.dropLast(rawSuffix.count))
+                    } else {
+                        languageCode = code
+                    }
                 } else {
                     languageCode = "en"
                 }
@@ -581,12 +587,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
                 if let controller = languageSuggestionController(account: strongSelf.account, suggestedLocalization: suggestedLocalization, currentLanguageCode: currentLanguageCode, openSelection: { [weak self] in
                     if let strongSelf = self {
-                        let controller = LanguageSelectionController(account: strongSelf.account)
-                        (strongSelf.navigationController as? NavigationController)?.replaceAllButRootController(controller, animated: true)
+                        let controller = LocalizationListController(account: strongSelf.account)
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
                 }) {
                     strongSelf.present(controller, in: .window(.root))
-                    _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.account.postbox, languageCode: suggestedLocalization.languageCode).start()
+                    //_ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.account.postbox, languageCode: suggestedLocalization.languageCode).start()
                 }
             }))
         }

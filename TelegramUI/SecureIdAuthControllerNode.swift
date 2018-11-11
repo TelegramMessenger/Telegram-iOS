@@ -256,13 +256,21 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     var contentNode: (ASDisplayNode & SecureIdAuthContentNode)?
                     
                     switch verificationState {
-                        case .noChallenge:
+                        case let .noChallenge(noChallengeState):
                             if let _ = self.contentNode as? SecureIdAuthPasswordSetupContentNode {
                             } else {
                                 let current = SecureIdAuthPasswordSetupContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, setupPassword: { [weak self] in
                                     self?.interaction.setupPassword()
                                 })
                                 contentNode = current
+                            }
+                            switch noChallengeState {
+                                case .notSet:
+                                    (self.contentNode as? SecureIdAuthPasswordSetupContentNode)?.updatePendingConfirmation(false)
+                                    (contentNode as? SecureIdAuthPasswordSetupContentNode)?.updatePendingConfirmation(false)
+                                case .awaitingConfirmation:
+                                    (self.contentNode as? SecureIdAuthPasswordSetupContentNode)?.updatePendingConfirmation(true)
+                                    (contentNode as? SecureIdAuthPasswordSetupContentNode)?.updatePendingConfirmation(true)
                             }
                         case let .passwordChallenge(hint, challengeState, _):
                             if let current = self.contentNode as? SecureIdAuthPasswordOptionContentNode {

@@ -7,12 +7,14 @@ enum OverlayStatusControllerType {
     case loading(cancelled: (() -> Void)?)
     case success
     case proxySettingSuccess
+    case genericSuccess(String)
 }
 
 private enum OverlayStatusContentController {
     case loading(TGProgressWindowController)
     case progress(TGProgressWindowController)
     case proxy(TGProxyWindowController)
+    case genericSuccess(TGProxyWindowController)
     
     var view: UIView {
         switch self {
@@ -21,6 +23,8 @@ private enum OverlayStatusContentController {
             case let .progress(controller):
                 return controller.view
             case let .proxy(controller):
+                return controller.view
+            case let .genericSuccess(controller):
                 return controller.view
         }
     }
@@ -33,6 +37,8 @@ private enum OverlayStatusContentController {
                 controller.updateLayout()
             case let .proxy(controller):
                 controller.updateLayout()
+            case let .genericSuccess(controller):
+                controller.updateLayout()
         }
     }
     
@@ -43,6 +49,8 @@ private enum OverlayStatusContentController {
             case let .progress(controller):
                 controller.dismiss(success: success)
             case let .proxy(controller):
+                controller.dismiss(success: success)
+            case let .genericSuccess(controller):
                 controller.dismiss(success: success)
         }
     }
@@ -63,7 +71,7 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     private let dismissed: () -> Void
     private let contentController: OverlayStatusContentController
     
-    init(theme: PresentationTheme, type: OverlayStatusControllerType, dismissed: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, type: OverlayStatusControllerType, dismissed: @escaping () -> Void) {
         self.dismissed = dismissed
         switch type {
             case let .loading(cancelled):
@@ -75,7 +83,9 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
             case .success:
                 self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
             case .proxySettingSuccess:
-                self.contentController = .proxy(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light))
+                self.contentController = .proxy(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: strings.SocksProxySetup_ProxyEnabled, shield: true))
+            case let .genericSuccess(text):
+                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false))
         }
         
         super.init()
@@ -106,6 +116,7 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
 
 final class OverlayStatusController: ViewController {
     private let theme: PresentationTheme
+    private let strings: PresentationStrings
     private let type: OverlayStatusControllerType
     
     private var animatedDidAppear = false
@@ -114,8 +125,9 @@ final class OverlayStatusController: ViewController {
         return self.displayNode as! OverlayStatusControllerNode
     }
     
-    init(theme: PresentationTheme, type: OverlayStatusControllerType) {
+    init(theme: PresentationTheme, strings: PresentationStrings, type: OverlayStatusControllerType) {
         self.theme = theme
+        self.strings = strings
         self.type = type
         
         super.init(navigationBarPresentationData: nil)
@@ -128,7 +140,7 @@ final class OverlayStatusController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = OverlayStatusControllerNode(theme: self.theme, type: self.type, dismissed: { [weak self] in
+        self.displayNode = OverlayStatusControllerNode(theme: self.theme, strings: self.strings, type: self.type, dismissed: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         

@@ -17,6 +17,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private let openMedia: (InstantPageMedia) -> Void
     
     private let imageNode: TransformImageNode
+    private let linkIconNode: ASImageNode
     private let pinNode: ChatMessageLiveLocationPositionNode
     
     private var currentSize: CGSize?
@@ -37,6 +38,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         self.openMedia = openMedia
         
         self.imageNode = TransformImageNode()
+        self.linkIconNode = ASImageNode()
         self.pinNode = ChatMessageLiveLocationPositionNode()
         
         super.init()
@@ -47,6 +49,11 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            
+            if media.url != nil {
+                self.linkIconNode.image = UIImage(bundleImageName: "Instant View/ImageLink")
+                self.addSubnode(self.linkIconNode)
+            }
         } else if let file = media.media as? TelegramMediaFile {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             if file.mimeType.hasPrefix("image/") {
@@ -116,6 +123,8 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 let makeLayout = self.imageNode.asyncLayout()
                 let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.theme.pageBackgroundColor))
                 apply()
+                
+                self.linkIconNode.frame = CGRect(x: size.width - 38.0, y: 14.0, width: 24.0, height: 24.0)
             } else if let file = self.media.media as? TelegramMediaFile, let dimensions = file.dimensions {
                 let emptyColor = file.mimeType.hasPrefix("image/") ? self.theme.imageEmptyColor : nil
 

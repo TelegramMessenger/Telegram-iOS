@@ -927,7 +927,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 return EmptyDisposable
             }
             
-            let controller = OverlayStatusController(theme: strongSelf.presentationTheme, type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: strongSelf.presentationTheme, strings: strongSelf.strings, type: .loading(cancelled: {
                 cancelImpl?()
             }))
             strongSelf.present(controller, nil)

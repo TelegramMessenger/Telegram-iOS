@@ -6,6 +6,8 @@ private let titleFont = Font.regular(14.0)
 private let buttonFont = Font.regular(17.0)
 
 final class SecureIdAuthPasswordSetupContentNode: ASDisplayNode, SecureIdAuthContentNode, UITextFieldDelegate {
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
     private let setupPassword: () -> Void
     
     private let iconNode: ASImageNode
@@ -17,9 +19,12 @@ final class SecureIdAuthPasswordSetupContentNode: ASDisplayNode, SecureIdAuthCon
     private let buttonTextNode: ImmediateTextNode
     private let buttonNode: HighlightableButtonNode
     
+    private var currentPendingConfirmation = false
     private var validLayout: CGFloat?
     
     init(theme: PresentationTheme, strings: PresentationStrings, setupPassword: @escaping () -> Void) {
+        self.theme = theme
+        self.strings = strings
         self.setupPassword = setupPassword
         
         self.iconNode = ASImageNode()
@@ -76,6 +81,20 @@ final class SecureIdAuthPasswordSetupContentNode: ASDisplayNode, SecureIdAuthCon
         }
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    func updatePendingConfirmation(_ pendingConfirmation: Bool) {
+        if pendingConfirmation != self.currentPendingConfirmation {
+            self.currentPendingConfirmation = pendingConfirmation
+        }
+        if !pendingConfirmation {
+            self.buttonTextNode.attributedText = NSAttributedString(string: self.strings.Passport_PasswordCreate, font: buttonFont, textColor: self.theme.list.itemAccentColor)
+        } else {
+            self.buttonTextNode.attributedText = NSAttributedString(string: self.strings.Passport_PasswordCompleteSetup, font: buttonFont, textColor: self.theme.list.itemAccentColor)
+        }
+        if let width = self.validLayout {
+            self.updateLayout(width: width, transition: .immediate)
+        }
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> SecureIdAuthContentLayout {

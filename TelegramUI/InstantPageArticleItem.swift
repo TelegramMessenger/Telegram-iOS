@@ -73,11 +73,13 @@ func layoutArticleItem(theme: InstantPageTheme, webPage: TelegramMediaWebpage, t
     }
     
     var availableLines: Int = 3
+    var contentHeight: CGFloat = 15.0 * 2.0
     
     var hasRTL = false
     var contentItems: [InstantPageItem] = []
     let (titleTextItem, titleItems, titleSize) = layoutTextItemWithString(title, boundingWidth: boundingWidth - inset - sideInset, offset: CGPoint(x: inset, y: 15.0), maxNumberOfLines: availableLines)
     contentItems.append(contentsOf: titleItems)
+    contentHeight += titleSize.height
     
     if let textItem = titleTextItem {
         availableLines -= textItem.lines.count
@@ -87,16 +89,19 @@ func layoutArticleItem(theme: InstantPageTheme, webPage: TelegramMediaWebpage, t
         }
     }
     
-    let (descriptionTextItem, descriptionItems, descriptionSize) = layoutTextItemWithString(description, boundingWidth: boundingWidth - inset - sideInset, offset: CGPoint(x: inset, y: 15.0 + titleSize.height + 14.0), maxNumberOfLines: 2)
-    contentItems.append(contentsOf: descriptionItems)
-    
-    if let textItem = descriptionTextItem {
-        if textItem.containsRTL || hasRTL {
-            textItem.alignment = .right
-            hasRTL = true
+    if availableLines > 0 {
+        let (descriptionTextItem, descriptionItems, descriptionSize) = layoutTextItemWithString(description, boundingWidth: boundingWidth - inset - sideInset, offset: CGPoint(x: inset, y: 15.0 + titleSize.height + 14.0), maxNumberOfLines: availableLines)
+        contentItems.append(contentsOf: descriptionItems)
+        
+        if let textItem = descriptionTextItem {
+            if textItem.containsRTL || hasRTL {
+                textItem.alignment = .right
+                hasRTL = true
+            }
         }
+        contentHeight += descriptionSize.height + 14.0
     }
     
-    let contentSize = CGSize(width: boundingWidth, height: titleSize.height + descriptionSize.height + 15.0 + 14.0 + 15.0)
+    let contentSize = CGSize(width: boundingWidth, height: contentHeight)
     return InstantPageArticleItem(frame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: contentSize.height)), webPage: webPage, contentItems: contentItems, contentSize: contentSize, cover: cover, url: url, webpageId: webpageId, rtl: rtl || hasRTL)
 }
