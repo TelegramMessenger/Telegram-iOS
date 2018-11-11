@@ -49,7 +49,7 @@ open class AlertController: ViewController {
         self.displayNodeDidLoad()
         
         self.controllerNode.dismiss = { [weak self] in
-            if let strongSelf = self {
+            if let strongSelf = self, strongSelf.contentNode.dismissOnOutsideTap {
                 strongSelf.controllerNode.animateOut {
                     self?.dismiss()
                 }

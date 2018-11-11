@@ -200,9 +200,14 @@ public final class TextAlertContentNode: AlertContentNode {
         var minActionsWidth: CGFloat = 0.0
         let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
         let actionTitleInsets: CGFloat = 8.0
+        
+        var effectiveActionLayout = self.actionLayout
         for actionNode in self.actionNodes {
             let actionTitleSize = actionNode.titleNode.measure(CGSize(width: maxActionWidth, height: actionButtonHeight))
-            switch self.actionLayout {
+            if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
+                effectiveActionLayout = .vertical
+            }
+            switch effectiveActionLayout {
                 case .horizontal:
                     minActionsWidth += actionTitleSize.width + actionTitleInsets
                 case .vertical:
@@ -213,7 +218,7 @@ public final class TextAlertContentNode: AlertContentNode {
         let resultSize: CGSize
         
         var actionsHeight: CGFloat = 0.0
-        switch self.actionLayout {
+        switch effectiveActionLayout {
             case .horizontal:
                 actionsHeight = actionButtonHeight
             case .vertical:
@@ -251,7 +256,7 @@ public final class TextAlertContentNode: AlertContentNode {
         for actionNode in self.actionNodes {
             if separatorIndex >= 0 {
                 let separatorNode = self.actionVerticalSeparators[separatorIndex]
-                switch self.actionLayout {
+                switch effectiveActionLayout {
                     case .horizontal:
                         transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: actionOffset - UIScreenPixel, y: resultSize.height - actionsHeight), size: CGSize(width: UIScreenPixel, height: actionsHeight - UIScreenPixel)))
                     case .vertical:
@@ -261,7 +266,7 @@ public final class TextAlertContentNode: AlertContentNode {
             separatorIndex += 1
             
             let currentActionWidth: CGFloat
-            switch self.actionLayout {
+            switch effectiveActionLayout {
                 case .horizontal:
                     if nodeIndex == self.actionNodes.count - 1 {
                         currentActionWidth = resultSize.width - actionOffset
@@ -273,7 +278,7 @@ public final class TextAlertContentNode: AlertContentNode {
             }
             
             let actionNodeFrame: CGRect
-            switch self.actionLayout {
+            switch effectiveActionLayout {
                 case .horizontal:
                     actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
                     actionOffset += currentActionWidth

@@ -36,7 +36,7 @@ public class KeyShortcutsController: UIResponder {
         // iOS 8 fix
         convertedCommands.append(KeyShortcut(modifiers:[.command]).uiKeyCommand)
         convertedCommands.append(KeyShortcut(modifiers:[.alternate]).uiKeyCommand)
-        
+
         convertedCommands.append(contentsOf: shortcuts.map { $0.uiKeyCommand })
         
         self.effectiveShortcuts = shortcuts
@@ -62,7 +62,7 @@ public class KeyShortcutsController: UIResponder {
     }
     
     public override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
-        if sender is UIKeyCommand {
+        if let keyCommand = sender as? UIKeyCommand, let _ = findShortcut(for: keyCommand) {
             return true
         } else {
             return super.canPerformAction(action, withSender: sender)
@@ -70,7 +70,7 @@ public class KeyShortcutsController: UIResponder {
     }
     
     public override func target(forAction action: Selector, withSender sender: Any?) -> Any? {
-        if sender is UIKeyCommand {
+        if let keyCommand = sender as? UIKeyCommand, let _ = findShortcut(for: keyCommand) {
             return self
         } else {
             return super.target(forAction: action, withSender: sender)
