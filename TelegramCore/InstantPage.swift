@@ -718,13 +718,17 @@ public final class InstantPageRelatedArticle: PostboxCoding, Equatable {
     public let title: String?
     public let description: String?
     public let photoId: MediaId?
+    public let author: String?
+    public let date: Int32?
     
-    init(url: String, webpageId: MediaId, title: String?, description: String?, photoId: MediaId?) {
+    init(url: String, webpageId: MediaId, title: String?, description: String?, photoId: MediaId?, author: String?, date: Int32?) {
         self.url = url
         self.webpageId = webpageId
         self.title = title
         self.description = description
         self.photoId = photoId
+        self.author = author
+        self.date = date
     }
     
     public init(decoder: PostboxDecoder) {
@@ -741,6 +745,8 @@ public final class InstantPageRelatedArticle: PostboxCoding, Equatable {
             photoId = MediaId(namespace: photoIdNamespace, id: photoIdId)
         }
         self.photoId = photoId
+        self.author = decoder.decodeOptionalStringForKey("a")
+        self.date = decoder.decodeOptionalInt32ForKey("d")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -764,6 +770,16 @@ public final class InstantPageRelatedArticle: PostboxCoding, Equatable {
             encoder.encodeNil(forKey: "p.n")
             encoder.encodeNil(forKey: "p.i")
         }
+        if let author = self.author {
+            encoder.encodeString(author, forKey: "a")
+        } else {
+            encoder.encodeNil(forKey: "a")
+        }
+        if let date = self.date {
+            encoder.encodeInt32(date, forKey: "d")
+        } else {
+            encoder.encodeNil(forKey: "d")
+        }
     }
     
     public static func ==(lhs: InstantPageRelatedArticle, rhs: InstantPageRelatedArticle) -> Bool {
@@ -780,6 +796,12 @@ public final class InstantPageRelatedArticle: PostboxCoding, Equatable {
             return false
         }
         if lhs.photoId != rhs.photoId {
+            return false
+        }
+        if lhs.author != rhs.author {
+            return false
+        }
+        if lhs.date != rhs.date {
             return false
         }
         return true
@@ -955,7 +977,7 @@ extension InstantPageRelatedArticle {
                 if let photoId = photoId {
                     posterPhotoId = MediaId(namespace: Namespaces.Media.CloudImage, id: photoId)
                 }
-                self.init(url: url, webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: webpageId), title: title, description: description, photoId: posterPhotoId)
+                self.init(url: url, webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: webpageId), title: title, description: description, photoId: posterPhotoId, author: author, date: publishedDate)
         }
     }
 }
