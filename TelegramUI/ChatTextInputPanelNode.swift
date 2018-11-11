@@ -621,6 +621,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             } else {
                 if self.strings !== interfaceState.strings {
                     self.strings = interfaceState.strings
+                    self.inputMenu.updateStrings(interfaceState.strings)
                     
                     for (_, button) in self.accessoryItemButtons {
                         button.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)

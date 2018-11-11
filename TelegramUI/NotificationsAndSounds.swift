@@ -418,7 +418,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     let controller = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
                         arguments?.updateMessageSound(value)
                     })
-                    arguments.presentController(controller, nil)
+                    arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
             case let .userExceptions(theme, strings, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {

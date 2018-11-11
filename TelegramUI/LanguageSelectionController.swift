@@ -374,7 +374,8 @@ private final class InnerLanguageSelectionController: UIViewController, UITableV
             }
         }
         if language.languageCode != self.presentationData.strings.primaryComponent.languageCode {
-            self.applyingLanguage = (language, (downloadAndApplyLocalization(postbox: self.account.postbox, network: self.account.network, languageCode: language.languageCode) |> deliverOnMainQueue).start(completed: { [weak self] in
+            self.applyingLanguage = (language, (downloadAndApplyLocalization(postbox: self.account.postbox, network: self.account.network, languageCode: language.languageCode)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.applyingLanguage = nil
                     strongSelf.tableView.reloadData()

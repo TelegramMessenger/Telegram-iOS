@@ -49,6 +49,7 @@ class ChatListSearchItem: ListViewItem {
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatListSearchItemNode {
+                nodeValue.placeholder = self.placeholder
                 let layout = nodeValue.asyncLayout()
                 async {
                     var nextIsPinned = false

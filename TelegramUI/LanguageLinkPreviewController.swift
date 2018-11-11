@@ -62,10 +62,19 @@ public final class LanguageLinkPreviewController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.localizationInfo = result
-            strongSelf.controllerNode.setData(localizationInfo: result)
+            if result.languageCode == strongSelf.presentationData.strings.primaryComponent.languageCode {
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.ApplyLanguage_ChangeLanguageAlreadyActive(result.localizedTitle).0, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                strongSelf.dismiss()
+            } else {
+                strongSelf.localizationInfo = result
+                strongSelf.controllerNode.setData(localizationInfo: result)
+            }
         }, error: { [weak self] _ in
-            self?.dismiss()
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.ApplyLanguage_LanguageNotSupportedError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            strongSelf.dismiss()
         }))
         self.ready.set(self.controllerNode.ready.get())
     }

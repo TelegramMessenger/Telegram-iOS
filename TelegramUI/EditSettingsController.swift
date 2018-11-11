@@ -360,7 +360,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                 let _ = logoutFromAccount(id: account.id, accountManager: accountManager).start()
             })
-            ])
+        ])
         presentControllerImpl?(alertController, nil)
     })
     

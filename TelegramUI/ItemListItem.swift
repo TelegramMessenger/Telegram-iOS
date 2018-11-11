@@ -40,8 +40,8 @@ enum ItemListNeighbor {
 }
 
 struct ItemListNeighbors {
-    let top: ItemListNeighbor
-    let bottom: ItemListNeighbor
+    var top: ItemListNeighbor
+    var bottom: ItemListNeighbor
 }
 
 func itemListNeighbors(item: ItemListItem, topItem: ItemListItem?, bottomItem: ItemListItem?) -> ItemListNeighbors {

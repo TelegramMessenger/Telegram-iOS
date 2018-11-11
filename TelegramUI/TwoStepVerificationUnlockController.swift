@@ -12,10 +12,10 @@ private final class TwoStepVerificationUnlockSettingsControllerArguments {
     let openDisablePassword: () -> Void
     let openSetupEmail: () -> Void
     let openResetPendingEmail: () -> Void
-    let updateEmailAddress: (String) -> Void
     let updateEmailCode: (String) -> Void
+    let openConfirmEmail: () -> Void
     
-    init(updatePasswordText: @escaping (String) -> Void, checkPassword: @escaping () -> Void, openForgotPassword: @escaping () -> Void, openSetupPassword: @escaping () -> Void, openDisablePassword: @escaping () -> Void, openSetupEmail: @escaping () -> Void, openResetPendingEmail: @escaping () -> Void, updateEmailAddress: @escaping (String) -> Void, updateEmailCode: @escaping (String) -> Void) {
+    init(updatePasswordText: @escaping (String) -> Void, checkPassword: @escaping () -> Void, openForgotPassword: @escaping () -> Void, openSetupPassword: @escaping () -> Void, openDisablePassword: @escaping () -> Void, openSetupEmail: @escaping () -> Void, openResetPendingEmail: @escaping () -> Void, updateEmailCode: @escaping (String) -> Void, openConfirmEmail: @escaping () -> Void) {
         self.updatePasswordText = updatePasswordText
         self.checkPassword = checkPassword
         self.openForgotPassword = openForgotPassword
@@ -23,8 +23,8 @@ private final class TwoStepVerificationUnlockSettingsControllerArguments {
         self.openDisablePassword = openDisablePassword
         self.openSetupEmail = openSetupEmail
         self.openResetPendingEmail = openResetPendingEmail
-        self.updateEmailAddress = updateEmailAddress
         self.updateEmailCode = updateEmailCode
+        self.openConfirmEmail = openConfirmEmail
     }
 }
 
@@ -65,13 +65,13 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
     case passwordInfo(PresentationTheme, String)
     
     case pendingEmailConfirmInfo(PresentationTheme, String)
-    case pendingEmailConfirmAddress(PresentationTheme, String, String)
     case pendingEmailConfirmCode(PresentationTheme, String, String)
     case pendingEmailInfo(PresentationTheme, String)
+    case pendingEmailOpenConfirm(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
-            case .pendingEmailConfirmInfo, .pendingEmailConfirmAddress, .pendingEmailConfirmCode:
+            case .pendingEmailConfirmInfo, .pendingEmailConfirmCode, .pendingEmailInfo, .pendingEmailOpenConfirm:
                 return TwoStepVerificationUnlockSettingsSection.email.rawValue
             default:
                 return TwoStepVerificationUnlockSettingsSection.password.rawValue
@@ -98,11 +98,11 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
                 return 7
             case .pendingEmailConfirmInfo:
                 return 8
-            case .pendingEmailConfirmAddress:
-                return 9
             case .pendingEmailConfirmCode:
-                return 10
+                return 9
             case .pendingEmailInfo:
+                return 10
+            case .pendingEmailOpenConfirm:
                 return 11
         }
     }
@@ -148,10 +148,6 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .pendingEmailConfirmInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .pendingEmailConfirmAddress(theme, title, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: ""), text: text, placeholder: title, type: .email, sectionId: self.section, textUpdated: { value in
-                    arguments.updateEmailAddress(value)
-                }, action: {})
             case let .pendingEmailConfirmCode(theme, title, text):
                 return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: ""), text: text, placeholder: title, type: .number, sectionId: self.section, textUpdated: { value in
                     arguments.updateEmailCode(value)
@@ -163,6 +159,10 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
                             arguments.openResetPendingEmail()
                     }
                 })
+            case let .pendingEmailOpenConfirm(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.openConfirmEmail()
+                })
         }
     }
 }
@@ -170,7 +170,6 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
 private struct TwoStepVerificationUnlockSettingsControllerState: Equatable {
     var passwordText: String = ""
     var checking: Bool = false
-    var emailAddress: String = ""
     var emailCode: String = ""
 }
 
@@ -181,17 +180,13 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
         case let .access(configuration):
             if let configuration = configuration {
                 switch configuration {
-                    case let .notSet(pendingEmailAndValue):
-                        if let pendingEmailAndValue = pendingEmailAndValue {
-                            /*entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
-                            if pendingEmailAndValue.email != nil {
-                            } else {
-                                entries.append(.pendingEmailConfirmAddress(presentationData.theme, presentationData.strings.TwoStepAuth_EmailTitle, state.emailAddress))
-                            }
+                    case let .notSet(pendingEmail):
+                        if let pendingEmail = pendingEmail {
+                            entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPendingEmail(pendingEmail.email.pattern).0))
                             entries.append(.pendingEmailConfirmCode(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.emailCode))
                              entries.append(.pendingEmailInfo(presentationData.theme, "[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
-                             */
-                            entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmailAndValue.pendingEmail.pattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
+                            
+                            /*entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmailAndValue.pendingEmail.pattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))*/
                         } else {
                             entries.append(.passwordSetup(presentationData.theme, presentationData.strings.TwoStepAuth_SetPassword))
                             entries.append(.passwordSetupInfo(presentationData.theme, presentationData.strings.TwoStepAuth_SetPasswordHelp))
@@ -205,19 +200,13 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                         }
                 }
             }
-        case let .manage(_, emailSet, pendingEmailAndValue, _):
+        case let .manage(_, emailSet, pendingEmail, _):
             entries.append(.changePassword(presentationData.theme, presentationData.strings.TwoStepAuth_ChangePassword))
             entries.append(.turnPasswordOff(presentationData.theme, presentationData.strings.TwoStepAuth_RemovePassword))
             entries.append(.setupRecoveryEmail(presentationData.theme, emailSet ? presentationData.strings.TwoStepAuth_ChangeEmail : presentationData.strings.TwoStepAuth_SetupEmail))
-            if let pendingEmailAndValue = pendingEmailAndValue {
-                /*entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
-                if pendingEmailAndValue.email != nil {
-                } else {
-                    entries.append(.pendingEmailConfirmAddress(presentationData.theme, presentationData.strings.TwoStepAuth_EmailTitle, state.emailAddress))
-                }
-                entries.append(.pendingEmailConfirmCode(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.emailCode))*/
-                //entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_ConfirmationText + "\n\n\(pendingEmailAndValue.pendingEmail.pattern)\n\n[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
-                entries.append(.pendingEmailInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
+            if let _ = pendingEmail {
+                entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_EmailSent))
+                entries.append(.pendingEmailOpenConfirm(presentationData.theme, presentationData.strings.TwoStepAuth_EnterEmailCode))
             } else {
                 entries.append(.passwordInfo(presentationData.theme, presentationData.strings.TwoStepAuth_GenericHelp))
             }
@@ -226,34 +215,24 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
     return entries
 }
 
-struct PendingEmailAndValue {
-    let pendingEmail: TwoStepVerificationPendingEmail
-    let email: String?
-}
-
-extension PendingEmailAndValue {
-    init?(pendingEmail: TwoStepVerificationPendingEmail?) {
-        if let pendingEmail = pendingEmail {
-            self.init(pendingEmail: pendingEmail, email: nil)
-        } else {
-            return nil
-        }
-    }
-}
-
 enum TwoStepVerificationUnlockSettingsControllerMode {
     case access
-    case manage(password: String, email: String, pendingEmail: PendingEmailAndValue?, hasSecureValues: Bool)
+    case manage(password: String, email: String, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
+}
+
+private struct PendingEmailState {
+    let password: String?
+    let email: TwoStepVerificationPendingEmail
 }
 
 private enum TwoStepVeriticationAccessConfiguration {
-    case notSet(pendingEmail: PendingEmailAndValue?)
+    case notSet(pendingEmail: PendingEmailState?)
     case set(hint: String, hasRecoveryEmail: Bool, hasSecureValues: Bool)
     
-    init(configuration: TwoStepVerificationConfiguration) {
+    init(configuration: TwoStepVerificationConfiguration, password: String?) {
         switch configuration {
             case let .notSet(pendingEmail):
-                self = .notSet(pendingEmail: PendingEmailAndValue(pendingEmail: pendingEmail))
+                self = .notSet(pendingEmail: pendingEmail.flatMap({ PendingEmailState(password: password, email: $0) }))
             case let .set(hint, hasRecoveryEmail, _, hasSecureValues):
                 self = .set(hint: hint, hasRecoveryEmail: hasRecoveryEmail, hasSecureValues: hasSecureValues)
         }
@@ -262,7 +241,7 @@ private enum TwoStepVeriticationAccessConfiguration {
 
 private enum TwoStepVerificationUnlockSettingsControllerData {
     case access(configuration: TwoStepVeriticationAccessConfiguration?)
-    case manage(password: String, emailSet: Bool, pendingEmail: PendingEmailAndValue?, hasSecureValues: Bool)
+    case manage(password: String, emailSet: Bool, pendingEmail: TwoStepVerificationPendingEmail?, hasSecureValues: Bool)
 }
 
 func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStepVerificationUnlockSettingsControllerMode) -> ViewController {
@@ -293,9 +272,109 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
     switch mode {
         case .access:
             dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: nil))
-            |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0)) }))
+                |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: nil)) }))
         case let .manage(password, email, pendingEmail, hasSecureValues):
             dataPromise.set(.single(.manage(password: password, emailSet: !email.isEmpty, pendingEmail: pendingEmail, hasSecureValues: hasSecureValues)))
+    }
+    
+    let checkEmailConfirmation: () -> Void = {
+        let _ = (dataPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { data in
+            var pendingEmailData: PendingEmailState?
+            switch data {
+                case let .access(configuration):
+                    guard let configuration = configuration else {
+                        return
+                    }
+                    switch configuration {
+                        case let .notSet(pendingEmail):
+                            pendingEmailData = pendingEmail
+                        case .set:
+                            break
+                    }
+                case let .manage(password, _, pendingEmail, _):
+                    if let pendingEmail = pendingEmail {
+                        pendingEmailData = PendingEmailState(password: password, email: pendingEmail)
+                    }
+            }
+            if let pendingEmail = pendingEmailData {
+                var code: String?
+                updateState { state in
+                    var state = state
+                    if !state.checking {
+                        code = state.emailCode
+                        state.checking = true
+                    }
+                    return state
+                }
+                if let code = code {
+                    setupDisposable.set((confirmTwoStepRecoveryEmail(network: account.network, code: code)
+                    |> deliverOnMainQueue).start(error: { error in
+                        updateState { state in
+                            var state = state
+                            state.checking = false
+                            return state
+                        }
+                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let text: String
+                        switch error {
+                            case .invalidEmail:
+                                text = presentationData.strings.TwoStepAuth_EmailInvalid
+                            case .invalidCode:
+                                text = presentationData.strings.Login_InvalidCodeError
+                            case .expired:
+                                text = presentationData.strings.TwoStepAuth_EmailCodeExpired
+                                let _ = (dataPromise.get()
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { data in
+                                    switch data {
+                                    case .access:
+                                        dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: nil))))
+                                    case let .manage(manage):
+                                        dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: manage.password, emailSet: false, pendingEmail: nil, hasSecureValues: manage.hasSecureValues)))
+                                    }
+                                    
+                                    updateState { state in
+                                        var state = state
+                                        state.checking = false
+                                        state.emailCode = ""
+                                        return state
+                                    }
+                                })
+                            case .flood:
+                                text = presentationData.strings.TwoStepAuth_FloodError
+                            case .generic:
+                                text = presentationData.strings.Login_UnknownError
+                        }
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    }, completed: {
+                        let _ = (dataPromise.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { data in
+                            switch data {
+                                case .access:
+                                    if let password = pendingEmail.password {
+                                        dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: password, emailSet: true, pendingEmail: nil, hasSecureValues: false)))
+                                    } else {
+                                        dataPromise.set(.single(.access(configuration: nil))
+                                            |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: pendingEmail.password)) }))
+                                    }
+                                case let .manage(manage):
+                                    dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: manage.password, emailSet: true, pendingEmail: nil, hasSecureValues: manage.hasSecureValues)))
+                            }
+                            
+                            updateState { state in
+                                var state = state
+                                state.checking = false
+                                state.emailCode = ""
+                                return state
+                            }
+                        })
+                    }))
+                }
+            }
+        })
     }
     
     let arguments = TwoStepVerificationUnlockSettingsControllerArguments(updatePasswordText: { updatedText in
@@ -337,7 +416,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     return state
                 }
                 
-                replaceControllerImpl?(twoStepVerificationUnlockSettingsController(account: account, mode: .manage(password: password, email: settings.email, pendingEmail: PendingEmailAndValue(pendingEmail: pendingEmail), hasSecureValues: settings.secureSecret != nil)))
+                replaceControllerImpl?(twoStepVerificationUnlockSettingsController(account: account, mode: .manage(password: password, email: settings.email, pendingEmail: pendingEmail, hasSecureValues: settings.secureSecret != nil)))
             }, error: { error in
                 updateState { state in
                     var state = state
@@ -422,57 +501,44 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     if let configuration = configuration {
                         switch configuration {
                             case .notSet:
-                                var completionImpl: ((String, String, Bool) -> Void)?
-                                var updatePatternImpl: (((String, String)?) -> Void)?
-                                let controller = createPasswordController(account: account, context: .account, state: .setup(currentPassword: nil), completion: { password, hint, emailPattern in
-                                    completionImpl?(password, hint, emailPattern)
-                                }, updatePasswordEmailConfirmation: { pattern in
-                                    updatePatternImpl?(pattern)
-                                }, processPasswordEmailConfirmation: false)
-                                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                                completionImpl = { [weak controller] password, hint, hasRecovery in
-                                    dataPromise.set(.single(.manage(password: password, emailSet: hasRecovery, pendingEmail: nil, hasSecureValues: false)))
-                                    controller?.view.endEditing(true)
-                                    controller?.dismiss()
-                                }
-                            
-                                updatePatternImpl = { [weak controller] pattern in
-                                    if let (email, pattern) = pattern {
-                                        dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: PendingEmailAndValue(pendingEmail: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: nil), email: email)))))
-                                    } else {
-                                        dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
+                                let controller = SetupTwoStepVerificationController(account: account, initialState: .createPassword, stateUpdated: { update in
+                                    switch update {
+                                        case .noPassword:
+                                            dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
+                                        case let .awaitingEmailConfirmation(password, pattern, codeLength):
+                                            dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: PendingEmailState(password: password, email: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: codeLength))))))
+                                        case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
+                                            if let password = password {
+                                                dataPromise.set(.single(.manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)))
+                                            } else {
+                                                dataPromise.set(.single(.access(configuration: nil))
+                                                    |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
+                                            }
                                     }
-                                    controller?.view.endEditing(true)
-                                    controller?.dismiss()
-                                }
+                                })
+                                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             case .set:
                                 break
                         }
                     }
                 case let .manage(password, hasRecovery, pendingEmail, hasSecureValues):
-                    var completionImpl: ((String, String, Bool) -> Void)?
-                    var updatePatternImpl: (((String, String)?) -> Void)?
-                    let controller = createPasswordController(account: account, context: .account, state: .setup(currentPassword: password), completion: { password, hint, emailPattern in
-                        completionImpl?(password, hint, emailPattern)
-                    }, updatePasswordEmailConfirmation: { pattern in
-                        updatePatternImpl?(pattern)
-                    }, processPasswordEmailConfirmation: false)
-                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                    completionImpl = { [weak controller] password, hint, _ in
-                        dataPromise.set(.single(.manage(password: password, emailSet: hasRecovery, pendingEmail: pendingEmail, hasSecureValues: hasSecureValues)))
-                        controller?.view.endEditing(true)
-                        controller?.dismiss()
-                    }
-                    
-                    updatePatternImpl = { [weak controller] pattern in
-                        if let (email, pattern) = pattern {
-                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: PendingEmailAndValue(pendingEmail: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: nil), email: email)))))
-                        } else {
-                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: nil))))
+                    let controller = SetupTwoStepVerificationController(account: account, initialState: .updatePassword(current: password, hasRecoveryEmail: hasRecovery, hasSecureValues: hasSecureValues), stateUpdated: { update in
+                        switch update {
+                            case .noPassword:
+                                dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
+                            case .awaitingEmailConfirmation:
+                                assertionFailure()
+                                break
+                            case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
+                                if let password = password {
+                                    dataPromise.set(.single(.manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)))
+                                } else {
+                                    dataPromise.set(.single(.access(configuration: nil))
+                                        |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
+                                }
                         }
-                        controller?.view.endEditing(true)
-                        controller?.dismiss()
-                    }
+                    })
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }))
     }, openDisablePassword: {
@@ -538,16 +604,26 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
             switch data {
                 case .access:
                     break
-                case let .manage(password, _, _, hasSecureValues):
-                    let result = Promise<TwoStepVerificationPasswordEntryResult?>()
-                    let controller = twoStepVerificationPasswordEntryController(account: account, mode: .setupEmail(password: password), result: result)
-                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                    setupResultDisposable.set((result.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak controller] updatedPassword in
-                        if let updatedPassword = updatedPassword {
-                            dataPromise.set(.single(.manage(password: updatedPassword.password, emailSet: true, pendingEmail: updatedPassword.pendingEmail, hasSecureValues: hasSecureValues)))
-                            controller?.dismiss()
+                case let .manage(password, emailSet, _, hasSecureValues):
+                    let controller = SetupTwoStepVerificationController(account: account, initialState: .addEmail(hadRecoveryEmail: emailSet, hasSecureValues: hasSecureValues, password: password), stateUpdated: { update in
+                        switch update {
+                            case .noPassword:
+                                assertionFailure()
+                                break
+                            case let .awaitingEmailConfirmation(password, pattern, codeLength):
+                                let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: emailSet, pendingEmail: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: codeLength), hasSecureValues: hasSecureValues)
+                                dataPromise.set(.single(data))
+                            case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
+                                if let password = password {
+                                    let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)
+                                    dataPromise.set(.single(data))
+                                } else {
+                                    dataPromise.set(.single(.access(configuration: nil))
+                                        |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
+                                }
                         }
-                    }))
+                    })
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }))
     }, openResetPendingEmail: {
@@ -571,115 +647,68 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                 return state
             }
         }))
-    }, updateEmailAddress: { value in
-        updateState { state in
-            var state = state
-            state.emailAddress = value
-            return state
-        }
     }, updateEmailCode: { value in
+        var previousValue: String?
         updateState { state in
             var state = state
+            previousValue = state.emailCode
             state.emailCode = value
             return state
         }
-    })
-    
-    let checkEmailConfirmation: () -> Void = {
         let _ = (dataPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { data in
-            var pendingEmailData: PendingEmailAndValue?
             switch data {
                 case let .access(configuration):
-                    guard let configuration = configuration else {
-                        return
-                    }
-                    switch configuration {
-                        case let .notSet(pendingEmail):
-                            pendingEmailData = pendingEmail
-                        case .set:
-                            break
-                    }
-                case let .manage(_, _, pendingEmail, _):
-                    pendingEmailData = pendingEmail
-            }
-            if let pendingEmailAndValue = pendingEmailData {
-                var emailAndCode: (String, String)?
-                updateState { state in
-                    var state = state
-                    if !state.checking {
-                        emailAndCode = (pendingEmailAndValue.email ?? state.emailAddress, state.emailCode)
-                        state.checking = true
-                    }
-                    return state
-                }
-                if let (email, code) = emailAndCode {
-                    setupDisposable.set((confirmTwoStepRecoveryEmail(network: account.network, email: email, code: code)
-                    |> deliverOnMainQueue).start(error: { error in
-                        updateState { state in
-                            var state = state
-                            state.checking = false
-                            return state
-                        }
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        let text: String
-                        switch error {
-                            case .invalidEmail:
-                                text = presentationData.strings.TwoStepAuth_EmailInvalid
-                            case .invalidCode:
-                                text = presentationData.strings.Login_InvalidCodeError
-                            case .expired:
-                                text = presentationData.strings.TwoStepAuth_EmailCodeExpired
-                                let _ = (dataPromise.get()
-                                |> take(1)
-                                |> deliverOnMainQueue).start(next: { data in
-                                    switch data {
-                                        case .access:
-                                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: nil))))
-                                        case let .manage(manage):
-                                            dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: manage.password, emailSet: false, pendingEmail: nil, hasSecureValues: manage.hasSecureValues)))
+                    if let configuration = configuration {
+                        switch configuration {
+                            case let .notSet(pendingEmail):
+                                if let pendingEmail = pendingEmail, let codeLength = pendingEmail.email.codeLength {
+                                    if let previousValue = previousValue, previousValue.count != codeLength && value.count == codeLength {
+                                        checkEmailConfirmation()
                                     }
-                                    
-                                    updateState { state in
-                                        var state = state
-                                        state.checking = false
-                                        state.emailAddress = ""
-                                        state.emailCode = ""
-                                        return state
-                                    }
-                                })
-                            case .flood:
-                                text = presentationData.strings.TwoStepAuth_FloodError
-                            case .generic:
-                                text = presentationData.strings.Login_UnknownError
+                                }
+                            case .set:
+                                break
                         }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                    }, completed: {
-                        let _ = (dataPromise.get()
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { data in
-                            switch data {
-                                case .access:
-                                    dataPromise.set(.single(.access(configuration: nil))
-                                    |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0)) }))
-                                case let .manage(manage):
-                                    dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.manage(password: manage.password, emailSet: true, pendingEmail: nil, hasSecureValues: manage.hasSecureValues)))
-                            }
-                            
-                            updateState { state in
-                                var state = state
-                                state.checking = false
-                                state.emailAddress = ""
-                                state.emailCode = ""
-                                return state
-                            }
-                        })
-                    }))
-                }
+                    }
+                case .manage:
+                    break
             }
         })
-    }
+    }, openConfirmEmail: {
+        let _ = (dataPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { data in
+            switch data {
+                case .access:
+                    break
+                case let .manage(password, emailSet, pendingEmail, hasSecureValues):
+                    guard let pendingEmail = pendingEmail else {
+                        return
+                    }
+                    let controller = SetupTwoStepVerificationController(account: account, initialState: .confirmEmail(password: password, hasSecureValues: hasSecureValues, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength), stateUpdated: { update in
+                        switch update {
+                            case .noPassword:
+                                assertionFailure()
+                                break
+                            case let .awaitingEmailConfirmation(password, pattern, codeLength):
+                                let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: emailSet, pendingEmail: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: codeLength), hasSecureValues: hasSecureValues)
+                                dataPromise.set(.single(data))
+                            case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
+                                if let password = password {
+                                    let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)
+                                    dataPromise.set(.single(data))
+                                } else {
+                                    dataPromise.set(.single(.access(configuration: nil))
+                                        |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
+                                }
+                        }
+                    })
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }
+        })
+    })
     
     var initialFocusImpl: (() -> Void)?
     var didAppear = false
@@ -698,11 +727,11 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     } else {
                         switch configuration {
                             case let .notSet(pendingEmail):
-                                /*if let pendingEmailAndValue = pendingEmail {
-                                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: (pendingEmailAndValue.email != nil || !state.emailAddress.isEmpty) && !state.emailCode.isEmpty, action: {
+                                if let _ = pendingEmail {
+                                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: !state.emailCode.isEmpty, action: {
                                         checkEmailConfirmation()
                                     })
-                                }*/
+                                }
                                 break
                             case .set:
                                 rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: true, action: {
@@ -718,11 +747,11 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                 if state.checking {
                     rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
                 } else {
-                    /*if let pendingEmailAndValue = manage.pendingEmail {
-                        rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: (pendingEmailAndValue.email != nil || !state.emailAddress.isEmpty) && !state.emailCode.isEmpty, action: {
+                    if let _ = manage.pendingEmail {
+                        rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: !state.emailCode.isEmpty, action: {
                             checkEmailConfirmation()
                         })
-                    }*/
+                    }
                 }
         }
         

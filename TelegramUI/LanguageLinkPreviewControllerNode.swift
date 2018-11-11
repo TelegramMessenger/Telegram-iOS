@@ -244,7 +244,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
         let contentFrame = contentContainerFrame.insetBy(dx: 0.0, dy: 0.0)
         
-        let bottomGridInset = buttonHeight
+        let bottomGridInset: CGFloat = self.actionButtonNode.alpha.isZero ? 0.0 : buttonHeight
         
         self.containerLayout = (layout, navigationBarHeight, bottomGridInset)
         self.scheduledLayoutTransitionRequest = nil
@@ -446,19 +446,21 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
     
     func setData(localizationInfo: LocalizationInfo) {
         let transition = ContainedViewLayoutTransition.animated(duration: 0.22, curve: .easeInOut)
-        transition.updateAlpha(node: self.actionButtonNode, alpha: 1.0)
-        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 1.0)
-        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 1.0)
         
-        if localizationInfo.translatedStringCount == 0 {
-            self.actionButtonNode.isEnabled = false
+        if localizationInfo.totalStringCount == 0 {
+            transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
+            transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
+            transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
             self.actionButtonNode.setTitle(self.presentationData.strings.Conversation_ApplyLocalization, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             self.actionButtonNode.setTitle(self.presentationData.strings.Conversation_ApplyLocalization, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .disabled)
             
         } else {
+            transition.updateAlpha(node: self.actionButtonNode, alpha: 1.0)
+            transition.updateAlpha(node: self.actionSeparatorNode, alpha: 1.0)
+            transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 1.0)
             self.actionButtonNode.isEnabled = true
-            self.actionButtonNode.setTitle(self.presentationData.strings.Conversation_ApplyLocalization, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
-            self.actionButtonNode.setTitle(self.presentationData.strings.Conversation_ApplyLocalization, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .disabled)
+            self.actionButtonNode.setTitle(self.presentationData.strings.ApplyLanguage_ChangeLanguageAction, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+            self.actionButtonNode.setTitle(self.presentationData.strings.ApplyLanguage_ChangeLanguageAction, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .disabled)
         }
         
         self.transitionToContentNode(LanguageLinkPreviewContentNode(account: self.account, localizationInfo: localizationInfo, theme: self.presentationData.theme, strings: self.presentationData.strings, openTranslationUrl: { [weak self] url in

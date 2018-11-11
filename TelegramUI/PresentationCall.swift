@@ -565,7 +565,11 @@ public final class PresentationCall {
     }
     
     func toggleIsMuted() {
-        self.isMutedValue = !self.isMutedValue
+        self.setIsMuted(!self.isMutedValue)
+    }
+    
+    func setIsMuted(_ value: Bool) {
+        self.isMutedValue = value
         self.isMutedPromise.set(self.isMutedValue)
         self.ongoingContext.setIsMuted(self.isMutedValue)
     }

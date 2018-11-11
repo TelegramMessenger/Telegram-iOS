@@ -24,21 +24,25 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         
-        self.titleNode.attributedText = NSAttributedString(string: "Change Language?", font: Font.medium(20.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
-        
         let completionScore = min(100, localizationInfo.translatedStringCount * 100 / max(1, localizationInfo.totalStringCount))
         
         let text: String
-        if localizationInfo.translatedStringCount == 0 {
-            self.titleNode.isHidden = true
-            text = "This language is not available yet."
+        if localizationInfo.totalStringCount == 0 {
+            self.titleNode.attributedText = NSAttributedString(string: strings.ApplyLanguage_UnsufficientDataTitle, font: Font.medium(18.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+            text = strings.ApplyLanguage_UnsufficientDataText(localizationInfo.title).0
         } else {
-            text = "You are about to apply a custom language pack \(localizationInfo.title) that is \(completionScore)% complete.\nThis will translate the entire interface. You can suggest corrections in the [translation panel](https://translations.telegram.org/\(localizationInfo.languageCode)/).\nYou can change your language back at any time in Settings."
+            self.titleNode.attributedText = NSAttributedString(string: strings.ApplyLanguage_ChangeLanguageTitle, font: Font.medium(18.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+            if !localizationInfo.isOfficial {
+                text = strings.ApplyLanguage_ChangeLanguageUnofficialText(localizationInfo.title, "\(completionScore)").0
+            } else {
+                text = strings.ApplyLanguage_ChangeLanguageOfficialText(localizationInfo.title).0
+            }
         }
         let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: theme.actionSheet.primaryTextColor)
+        let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: theme.actionSheet.primaryTextColor)
         let link = MarkdownAttributeSet(font: Font.regular(15.0), textColor: theme.actionSheet.controlAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
         
-        self.textNode.attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+        self.textNode.attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
         self.textNode.linkHighlightColor = theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
         self.textNode.highlightAttributeAction = { attributes in
             if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
@@ -52,8 +56,6 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
                 openTranslationUrl("https://translations.telegram.org/\(localizationInfo.languageCode)/")
             }
         }
-        
-        //self.textNode.attributedText = NSAttributedString(string: "", font: Font.regular(15.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
     }
     
     func activate() {
@@ -71,7 +73,7 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
     
     func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let insets = UIEdgeInsets(top: 12.0, left: 10.0, bottom: 12.0 + bottomInset, right: 10.0)
-        let titleSpacing: CGFloat = 7.0
+        let titleSpacing: CGFloat = 12.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - insets.left - insets.right, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right, height: .greatestFiniteMagnitude))
         

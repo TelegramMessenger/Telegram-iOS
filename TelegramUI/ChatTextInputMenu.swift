@@ -8,6 +8,10 @@ enum ChatTextInputMenuState {
 }
 
 final class ChatTextInputMenu {
+    private var stringBold: String = "Bold"
+    private var stringItalic: String = "Italic"
+    private var stringMonospace: String = "Monospace"
+    
     private(set) var state: ChatTextInputMenuState = .inactive {
         didSet {
             if self.state != oldValue {
@@ -19,9 +23,9 @@ final class ChatTextInputMenu {
                         //UIMenuController.shared.menuItems = [UIMenuItem(title: "Format", action: Selector(("_showTextStyleOptions:")))]
                     case .format:
                         UIMenuController.shared.menuItems = [
-                            UIMenuItem(title: "Bold", action: Selector(("formatAttributesBold:"))),
-                            UIMenuItem(title: "Italic", action: Selector(("formatAttributesItalic:"))),
-                            UIMenuItem(title: "Monospace", action: Selector(("formatAttributesMonospace:")))
+                            UIMenuItem(title: self.stringBold, action: Selector(("formatAttributesBold:"))),
+                            UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
+                            UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:")))
                         ]
                         UIMenuController.shared.isMenuVisible = true
                         UIMenuController.shared.update()
@@ -43,6 +47,12 @@ final class ChatTextInputMenu {
         if let observer = self.observer {
             NotificationCenter.default.removeObserver(observer)
         }
+    }
+    
+    func updateStrings(_ strings: PresentationStrings) {
+        self.stringBold = strings.TextFormat_Bold
+        self.stringItalic = strings.TextFormat_Italic
+        self.stringMonospace = strings.TextFormat_Monospace
     }
     
     func activate() {
