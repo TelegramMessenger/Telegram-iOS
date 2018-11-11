@@ -274,13 +274,14 @@ const NSInteger PGCameraFrameRate = 30;
         AVCaptureDeviceFormat *preferredFormat = nil;
         NSMutableArray *maybeFormats = nil;
         int32_t maxWidth = 0;
+        int32_t maxHeight = 0;
         for (AVCaptureDeviceFormat *format in availableFormats)
         {
             if (![format.mediaType isEqualToString:@"vide"] || [[format valueForKey:@"isPhotoFormat"] boolValue])
                 continue;
             
             CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
-            if (dimensions.width >= maxWidth && dimensions.width <= 1920)
+            if (dimensions.width >= maxWidth && dimensions.width <= 1920 && dimensions.height >= maxHeight && dimensions.height <= 1080)
             {
                 if (dimensions.width > maxWidth)
                     maybeFormats = [[NSMutableArray alloc] init];
@@ -911,11 +912,16 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
         
         [[SQueue concurrentDefaultQueue] dispatch:^
         {
-            bool mirrored = self.requestPreviewIsMirrored();
-            UIImageOrientation orientation = TGSnapshotOrientationForVideoOrientation(mirrored);
-            UIImage *image = [self imageFromSampleBuffer:sampleBuffer orientation:orientation];
-            CFRelease(sampleBuffer);
-            capturedFrameCompletion(image);
+            TGDispatchOnMainThread(^{
+                bool mirrored = self.requestPreviewIsMirrored();
+                UIImageOrientation orientation = TGSnapshotOrientationForVideoOrientation(mirrored);
+                [[SQueue concurrentDefaultQueue] dispatch:^
+                {
+                    UIImage *image = [self imageFromSampleBuffer:sampleBuffer orientation:orientation];
+                    CFRelease(sampleBuffer);
+                    capturedFrameCompletion(image);
+                }];
+            });
         }];
     }
 }

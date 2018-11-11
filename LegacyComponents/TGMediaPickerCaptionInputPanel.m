@@ -16,7 +16,6 @@
 #import "TGModernConversationAssociatedInputPanel.h"
 
 const NSInteger TGMediaPickerCaptionInputPanelCaptionLimit = 1024;
-const NSInteger TGMediaPickerCaptionInputPanelCaptionCounterThreshold = 924;
 
 static void setViewFrame(UIView *view, CGRect frame)
 {
@@ -485,7 +484,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     NSInteger textLength = text.length;
     _counterLabel.text = [NSString stringWithFormat:@"%d", (int)(TGMediaPickerCaptionInputPanelCaptionLimit - textLength)];
     
-    bool hidden = (text.length < TGMediaPickerCaptionInputPanelCaptionCounterThreshold);
+    bool hidden = (text.length < (TGMediaPickerCaptionInputPanelCaptionLimit - 100));
     if (hidden != _counterLabel.hidden)
     {
         appearance = true;
@@ -512,7 +511,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         }
     }
     
-    _counterLabel.hidden = ![self isFirstResponder] || textLength < TGMediaPickerCaptionInputPanelCaptionCounterThreshold;
+    _counterLabel.hidden = ![self isFirstResponder] || textLength < (TGMediaPickerCaptionInputPanelCaptionLimit - 100);
 }
 
 - (void)shakeControls
