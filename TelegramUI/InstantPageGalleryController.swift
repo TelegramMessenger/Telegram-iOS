@@ -31,28 +31,40 @@ struct InstantPageGalleryEntry: Equatable {
     func item(account: Account, webPage: TelegramMediaWebpage, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) -> GalleryItem {
         let caption: NSAttributedString
         let credit: NSAttributedString
-        if let mediaCaption = self.media.caption {
-            let styleStack = InstantPageTextStyleStack()
-            styleStack.push(.fontSize(16.0))
-            styleStack.push(.textColor(.white))
-            styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
-            styleStack.push(.fontSerif(false))
-            styleStack.push(.lineSpacingFactor(1.0))
-            caption = attributedStringForRichText(mediaCaption, styleStack: styleStack)
-        } else {
-            caption = NSAttributedString(string: "")
-        }
         
-        if let mediaCredit = self.media.credit {
-            let styleStack = InstantPageTextStyleStack()
-            styleStack.push(.fontSize(14.0))
-            styleStack.push(.textColor(.white))
-            styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
-            styleStack.push(.fontSerif(false))
-            styleStack.push(.lineSpacingFactor(1.0))
-            credit = attributedStringForRichText(mediaCredit, styleStack: styleStack)
-        } else {
+        let styleStack = InstantPageTextStyleStack()
+        styleStack.push(.fontSize(16.0))
+        styleStack.push(.textColor(.white))
+        styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
+        styleStack.push(.fontSerif(false))
+        
+        if let url = self.media.url {
+            styleStack.push(.lineSpacingFactor(1.45))
+            
+            let titleString = RichText.bold(.plain(presentationData.strings.InstantPage_TapToOpenLink + "\n"))
+            let urlString = RichText.url(text: .plain(url.url), url: url.url, webpageId: url.webpageId)
+            let urlText = RichText.concat([titleString, urlString])
+            
+            caption = attributedStringForRichText(urlText, styleStack: styleStack)
             credit = NSAttributedString(string: "")
+        } else {
+            if let mediaCaption = self.media.caption {
+                caption = attributedStringForRichText(mediaCaption, styleStack: styleStack)
+            } else {
+                caption = NSAttributedString(string: "")
+            }
+            
+            if let mediaCredit = self.media.credit {
+                let styleStack = InstantPageTextStyleStack()
+                styleStack.push(.fontSize(14.0))
+                styleStack.push(.textColor(.white))
+                styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
+                styleStack.push(.fontSerif(false))
+                //styleStack.push(.lineSpacingFactor(1.0))
+                credit = attributedStringForRichText(mediaCredit, styleStack: styleStack)
+            } else {
+                credit = NSAttributedString(string: "")
+            }
         }
         
         if let image = self.media.media as? TelegramMediaImage {

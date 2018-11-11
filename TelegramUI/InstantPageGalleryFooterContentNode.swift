@@ -115,6 +115,22 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         return panelHeight
     }
     
+    override func animateIn(fromHeight: CGFloat, previousContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition) {
+        transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
+        self.textNode.alpha = 1.0
+        self.actionButton.alpha = 1.0
+        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+    }
+    
+    override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        transition.updateFrame(node: self.textNode, frame: self.textNode.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
+        self.textNode.alpha = 0.0
+        self.actionButton.alpha = 0.0
+        self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
+            completion()
+        })
+    }
+    
     @objc func actionButtonPressed() {
         if let shareMedia = self.shareMedia {
             self.controllerInteraction?.presentController(ShareController(account: self.account, subject: .media(shareMedia), preferredAction: .saveToCameraRoll, showInChat: nil, externalShare: true, immediateExternalShare: false), nil)

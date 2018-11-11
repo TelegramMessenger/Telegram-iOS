@@ -8,7 +8,7 @@ public final class CallKitIntegration {
     private let providerDelegate: AnyObject
     
     public static var isAvailable: Bool {
-        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        #if targetEnvironment(simulator)
         return false
         #endif
         
@@ -24,17 +24,17 @@ public final class CallKitIntegration {
         return self.audioSessionActivePromise.get()
     }
     
-    init?(startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    init?(startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         if !CallKitIntegration.isAvailable {
             return nil
         }
     
-        #if (arch(i386) || arch(x86_64)) && os(iOS)
+        #if targetEnvironment(simulator)
         return nil
         #else
         
         if #available(iOSApplicationExtension 10.0, *) {
-            self.providerDelegate = CallKitProviderDelegate(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, audioSessionActivationChanged: audioSessionActivationChanged)
+            self.providerDelegate = CallKitProviderDelegate(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged)
         } else {
             return nil
         }
@@ -80,17 +80,19 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private let startCall: (UUID, String) -> Signal<Bool, NoError>
     private let answerCall: (UUID) -> Void
     private let endCall: (UUID) -> Signal<Bool, NoError>
+    private let setCallMuted: (UUID, Bool) -> Void
     private let audioSessionActivationChanged: (Bool) -> Void
     
     private let disposableSet = DisposableSet()
     
     fileprivate let audioSessionActivePromise: ValuePromise<Bool>
     
-    init(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    init(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         self.audioSessionActivePromise = audioSessionActivePromise
         self.startCall = startCall
         self.answerCall = answerCall
         self.endCall = endCall
+        self.setCallMuted = setCallMuted
         self.audioSessionActivationChanged = audioSessionActivationChanged
         
         self.provider = CXProvider(configuration: CallKitProviderDelegate.providerConfiguration)
@@ -231,6 +233,11 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
                     action.fail()
                 }
             }))
+    }
+    
+    func provider(_ provider: CXProvider, perform action: CXSetMutedCallAction) {
+        self.setCallMuted(action.uuid, action.isMuted)
+        action.fulfill()
     }
     
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {

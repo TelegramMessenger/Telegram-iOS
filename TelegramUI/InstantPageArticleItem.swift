@@ -67,26 +67,36 @@ final class InstantPageArticleItem: InstantPageItem {
 func layoutArticleItem(theme: InstantPageTheme, webPage: TelegramMediaWebpage, title: NSAttributedString, description: NSAttributedString, cover: TelegramMediaImage?, url: String, webpageId: MediaId, boundingWidth: CGFloat, rtl: Bool) -> InstantPageArticleItem {
     let inset: CGFloat = 17.0
     var sideInset = inset
-    let imageSize = CGSize(width: 65.0, height: 65.0)
+    let imageSize = CGSize(width: 44.0, height: 44.0)
     if cover != nil {
         sideInset += imageSize.width + 10.0
     }
     
-    var contentItems: [InstantPageItem] = []
-    let (titleItems, titleSize) = layoutTextItemWithString(title, boundingWidth: boundingWidth - inset - sideInset, offset: CGPoint(x: inset, y: 20.0), maxNumberOfLines: 2)
-    contentItems.append(contentsOf: titleItems)
-    
-    let (descriptionItems, descriptionSize) = layoutTextItemWithString(description, boundingWidth: boundingWidth - inset - sideInset, offset: CGPoint(x: inset, y: 20.0 + titleSize.height + 14.0), maxNumberOfLines: 2)
-    contentItems.append(contentsOf: descriptionItems)
+    var availableLines: Int = 3
     
     var hasRTL = false
-    for case let item as InstantPageTextItem in contentItems {
-        if item.containsRTL {
+    var contentItems: [InstantPageItem] = []
+    let (titleTextItem, titleItems, titleSize) = layoutTextItemWithString(title, boundingWidth: boundingWidth - inset - sideInset, offset: CGPoint(x: inset, y: 15.0), maxNumberOfLines: availableLines)
+    contentItems.append(contentsOf: titleItems)
+    
+    if let textItem = titleTextItem {
+        availableLines -= textItem.lines.count
+        if textItem.containsRTL {
+            textItem.alignment = .right
             hasRTL = true
-            break
         }
     }
     
-    let contentSize = CGSize(width: boundingWidth, height: max(93.0, titleSize.height + descriptionSize.height + 20.0 + 14.0 + 20.0))
+    let (descriptionTextItem, descriptionItems, descriptionSize) = layoutTextItemWithString(description, boundingWidth: boundingWidth - inset - sideInset, offset: CGPoint(x: inset, y: 15.0 + titleSize.height + 14.0), maxNumberOfLines: 2)
+    contentItems.append(contentsOf: descriptionItems)
+    
+    if let textItem = descriptionTextItem {
+        if textItem.containsRTL || hasRTL {
+            textItem.alignment = .right
+            hasRTL = true
+        }
+    }
+    
+    let contentSize = CGSize(width: boundingWidth, height: titleSize.height + descriptionSize.height + 15.0 + 14.0 + 15.0)
     return InstantPageArticleItem(frame: CGRect(origin: CGPoint(), size: CGSize(width: boundingWidth, height: contentSize.height)), webPage: webPage, contentItems: contentItems, contentSize: contentSize, cover: cover, url: url, webpageId: webpageId, rtl: rtl || hasRTL)
 }

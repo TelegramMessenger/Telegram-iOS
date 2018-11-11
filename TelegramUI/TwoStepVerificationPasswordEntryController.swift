@@ -250,7 +250,7 @@ enum TwoStepVerificationPasswordEntryMode {
 
 struct TwoStepVerificationPasswordEntryResult {
     let password: String
-    let pendingEmail: PendingEmailAndValue?
+    let pendingEmail: TwoStepVerificationPendingEmail?
 }
 
 func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepVerificationPasswordEntryMode, result: Promise<TwoStepVerificationPasswordEntryResult?>) -> ViewController {
@@ -329,11 +329,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         }
                         switch update {
                             case let .password(password, pendingEmail):
-                                var pendingEmailAndValue: PendingEmailAndValue?
-                                if let pendingEmail = pendingEmail {
-                                    pendingEmailAndValue = PendingEmailAndValue(pendingEmail: pendingEmail, email: email)
-                                }
-                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: pendingEmailAndValue)))
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: pendingEmail)))
                             case .none:
                                 break
                         }
@@ -358,7 +354,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         }
                         switch update {
                             case let .password(password, pendingEmail):
-                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: PendingEmailAndValue(pendingEmail: pendingEmail))))
+                                result.set(.single(TwoStepVerificationPasswordEntryResult(password: password, pendingEmail: pendingEmail)))
                             case .none:
                                 break
                         }

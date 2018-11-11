@@ -300,6 +300,9 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         self.theme = theme
         self.strings = strings
+        if let (boundingSize, leftInset, rightInset) = self.validLayout {
+            self.updateLayout(boundingSize: boundingSize, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+        }
     }
     
     func updateLayout(boundingSize: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {

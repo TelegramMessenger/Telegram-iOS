@@ -89,7 +89,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     
     controller.finishedWithResults = { [weak menuController, weak legacyController] overlayController, selectionContext, editingContext, currentItem in
         if let selectionContext = selectionContext, let editingContext = editingContext {
-            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos, saveEditedPhotos: saveCapturedPhotos, descriptionGenerator: legacyAssetPickerItemGenerator())
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos && !isSecretChat, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, descriptionGenerator: legacyAssetPickerItemGenerator())
             sendMessagesWithSignals(signals)
         }
         

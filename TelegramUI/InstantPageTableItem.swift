@@ -362,11 +362,11 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
             var minCellWidth: CGFloat = 1.0
             var maxCellWidth: CGFloat = 1.0
             if let text = cell.text {
-                if let shortestTextItem = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidthLimit, offset: CGPoint(), media: media, webpage: webpage, minimizeWidth: true).0.first as? InstantPageTextItem {
+                if let shortestTextItem = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidthLimit, offset: CGPoint(), media: media, webpage: webpage, minimizeWidth: true).0 {
                     minCellWidth = shortestTextItem.effectiveWidth() + totalCellPadding
                 }
                 
-                if let longestTextItem = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidthLimit, offset: CGPoint(), media: media, webpage: webpage).0.first as? InstantPageTextItem {
+                if let longestTextItem = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidthLimit, offset: CGPoint(), media: media, webpage: webpage).0 {
                     maxCellWidth = longestTextItem.effectiveWidth() + totalCellPadding
                 }
             }
@@ -524,8 +524,8 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
             var additionalItems: [InstantPageItem] = []
             var cellHeight: CGFloat?
             if let text = cell.text {
-                let (items, _) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidth - totalCellPadding, offset: CGPoint(), media: media, webpage: webpage)
-                if let textItem = items.first as? InstantPageTextItem {
+                let (textItem, items, _) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidth - totalCellPadding, offset: CGPoint(), media: media, webpage: webpage)
+                if let textItem = textItem {
                     isEmptyRow = false
                     textItem.alignment = cell.alignment.textAlignment
                     textItem.frame = textItem.frame.offsetBy(dx: tableCellInsets.left, dy: 0.0)

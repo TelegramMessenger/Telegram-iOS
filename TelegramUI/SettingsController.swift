@@ -402,7 +402,8 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         entries.append(.privacyAndSecurity(presentationData.theme, SettingsItemIcons.security, presentationData.strings.Settings_PrivacySettings))
         entries.append(.dataAndStorage(presentationData.theme, SettingsItemIcons.dataAndStorage, presentationData.strings.Settings_ChatSettings))
         entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.Settings_Appearance))
-        entries.append(.language(presentationData.theme, SettingsItemIcons.language, presentationData.strings.Settings_AppLanguage, presentationData.strings.Localization_LanguageName))
+        let languageName = presentationData.strings.primaryComponent.localizedName
+        entries.append(.language(presentationData.theme, SettingsItemIcons.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
         
         if hasPassport {
             entries.append(.passport(presentationData.theme, SettingsItemIcons.passport, presentationData.strings.Settings_Passport, ""))
@@ -523,8 +524,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }, presentController: { controller in
         presentControllerImpl?(controller, nil)
     }, openLanguage: {
-        let controller = LanguageSelectionController(account: account)
-        presentControllerImpl?(controller, nil)
+        //let controller = LanguageSelectionController(account: account)
+        //presentControllerImpl?(controller, nil)
+        pushControllerImpl?(LocalizationListController(account: account))
     }, openPassport: {
         let controller = SecureIdAuthController(account: account, mode: .list)
         presentControllerImpl?(controller, nil)

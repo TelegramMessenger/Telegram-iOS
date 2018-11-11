@@ -218,6 +218,12 @@
 		D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD771FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift */; };
 		D056CD7A1FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD791FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift */; };
 		D056CD7C1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD7B1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift */; };
+		D05D8B3A2192FC460064586F /* LocalizationListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B392192FC460064586F /* LocalizationListController.swift */; };
+		D05D8B3F2192FC6E0064586F /* LocalizationListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B3E2192FC6E0064586F /* LocalizationListControllerNode.swift */; };
+		D05D8B412192FC8A0064586F /* LocalizationListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B402192FC8A0064586F /* LocalizationListItem.swift */; };
+		D05D8B742195CD890064586F /* SetupTwoStepVerificationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B732195CD890064586F /* SetupTwoStepVerificationController.swift */; };
+		D05D8B762195CD930064586F /* SetupTwoStepVerificationControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B752195CD930064586F /* SetupTwoStepVerificationControllerNode.swift */; };
+		D05D8B782195E0050064586F /* SetupTwoStepVerificationContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B772195E0050064586F /* SetupTwoStepVerificationContentNode.swift */; };
 		D0642EFC1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */; };
 		D064EF871F69A06F00AC0398 /* MessageContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = D064EF861F69A06F00AC0398 /* MessageContentKind.swift */; };
 		D0671F232143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0671F222143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift */; };
@@ -1502,6 +1508,12 @@
 		D05B724C1E720393000BD3AD /* SelectivePrivacySettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SelectivePrivacySettingsController.swift; sourceTree = "<group>"; };
 		D05B724F1E720597000BD3AD /* PresentationData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationData.swift; sourceTree = "<group>"; };
 		D05BFB5E1EAA22F900909D38 /* PresentationResourceKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationResourceKey.swift; sourceTree = "<group>"; };
+		D05D8B392192FC460064586F /* LocalizationListController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationListController.swift; sourceTree = "<group>"; };
+		D05D8B3E2192FC6E0064586F /* LocalizationListControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationListControllerNode.swift; sourceTree = "<group>"; };
+		D05D8B402192FC8A0064586F /* LocalizationListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationListItem.swift; sourceTree = "<group>"; };
+		D05D8B732195CD890064586F /* SetupTwoStepVerificationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupTwoStepVerificationController.swift; sourceTree = "<group>"; };
+		D05D8B752195CD930064586F /* SetupTwoStepVerificationControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupTwoStepVerificationControllerNode.swift; sourceTree = "<group>"; };
+		D05D8B772195E0050064586F /* SetupTwoStepVerificationContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupTwoStepVerificationContentNode.swift; sourceTree = "<group>"; };
 		D0613FC71E5F8AB100202CDB /* ChannelInfoController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelInfoController.swift; sourceTree = "<group>"; };
 		D0613FCC1E60482300202CDB /* ChannelMembersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelMembersController.swift; sourceTree = "<group>"; };
 		D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertToSupergroupController.swift; sourceTree = "<group>"; };
@@ -2918,6 +2930,16 @@
 			name = Resources;
 			sourceTree = "<group>";
 		};
+		D05D8B792195E00C0064586F /* Setup Two Step Verification */ = {
+			isa = PBXGroup;
+			children = (
+				D05D8B732195CD890064586F /* SetupTwoStepVerificationController.swift */,
+				D05D8B752195CD930064586F /* SetupTwoStepVerificationControllerNode.swift */,
+				D05D8B772195E0050064586F /* SetupTwoStepVerificationContentNode.swift */,
+			);
+			name = "Setup Two Step Verification";
+			sourceTree = "<group>";
+		};
 		D067B4AE211C916D00796039 /* Channel Intro */ = {
 			isa = PBXGroup;
 			children = (
@@ -3280,6 +3302,9 @@
 			children = (
 				D0AF7C451ED84BC500CD8E0F /* LanguageSelectionController.swift */,
 				D0AF7C491ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift */,
+				D05D8B392192FC460064586F /* LocalizationListController.swift */,
+				D05D8B3E2192FC6E0064586F /* LocalizationListControllerNode.swift */,
+				D05D8B402192FC8A0064586F /* LocalizationListItem.swift */,
 			);
 			name = "Language Selection";
 			sourceTree = "<group>";
@@ -4518,6 +4543,7 @@
 				D0760B231E9D015D00F1F3C4 /* PasscodeOptionsController.swift */,
 				D0CE6F6F213EEE5000BCD44B /* CreatePasswordController.swift */,
 				D0B3AC7F2142E2E900CD1374 /* ResetPasswordController.swift */,
+				D05D8B792195E00C0064586F /* Setup Two Step Verification */,
 			);
 			name = "Privacy and Security";
 			sourceTree = "<group>";
@@ -4930,6 +4956,7 @@
 				D0EC6CDF1EB9F58800EBF1C3 /* PresentationResourceKey.swift in Sources */,
 				D0EC6CE01EB9F58800EBF1C3 /* PresentationResourcesRootController.swift in Sources */,
 				D0EC6CE11EB9F58800EBF1C3 /* PresentationResourcesItemList.swift in Sources */,
+				D05D8B3F2192FC6E0064586F /* LocalizationListControllerNode.swift in Sources */,
 				D0EC6CE21EB9F58800EBF1C3 /* PresentationResourcesChatList.swift in Sources */,
 				D0EC6CE31EB9F58800EBF1C3 /* PresentationResourcesChat.swift in Sources */,
 				D0AA840C1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift in Sources */,
@@ -4949,6 +4976,7 @@
 				D0EC6CED1EB9F58800EBF1C3 /* StringPluralization.swift in Sources */,
 				D02B2B9820810DA00062476B /* StickerPaneSearchStickerItem.swift in Sources */,
 				D020A9DC1FEAE6E7008C66F7 /* OverlayPlayerControllerNode.swift in Sources */,
+				D05D8B742195CD890064586F /* SetupTwoStepVerificationController.swift in Sources */,
 				D04B26EC20082EB50053A58C /* LocationBroadcastPanelWavesNode.swift in Sources */,
 				D0EC6CEE1EB9F58800EBF1C3 /* InAppNotificationSettings.swift in Sources */,
 				D0EC6CEF1EB9F58800EBF1C3 /* PresentationPasscodeSettings.swift in Sources */,
@@ -4977,6 +5005,7 @@
 				D0EC6CF91EB9F58800EBF1C3 /* MediaManager.swift in Sources */,
 				096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */,
 				D01776B81F1D6FB30044446D /* RadialProgressContentNode.swift in Sources */,
+				D05D8B762195CD930064586F /* SetupTwoStepVerificationControllerNode.swift in Sources */,
 				D0EC6CFA1EB9F58800EBF1C3 /* ManagedAudioSession.swift in Sources */,
 				D0EB5ADF1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift in Sources */,
 				D0EC6CFB1EB9F58800EBF1C3 /* ManagedAudioRecorder.swift in Sources */,
@@ -5044,6 +5073,7 @@
 				D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */,
 				D0CE67941F7DB45100FFB557 /* ChatMessageContactBubbleContentNode.swift in Sources */,
 				D0B3AC802142E2E900CD1374 /* ResetPasswordController.swift in Sources */,
+				D05D8B3A2192FC460064586F /* LocalizationListController.swift in Sources */,
 				D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */,
 				D0ADF966212E05A300310BBC /* TonePlayer.swift in Sources */,
 				D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */,
@@ -5236,6 +5266,7 @@
 				D04614372005094E00EC0EF2 /* DeviceLocationManager.swift in Sources */,
 				D0EC6D881EB9F58800EBF1C3 /* ChatControllerTitlePanelNodeContainer.swift in Sources */,
 				D0EC6D891EB9F58800EBF1C3 /* ChatSecretAutoremoveTimerActionSheet.swift in Sources */,
+				D05D8B782195E0050064586F /* SetupTwoStepVerificationContentNode.swift in Sources */,
 				D0EC6D8A1EB9F58800EBF1C3 /* ChatInfo.swift in Sources */,
 				D0EC6D8B1EB9F58800EBF1C3 /* ChatHistoryNavigationStack.swift in Sources */,
 				D0EC6D8C1EB9F58800EBF1C3 /* NavigateToChatController.swift in Sources */,
@@ -5600,6 +5631,7 @@
 				D0EC6E4A1EB9F58900EBF1C3 /* ItemListControllerNode.swift in Sources */,
 				D0147BA9206EA35000E40378 /* SecureIdDocumentGalleryController.swift in Sources */,
 				D0B37C5C1F8D22AE004252DF /* ThemeSettingsController.swift in Sources */,
+				D05D8B412192FC8A0064586F /* LocalizationListItem.swift in Sources */,
 				D0383ED4207CFBB900C45548 /* GalleryThumbnailContainerNode.swift in Sources */,
 				D0EC6E4B1EB9F58900EBF1C3 /* ItemListControllerSegmentedTitleView.swift in Sources */,
 				D0EC6E4D1EB9F58900EBF1C3 /* PeerInfoController.swift in Sources */,

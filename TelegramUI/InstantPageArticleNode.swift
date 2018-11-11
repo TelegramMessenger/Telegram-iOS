@@ -90,7 +90,7 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
         
         let size = self.bounds.size
         let inset: CGFloat = 17.0
-        let imageSize = CGSize(width: 65.0, height: 65.0)
+        let imageSize = CGSize(width: 44.0, height: 44.0)
         
         self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: size.height + UIScreenPixel))
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -107,9 +107,9 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
         
         if let imageNode = self.imageNode {
             if self.rtl {
-                imageNode.frame = CGRect(origin: CGPoint(x: inset, y: 14.0), size: imageSize)
+                imageNode.frame = CGRect(origin: CGPoint(x: inset, y: 11.0), size: imageSize)
             } else {
-                imageNode.frame = CGRect(origin: CGPoint(x: size.width - inset - imageSize.width, y: 14.0), size: imageSize)
+                imageNode.frame = CGRect(origin: CGPoint(x: size.width - inset - imageSize.width, y: 11.0), size: imageSize)
             }
         }
     }

@@ -432,9 +432,9 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
     }
 }
 
-func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0) -> ([InstantPageItem], CGSize) {
+func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0) -> (InstantPageTextItem?, [InstantPageItem], CGSize) {
     if string.length == 0 {
-        return ([], CGSize())
+        return (nil, [], CGSize())
     }
     
     var lines: [InstantPageTextLine] = []
@@ -449,7 +449,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     }
     let image = string.attribute(NSAttributedStringKey.init(rawValue: InstantPageMediaIdAttribute), at: 0, effectiveRange: nil)
     guard font != nil || image != nil else {
-        return ([], CGSize())
+        return (nil, [], CGSize())
     }
     
     var lineSpacingFactor: CGFloat = 1.12
@@ -611,5 +611,5 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         }
     }
     
-    return (items, textItem.frame.size)
+    return (textItem, items, textItem.frame.size)
 }

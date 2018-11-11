@@ -87,7 +87,7 @@ func layoutDetailsItem(theme: InstantPageTheme, title: NSAttributedString, bound
     let detailsInset: CGFloat = 17.0 + safeInset
     let titleInset: CGFloat = 22.0
     
-    let (titleItems, titleSize) = layoutTextItemWithString(title, boundingWidth: boundingWidth - detailsInset * 2.0 - titleInset, offset: CGPoint(x: detailsInset + titleInset, y: 0.0))
+    let (_, titleItems, titleSize) = layoutTextItemWithString(title, boundingWidth: boundingWidth - detailsInset * 2.0 - titleInset, offset: CGPoint(x: detailsInset + titleInset, y: 0.0))
     let titleHeight = max(44.0, titleSize.height + 26.0)
     var offset: CGFloat?
     for var item in titleItems {

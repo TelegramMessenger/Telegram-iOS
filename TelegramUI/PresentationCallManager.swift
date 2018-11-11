@@ -72,6 +72,7 @@ public final class PresentationCallManager {
         var startCallImpl: ((UUID, String) -> Signal<Bool, NoError>)?
         var answerCallImpl: ((UUID) -> Void)?
         var endCallImpl: ((UUID) -> Signal<Bool, NoError>)?
+        var setCallMutedImpl: ((UUID, Bool) -> Void)?
         var audioSessionActivationChangedImpl: ((Bool) -> Void)?
         
         self.callKitIntegration = CallKitIntegration(startCall: { uuid, handle in
@@ -88,6 +89,8 @@ public final class PresentationCallManager {
             } else {
                 return .single(false)
             }
+        }, setCallMuted: { uuid, isMuted in
+            setCallMutedImpl?(uuid, isMuted)
         }, audioSessionActivationChanged: { value in
             audioSessionActivationChangedImpl?(value)
         })
@@ -157,6 +160,12 @@ public final class PresentationCallManager {
                 return currentCall.hangUp()
             } else {
                 return .single(false)
+            }
+        }
+        
+        setCallMutedImpl = { [weak self] uuid, isMuted in
+            if let strongSelf = self, let currentCall = strongSelf.currentCall {
+                currentCall.setIsMuted(isMuted)
             }
         }
         
