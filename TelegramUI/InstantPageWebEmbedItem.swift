@@ -6,7 +6,7 @@ import AsyncDisplayKit
 final class InstantPageWebEmbedItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
-    let separatesTiles: Bool = true
+    let separatesTiles: Bool = false
     let medias: [InstantPageMedia] = []
     
     let url: String?

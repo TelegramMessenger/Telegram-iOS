@@ -167,7 +167,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         loadStickerSaveStatus = file.fileId
                     }
                 }
-            } else if let _ = media as? TelegramMediaAction {
+            } else if media is TelegramMediaAction || media is TelegramMediaExpiredContent {
                 isAction = true
             } else if let image = media as? TelegramMediaImage {
                 if !messages[0].containsSecretMedia {
@@ -545,7 +545,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                 } else if let peer = transaction.getPeer(id.peerId) {
                     var isAction = false
                     for media in message.media {
-                        if media is TelegramMediaAction {
+                        if media is TelegramMediaAction || media is TelegramMediaExpiredContent {
                             isAction = true
                         }
                     }

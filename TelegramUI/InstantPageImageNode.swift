@@ -11,12 +11,10 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private var theme: InstantPageTheme
     let media: InstantPageMedia
     let attributes: [InstantPageImageAttribute]
-    let url: InstantPageUrlItem?
     private let interactive: Bool
     private let roundCorners: Bool
     private let fit: Bool
     private let openMedia: (InstantPageMedia) -> Void
-    private let openUrl: (InstantPageUrlItem) -> Void
     
     private let imageNode: TransformImageNode
     private let pinNode: ChatMessageLiveLocationPositionNode
@@ -27,18 +25,16 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], url: InstantPageUrlItem? = nil, interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void = { _ in }) {
+    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.account = account
         self.theme = theme
         self.webPage = webPage
         self.media = media
         self.attributes = attributes
-        self.url = url
         self.interactive = interactive
         self.roundCorners = roundCorners
         self.fit = fit
         self.openMedia = openMedia
-        self.openUrl = openUrl
         
         self.imageNode = TransformImageNode()
         self.pinNode = ChatMessageLiveLocationPositionNode()
@@ -99,14 +95,6 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             self.theme = theme
             self.themeUpdated = true
             self.setNeedsLayout()
-            
-            if let file = self.media.media as? TelegramMediaFile {
-                let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
-                if file.mimeType.hasPrefix("image/") {
-                    _ = freeMediaFileInteractiveFetched(account: self.account, fileReference: fileReference).start()
-                    self.imageNode.setSignal(chatMessageImageFile(account: self.account, fileReference: fileReference, thumbnail: false, fetched: true))
-                }
-            }
         }
     }
     
@@ -126,7 +114,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 let boundingSize = size
                 let radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
                 let makeLayout = self.imageNode.asyncLayout()
-                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.theme.pageBackgroundColor))
                 apply()
             } else if let file = self.media.media as? TelegramMediaFile, let dimensions = file.dimensions {
                 let emptyColor = file.mimeType.hasPrefix("image/") ? self.theme.imageEmptyColor : nil
@@ -175,11 +163,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let url = self.url {
-                self.openUrl(url)
-            } else {
-                self.openMedia(self.media)
-            }
+            self.openMedia(self.media)
         }
     }
 }

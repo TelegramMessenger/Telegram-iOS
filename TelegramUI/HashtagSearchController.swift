@@ -56,6 +56,7 @@ final class HashtagSearchController: TelegramController {
                 strongSelf.controllerNode.listNode.clearHighlightAnimated(true)
             }
         }, groupSelected: { _ in
+        }, addContact: {_ in
         }, setPeerIdWithRevealedOptions: { _, _ in
         }, setItemPinned: { _, _ in
         }, setPeerMuted: { _, _ in

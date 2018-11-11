@@ -8,13 +8,13 @@ import TelegramCore
 
 enum AvatarGalleryEntry: Equatable {
     case topImage([TelegramMediaImageRepresentation], GalleryItemIndexData?)
-    case image(TelegramMediaImage, GalleryItemIndexData?)
+    case image(TelegramMediaImage, Peer, Int32, GalleryItemIndexData?)
     
     var representations: [TelegramMediaImageRepresentation] {
         switch self {
             case let .topImage(representations, _):
                 return representations
-            case let .image(image, _):
+            case let .image(image, _, _, _):
                 return image.representations
         }
     }
@@ -23,7 +23,7 @@ enum AvatarGalleryEntry: Equatable {
         switch self {
             case let .topImage(_, indexData):
                 return indexData
-            case let .image(_, indexData):
+            case let .image(_, _, _, indexData):
                 return indexData
         }
     }
@@ -36,8 +36,8 @@ enum AvatarGalleryEntry: Equatable {
                 } else {
                     return false
                 }
-            case let .image(lhsImage, lhsIndexData):
-                if case let .image(rhsImage, rhsIndexData) = rhs, lhsImage.isEqual(to: rhsImage), lhsIndexData == rhsIndexData {
+            case let .image(lhsImage, lhsPeer, lhsDate, lhsIndexData):
+                if case let .image(rhsImage, rhsPeer, rhsDate, rhsIndexData) = rhs, lhsImage.isEqual(to: rhsImage), arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsIndexData == rhsIndexData {
                     return true
                 } else {
                     return false
@@ -80,9 +80,9 @@ func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[Avatar
                 let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                 if result.isEmpty, let first = initialEntries.first {
                     let image = TelegramMediaImage(imageId: photo.image.imageId, representations: first.representations, reference: photo.reference, partialReference: nil)
-                    result.append(.image(image, indexData))
+                    result.append(.image(image, peer, photo.date, indexData))
                 } else {
-                    result.append(.image(photo.image, indexData))
+                    result.append(.image(photo.image, peer, photo.date, indexData))
                 }
                 index += 1
             }
@@ -166,7 +166,7 @@ class AvatarGalleryController: ViewController {
                     strongSelf.entries = entries
                     strongSelf.centralEntryIndex = 0
                     if strongSelf.isViewLoaded {
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(account: account, peer: peer, strings: presentationData.strings, entry: entry, delete: strongSelf.peer.id == strongSelf.account.peerId ? {
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(account: account, peer: peer, presentationData: presentationData, entry: entry, delete: strongSelf.peer.id == strongSelf.account.peerId ? {
                             self?.deleteEntry(entry)
                             } : nil) }), centralItemIndex: 0, keepFirst: true)
                         
@@ -302,7 +302,7 @@ class AvatarGalleryController: ViewController {
         }
         
         let presentationData = self.presentationData
-        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(account: self.account, peer: peer, strings: presentationData.strings, entry: entry, delete: self.peer.id == self.account.peerId ? { [weak self] in
+        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(account: self.account, peer: peer, presentationData: presentationData, entry: entry, delete: self.peer.id == self.account.peerId ? { [weak self] in
             self?.deleteEntry(entry)
             } : nil) }), centralItemIndex: self.centralEntryIndex)
         
@@ -387,7 +387,7 @@ class AvatarGalleryController: ViewController {
         switch entry {
             case .topImage:
                 break
-            case let .image(image, _):
+            case let .image(image, _, _, _):
                 if let reference = image.reference {
                     let _ = removeAccountPhoto(network: self.account.network, reference: reference).start()
                 }

@@ -21,31 +21,44 @@ struct InstantPageGalleryEntry: Equatable {
     let pageId: MediaId
     let media: InstantPageMedia
     let caption: RichText?
+    let credit: RichText?
     let location: InstantPageGalleryEntryLocation
     
     static func ==(lhs: InstantPageGalleryEntry, rhs: InstantPageGalleryEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.pageId == rhs.pageId && lhs.media == rhs.media && lhs.caption == rhs.caption && lhs.location == rhs.location
+        return lhs.index == rhs.index && lhs.pageId == rhs.pageId && lhs.media == rhs.media && lhs.caption == rhs.caption && lhs.credit == rhs.credit && lhs.location == rhs.location
     }
     
     func item(account: Account, webPage: TelegramMediaWebpage, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) -> GalleryItem {
-        let styleStack = InstantPageTextStyleStack()
-        styleStack.push(.fontSize(16.0))
-        styleStack.push(.textColor(.white))
-        styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
-        styleStack.push(.fontSerif(false))
-        styleStack.push(.lineSpacingFactor(1.0))
-        
-        let attributedString: NSAttributedString
-        if let caption = self.media.caption {
-            attributedString = attributedStringForRichText(caption, styleStack: styleStack)
+        let caption: NSAttributedString
+        let credit: NSAttributedString
+        if let mediaCaption = self.media.caption {
+            let styleStack = InstantPageTextStyleStack()
+            styleStack.push(.fontSize(16.0))
+            styleStack.push(.textColor(.white))
+            styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
+            styleStack.push(.fontSerif(false))
+            styleStack.push(.lineSpacingFactor(1.0))
+            caption = attributedStringForRichText(mediaCaption, styleStack: styleStack)
         } else {
-            attributedString = NSAttributedString(string: "")
+            caption = NSAttributedString(string: "")
+        }
+        
+        if let mediaCredit = self.media.credit {
+            let styleStack = InstantPageTextStyleStack()
+            styleStack.push(.fontSize(14.0))
+            styleStack.push(.textColor(.white))
+            styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
+            styleStack.push(.fontSerif(false))
+            styleStack.push(.lineSpacingFactor(1.0))
+            credit = attributedStringForRichText(mediaCredit, styleStack: styleStack)
+        } else {
+            credit = NSAttributedString(string: "")
         }
         
         if let image = self.media.media as? TelegramMediaImage {
-            return InstantImageGalleryItem(account: account, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: attributedString, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
+            return InstantImageGalleryItem(account: account, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
         } else if let file = self.media.media as? TelegramMediaFile, file.isVideo {
-            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: GalleryItemIndexData(position: self.location.position, totalCount: self.location.totalCount), contentInfo: .webPage(webPage, file), caption: attributedString, openUrl: { _ in }, openUrlOptions: { _ in })
+            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: GalleryItemIndexData(position: self.location.position, totalCount: self.location.totalCount), contentInfo: .webPage(webPage, file), caption: caption, credit: credit, openUrl: { _ in }, openUrlOptions: { _ in })
         } else {
             preconditionFailure()
         }

@@ -54,6 +54,7 @@ final class ChatListNodeInteraction {
     let peerSelected: (Peer) -> Void
     let messageSelected: (Message, Bool) -> Void
     let groupSelected: (PeerGroupId) -> Void
+    let addContact: (String) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let setItemPinned: (PinnedItemId, Bool) -> Void
     let setPeerMuted: (PeerId, Bool) -> Void
@@ -63,11 +64,12 @@ final class ChatListNodeInteraction {
     
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, messageSelected: @escaping (Message, Bool) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void) {
+    init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, messageSelected: @escaping (Message, Bool) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.messageSelected = messageSelected
         self.groupSelected = groupSelected
+        self.addContact = addContact
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.setItemPinned = setItemPinned
         self.setPeerMuted = setPeerMuted
@@ -293,6 +295,7 @@ final class ChatListNode: ListView {
     
     var peerSelected: ((PeerId, Bool, Bool) -> Void)?
     var groupSelected: ((PeerGroupId) -> Void)?
+    var addContact: ((String) -> Void)?
     var activateSearch: (() -> Void)?
     var deletePeerChat: ((PeerId) -> Void)?
     var updatePeerGrouping: ((PeerId, Bool) -> Void)?
@@ -371,6 +374,7 @@ final class ChatListNode: ListView {
             if let strongSelf = self, let groupSelected = strongSelf.groupSelected {
                 groupSelected(groupId)
             }
+        }, addContact: { _ in
         }, setPeerIdWithRevealedOptions: { [weak self] peerId, fromPeerId in
             if let strongSelf = self {
                 strongSelf.updateState { state in

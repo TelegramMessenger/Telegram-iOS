@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0902838821931D960067EFBD /* LanguageSuggestionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0902838721931D960067EFBD /* LanguageSuggestionController.swift */; };
+		0902838D2194AEB90067EFBD /* ImageTransparency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0902838C2194AEB90067EFBD /* ImageTransparency.swift */; };
+		090E63E62195880F00E3C035 /* ContactAddItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63E52195880F00E3C035 /* ContactAddItem.swift */; };
+		090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */; };
 		091346962183496900846E49 /* InstantPageArticleItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091346952183496900846E49 /* InstantPageArticleItem.swift */; };
 		091346982183498A00846E49 /* InstantPageArticleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091346972183498A00846E49 /* InstantPageArticleNode.swift */; };
 		0913469A218528D200846E49 /* InstantPageTableItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09134699218528D200846E49 /* InstantPageTableItem.swift */; };
@@ -87,7 +91,6 @@
 		D01776BA1F1D704F0044446D /* RadialStatusIconContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776B91F1D704F0044446D /* RadialStatusIconContentNode.swift */; };
 		D01776BC1F1E21AF0044446D /* RadialStatusBackgroundNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776BB1F1E21AF0044446D /* RadialStatusBackgroundNode.swift */; };
 		D01776BE1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776BD1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift */; };
-		D018477E1FFBC01E00075256 /* TimestampStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018477D1FFBC01E00075256 /* TimestampStrings.swift */; };
 		D01847801FFBD12E00075256 /* ChatListPresentationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018477F1FFBD12E00075256 /* ChatListPresentationData.swift */; };
 		D0185E882089ED5F005E1A6C /* ProxyListSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */; };
 		D0185E8A208A01AF005E1A6C /* ProxySettingsActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */; };
@@ -583,11 +586,9 @@
 		D0EC6CC81EB9F58800EBF1C3 /* ProgressiveImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */; };
 		D0EC6CC91EB9F58800EBF1C3 /* WebP.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E941D6B8C9B0046BCD6 /* WebP.swift */; };
 		D0EC6CCA1EB9F58800EBF1C3 /* PeerPresenceStatusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */; };
-		D0EC6CCB1EB9F58800EBF1C3 /* ApplicationSpecificData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED5D4A1DC806D7007CBB15 /* ApplicationSpecificData.swift */; };
 		D0EC6CCC1EB9F58800EBF1C3 /* ServiceSoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE641DCBC26B007511FD /* ServiceSoundManager.swift */; };
 		D0EC6CCD1EB9F58800EBF1C3 /* DeclareEncodables.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE701DCBF23F007511FD /* DeclareEncodables.swift */; };
 		D0EC6CCE1EB9F58800EBF1C3 /* TelegramApplicationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */; };
-		D0EC6CCF1EB9F58800EBF1C3 /* GeoLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04B66B71DD672D00049C3D2 /* GeoLocation.swift */; };
 		D0EC6CD11EB9F58800EBF1C3 /* UrlHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = D023836F1DDF0462004018B6 /* UrlHandling.swift */; };
 		D0EC6CD31EB9F58800EBF1C3 /* GenerateTextEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F917B41E0DA396003687E6 /* GenerateTextEntities.swift */; };
 		D0EC6CD41EB9F58800EBF1C3 /* StringWithAppliedEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017494D1E1059570057C89A /* StringWithAppliedEntities.swift */; };
@@ -1055,6 +1056,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0902838721931D960067EFBD /* LanguageSuggestionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageSuggestionController.swift; sourceTree = "<group>"; };
+		0902838C2194AEB90067EFBD /* ImageTransparency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTransparency.swift; sourceTree = "<group>"; };
+		090E63E52195880F00E3C035 /* ContactAddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactAddItem.swift; sourceTree = "<group>"; };
+		090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAddContact.swift; sourceTree = "<group>"; };
 		091346952183496900846E49 /* InstantPageArticleItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageArticleItem.swift; sourceTree = "<group>"; };
 		091346972183498A00846E49 /* InstantPageArticleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageArticleNode.swift; sourceTree = "<group>"; };
 		09134699218528D200846E49 /* InstantPageTableItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageTableItem.swift; sourceTree = "<group>"; };
@@ -1179,7 +1184,6 @@
 		D01776BD1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMediaCollectionSectionsNode.swift; sourceTree = "<group>"; };
 		D0177B7F1DFAE18500A5083A /* MediaPlayerTimeTextNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaPlayerTimeTextNode.swift; sourceTree = "<group>"; };
 		D0177B831DFB095000A5083A /* FileMediaResourceStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileMediaResourceStatus.swift; sourceTree = "<group>"; };
-		D018477D1FFBC01E00075256 /* TimestampStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimestampStrings.swift; sourceTree = "<group>"; };
 		D018477F1FFBD12E00075256 /* ChatListPresentationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListPresentationData.swift; sourceTree = "<group>"; };
 		D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyListSettingsController.swift; sourceTree = "<group>"; };
 		D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingsActionItem.swift; sourceTree = "<group>"; };
@@ -1379,7 +1383,6 @@
 		D04B4D101EEA04D400711AF6 /* MapResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapResources.swift; sourceTree = "<group>"; };
 		D04B4D121EEA0A6500711AF6 /* ChatMessageMapBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageMapBubbleContentNode.swift; sourceTree = "<group>"; };
 		D04B4D651EEA993A00711AF6 /* LegacyLocationController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyLocationController.swift; sourceTree = "<group>"; };
-		D04B66B71DD672D00049C3D2 /* GeoLocation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GeoLocation.swift; sourceTree = "<group>"; };
 		D04BB2B21E44E56200650E93 /* AuthorizationSequenceSplashController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceSplashController.swift; sourceTree = "<group>"; };
 		D04BB2B41E44E58E00650E93 /* AuthorizationSequencePhoneEntryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequencePhoneEntryController.swift; sourceTree = "<group>"; };
 		D04BB2B81E44E5E400650E93 /* AuthorizationSequencePhoneEntryControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequencePhoneEntryControllerNode.swift; sourceTree = "<group>"; };
@@ -2027,7 +2030,6 @@
 		D0EC6EBC1EBA100F00EBF1C3 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		D0EC6FFA1EBA1DE900EBF1C3 /* OngoingCallThreadLocalContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OngoingCallThreadLocalContext.h; sourceTree = "<group>"; };
 		D0EC6FFC1EBA1F2400EBF1C3 /* OngoingCallThreadLocalContext.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = OngoingCallThreadLocalContext.mm; sourceTree = "<group>"; };
-		D0ED5D4A1DC806D7007CBB15 /* ApplicationSpecificData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationSpecificData.swift; sourceTree = "<group>"; };
 		D0EE97191D88BCA0006C18E1 /* ChatInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInfo.swift; sourceTree = "<group>"; };
 		D0EEE9A02165585F001292A6 /* DocumentPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPreviewController.swift; sourceTree = "<group>"; };
 		D0EF40DC1E72F00E000DFCD4 /* SelectivePrivacySettingsPeersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SelectivePrivacySettingsPeersController.swift; sourceTree = "<group>"; };
@@ -2230,6 +2232,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0902838921931DA30067EFBD /* Language Suggestion */ = {
+			isa = PBXGroup;
+			children = (
+				0902838721931D960067EFBD /* LanguageSuggestionController.swift */,
+			);
+			name = "Language Suggestion";
+			sourceTree = "<group>";
+		};
 		092F368B2154AAD6001A9F49 /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
@@ -2427,6 +2437,7 @@
 				D0192D3B210A44D00005FA10 /* DeviceContactData.swift */,
 				D0192D43210A5AA50005FA10 /* DeviceContactDataManager.swift */,
 				D0F4B0212110972300912B92 /* ContactInfoStrings.swift */,
+				090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */,
 			);
 			name = "Device Contacts";
 			sourceTree = "<group>";
@@ -3122,6 +3133,7 @@
 				D0F69E6F1D6B8C340046BCD6 /* ContactsPeerItem.swift */,
 				D0F69E711D6B8C340046BCD6 /* ContactsSectionHeaderAccessoryItem.swift */,
 				D08775131E3F4A7700A97350 /* ContactListNameIndexHeader.swift */,
+				090E63E52195880F00E3C035 /* ContactAddItem.swift */,
 			);
 			name = "Contact List Node";
 			sourceTree = "<group>";
@@ -4340,6 +4352,7 @@
 		D0F69E791D6B8C3B0046BCD6 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				0902838921931DA30067EFBD /* Language Suggestion */,
 				D02C816F2177715A00CD1006 /* Notifications */,
 				D0FA0AC21E7742CE005BB9B7 /* Privacy and Security */,
 				D0C9323A1E0B4AD40074F044 /* Data and Storage */,
@@ -4405,11 +4418,9 @@
 				D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */,
 				D0F69E941D6B8C9B0046BCD6 /* WebP.swift */,
 				D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */,
-				D0ED5D4A1DC806D7007CBB15 /* ApplicationSpecificData.swift */,
 				D073CE641DCBC26B007511FD /* ServiceSoundManager.swift */,
 				D073CE701DCBF23F007511FD /* DeclareEncodables.swift */,
 				D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */,
-				D04B66B71DD672D00049C3D2 /* GeoLocation.swift */,
 				D023836F1DDF0462004018B6 /* UrlHandling.swift */,
 				D0F917B41E0DA396003687E6 /* GenerateTextEntities.swift */,
 				D017494D1E1059570057C89A /* StringWithAppliedEntities.swift */,
@@ -4432,7 +4443,6 @@
 				D01C06BF1FBF118A001561AB /* MessageUtils.swift */,
 				D0C26D5D1FDF49E7004ABF18 /* DateFormat.swift */,
 				D09250051FE5371D003F693F /* GlobalExperimentalSettings.swift */,
-				D018477D1FFBC01E00075256 /* TimestampStrings.swift */,
 				D0C26D561FDF2388004ABF18 /* OpenChatMessage.swift */,
 				D04ECD711FFBF22B00DE9029 /* OpenUrl.swift */,
 				D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */,
@@ -4452,6 +4462,7 @@
 				D0192D45210F4F940005FA10 /* FixSearchableListNodeScrolling.swift */,
 				09C3466C2167D63A00B76780 /* Accessibility.swift */,
 				D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */,
+				0902838C2194AEB90067EFBD /* ImageTransparency.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -4874,7 +4885,6 @@
 				D081E108217F583F003CD921 /* LanguageLinkPreviewContentNode.swift in Sources */,
 				D0EC6CC91EB9F58800EBF1C3 /* WebP.swift in Sources */,
 				D0EC6CCA1EB9F58800EBF1C3 /* PeerPresenceStatusManager.swift in Sources */,
-				D0EC6CCB1EB9F58800EBF1C3 /* ApplicationSpecificData.swift in Sources */,
 				D09E637F1F0E8C9F003444CD /* PeerMessagesMediaPlaylist.swift in Sources */,
 				D0E412DF206AA00500BEE4A2 /* SecureIdVerificationDocumentsContext.swift in Sources */,
 				D0EC6CCC1EB9F58800EBF1C3 /* ServiceSoundManager.swift in Sources */,
@@ -4883,7 +4893,6 @@
 				D02D60B1206C189900FEFE1E /* SecureIdPlaintextFormController.swift in Sources */,
 				D0CFBB951FD8B05000B65C0D /* OverlayInstantVideoDecoration.swift in Sources */,
 				D0EC6CCE1EB9F58800EBF1C3 /* TelegramApplicationContext.swift in Sources */,
-				D0EC6CCF1EB9F58800EBF1C3 /* GeoLocation.swift in Sources */,
 				D09394132007F5BB00997F31 /* LocationBroadcastNavigationAccessoryPanel.swift in Sources */,
 				D0471B5C1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift in Sources */,
 				D0C27B3D1F4B454800A4E170 /* InstantPagePlayableVideoNode.swift in Sources */,
@@ -5089,6 +5098,7 @@
 				D0E8B8B9204477B600605593 /* SecretChatKeyVisualization.swift in Sources */,
 				D0EC6D371EB9F58800EBF1C3 /* SearchDisplayController.swift in Sources */,
 				D0185E8C208A025A005E1A6C /* ProxySettingsServerItem.swift in Sources */,
+				090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */,
 				D04281ED200E3B28009DDE36 /* ItemListControllerSearch.swift in Sources */,
 				D0EC6D381EB9F58800EBF1C3 /* SearchDisplayControllerContentNode.swift in Sources */,
 				D06F1EA41F6C0A5D00FE8B74 /* ChatHistorySearchContainerNode.swift in Sources */,
@@ -5236,6 +5246,7 @@
 				D0EC6D8F1EB9F58800EBF1C3 /* ChatMessageBubbleContentCalclulateImageCorners.swift in Sources */,
 				D01776BC1F1E21AF0044446D /* RadialStatusBackgroundNode.swift in Sources */,
 				D0FE4DE61F0BA58A00E8A0B3 /* OverlayMediaItemNode.swift in Sources */,
+				0902838821931D960067EFBD /* LanguageSuggestionController.swift in Sources */,
 				D0E8B8A72044339500605593 /* PresentationCallToneData.swift in Sources */,
 				D0F19F6420E5A15B00EEC860 /* ChatMediaInputPeerSpecificItem.swift in Sources */,
 				D0AEAE252080D6830013176E /* StickerPaneSearchContainerNode.swift in Sources */,
@@ -5302,7 +5313,6 @@
 				D0EC6DA71EB9F58900EBF1C3 /* ChatMessageBackground.swift in Sources */,
 				D0F0AAE01EC1E12C005EE2A5 /* PresentationCall.swift in Sources */,
 				D0EC6DA81EB9F58900EBF1C3 /* ChatInterfaceState.swift in Sources */,
-				D018477E1FFBC01E00075256 /* TimestampStrings.swift in Sources */,
 				D08BDF661FA8CB10009D08E1 /* EditSettingsController.swift in Sources */,
 				D0EC6DA91EB9F58900EBF1C3 /* ChatPresentationInterfaceState.swift in Sources */,
 				D0EC6DAA1EB9F58900EBF1C3 /* ChatPanelInterfaceInteraction.swift in Sources */,
@@ -5467,6 +5477,7 @@
 				D0E412CE206A707400BEE4A2 /* FormControllerTextItem.swift in Sources */,
 				D0EC6E051EB9F58900EBF1C3 /* SecretMediaPreviewControllerNode.swift in Sources */,
 				D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */,
+				0902838D2194AEB90067EFBD /* ImageTransparency.swift in Sources */,
 				D0208AD61FA33D14001F0D5F /* RaiseToListenActivator.m in Sources */,
 				D0EC6E061EB9F58900EBF1C3 /* ChatDocumentGalleryItem.swift in Sources */,
 				D0EC6E071EB9F58900EBF1C3 /* ChatExternalFileGalleryItem.swift in Sources */,
@@ -5502,6 +5513,7 @@
 				0952D1772177FB5400194860 /* WatchPresetSettings.swift in Sources */,
 				D091C7A61F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift in Sources */,
 				D0EC6E191EB9F58900EBF1C3 /* InstantPageAnchorItem.swift in Sources */,
+				090E63E62195880F00E3C035 /* ContactAddItem.swift in Sources */,
 				D05677531F4CA0D0001B723E /* InstantPagePeerReferenceNode.swift in Sources */,
 				D0EC6E1A1EB9F58900EBF1C3 /* InstantPageImageItem.swift in Sources */,
 				D0EC6E1B1EB9F58900EBF1C3 /* InstantPageImageNode.swift in Sources */,

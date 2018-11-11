@@ -89,6 +89,19 @@ enum ChatItemGalleryFooterContent: Equatable {
     }
 }
 
+enum ChatItemGalleryFooterContentTapAction {
+    case none
+    case url(url: String, concealed: Bool)
+    case textMention(String)
+    case peerMention(PeerId, String)
+    case botCommand(String)
+    case hashtag(String?, String)
+    case instantPage
+    case call(PeerId)
+    case openMessage
+    case ignore
+}
+
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     private let account: Account
     private var theme: PresentationTheme
@@ -239,6 +252,23 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             }
         }
         self.textNode.tapAttributeAction = { [weak self] attributes in
+//            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+//                var concealed = true
+//                if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+//                    concealed = !doesUrlMatchText(url: url, text: attributeText)
+//                }
+//                return .url(url: url, concealed: concealed)
+//            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+//                return .peerMention(peerMention.peerId, peerMention.mention)
+//            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+//                return .textMention(peerName)
+//            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+//                return .botCommand(botCommand)
+//            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+//                return .hashtag(hashtag.peerName, hashtag.hashtag)
+//            } else {
+//                return .none
+//            }
             if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
                 strongSelf.openUrl?(url)
             }
@@ -293,6 +323,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         
         if self.currentMessageText != caption || self.currentAuthorNameText != titleText || self.currentDateText != dateText {
             self.currentMessageText = caption
+            self.currentAuthorNameText = titleText
+            self.currentDateText = dateText
             
             if caption.length == 0 {
                 self.textNode.isHidden = true

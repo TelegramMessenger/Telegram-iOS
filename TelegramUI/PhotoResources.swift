@@ -631,7 +631,8 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if thumbnailImage == nil && fullSizeImage == nil {
-                    c.setFillColor(UIColor.white.cgColor)
+                    let color = arguments.emptyColor ?? UIColor.white
+                    c.setFillColor(color.cgColor)
                     c.fill(fittedRect)
                 } else {
                     if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
@@ -2347,10 +2348,16 @@ private func drawAlbumArtPlaceholder(into c: CGContext, arguments: TransformImag
     }
 }
 
-func playerAlbumArt(postbox: Postbox, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    
+    var fileThumbnailResource: TelegramMediaResource?
+    if let fileReference = fileReference, let smallestRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+        fileThumbnailResource = smallestRepresentation.resource
+    }
+    
     if let albumArt = albumArt {
         if thumbnail {
-            return albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource) |> map { thumbnailData in
+            return albumArtThumbnailData(postbox: postbox, thumbnail: fileThumbnailResource ?? albumArt.thumbnailResource) |> map { thumbnailData in
                 return { arguments in
                     let context = DrawingContext(size: arguments.drawingSize, clear: true)
                     

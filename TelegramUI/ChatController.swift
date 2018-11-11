@@ -402,7 +402,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     
                     var hasActions = false
                     for media in updatedMessages[0].media {
-                        if media is TelegramMediaAction {
+                        if media is TelegramMediaAction || media is TelegramMediaExpiredContent {
                             hasActions = true
                             break
                         }
@@ -780,13 +780,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         let mailtoString = "mailto:"
                         let telString = "tel:"
                         var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                        var phoneNumber: String?
                         if cleanUrl.hasPrefix(mailtoString) {
                             canAddToReadingList = false
                             cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
                         } else if cleanUrl.hasPrefix(telString) {
                             canAddToReadingList = false
-                            cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
-                            openText = strongSelf.presentationData.strings.Conversation_Call
+                            phoneNumber = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
+                            cleanUrl = phoneNumber!
+                            openText = strongSelf.presentationData.strings.UserInfo_PhoneCall
                         } else if canOpenIn {
                             openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         }
@@ -804,6 +806,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                                 }
                             }
                         }))
+                        if let phoneNumber = phoneNumber {
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddContact, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.controllerInteraction?.addContact(phoneNumber)
+                                }
+                            }))
+                        }
                         items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             UIPasteboard.general.string = cleanUrl
@@ -1010,6 +1020,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 strongSelf.chatDisplayNode.dismissInput()
                 strongSelf.present(actionSheet, in: .window(.root))
             })
+        }, addContact: { [weak self] phoneNumber in
+            if let strongSelf = self {
+                openAddContact(account: strongSelf.account, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
+                    self?.present(controller, in: .window(.root), with: arguments)
+                })
+            }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -1835,26 +1851,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 strongSelf.presentAttachmentMenu(editMediaOptions: nil)
             }
         }
-        
-        let postbox = self.account.postbox
-        self.chatDisplayNode.displayPasteMenu = { [weak self] images in
-            let _ = (postbox.transaction { transaction -> GeneratedMediaStoreSettings in
-                let entry = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
-                return entry ?? GeneratedMediaStoreSettings.defaultSettings
-                }
-            |> deliverOnMainQueue).start(next: { [weak self] settings in
-                if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                    let controller = legacyPasteMenu(account: strongSelf.account, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
-                        self?.enqueueMediaMessages(signals: signals)
-                    })
-                    strongSelf.chatDisplayNode.dismissInput()
-                    strongSelf.present(controller, in: .window(.root))
-                }
-            })
-        }
-        self.chatDisplayNode.sendGif = { [weak self] data in
-            if let strongSelf = self {
-                strongSelf.enqueueGifData(data)
+        self.chatDisplayNode.paste = { [weak self] data in
+            switch data {
+                case let .images(images):
+                   self?.displayPasteMenu(images)
+                case let .gif(data):
+                    self?.enqueueGifData(data)
+                case let .sticker(image):
+                    self?.enqueueStickerImage(image)
             }
         }
         self.chatDisplayNode.updateTypingActivity = { [weak self] value in
@@ -2798,12 +2802,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 self.failedMessageEventsDisposable.set((self.account.pendingMessageManager.failedMessageEvents(peerId: peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
                     if let strongSelf = self {
+                        let text: String
                         switch reason {
                             case .flood:
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Generic_ErrorMoreInfo, action: {
-                                    self?.openPeerMention("spambot", navigation: .chat(textInputState: nil, messageId: nil))
-                                }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
+                            case .publicBan:
+                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
+                            
                         }
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Generic_ErrorMoreInfo, action: {
+                            self?.openPeerMention("spambot", navigation: .chat(textInputState: nil, messageId: nil))
+                        }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                 }))
             case let .group(groupId):
@@ -3848,9 +3857,53 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         }
     }
     
+    private func displayPasteMenu(_ images: [UIImage]) {
+        let _ = (self.account.postbox.transaction { transaction -> GeneratedMediaStoreSettings in
+            let entry = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
+            return entry ?? GeneratedMediaStoreSettings.defaultSettings
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] settings in
+            if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                let controller = legacyPasteMenu(account: strongSelf.account, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
+                    self?.enqueueMediaMessages(signals: signals)
+                })
+                strongSelf.chatDisplayNode.dismissInput()
+                strongSelf.present(controller, in: .window(.root))
+            }
+        })
+    }
+    
     private func enqueueGifData(_ data: Data) {
         self.enqueueMediaMessageDisposable.set((legacyEnqueueGifMessage(account: self.account, data: data) |> deliverOnMainQueue).start(next: { [weak self] message in
             if let strongSelf = self {
+                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                        })
+                    }
+                })
+                strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageId) })
+            }
+        }))
+    }
+    
+    private func enqueueStickerImage(_ image: UIImage) {
+        let size = image.size.aspectFitted(CGSize(width: 512.0, height: 512.0))
+        self.enqueueMediaMessageDisposable.set((convertToWebP(image: image, targetSize: size, quality: 0.85) |> deliverOnMainQueue).start(next: { [weak self] data in
+            if let strongSelf = self, !data.isEmpty {
+                let resource = LocalFileMediaResource(fileId: arc4random64())
+                strongSelf.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                
+                var fileAttributes: [TelegramMediaFileAttribute] = []
+                fileAttributes.append(.FileName(fileName: "sticker.webp"))
+                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+                fileAttributes.append(.ImageSize(size: size))
+                
+                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: resource, previewRepresentations: [], mimeType: "image/webp", size: data.count, attributes: fileAttributes)
+                let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil)
+                
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
@@ -3989,11 +4042,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                                 strongSelf.recorderFeedback?.error()
                                 strongSelf.recorderFeedback = nil
                             } else {
-                                var randomId: Int64 = 0
-                                arc4random_buf(&randomId, 8)
+                                let randomId = arc4random64()
                                 
                                 let resource = LocalFileMediaResource(fileId: randomId)
-                                
                                 strongSelf.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
                                 
                                 var waveformBuffer: MemoryBuffer?
@@ -4080,10 +4131,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 }
             })
             
-            var randomId: Int64 = 0
-            arc4random_buf(&randomId, 8)
-            
-            self.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+            self.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
         }
     }
     
@@ -5190,8 +5238,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             let images = imageItems as! [UIImage]
             
             strongSelf.chatDisplayNode.updateDropInteraction(isActive: false)
-            
-            strongSelf.chatDisplayNode.displayPasteMenu(images)
+            strongSelf.displayPasteMenu(images)
         }
     }
     

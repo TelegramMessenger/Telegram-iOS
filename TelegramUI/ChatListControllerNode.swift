@@ -20,6 +20,7 @@ class ChatListControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((Peer, Bool) -> Void)?
     var requestOpenRecentPeerOptions: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
+    var requestAddContact: ((String) -> Void)?
     
     var themeAndStrings: (PresentationTheme, PresentationStrings, dateTimeFormat: PresentationDateTimeFormat)
     
@@ -144,6 +145,10 @@ class ChatListControllerNode: ASDisplayNode {
             }, openMessage: { [weak self] peer, messageId in
                 if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
                     requestOpenMessageFromSearch(peer, messageId)
+                }
+            }, addContact: { [weak self] phoneNumber in
+                if let requestAddContact = self?.requestAddContact {
+                    requestAddContact(phoneNumber)
                 }
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {

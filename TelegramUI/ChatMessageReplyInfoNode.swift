@@ -5,13 +5,7 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 
-private let titleFont: UIFont = {
-    if #available(iOS 8.2, *) {
-        return UIFont.systemFont(ofSize: 14.0, weight: UIFont.Weight.medium)
-    } else {
-        return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, 14.0, nil)
-    }
-}()
+private let titleFont = Font.medium(14.0)
 private let textFont = Font.regular(14.0)
 
 enum ChatMessageReplyInfoType {
@@ -25,7 +19,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
     private var titleNode: TextNode?
     private var textNode: TextNode?
     private var imageNode: TransformImageNode?
-    private var overlayIconNode: ASImageNode?
     private var previousMediaReference: AnyMediaReference?
     
     override init() {
@@ -79,8 +72,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             var leftInset: CGFloat = 11.0
             let spacing: CGFloat = 2.0
             
-            var overlayIcon: UIImage?
-            
             var updatedMediaReference: AnyMediaReference?
             var imageDimensions: CGSize?
             var hasRoundImage = false
@@ -99,9 +90,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                             imageDimensions = dimensions
                         } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
                             imageDimensions = representation.dimensions
-                        }
-                        if !file.isInstantVideo && !file.isAnimated {
-                            overlayIcon = PresentationResourcesChat.chatBubbleReplyThumbnailPlayImage(theme)
                         }
                         if file.isInstantVideo {
                             hasRoundImage = true
@@ -179,7 +167,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     node.contentNode.addSubnode(textNode)
                 }
                 
-                var imageFrame: CGRect?
                 if let applyImage = applyImage {
                     let imageNode = applyImage()
                     if node.imageNode == nil {
@@ -188,7 +175,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.imageNode = imageNode
                     }
                     imageNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 30.0, height: 30.0))
-                    imageFrame = imageNode.frame
                     
                     if let updateImageSignal = updateImageSignal {
                         imageNode.setSignal(updateImageSignal)
@@ -196,25 +182,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 } else if let imageNode = node.imageNode {
                     imageNode.removeFromSupernode()
                     node.imageNode = nil
-                }
-                
-                if let overlayIcon = overlayIcon, let imageFrame = imageFrame {
-                    let overlayIconNode: ASImageNode
-                    if let current = node.overlayIconNode {
-                        overlayIconNode = current
-                    } else {
-                        overlayIconNode = ASImageNode()
-                        overlayIconNode.isLayerBacked = true
-                        overlayIconNode.displayWithoutProcessing = true
-                        overlayIconNode.displaysAsynchronously = false
-                        node.overlayIconNode = overlayIconNode
-                        node.addSubnode(overlayIconNode)
-                    }
-                    overlayIconNode.image = overlayIcon
-                    overlayIconNode.frame = CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.size.width - overlayIcon.size.width) / 2.0), y: imageFrame.minY + floor((imageFrame.size.height - overlayIcon.size.height) / 2.0)), size: overlayIcon.size)
-                } else if let overlayIconNode = node.overlayIconNode {
-                    overlayIconNode.removeFromSupernode()
-                    node.overlayIconNode = nil
                 }
                 
                 titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: spacing), size: titleLayout.size)

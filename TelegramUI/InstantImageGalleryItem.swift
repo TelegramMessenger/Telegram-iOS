@@ -33,15 +33,17 @@ class InstantImageGalleryItem: GalleryItem {
     let presentationData: PresentationData
     let imageReference: ImageMediaReference
     let caption: NSAttributedString
+    let credit: NSAttributedString
     let location: InstantPageGalleryEntryLocation
     let openUrl: (InstantPageUrlItem) -> Void
     let openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(account: Account, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, location: InstantPageGalleryEntryLocation, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+    init(account: Account, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.imageReference = imageReference
         self.caption = caption
+        self.credit = credit
         self.location = location
         self.openUrl = openUrl
         self.openUrlOptions = openUrlOptions
@@ -54,7 +56,7 @@ class InstantImageGalleryItem: GalleryItem {
     
         node._title.set(.single("\(self.location.position + 1) \(self.presentationData.strings.Common_of) \(self.location.totalCount)"))
         
-        node.setCaption(self.caption)
+        node.setCaption(self.caption, credit: self.credit)
         
         return node
     }
@@ -63,7 +65,7 @@ class InstantImageGalleryItem: GalleryItem {
         if let node = node as? InstantImageGalleryItemNode {
             node._title.set(.single("\(self.location.position + 1) \(self.presentationData.strings.Common_of) \(self.location.totalCount)"))
             
-            node.setCaption(self.caption)
+            node.setCaption(self.caption, credit: self.credit)
         }
     }
     
@@ -114,8 +116,8 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
-    fileprivate func setCaption(_ caption: NSAttributedString) {
-        self.footerContentNode.setCaption(caption)
+    fileprivate func setCaption(_ caption: NSAttributedString, credit: NSAttributedString) {
+        self.footerContentNode.setCaption(caption, credit: credit)
     }
     
     fileprivate func setImage(imageReference: ImageMediaReference) {

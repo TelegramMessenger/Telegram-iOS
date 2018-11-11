@@ -384,7 +384,8 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
         
         super.init()
         
-        self.backgroundColor = .black
+        self.backgroundColor = theme.panelSecondaryColor
+        self.clipsToBounds = true
         
         self.addSubnode(self.pagerNode)
         self.addSubnode(self.pageControlNode)
@@ -430,5 +431,6 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
     }
     
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
+        self.backgroundColor = theme.panelSecondaryColor
     }
 }

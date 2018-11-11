@@ -4,21 +4,25 @@ import SwiftSignalKit
 
 public struct GeneratedMediaStoreSettings: PreferencesEntry, Equatable {
     public let storeEditedPhotos: Bool
+    public let storeCapturedMedia: Bool
     
     public static var defaultSettings: GeneratedMediaStoreSettings {
-        return GeneratedMediaStoreSettings(storeEditedPhotos: true)
+        return GeneratedMediaStoreSettings(storeEditedPhotos: true, storeCapturedMedia: true)
     }
     
-    init(storeEditedPhotos: Bool) {
+    init(storeEditedPhotos: Bool, storeCapturedMedia: Bool) {
         self.storeEditedPhotos = storeEditedPhotos
+        self.storeCapturedMedia = storeCapturedMedia
     }
     
     public init(decoder: PostboxDecoder) {
         self.storeEditedPhotos = decoder.decodeInt32ForKey("eph", orElse: 0) != 0
+        self.storeCapturedMedia = decoder.decodeInt32ForKey("cpm", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.storeEditedPhotos ? 1 : 0, forKey: "eph")
+        encoder.encodeInt32(self.storeCapturedMedia ? 1 : 0, forKey: "cpm")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
@@ -30,11 +34,11 @@ public struct GeneratedMediaStoreSettings: PreferencesEntry, Equatable {
     }
     
     public static func ==(lhs: GeneratedMediaStoreSettings, rhs: GeneratedMediaStoreSettings) -> Bool {
-        return lhs.storeEditedPhotos == rhs.storeEditedPhotos
+        return lhs.storeEditedPhotos == rhs.storeEditedPhotos && lhs.storeCapturedMedia == rhs.storeCapturedMedia
     }
     
     func withUpdatedStoreEditedPhotos(_ storeEditedPhotos: Bool) -> GeneratedMediaStoreSettings {
-        return GeneratedMediaStoreSettings(storeEditedPhotos: storeEditedPhotos)
+        return GeneratedMediaStoreSettings(storeEditedPhotos: storeEditedPhotos, storeCapturedMedia: self.storeCapturedMedia)
     }
 }
 

@@ -66,11 +66,11 @@ private struct InstantPageTableCellItem {
         var frame = self.frame
         frame = CGRect(x: totalWidth - frame.minX - frame.width, y: frame.minY, width: frame.width, height: frame.height)
         var adjacentSides = self.adjacentSides
-        if adjacentSides.contains(.left) {
+        if adjacentSides.contains(.left) && !adjacentSides.contains(.right) {
             adjacentSides.remove(.left)
             adjacentSides.insert(.right)
         }
-        if adjacentSides.contains(.right) {
+        else if adjacentSides.contains(.right) && !adjacentSides.contains(.left) {
             adjacentSides.remove(.right)
             adjacentSides.insert(.left)
         }
@@ -120,46 +120,53 @@ final class InstantPageTableItem: InstantPageItem {
     
     func drawInTile(context: CGContext) {
         for cell in self.cells {
+            if cell.textItem == nil && cell.additionalItems.isEmpty {
+                continue
+            }
             context.saveGState()
             context.translateBy(x: cell.frame.minX, y: cell.frame.minY)
+            
+            let hasBorder = self.borderWidth > 0.0
+            let bounds = CGRect(origin: CGPoint(), size: cell.frame.size)
+            var path: UIBezierPath?
+            if !cell.adjacentSides.isEmpty {
+                path = UIBezierPath(roundedRect: bounds, byRoundingCorners: cell.adjacentSides.uiRectCorner, cornerRadii: CGSize(width: tableCornerRadius, height: tableCornerRadius))
+            }
             if cell.filled {
-                let bounds = CGRect(origin: CGPoint(), size: cell.frame.size)
                 context.setFillColor(self.theme.tableHeaderColor.cgColor)
-                if !cell.adjacentSides.isEmpty {
-                    let path = UIBezierPath(roundedRect: bounds, byRoundingCorners: cell.adjacentSides.uiRectCorner, cornerRadii: CGSize(width: tableCornerRadius, height: tableCornerRadius))
-                    context.addPath(path.cgPath)
-                    context.fillPath()
-                } else {
+            }
+            if self.borderWidth > 0.0 {
+                context.setStrokeColor(self.theme.tableBorderColor.cgColor)
+                context.setLineWidth(borderWidth)
+            }
+            if let path = path {
+                context.addPath(path.cgPath)
+                var drawMode: CGPathDrawingMode?
+                switch (cell.filled, hasBorder) {
+                    case (true, false):
+                        drawMode = .fill
+                    case (true, true):
+                        drawMode = .fillStroke
+                    case (false, true):
+                        drawMode = .stroke
+                    default:
+                        break
+                }
+                if let drawMode = drawMode {
+                    context.drawPath(using: drawMode)
+                }
+            } else {
+                if cell.filled {
                     context.fill(bounds)
+                }
+                if hasBorder {
+                    context.stroke(bounds)
                 }
             }
             if let textItem = cell.textItem {
                 textItem.drawInTile(context: context)
             }
             context.restoreGState()
-            if self.borderWidth > 0.0 {
-                context.setStrokeColor(self.theme.tableBorderColor.cgColor)
-                context.setLineWidth(borderWidth)
-                if !cell.adjacentSides.contains(.right) {
-                    context.move(to: CGPoint(x: cell.frame.maxX + borderWidth / 2.0, y: cell.frame.minY))
-                    context.addLine(to: CGPoint(x: cell.frame.maxX + borderWidth / 2.0, y: cell.frame.maxY + borderWidth))
-                    context.strokePath()
-                }
-                if !cell.adjacentSides.contains(.bottom) {
-                    context.move(to: CGPoint(x: cell.frame.minX, y: cell.frame.maxY + borderWidth / 2.0))
-                    context.addLine(to: CGPoint(x: cell.frame.maxX, y: cell.frame.maxY + borderWidth / 2.0))
-                    context.strokePath()
-                }
-            }
-        }
-        
-        if self.borderWidth > 0.0 {
-            context.setStrokeColor(self.theme.tableBorderColor.cgColor)
-            context.setLineWidth(borderWidth)
-            let path = UIBezierPath(roundedRect: CGRect(x: borderWidth / 2.0, y: borderWidth / 2.0, width: self.totalWidth - borderWidth, height: self.frame.height - borderWidth), cornerRadius: tableCornerRadius)
-            
-            context.addPath(path.cgPath)
-            context.strokePath()
         }
     }
     
@@ -383,7 +390,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
         columnCount = max(columnCount, row.cells.count)
     }
     
-    let maxContentWidth = boundingWidth - borderWidth * CGFloat(columnCount - 1)
+    let maxContentWidth = boundingWidth - borderWidth // - borderWidth * CGFloat(columnCount - 1)
     var availableWidth = maxContentWidth
     var minColumnWidths: [Int : CGFloat] = [:]
     var maxColumnWidths: [Int : CGFloat] = [:]
@@ -454,19 +461,22 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
     }
     
     if widthToDistribute > 0.0 {
+        var distributedWidth = widthToDistribute
         for i in 0 ..< finalColumnWidths.count {
             var width = finalColumnWidths[i]!
             let maxWidth = maxColumnWidths[i]!
-            let growth = round(widthToDistribute * maxWidth / maxTotalWidth)
+            let growth = min(round(widthToDistribute * maxWidth / maxTotalWidth), distributedWidth)
             width += growth
-            availableWidth -= growth
+            distributedWidth -= growth
             finalColumnWidths[i] = width
         }
         totalWidth = boundingWidth
+    } else {
+        totalWidth += borderWidth
     }
     
     var finalizedCells: [InstantPageTableCellItem] = []
-    var origin: CGPoint = CGPoint()
+    var origin: CGPoint = CGPoint(x: borderWidth / 2.0, y: borderWidth / 2.0)
     var totalHeight: CGFloat = 0.0
     var rowHeights: [Int : CGFloat] = [:]
     
@@ -476,7 +486,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
         let row = rows[i]
         var maxRowHeight: CGFloat = 1.0
         var isEmptyRow = true
-        origin.x = 0.0
+        origin.x = borderWidth / 2.0
         
         var k: Int = 0
         var rowCells: [InstantPageTableCellItem] = []
@@ -491,7 +501,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
                             origin.x += width
                         }
                     }
-                    origin.x += borderWidth * CGFloat(cell.colspan)
+                    //origin.x += borderWidth * CGFloat(cell.colspan)
                     k += cell.colspan
                 } else {
                     break
@@ -508,7 +518,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
                     cellWidth += width
                 }
             }
-            cellWidth += borderWidth * CGFloat(colspan - 1)
+            //cellWidth += borderWidth * CGFloat(colspan - 1)
             
             var item: InstantPageTextItem?
             var additionalItems: [InstantPageItem] = []
@@ -572,7 +582,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
             }
 
             k += colspan
-            origin.x += cellWidth + borderWidth
+            origin.x += cellWidth //+ borderWidth
         }
         
         let finalizeCell: (InstantPageTableCellItem, inout [InstantPageTableCellItem], CGFloat) -> Void = { cell, cells, height in
@@ -623,7 +633,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
                         completedSpans[k]!.insert(colAndCell.0)
                     }
                 }
-                cellHeight += borderWidth * CGFloat(cell.rowspan - 1)
+                //cellHeight += borderWidth * CGFloat(cell.rowspan - 1)
                 
                 if cell.frame.height > cellHeight {
                     let delta = cell.frame.height - cellHeight
@@ -659,10 +669,11 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
         
         if !isEmptyRow {
             totalHeight += maxRowHeight
-            origin.y += maxRowHeight + borderWidth
+            origin.y += maxRowHeight //+ borderWidth
         }
     }
-    totalHeight += borderWidth * CGFloat(rowHeights.count - 1)
+    totalHeight += borderWidth
+    //totalHeight += borderWidth * CGFloat(rowHeights.count - 1)
     
     if rtl {
         finalizedCells = finalizedCells.map { $0.withRTL(totalWidth) }

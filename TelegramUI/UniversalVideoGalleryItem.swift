@@ -19,12 +19,13 @@ class UniversalVideoGalleryItem: GalleryItem {
     let indexData: GalleryItemIndexData?
     let contentInfo: UniversalVideoGalleryItemContentInfo?
     let caption: NSAttributedString
+    let credit: NSAttributedString?
     let hideControls: Bool
     let playbackCompleted: () -> Void
     let openUrl: (String) -> Void
     let openUrlOptions: (String) -> Void
     
-    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, openUrl: @escaping (String) -> Void, openUrlOptions: @escaping (String) -> Void) {
+    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, openUrl: @escaping (String) -> Void, openUrlOptions: @escaping (String) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.content = content
@@ -32,6 +33,7 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.indexData = indexData
         self.contentInfo = contentInfo
         self.caption = caption
+        self.credit = credit
         self.hideControls = hideControls
         self.playbackCompleted = playbackCompleted
         self.openUrl = openUrl
@@ -314,7 +316,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.scrubberView.setBufferingStatusSignal(videoNode.bufferingStatus)
             
-            var requiresDownload = true
+            self.requiresDownload = true
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
                 var file: TelegramMediaFile?
@@ -426,7 +428,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     else if isPaused {
                         if hasStarted || strongSelf.didPause || buffering {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
-                        } else if let fetchStatus = fetchStatus, !requiresDownload {
+                        } else if let fetchStatus = fetchStatus, !strongSelf.requiresDownload {
                             strongSelf.footerContentNode.content = .fetch(status: fetchStatus)
                         }
                     } else {

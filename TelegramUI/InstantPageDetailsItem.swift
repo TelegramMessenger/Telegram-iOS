@@ -69,10 +69,13 @@ final class InstantPageDetailsItem: InstantPageItem {
                 }
             }
         } else {
+            let convertedPoint = point.offsetBy(dx: 0.0, dy: -self.titleHeight)
             for item in self.items {
-                if item.frame.contains(point) {
-                    let rects = item.linkSelectionRects(at: point.offsetBy(dx: 0.0, dy: -self.titleHeight))
-                    return rects.map { $0.offsetBy(dx: item.frame.minX, dy: item.frame.minY + self.titleHeight) }
+                if item.frame.contains(convertedPoint) {
+                    let rects = item.linkSelectionRects(at: convertedPoint.offsetBy(dx: -item.frame.minX, dy: -item.frame.minY))
+                    if !rects.isEmpty {
+                        return rects.map { $0.offsetBy(dx: item.frame.minX, dy: item.frame.minY + self.titleHeight) }
+                    }
                 }
             }
         }

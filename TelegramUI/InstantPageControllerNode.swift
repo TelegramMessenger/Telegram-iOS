@@ -921,7 +921,36 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.resolveUrlDisposable.set((resolveUrl(account: self.account, url: url.url) |> deliverOnMainQueue).start(next: { [weak self] result in
+        var cancelImpl: (() -> Void)?
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            guard let strongSelf = self else {
+                return EmptyDisposable
+            }
+            
+            let controller = OverlayStatusController(theme: strongSelf.presentationTheme, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            strongSelf.present(controller, nil)
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        let resolveSignal = resolveUrl(account: self.account, url: url.url)
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = { [weak self] in
+            self?.resolveUrlDisposable.set(nil)
+        }
+        self.resolveUrlDisposable.set((resolveSignal |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
                     case let .externalUrl(externalUrl):
@@ -1020,7 +1049,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var entries: [InstantPageGalleryEntry] = []
         for media in medias {
-            entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, location: InstantPageGalleryEntryLocation(position: Int32(entries.count), totalCount: Int32(medias.count))))
+            entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: InstantPageGalleryEntryLocation(position: Int32(entries.count), totalCount: Int32(medias.count))))
         }
         
         var centralIndex: Int?

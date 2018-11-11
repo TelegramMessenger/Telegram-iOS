@@ -52,6 +52,7 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
     private let scrollNode: ASScrollNode
     
     private(set) var items: [GalleryThumbnailItem] = []
+    private(set) var indexes: [Int] = []
     private var itemNodes: [GalleryThumbnailItemNode] = []
     private var centralIndexAndProgress: (Int, CGFloat?)?
     private var currentLayout: CGSize?
@@ -84,7 +85,8 @@ final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func updateItems(_ items: [GalleryThumbnailItem], centralIndex: Int, progress: CGFloat) {
+    func updateItems(_ items: [GalleryThumbnailItem], indexes: [Int], centralIndex: Int, progress: CGFloat) {
+        self.indexes = indexes
         var items: [GalleryThumbnailItem] = items.count <= 1 ? [] : items
         var updated = false
         if self.items.count == items.count {

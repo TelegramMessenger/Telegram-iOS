@@ -9,11 +9,21 @@ import Photos
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
 
+private let nameFont = Font.medium(15.0)
+private let dateFont = Font.regular(14.0)
+
 final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     private let account: Account
+    private var strings: PresentationStrings
+    private var dateTimeFormat: PresentationDateTimeFormat
     
     private let deleteButton: UIButton
     private let actionButton: UIButton
+    private let nameNode: ASTextNode
+    private let dateNode: ASTextNode
+    
+    private var currentNameText: String?
+    private var currentDateText: String?
     
     var delete: (() -> Void)? {
         didSet {
@@ -23,8 +33,10 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     var share: ((GalleryControllerInteraction) -> Void)?
     
-    init(account: Account) {
+    init(account: Account, presentationData: PresentationData) {
         self.account = account
+        self.strings = presentationData.strings
+        self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.deleteButton = UIButton()
         self.deleteButton.isHidden = true
@@ -33,16 +45,58 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.deleteButton.setImage(deleteImage, for: [.normal])
         self.actionButton.setImage(actionImage, for: [.normal])
         
+        self.nameNode = ASTextNode()
+        self.nameNode.maximumNumberOfLines = 1
+        self.nameNode.isLayerBacked = true
+        self.nameNode.displaysAsynchronously = false
+        
+        self.dateNode = ASTextNode()
+        self.dateNode.maximumNumberOfLines = 1
+        self.dateNode.isLayerBacked = true
+        self.dateNode.displaysAsynchronously = false
+        
         super.init()
         
         self.view.addSubview(self.deleteButton)
         self.view.addSubview(self.actionButton)
+        
+        self.addSubnode(self.nameNode)
+        self.addSubnode(self.dateNode)
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
     }
     
     deinit {
+    }
+    
+    func setEntry(_ entry: AvatarGalleryEntry) {
+        var nameText: String?
+        var dateText: String?
+        switch entry {
+            case let .image(_, peer, date, _):
+                nameText = peer.displayTitle
+                dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
+            default:
+                break
+        }
+        
+        if self.currentNameText != nameText || self.currentDateText != dateText {
+            self.currentNameText = nameText
+            self.currentDateText = dateText
+            
+            if let nameText = nameText {
+                self.nameNode.attributedText = NSAttributedString(string: nameText, font: nameFont, textColor: .white)
+            } else {
+                self.nameNode.attributedText = nil
+            }
+            
+            if let dateText = dateText {
+                self.dateNode.attributedText = NSAttributedString(string: dateText, font: dateFont, textColor: .white)
+            } else {
+                self.dateNode.attributedText = nil
+            }
+        }
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -52,17 +106,33 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
+        let nameSize = self.nameNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
+        let dateSize = self.dateNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        
+        if nameSize.height.isZero {
+            self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height) / 2.0)), size: dateSize)
+        } else {
+            let labelsSpacing: CGFloat = 0.0
+            self.nameNode.frame = CGRect(origin: CGPoint(x: floor((width - nameSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - nameSize.height - labelsSpacing) / 2.0)), size: nameSize)
+            self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - nameSize.height - labelsSpacing) / 2.0) + nameSize.height + labelsSpacing), size: dateSize)
+        }
+        
         return panelHeight
     }
     
     override func animateIn(fromHeight: CGFloat, previousContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition) {
         self.deleteButton.alpha = 1.0
         self.actionButton.alpha = 1.0
+        self.nameNode.alpha = 1.0
+        self.dateNode.alpha = 1.0
     }
     
     override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         self.deleteButton.alpha = 0.0
         self.actionButton.alpha = 0.0
+        self.nameNode.alpha = 0.0
+        self.dateNode.alpha = 0.0
+        completion()
     }
     
     @objc private func deleteButtonPressed() {

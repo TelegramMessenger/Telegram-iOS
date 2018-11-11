@@ -64,16 +64,30 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
     }
     
-    func setCaption(_ caption: NSAttributedString) {
+    func setCaption(_ caption: NSAttributedString, credit: NSAttributedString) {
         if self.currentMessageText != caption {
             self.currentMessageText = caption
             
-            if caption.length == 0 {
+            var attributedText: NSMutableAttributedString?
+            if caption.length > 0 {
+                attributedText = NSMutableAttributedString(attributedString: caption)
+            }
+           
+            if credit.length > 0 {
+                if attributedText != nil {
+                    attributedText?.append(NSAttributedString(string: "\n"))
+                    attributedText?.append(credit)
+                } else {
+                    attributedText = NSMutableAttributedString(attributedString: credit)
+                }
+            }
+            
+            if let attributedText = attributedText {
+                self.textNode.isHidden = false
+                self.textNode.attributedText = attributedText
+            } else {
                 self.textNode.isHidden = true
                 self.textNode.attributedText = nil
-            } else {
-                self.textNode.isHidden = false
-                self.textNode.attributedText = caption
             }
             
             self.requestLayout?(.immediate)
