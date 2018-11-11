@@ -22,7 +22,7 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
     
     func isEqualToItem(_ other: ListViewAccessoryItem) -> Bool {
         if case let other as ChatMessageAvatarAccessoryItem = other {
-            return other.peerId == self.peerId && abs(other.messageTimestamp - self.messageTimestamp) < 5 * 60
+            return other.peerId == self.peerId && abs(other.messageTimestamp - self.messageTimestamp) < 10 * 60
         }
         
         return false
