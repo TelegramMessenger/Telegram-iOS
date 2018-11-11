@@ -592,7 +592,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     }
                 }) {
                     strongSelf.present(controller, in: .window(.root))
-                    //_ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.account.postbox, languageCode: suggestedLocalization.languageCode).start()
+                    _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.account.postbox, languageCode: suggestedLocalization.languageCode).start()
                 }
             }))
         }
