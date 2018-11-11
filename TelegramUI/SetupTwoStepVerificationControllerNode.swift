@@ -9,10 +9,10 @@ enum SetupTwoStepVerificationInitialState {
     case createPassword
     case updatePassword(current: String, hasRecoveryEmail: Bool, hasSecureValues: Bool)
     case addEmail(hadRecoveryEmail: Bool, hasSecureValues: Bool, password: String)
-    case confirmEmail(password: String, hasSecureValues: Bool, pattern: String, codeLength: Int32?)
+    case confirmEmail(password: String?, hasSecureValues: Bool, pattern: String, codeLength: Int32?)
 }
 
-enum SetupTwoStepVerificationStateKind {
+enum SetupTwoStepVerificationStateKind: Int32 {
     case enterPassword
     case confirmPassword
     case enterHint
@@ -33,7 +33,7 @@ private enum EnterEmailState: Equatable {
 private enum ConfirmEmailState: Equatable {
     case create(password: String, hint: String, email: String)
     case add(password: String, hasSecureValues: Bool, email: String)
-    case confirm(password: String, hasSecureValues: Bool, pattern: String, codeLength: Int32?)
+    case confirm(password: String?, hasSecureValues: Bool, pattern: String, codeLength: Int32?)
 }
 
 private enum SetupTwoStepVerificationState: Equatable {
@@ -133,8 +133,9 @@ enum SetupTwoStepVerificationStateUpdate {
 final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
     private let account: Account
     private var presentationData: PresentationData
+    private let updateBackAction: (Bool) -> Void
     private let updateNextAction: (SetupTwoStepVerificationNextAction) -> Void
-    private let stateUpdated: (SetupTwoStepVerificationStateUpdate) -> Void
+    private let stateUpdated: (SetupTwoStepVerificationStateUpdate, Bool) -> Void
     private let present: (ViewController, Any?) -> Void
     private let dismiss: () -> Void
     private var innerState: SetupTwoStepVerificationControllerInnerState
@@ -142,8 +143,9 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
     private var contentNode: SetupTwoStepVerificationContentNode?
     private let actionDisposable = MetaDisposable()
     
-    init(account: Account, updateNextAction: @escaping (SetupTwoStepVerificationNextAction) -> Void, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate) -> Void, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, initialState: SetupTwoStepVerificationInitialState) {
+    init(account: Account, updateBackAction: @escaping (Bool) -> Void, updateNextAction: @escaping (SetupTwoStepVerificationNextAction) -> Void, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, initialState: SetupTwoStepVerificationInitialState) {
         self.account = account
+        self.updateBackAction = updateBackAction
         self.updateNextAction = updateNextAction
         self.stateUpdated = stateUpdated
         self.present = present
@@ -188,6 +190,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
     }
     
     private func processStateUpdated() {
+        var backAction = false
         let nextAction: SetupTwoStepVerificationNextAction
         if self.innerState.data.activity {
             nextAction = .activity
@@ -197,8 +200,10 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                     nextAction = .button(title: self.presentationData.strings.Common_Next, isEnabled: !password.isEmpty)
                 case let .confirmPassword(_, _, confirmation):
                     nextAction = .button(title: self.presentationData.strings.Common_Next, isEnabled: !confirmation.isEmpty)
+                    backAction = true
                 case let .enterHint(_, _, hint):
                     nextAction = .button(title: hint.isEmpty ? self.presentationData.strings.TwoStepAuth_EmailSkip :  self.presentationData.strings.Common_Next, isEnabled: true)
+                    backAction = true
                 case let .enterEmail(enterState, email):
                     switch enterState {
                         case .create:
@@ -210,6 +215,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                     nextAction = .button(title: self.presentationData.strings.Common_Next, isEnabled: !code.isEmpty)
             }
         }
+        self.updateBackAction(backAction)
         self.updateNextAction(nextAction)
     }
     
@@ -242,30 +248,41 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
             var leftAction: SetupTwoStepVerificationContentAction?
             var rightAction: SetupTwoStepVerificationContentAction?
             switch state.data.state {
-                case let .enterPassword(_, password):
-                    title = "Create a Password"
-                    subtitle = "Please create a password which will be used to protect your data"
+                case let .enterPassword(mode, password):
+                    switch mode {
+                        case .create:
+                            title = "Create a Password"
+                            subtitle = "Please create a password which will be used to protect your data."
+                        case .update:
+                            title = "Change Password"
+                            subtitle = "Please enter a new password which will be used to protect your data."
+                    }
                     inputType = .password
                     inputPlaceholder = "Password"
                     inputText = password
                     isPassword = true
                 case let .confirmPassword(_, _, confirmation):
                     title = "Re-enter your Password"
-                    subtitle = "Please confirm your password"
+                    subtitle = "Please confirm your password."
                     inputType = .password
                     inputPlaceholder = "Password"
                     inputText = confirmation
                     isPassword = true
                 case let .enterHint(_, _, hint):
                     title = "Add a Hint"
-                    subtitle = "You can create an optional hint for your password"
+                    subtitle = "You can create an optional hint for your password."
                     inputType = .text
                     inputPlaceholder = "Hint"
                     inputText = hint
                     isPassword = false
-                case let .enterEmail(_, email):
+                case let .enterEmail(enterState, email):
                     title = "Recovery Email"
-                    subtitle = "Please add your valid e-mail. It is the only way to recover a forgotten password"
+                    switch enterState {
+                        case let .add(hadRecoveryEmail, _, _) where hadRecoveryEmail:
+                            subtitle = "Please enter your new recovery email. It is the only way to recover a forgotten password."
+                        default:
+                            subtitle = "Please add your valid e-mail. It is the only way to recover a forgotten password."
+                    }
                     inputType = .email
                     inputPlaceholder = "Email"
                     inputText = email
@@ -296,7 +313,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                         state.data.state = .enterEmail(state: .create(password: password, hint: hint), email: "")
                                         return state
                                     }, transition: .animated(duration: 0.5, curve: .spring))
-                                    strongSelf.stateUpdated(.noPassword)
+                                    strongSelf.stateUpdated(.noPassword, false)
                                 }, error: { _ in
                                     guard let strongSelf = self else {
                                         return
@@ -314,7 +331,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                         case let .confirm(_, _, pattern, _):
                             emailPattern = pattern
                     }
-                    subtitle = "Please enter the code we've just emailed at \(emailPattern)"
+                    subtitle = "Please enter the code we've just emailed at \(emailPattern)."
                     inputType = .code
                     inputPlaceholder = "Code"
                     inputText = code
@@ -383,10 +400,17 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
             contentNode.frame = contentFrame
             contentNode.activate()
             if let currentContentNode = self.contentNode {
-                transition.updatePosition(node: currentContentNode, position: CGPoint(x: -contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
-                    currentContentNode?.removeFromSupernode()
-                })
-                transition.animateHorizontalOffsetAdditive(node: contentNode, offset: -contentFrame.width)
+                if currentContentNode.kind.rawValue < contentNode.kind.rawValue {
+                    transition.updatePosition(node: currentContentNode, position: CGPoint(x: -contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
+                        currentContentNode?.removeFromSupernode()
+                    })
+                    transition.animateHorizontalOffsetAdditive(node: contentNode, offset: -contentFrame.width)
+                } else {
+                    transition.updatePosition(node: currentContentNode, position: CGPoint(x: contentFrame.size.width + contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
+                        currentContentNode?.removeFromSupernode()
+                    })
+                    transition.animateHorizontalOffsetAdditive(node: contentNode, offset: contentFrame.width)
+                }
             }
             self.contentNode = contentNode
         } else if let contentNode = self.contentNode {
@@ -394,6 +418,24 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
             transition.updateFrame(node: contentNode, frame: contentFrame)
             contentNode.updateLayout(size: contentFrame.size, insets: insets, visibleInsets: visibleInsets, transition: transition)
         }
+    }
+    
+    func activateBackAction() {
+        if self.innerState.data.activity {
+            return
+        }
+        self.updateState({ state in
+            var state = state
+            switch state.data.state {
+                case let .confirmPassword(mode, _, _):
+                    state.data.state = .enterPassword(mode: mode, password: "")
+                case let .enterHint(mode, _, _):
+                    state.data.state = .enterPassword(mode: mode, password: "")
+                default:
+                    break
+            }
+            return state
+        }, transition: .animated(duration: 0.5, curve: .spring))
     }
     
     func activateNextAction() {
@@ -432,11 +474,10 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                         switch result {
                                             case let .password(password, pendingEmail):
                                                 if let pendingEmail = pendingEmail {
-                                                    strongSelf.stateUpdated(.awaitingEmailConfirmation(password: password, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength))
+                                                    strongSelf.stateUpdated(.awaitingEmailConfirmation(password: password, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength), true)
                                                 } else {
-                                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: hasRecoveryEmail, hasSecureValues: hasSecureValues))
+                                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: hasRecoveryEmail, hasSecureValues: hasSecureValues), true)
                                                 }
-                                                strongSelf.dismiss()
                                             case .none:
                                                 strongSelf.dismiss()
                                         }
@@ -452,7 +493,6 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                         state.data.activity = false
                                         return state
                                     }, transition: .animated(duration: 0.5, curve: .spring))
-                                    strongSelf.dismiss()
                                 }))
                         }
                     case let .enterEmail(enterState, email):
@@ -466,15 +506,14 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                     }
                                     strongSelf.updateState({ state in
                                         var state = state
-                                        state.data.activity = false
                                         switch result {
                                             case let .password(password, pendingEmail):
                                                 if let pendingEmail = pendingEmail {
+                                                    state.data.activity = false
                                                     state.data.state = .confirmEmail(state: .create(password: password, hint: hint, email: email), pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength, code: "")
-                                                    strongSelf.stateUpdated(.awaitingEmailConfirmation(password: password, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength))
+                                                    strongSelf.stateUpdated(.awaitingEmailConfirmation(password: password, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength), false)
                                                 } else {
-                                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: false, hasSecureValues: false))
-                                                    strongSelf.dismiss()
+                                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: false, hasSecureValues: false), true)
                                                 }
                                             case .none:
                                                 break
@@ -502,7 +541,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                         return state
                                     }, transition: .animated(duration: 0.5, curve: .spring))
                                 }))
-                            case let .add(hadRecoveryEmail, hasSecureValues, password):
+                            case let .add(_, hasSecureValues, password):
                                 strongSelf.updateState({ state in
                                     var state = state
                                     state.data.activity = true
@@ -523,10 +562,9 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                             case let .password(password, pendingEmail):
                                                 if let pendingEmail = pendingEmail {
                                                     state.data.state = .confirmEmail(state: .add(password: password, hasSecureValues: hasSecureValues, email: email), pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength, code: "")
-                                                    strongSelf.stateUpdated(.awaitingEmailConfirmation(password: password, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength))
+                                                    strongSelf.stateUpdated(.awaitingEmailConfirmation(password: password, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength), false)
                                                 } else {
-                                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: hasSecureValues))
-                                                    strongSelf.dismiss()
+                                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: hasSecureValues), true)
                                                 }
                                         }
                                         return state
@@ -578,21 +616,14 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.updateState({ state in
-                                var state = state
-                                state.data.activity = false
-                                return state
-                            }, transition: .animated(duration: 0.5, curve: .spring))
                             switch confirmState {
                                 case let .create(password, _, _):
-                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: false))
+                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: false), true)
                                 case let .add(password, hasSecureValues, email):
-                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: !email.isEmpty, hasSecureValues: hasSecureValues))
+                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: !email.isEmpty, hasSecureValues: hasSecureValues), true)
                                 case let .confirm(password, hasSecureValues, _, _):
-                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: hasSecureValues))
+                                    strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: hasSecureValues), true)
                             }
-                            
-                            strongSelf.dismiss()
                         }))
                 }
                 return state

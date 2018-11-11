@@ -501,7 +501,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     if let configuration = configuration {
                         switch configuration {
                             case .notSet:
-                                let controller = SetupTwoStepVerificationController(account: account, initialState: .createPassword, stateUpdated: { update in
+                                let controller = SetupTwoStepVerificationController(account: account, initialState: .createPassword, stateUpdated: { update, shouldDismiss, controller in
                                     switch update {
                                         case .noPassword:
                                             dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
@@ -510,10 +510,15 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                         case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
                                             if let password = password {
                                                 dataPromise.set(.single(.manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)))
+                                                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_EnabledSuccess)), nil)
                                             } else {
                                                 dataPromise.set(.single(.access(configuration: nil))
                                                     |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
                                             }
+                                    }
+                                    if shouldDismiss {
+                                        controller.dismiss()
                                     }
                                 })
                                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -522,7 +527,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                         }
                     }
                 case let .manage(password, hasRecovery, pendingEmail, hasSecureValues):
-                    let controller = SetupTwoStepVerificationController(account: account, initialState: .updatePassword(current: password, hasRecoveryEmail: hasRecovery, hasSecureValues: hasSecureValues), stateUpdated: { update in
+                    let controller = SetupTwoStepVerificationController(account: account, initialState: .updatePassword(current: password, hasRecoveryEmail: hasRecovery, hasSecureValues: hasSecureValues), stateUpdated: { update, shouldDismiss, controller in
                         switch update {
                             case .noPassword:
                                 dataPromise.set(.single(.access(configuration: .notSet(pendingEmail: nil))))
@@ -532,10 +537,15 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                             case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
                                 if let password = password {
                                     dataPromise.set(.single(.manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)))
+                                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_PasswordChangeSuccess)), nil)
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
                                         |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
                                 }
+                        }
+                        if shouldDismiss {
+                            controller.dismiss()
                         }
                     })
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -571,6 +581,8 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                 case .access:
                                     return .complete()
                                 case let .manage(password, _, _, _):
+                                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess)), nil)
                                     return updateTwoStepVerificationPassword(network: account.network, currentPassword: password, updatedPassword: .none)
                                         |> mapToSignal { _ -> Signal<Void, UpdateTwoStepVerificationPasswordError> in
                                             return .complete()
@@ -605,7 +617,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                 case .access:
                     break
                 case let .manage(password, emailSet, _, hasSecureValues):
-                    let controller = SetupTwoStepVerificationController(account: account, initialState: .addEmail(hadRecoveryEmail: emailSet, hasSecureValues: hasSecureValues, password: password), stateUpdated: { update in
+                    let controller = SetupTwoStepVerificationController(account: account, initialState: .addEmail(hadRecoveryEmail: emailSet, hasSecureValues: hasSecureValues, password: password), stateUpdated: { update, shouldDismiss, controller in
                         switch update {
                             case .noPassword:
                                 assertionFailure()
@@ -617,10 +629,15 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                 if let password = password {
                                     let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)
                                     dataPromise.set(.single(data))
+                                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(emailSet ? presentationData.strings.TwoStepAuth_EmailChangeSuccess : presentationData.strings.TwoStepAuth_EmailAddSuccess)), nil)
                                 } else {
                                     dataPromise.set(.single(.access(configuration: nil))
                                         |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
                                 }
+                        }
+                        if shouldDismiss {
+                            controller.dismiss()
                         }
                     })
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -687,7 +704,7 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                     guard let pendingEmail = pendingEmail else {
                         return
                     }
-                    let controller = SetupTwoStepVerificationController(account: account, initialState: .confirmEmail(password: password, hasSecureValues: hasSecureValues, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength), stateUpdated: { update in
+                    let controller = SetupTwoStepVerificationController(account: account, initialState: .confirmEmail(password: password, hasSecureValues: hasSecureValues, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength), stateUpdated: { update, shouldDismiss, controller in
                         switch update {
                             case .noPassword:
                                 assertionFailure()
@@ -696,6 +713,8 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                 let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: emailSet, pendingEmail: TwoStepVerificationPendingEmail(pattern: pattern, codeLength: codeLength), hasSecureValues: hasSecureValues)
                                 dataPromise.set(.single(data))
                             case let .passwordSet(password, hasRecoveryEmail, hasSecureValues):
+                                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(emailSet ? presentationData.strings.TwoStepAuth_EmailChangeSuccess : presentationData.strings.TwoStepAuth_EmailAddSuccess)), nil)
                                 if let password = password {
                                     let data: TwoStepVerificationUnlockSettingsControllerData = .manage(password: password, emailSet: hasRecoveryEmail, pendingEmail: nil, hasSecureValues: hasSecureValues)
                                     dataPromise.set(.single(data))
@@ -703,6 +722,9 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                     dataPromise.set(.single(.access(configuration: nil))
                                         |> then(twoStepVerificationConfiguration(account: account) |> map { TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVeriticationAccessConfiguration(configuration: $0, password: password)) }))
                                 }
+                        }
+                        if shouldDismiss {
+                            controller.dismiss()
                         }
                     })
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

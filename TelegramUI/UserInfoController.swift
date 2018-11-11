@@ -1170,7 +1170,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
                 let _ = (enqueueMessages(account: account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: contact), replyToMessageId: nil, localGroupingKey: nil)])
                     |> deliverOnMainQueue).start(next: { [weak controller] _ in
                         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        controller?.present(OverlayStatusController(theme: presentationData.theme, type: .success), in: .window(.root))
+                        controller?.present(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), in: .window(.root))
                     })
         })
     }
@@ -1206,7 +1206,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
                     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
                         cancelImpl?()
                     }))
                     presentControllerImpl?(controller, nil)

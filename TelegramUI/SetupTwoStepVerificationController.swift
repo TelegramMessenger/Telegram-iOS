@@ -8,7 +8,7 @@ import TelegramCore
 class SetupTwoStepVerificationController: ViewController {
     private let account: Account
     private let initialState: SetupTwoStepVerificationInitialState
-    private let stateUpdated: (SetupTwoStepVerificationStateUpdate) -> Void
+    private let stateUpdated: (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void
     
     private var controllerNode: SetupTwoStepVerificationControllerNode {
         return self.displayNode as! SetupTwoStepVerificationControllerNode
@@ -21,12 +21,13 @@ class SetupTwoStepVerificationController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
+    private var currentBackAction = false
     private var currentNextAction: SetupTwoStepVerificationNextAction?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate) -> Void) {
+    init(account: Account, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
         self.account = account
         self.initialState = initialState
         self.stateUpdated = stateUpdated
@@ -62,6 +63,10 @@ class SetupTwoStepVerificationController: ViewController {
         self.presentationDataDisposable?.dispose()
     }
     
+    @objc private func backPressed() {
+        self.controllerNode.activateBackAction()
+    }
+    
     @objc private func cancelPressed() {
         self.dismiss()
     }
@@ -94,7 +99,22 @@ class SetupTwoStepVerificationController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = SetupTwoStepVerificationControllerNode(account: self.account, updateNextAction: { [weak self] action in
+        self.displayNode = SetupTwoStepVerificationControllerNode(account: self.account, updateBackAction: { [weak self] action in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.currentBackAction == action {
+                return
+            }
+            strongSelf.currentBackAction = action
+            let item: UIBarButtonItem?
+            if action {
+                item = UIBarButtonItem(backButtonAppearanceWithTitle: strongSelf.presentationData.strings.Common_Back, target: strongSelf, action: #selector(strongSelf.backPressed))
+            } else {
+                item = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, style: .plain, target: strongSelf, action: #selector(strongSelf.cancelPressed))
+            }
+            strongSelf.navigationItem.setLeftBarButton(item, animated: false)
+        }, updateNextAction: { [weak self] action in
             guard let strongSelf = self else {
                 return
             }
@@ -118,7 +138,11 @@ class SetupTwoStepVerificationController: ViewController {
             if case let .button(_, isEnabled) = action {
                 strongSelf.navigationItem.rightBarButtonItem?.isEnabled = isEnabled
             }
-        }, stateUpdated: self.stateUpdated, present: { [weak self] c, a in
+        }, stateUpdated: { [weak self] state, shouldDismiss in
+            if let strongSelf = self {
+                strongSelf.stateUpdated(state, shouldDismiss, strongSelf)
+            }
+        }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismiss: { [weak self] in
             self?.dismiss()

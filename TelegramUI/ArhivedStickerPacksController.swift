@@ -292,7 +292,7 @@ public func archivedStickerPacksController(account: Account, archived: [Archived
         }
         |> deliverOnMainQueue).start(completed: {
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
             
             let applyPacks: Signal<Void, NoError> = stickerPacks.get()
             |> filter { $0 != nil }

@@ -670,7 +670,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             var cancelImpl: (() -> Void)?
             let presentationData = strongSelf.presentationData
             let progressSignal = Signal<Never, NoError> { subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
                     cancelImpl?()
                 }))
                 self?.present(controller, in: .window(.root))
@@ -4256,7 +4256,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         var cancelImpl: (() -> Void)?
                         let presentationData = self.presentationData
                         let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
                                 cancelImpl?()
                             }))
                             self?.present(controller, in: .window(.root))
@@ -4393,7 +4393,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, type: .success), in: .window(.root))
+                                strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .success), in: .window(.root))
                             }))
                     }
                 })
@@ -4565,7 +4565,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         var cancelImpl: (() -> Void)?
         let presentationData = self.presentationData
         let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
                 cancelImpl?()
             }))
             self?.present(controller, in: .window(.root))

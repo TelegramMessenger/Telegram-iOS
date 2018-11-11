@@ -37,7 +37,7 @@ final class ProxyServerActionSheetController: ActionSheetController {
             }
             strongSelf.isDismissed = true
             if success {
-                strongSelf.present(OverlayStatusController(theme: theme, type: .proxySettingSuccess), in: .window(.root))
+                strongSelf.present(OverlayStatusController(theme: theme, strings: strings, type: .proxySettingSuccess), in: .window(.root))
             }
             strongSelf.dismissAnimated()
         }, present: { [weak self] c, a in

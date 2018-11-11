@@ -133,6 +133,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
+        let strings = presentationData.strings
         
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
@@ -153,7 +154,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     return .complete()
                 } |> deliverOnMainQueue).start(completed: {
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: theme, type: .success), nil)
+                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: theme, strings: strings, type: .success), nil)
                     }
                 })
             }
