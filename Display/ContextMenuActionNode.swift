@@ -1,11 +1,21 @@
 import Foundation
 import AsyncDisplayKit
 
+final private class ContextMenuActionButton: HighlightTrackingButton {
+    override func convert(_ point: CGPoint, from view: UIView?) -> CGPoint {
+        if view is UIWindow {
+            return super.convert(point, from: nil)
+        } else {
+            return super.convert(point, from: view)
+        }
+    }
+}
+
 final class ContextMenuActionNode: ASDisplayNode {
     private let textNode: ASTextNode?
     private let iconNode: ASImageNode?
     private let action: () -> Void
-    private let button: HighlightTrackingButton
+    private let button: ContextMenuActionButton
     
     var dismiss: (() -> Void)?
     
@@ -30,7 +40,7 @@ final class ContextMenuActionNode: ASDisplayNode {
         }
         self.action = action.action
         
-        self.button = HighlightTrackingButton()
+        self.button = ContextMenuActionButton()
         
         super.init()
         
