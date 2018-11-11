@@ -341,6 +341,14 @@ final class ChatListIndexTable: Table {
             }
             self.updatedPreviousPeerCachedIndices.removeAll()
             
+            for peerId in addedChatListPeerIds {
+                self.peerNameIndexTable.setPeerCategoryState(peerId: peerId, category: [.chats], includes: true)
+            }
+            
+            for peerId in removedChatListPeerIds {
+                self.peerNameIndexTable.setPeerCategoryState(peerId: peerId, category: [.chats], includes: false)
+            }
+            
             var totalUnreadState = self.metadataTable.getChatListTotalUnreadState()
             
             var alteredPeerIds = Set<PeerId>()

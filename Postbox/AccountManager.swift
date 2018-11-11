@@ -195,7 +195,8 @@ final class AccountManagerImpl {
                 return .single(nil)
             }
             
-            let signal = self.accountRecordsInternal(transaction: transaction) |> map { view -> AccountRecordId? in
+            let signal = self.accountRecordsInternal(transaction: transaction)
+            |> map { view -> AccountRecordId? in
                 return view.currentRecord?.id
             }
             
