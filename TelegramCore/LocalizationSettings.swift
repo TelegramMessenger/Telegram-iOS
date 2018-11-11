@@ -7,23 +7,27 @@ import Foundation
 
 public final class LocalizationComponent: Equatable, PostboxCoding {
     public let languageCode: String
+    public let localizedName: String
     public let localization: Localization
     public let customPluralizationCode: String?
     
-    public init(languageCode: String, localization: Localization, customPluralizationCode: String?) {
+    public init(languageCode: String, localizedName: String, localization: Localization, customPluralizationCode: String?) {
         self.languageCode = languageCode
+        self.localizedName = localizedName
         self.localization = localization
         self.customPluralizationCode = customPluralizationCode
     }
     
     public init(decoder: PostboxDecoder) {
         self.languageCode = decoder.decodeStringForKey("lc", orElse: "")
+        self.localizedName = decoder.decodeStringForKey("localizedName", orElse: "")
         self.localization = decoder.decodeObjectForKey("loc", decoder: { Localization(decoder: $0) }) as! Localization
         self.customPluralizationCode = decoder.decodeOptionalStringForKey("cpl")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.languageCode, forKey: "lc")
+        encoder.encodeString(self.localizedName, forKey: "localizedName")
         encoder.encodeObject(self.localization, forKey: "loc")
         if let customPluralizationCode = self.customPluralizationCode {
             encoder.encodeString(customPluralizationCode, forKey: "cpl")
@@ -34,6 +38,9 @@ public final class LocalizationComponent: Equatable, PostboxCoding {
     
     public static func ==(lhs: LocalizationComponent, rhs: LocalizationComponent) -> Bool {
         if lhs.languageCode != rhs.languageCode {
+            return false
+        }
+        if lhs.localizedName != rhs.localizedName {
             return false
         }
         if lhs.localization != rhs.localization {
@@ -57,7 +64,7 @@ public final class LocalizationSettings: PreferencesEntry, Equatable {
     
     public init(decoder: PostboxDecoder) {
         if let languageCode = decoder.decodeOptionalStringForKey("lc") {
-            self.primaryComponent = LocalizationComponent(languageCode: languageCode, localization: decoder.decodeObjectForKey("loc", decoder: { Localization(decoder: $0) }) as! Localization, customPluralizationCode: nil)
+            self.primaryComponent = LocalizationComponent(languageCode: languageCode, localizedName: "", localization: decoder.decodeObjectForKey("loc", decoder: { Localization(decoder: $0) }) as! Localization, customPluralizationCode: nil)
             self.secondaryComponent = nil
         } else {
             self.primaryComponent = decoder.decodeObjectForKey("primaryComponent", decoder: { LocalizationComponent(decoder: $0) }) as! LocalizationComponent

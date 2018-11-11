@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public final class LocalizationInfo: PostboxCoding {
+public struct LocalizationInfo: PostboxCoding, Equatable {
     public let languageCode: String
     public let baseLanguageCode: String?
     public let customPluralizationCode: String?
@@ -14,8 +14,9 @@ public final class LocalizationInfo: PostboxCoding {
     public let isOfficial: Bool
     public let totalStringCount: Int32
     public let translatedStringCount: Int32
+    public let platformUrl: String
     
-    public init(languageCode: String, baseLanguageCode: String?, customPluralizationCode: String?, title: String, localizedTitle: String, isOfficial: Bool, totalStringCount: Int32, translatedStringCount: Int32) {
+    public init(languageCode: String, baseLanguageCode: String?, customPluralizationCode: String?, title: String, localizedTitle: String, isOfficial: Bool, totalStringCount: Int32, translatedStringCount: Int32, platformUrl: String) {
         self.languageCode = languageCode
         self.baseLanguageCode = baseLanguageCode
         self.customPluralizationCode = customPluralizationCode
@@ -24,6 +25,7 @@ public final class LocalizationInfo: PostboxCoding {
         self.isOfficial = isOfficial
         self.totalStringCount = totalStringCount
         self.translatedStringCount = translatedStringCount
+        self.platformUrl = platformUrl
     }
     
     public init(decoder: PostboxDecoder) {
@@ -35,6 +37,7 @@ public final class LocalizationInfo: PostboxCoding {
         self.isOfficial = decoder.decodeInt32ForKey("of", orElse: 0) != 0
         self.totalStringCount = decoder.decodeInt32ForKey("tsc", orElse: 0)
         self.translatedStringCount = decoder.decodeInt32ForKey("lsc", orElse: 0)
+        self.platformUrl = decoder.decodeStringForKey("platformUrl", orElse: "")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -54,14 +57,15 @@ public final class LocalizationInfo: PostboxCoding {
         encoder.encodeInt32(self.isOfficial ? 1 : 0, forKey: "of")
         encoder.encodeInt32(self.totalStringCount, forKey: "tsc")
         encoder.encodeInt32(self.translatedStringCount, forKey: "lsc")
+        encoder.encodeString(self.platformUrl, forKey: "platformUrl")
     }
 }
 
 extension LocalizationInfo {
-    convenience init(apiLanguage: Api.LangPackLanguage) {
+    init(apiLanguage: Api.LangPackLanguage) {
         switch apiLanguage {
             case let .langPackLanguage(language):
-                self.init(languageCode: language.langCode, baseLanguageCode: language.baseLangCode, customPluralizationCode: language.pluralCode, title: language.name, localizedTitle: language.nativeName, isOfficial: (language.flags & (1 << 0)) != 0, totalStringCount: language.stringsCount, translatedStringCount: language.translatedCount)
+                self.init(languageCode: language.langCode, baseLanguageCode: language.baseLangCode, customPluralizationCode: language.pluralCode, title: language.name, localizedTitle: language.nativeName, isOfficial: (language.flags & (1 << 0)) != 0, totalStringCount: language.stringsCount, translatedStringCount: language.translatedCount, platformUrl: language.translationsUrl)
         }
     }
 }

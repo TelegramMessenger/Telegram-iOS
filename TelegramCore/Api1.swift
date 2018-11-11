@@ -2362,13 +2362,13 @@ extension Api {
     
     }
     enum LangPackLanguage: TypeConstructorDescription {
-        case langPackLanguage(flags: Int32, name: String, nativeName: String, langCode: String, baseLangCode: String?, pluralCode: String, stringsCount: Int32, translatedCount: Int32)
+        case langPackLanguage(flags: Int32, name: String, nativeName: String, langCode: String, baseLangCode: String?, pluralCode: String, stringsCount: Int32, translatedCount: Int32, translationsUrl: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount):
+                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount, let translationsUrl):
                     if boxed {
-                        buffer.appendInt32(106019213)
+                        buffer.appendInt32(-288727837)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(name, buffer: buffer, boxed: false)
@@ -2378,14 +2378,15 @@ extension Api {
                     serializeString(pluralCode, buffer: buffer, boxed: false)
                     serializeInt32(stringsCount, buffer: buffer, boxed: false)
                     serializeInt32(translatedCount, buffer: buffer, boxed: false)
+                    serializeString(translationsUrl, buffer: buffer, boxed: false)
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount):
-                return ("langPackLanguage", [("flags", flags), ("name", name), ("nativeName", nativeName), ("langCode", langCode), ("baseLangCode", baseLangCode), ("pluralCode", pluralCode), ("stringsCount", stringsCount), ("translatedCount", translatedCount)])
+                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount, let translationsUrl):
+                return ("langPackLanguage", [("flags", flags), ("name", name), ("nativeName", nativeName), ("langCode", langCode), ("baseLangCode", baseLangCode), ("pluralCode", pluralCode), ("stringsCount", stringsCount), ("translatedCount", translatedCount), ("translationsUrl", translationsUrl)])
     }
     }
     
@@ -2406,6 +2407,8 @@ extension Api {
             _7 = reader.readInt32()
             var _8: Int32?
             _8 = reader.readInt32()
+            var _9: String?
+            _9 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -2414,8 +2417,9 @@ extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.LangPackLanguage.langPackLanguage(flags: _1!, name: _2!, nativeName: _3!, langCode: _4!, baseLangCode: _5, pluralCode: _6!, stringsCount: _7!, translatedCount: _8!)
+            let _c9 = _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.LangPackLanguage.langPackLanguage(flags: _1!, name: _2!, nativeName: _3!, langCode: _4!, baseLangCode: _5, pluralCode: _6!, stringsCount: _7!, translatedCount: _8!, translationsUrl: _9!)
             }
             else {
                 return nil
@@ -3337,7 +3341,6 @@ extension Api {
         case updateUserStatus(userId: Int32, status: Api.UserStatus)
         case updateUserName(userId: Int32, firstName: String, lastName: String, username: String)
         case updateUserPhoto(userId: Int32, date: Int32, photo: Api.UserProfilePhoto, previous: Api.Bool)
-        case updateContactRegistered(userId: Int32, date: Int32)
         case updateContactLink(userId: Int32, myLink: Api.ContactLink, foreignLink: Api.ContactLink)
         case updateNewEncryptedMessage(message: Api.EncryptedMessage, qts: Int32)
         case updateEncryptedChatTyping(chatId: Int32)
@@ -3472,13 +3475,6 @@ extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     photo.serialize(buffer, true)
                     previous.serialize(buffer, true)
-                    break
-                case .updateContactRegistered(let userId, let date):
-                    if boxed {
-                        buffer.appendInt32(628472761)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
                     break
                 case .updateContactLink(let userId, let myLink, let foreignLink):
                     if boxed {
@@ -3988,8 +3984,6 @@ extension Api {
                 return ("updateUserName", [("userId", userId), ("firstName", firstName), ("lastName", lastName), ("username", username)])
                 case .updateUserPhoto(let userId, let date, let photo, let previous):
                 return ("updateUserPhoto", [("userId", userId), ("date", date), ("photo", photo), ("previous", previous)])
-                case .updateContactRegistered(let userId, let date):
-                return ("updateContactRegistered", [("userId", userId), ("date", date)])
                 case .updateContactLink(let userId, let myLink, let foreignLink):
                 return ("updateContactLink", [("userId", userId), ("myLink", myLink), ("foreignLink", foreignLink)])
                 case .updateNewEncryptedMessage(let message, let qts):
@@ -4266,20 +4260,6 @@ extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateUserPhoto(userId: _1!, date: _2!, photo: _3!, previous: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_updateContactRegistered(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateContactRegistered(userId: _1!, date: _2!)
             }
             else {
                 return nil
@@ -15158,6 +15138,7 @@ extension Api {
         case messageActionBotAllowed(domain: String)
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSecureValuesSent(types: [Api.SecureValueType])
+        case messageActionContactSignUp(flags: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -15323,6 +15304,12 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+                case .messageActionContactSignUp(let flags):
+                    if boxed {
+                        buffer.appendInt32(1894744724)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -15372,6 +15359,8 @@ extension Api {
                 return ("messageActionSecureValuesSentMe", [("values", values), ("credentials", credentials)])
                 case .messageActionSecureValuesSent(let types):
                 return ("messageActionSecureValuesSent", [("types", types)])
+                case .messageActionContactSignUp(let flags):
+                return ("messageActionContactSignUp", [("flags", flags)])
     }
     }
     
@@ -15632,6 +15621,17 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.MessageAction.messageActionSecureValuesSent(types: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageActionContactSignUp(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionContactSignUp(flags: _1!)
             }
             else {
                 return nil
@@ -16258,13 +16258,13 @@ extension Api {
     
     }
     enum PageRelatedArticle: TypeConstructorDescription {
-        case pageRelatedArticle(flags: Int32, url: String, webpageId: Int64, title: String?, description: String?, photoId: Int64?)
+        case pageRelatedArticle(flags: Int32, url: String, webpageId: Int64, title: String?, description: String?, photoId: Int64?, author: String?, publishedDate: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .pageRelatedArticle(let flags, let url, let webpageId, let title, let description, let photoId):
+                case .pageRelatedArticle(let flags, let url, let webpageId, let title, let description, let photoId, let author, let publishedDate):
                     if boxed {
-                        buffer.appendInt32(-242812612)
+                        buffer.appendInt32(-1282352120)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(url, buffer: buffer, boxed: false)
@@ -16272,14 +16272,16 @@ extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt64(photoId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(author!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(publishedDate!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .pageRelatedArticle(let flags, let url, let webpageId, let title, let description, let photoId):
-                return ("pageRelatedArticle", [("flags", flags), ("url", url), ("webpageId", webpageId), ("title", title), ("description", description), ("photoId", photoId)])
+                case .pageRelatedArticle(let flags, let url, let webpageId, let title, let description, let photoId, let author, let publishedDate):
+                return ("pageRelatedArticle", [("flags", flags), ("url", url), ("webpageId", webpageId), ("title", title), ("description", description), ("photoId", photoId), ("author", author), ("publishedDate", publishedDate)])
     }
     }
     
@@ -16296,14 +16298,20 @@ extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
             var _6: Int64?
             if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt64() }
+            var _7: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_7 = parseString(reader) }
+            var _8: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_8 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.PageRelatedArticle.pageRelatedArticle(flags: _1!, url: _2!, webpageId: _3!, title: _4, description: _5, photoId: _6)
+            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.PageRelatedArticle.pageRelatedArticle(flags: _1!, url: _2!, webpageId: _3!, title: _4, description: _5, photoId: _6, author: _7, publishedDate: _8)
             }
             else {
                 return nil

@@ -174,7 +174,7 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
             return postbox.transaction { transaction -> Signal<Void, SynchronizeLocalizationUpdatesError> in
                 let (primary, secondary) = getLocalization(transaction)
                 
-                var currentSettings = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
+                var currentSettings = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
                 
                 for difference in parsedDifferences {
                     let current: (isPrimary: Bool, entries: [LocalizationEntry])
@@ -205,9 +205,9 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
                     }
                     mergedEntries.append(contentsOf: difference.entries)
                     if current.isPrimary {
-                        currentSettings = LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: currentSettings.primaryComponent.languageCode, localization: Localization(version: difference.version, entries: mergedEntries), customPluralizationCode: currentSettings.primaryComponent.customPluralizationCode), secondaryComponent: currentSettings.secondaryComponent)
+                        currentSettings = LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: currentSettings.primaryComponent.languageCode, localizedName: currentSettings.primaryComponent.localizedName, localization: Localization(version: difference.version, entries: mergedEntries), customPluralizationCode: currentSettings.primaryComponent.customPluralizationCode), secondaryComponent: currentSettings.secondaryComponent)
                     } else if let currentSecondary = currentSettings.secondaryComponent {
-                        currentSettings = LocalizationSettings(primaryComponent: currentSettings.primaryComponent, secondaryComponent: LocalizationComponent(languageCode: currentSecondary.languageCode, localization: Localization(version: difference.version, entries: mergedEntries), customPluralizationCode: currentSecondary.customPluralizationCode))
+                        currentSettings = LocalizationSettings(primaryComponent: currentSettings.primaryComponent, secondaryComponent: LocalizationComponent(languageCode: currentSecondary.languageCode, localizedName: currentSecondary.localizedName, localization: Localization(version: difference.version, entries: mergedEntries), customPluralizationCode: currentSecondary.customPluralizationCode))
                     }
                 }
                 
@@ -284,13 +284,13 @@ func tryApplyingLanguageDifference(transaction: Transaction, langCode: String, d
             }
             mergedEntries.append(contentsOf: updatedEntries)
             
-            let currentSettings = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
+            let currentSettings = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
             
             var updatedSettings: LocalizationSettings
             if isPrimary {
-                updatedSettings = LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: currentSettings.primaryComponent.languageCode, localization: Localization(version: updatedVersion, entries: mergedEntries), customPluralizationCode: currentSettings.primaryComponent.customPluralizationCode), secondaryComponent: currentSettings.secondaryComponent)
+                updatedSettings = LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: currentSettings.primaryComponent.languageCode, localizedName: currentSettings.primaryComponent.localizedName, localization: Localization(version: updatedVersion, entries: mergedEntries), customPluralizationCode: currentSettings.primaryComponent.customPluralizationCode), secondaryComponent: currentSettings.secondaryComponent)
             } else if let currentSecondary = currentSettings.secondaryComponent {
-                updatedSettings = LocalizationSettings(primaryComponent: currentSettings.primaryComponent, secondaryComponent: LocalizationComponent(languageCode: currentSecondary.languageCode, localization: Localization(version: updatedVersion, entries: mergedEntries), customPluralizationCode: currentSecondary.customPluralizationCode))
+                updatedSettings = LocalizationSettings(primaryComponent: currentSettings.primaryComponent, secondaryComponent: LocalizationComponent(languageCode: currentSecondary.languageCode, localizedName: currentSecondary.localizedName, localization: Localization(version: updatedVersion, entries: mergedEntries), customPluralizationCode: currentSecondary.customPluralizationCode))
             } else {
                 assertionFailure()
                 return false

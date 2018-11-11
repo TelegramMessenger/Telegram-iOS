@@ -366,6 +366,8 @@
 		D05A32E51E6F0B2E002760B4 /* RecentAccountSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E31E6F0B2E002760B4 /* RecentAccountSessions.swift */; };
 		D05A32E71E6F0B5C002760B4 /* RecentAccountSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E61E6F0B5C002760B4 /* RecentAccountSession.swift */; };
 		D05A32E81E6F0B5C002760B4 /* RecentAccountSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A32E61E6F0B5C002760B4 /* RecentAccountSession.swift */; };
+		D05D8B372192F8AF0064586F /* LocalizationListState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B362192F8AF0064586F /* LocalizationListState.swift */; };
+		D05D8B382192F8AF0064586F /* LocalizationListState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B362192F8AF0064586F /* LocalizationListState.swift */; };
 		D0613FCA1E60440600202CDB /* InvitationLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FC91E60440600202CDB /* InvitationLinks.swift */; };
 		D0613FCB1E60440600202CDB /* InvitationLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FC91E60440600202CDB /* InvitationLinks.swift */; };
 		D0613FCF1E60520700202CDB /* ChannelMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FCE1E60520700202CDB /* ChannelMembers.swift */; };
@@ -957,6 +959,7 @@
 		D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatedAccountPrivacySettings.swift; sourceTree = "<group>"; };
 		D05A32E31E6F0B2E002760B4 /* RecentAccountSessions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentAccountSessions.swift; sourceTree = "<group>"; };
 		D05A32E61E6F0B5C002760B4 /* RecentAccountSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentAccountSession.swift; sourceTree = "<group>"; };
+		D05D8B362192F8AF0064586F /* LocalizationListState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationListState.swift; sourceTree = "<group>"; };
 		D0613FC91E60440600202CDB /* InvitationLinks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InvitationLinks.swift; sourceTree = "<group>"; };
 		D0613FCE1E60520700202CDB /* ChannelMembers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelMembers.swift; sourceTree = "<group>"; };
 		D0613FD61E606B3B00202CDB /* ConvertGroupToSupergroup.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertGroupToSupergroup.swift; sourceTree = "<group>"; };
@@ -1680,6 +1683,7 @@
 				D08CAA7F1ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift */,
 				D08CAA831ED8164B0000FDA8 /* Localization.swift */,
 				D08CAA861ED81DD40000FDA8 /* LocalizationInfo.swift */,
+				D05D8B362192F8AF0064586F /* LocalizationListState.swift */,
 			);
 			name = Localization;
 			sourceTree = "<group>";
@@ -2179,6 +2183,7 @@
 				D01AC91D1DD5DA5E00E8160F /* RequestMessageActionCallback.swift in Sources */,
 				D00C7CEB1E37A8540080C3D5 /* SetSecretChatMessageAutoremoveTimeoutInteractively.swift in Sources */,
 				D09BB6B61DB0428000A905C0 /* PendingMessageUploadedContent.swift in Sources */,
+				D05D8B372192F8AF0064586F /* LocalizationListState.swift in Sources */,
 				D0F3CC7D1DDE289E008148FA /* ResolvePeerByName.swift in Sources */,
 				D0B843B71DA7FF30005F29E1 /* NBMetadataCoreMapper.m in Sources */,
 				D0AB0B921D65E9FA002C78E7 /* ManagedServiceViews.swift in Sources */,
@@ -2716,6 +2721,7 @@
 				D07047BB1F3DF75500F6A8D4 /* ConsumePersonalMessageAction.swift in Sources */,
 				D0380DBB204EF306000414AB /* MessageMediaPreuploadManager.swift in Sources */,
 				D050F2621E4A5AE700988324 /* GlobalNotificationSettings.swift in Sources */,
+				D05D8B382192F8AF0064586F /* LocalizationListState.swift in Sources */,
 				D0DFD5E01FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift in Sources */,
 				D0B418991D7E0580004562A4 /* TelegramMediaMap.swift in Sources */,
 				D0E8174A2010E7E300B82BBB /* ChannelAdminEventLogContext.swift in Sources */,

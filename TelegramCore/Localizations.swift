@@ -139,11 +139,23 @@ public func downloadAndApplyLocalization(postbox: Postbox, network: Network, lan
             }
             var secondaryComponent: LocalizationComponent?
             if let secondaryCode = preview.baseLanguageCode, components.count > 1 {
-                secondaryComponent = LocalizationComponent(languageCode: secondaryCode, localization: components[1], customPluralizationCode: nil)
+                secondaryComponent = LocalizationComponent(languageCode: secondaryCode, localizedName: "", localization: components[1], customPluralizationCode: nil)
             }
             return postbox.transaction { transaction -> Signal<Void, DownloadAndApplyLocalizationError> in
                 transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
-                    return LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: preview.languageCode, localization: primaryLocalization, customPluralizationCode: preview.customPluralizationCode), secondaryComponent: secondaryComponent)
+                    return LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: preview.languageCode, localizedName: preview.localizedTitle, localization: primaryLocalization, customPluralizationCode: preview.customPluralizationCode), secondaryComponent: secondaryComponent)
+                })
+                
+                updateLocalizationListStateInteractively(transaction: transaction, { state in
+                    var state = state
+                    for i in 0 ..< state.availableSavedLocalizations.count {
+                        if state.availableSavedLocalizations[i].languageCode == preview.languageCode {
+                            state.availableSavedLocalizations.remove(at: i)
+                            break
+                        }
+                    }
+                    state.availableSavedLocalizations.insert(preview, at: 0)
+                    return state
                 })
                 
                 network.context.updateApiEnvironment { current in

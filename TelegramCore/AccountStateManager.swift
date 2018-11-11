@@ -110,6 +110,11 @@ public final class AccountStateManager {
         return self.appliedIncomingReadMessagesPipe.signal()
     }
     
+    private let significantStateUpdateCompletedPipe = ValuePipe<Void>()
+    var significantStateUpdateCompleted: Signal<Void, NoError> {
+        return self.significantStateUpdateCompletedPipe.signal()
+    }
+    
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
     
     private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
@@ -424,6 +429,7 @@ public final class AccountStateManager {
                                             strongSelf.insertProcessEvents(events)
                                         }
                                         strongSelf.currentIsUpdatingValue = false
+                                    strongSelf.significantStateUpdateCompletedPipe.putNext(Void())
                                 }
                             } else {
                                 if !events.isEmpty {
