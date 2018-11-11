@@ -55,6 +55,17 @@ private final class PendingMessageContext {
 
 public enum PendingMessageFailureReason {
     case flood
+    case publicBan
+}
+
+private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
+    if error.hasPrefix("PEER_FLOOD") {
+        return .flood
+    } else if error.hasPrefix("USER_BANNED_IN_CHANNEL") {
+        return .publicBan
+    } else {
+        return nil
+    }
 }
 
 private final class PeerPendingMessagesSummaryContext {
@@ -740,10 +751,10 @@ public final class PendingMessageManager {
                                     strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
                                     return .complete()
                                 }
-                            } else if error.errorDescription.hasPrefix("PEER_FLOOD"), let message = messages.first?.0 {
+                            } else if let failureReason = reasonForError(error.errorDescription), let message = messages.first?.0 {
                                 if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                                     for subscriber in context.messageFailedSubscribers.copyItems() {
-                                        subscriber(.flood)
+                                        subscriber(failureReason)
                                     }
                                 }
                             }
@@ -948,10 +959,10 @@ public final class PendingMessageManager {
                                 strongSelf.beginSendingMessages([messageId])
                                 return
                             }
-                        } else if error.errorDescription.hasPrefix("PEER_FLOOD") {
+                        } else if let failureReason = reasonForError(error.errorDescription) {
                             if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                                 for subscriber in context.messageFailedSubscribers.copyItems() {
-                                    subscriber(.flood)
+                                    subscriber(failureReason)
                                 }
                             }
                         }

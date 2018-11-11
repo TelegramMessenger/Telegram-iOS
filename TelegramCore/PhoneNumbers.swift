@@ -11,3 +11,7 @@ public func formatPhoneNumber(_ string: String) -> String {
         return string
     }
 }
+
+public func isViablePhoneNumber(_ string: String) -> Bool {
+    return phoneNumberUtil.isViablePhoneNumber(string)
+}
