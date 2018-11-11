@@ -11,14 +11,13 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private var theme: InstantPageTheme
     let media: InstantPageMedia
     let attributes: [InstantPageImageAttribute]
-    let url: InstantPageUrlItem?
     private let interactive: Bool
     private let roundCorners: Bool
     private let fit: Bool
     private let openMedia: (InstantPageMedia) -> Void
-    private let openUrl: (InstantPageUrlItem) -> Void
     
     private let imageNode: TransformImageNode
+    private let linkIconNode: ASImageNode
     private let pinNode: ChatMessageLiveLocationPositionNode
     
     private var currentSize: CGSize?
@@ -27,20 +26,19 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], url: InstantPageUrlItem? = nil, interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void = { _ in }) {
+    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.account = account
         self.theme = theme
         self.webPage = webPage
         self.media = media
         self.attributes = attributes
-        self.url = url
         self.interactive = interactive
         self.roundCorners = roundCorners
         self.fit = fit
         self.openMedia = openMedia
-        self.openUrl = openUrl
         
         self.imageNode = TransformImageNode()
+        self.linkIconNode = ASImageNode()
         self.pinNode = ChatMessageLiveLocationPositionNode()
         
         super.init()
@@ -51,6 +49,11 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            
+            if media.url != nil {
+                self.linkIconNode.image = UIImage(bundleImageName: "Instant View/ImageLink")
+                self.addSubnode(self.linkIconNode)
+            }
         } else if let file = media.media as? TelegramMediaFile {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             if file.mimeType.hasPrefix("image/") {
@@ -99,14 +102,6 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             self.theme = theme
             self.themeUpdated = true
             self.setNeedsLayout()
-            
-            if let file = self.media.media as? TelegramMediaFile {
-                let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
-                if file.mimeType.hasPrefix("image/") {
-                    _ = freeMediaFileInteractiveFetched(account: self.account, fileReference: fileReference).start()
-                    self.imageNode.setSignal(chatMessageImageFile(account: self.account, fileReference: fileReference, thumbnail: false, fetched: true))
-                }
-            }
         }
     }
     
@@ -126,8 +121,10 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 let boundingSize = size
                 let radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
                 let makeLayout = self.imageNode.asyncLayout()
-                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.theme.pageBackgroundColor))
                 apply()
+                
+                self.linkIconNode.frame = CGRect(x: size.width - 38.0, y: 14.0, width: 24.0, height: 24.0)
             } else if let file = self.media.media as? TelegramMediaFile, let dimensions = file.dimensions {
                 let emptyColor = file.mimeType.hasPrefix("image/") ? self.theme.imageEmptyColor : nil
 
@@ -175,11 +172,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let url = self.url {
-                self.openUrl(url)
-            } else {
-                self.openMedia(self.media)
-            }
+            self.openMedia(self.media)
         }
     }
 }

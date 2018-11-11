@@ -163,6 +163,12 @@ private func textInputBackgroundImage(backgroundColor: UIColor, strokeColor: UIC
     }
 }
 
+enum ChatTextInputPanelPasteData {
+    case images([UIImage])
+    case gif(Data)
+    case sticker(UIImage)
+}
+
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textPlaceholderNode: TextNode
     var contextPlaceholderNode: TextNode?
@@ -186,8 +192,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
-    var pasteImages: ([UIImage]) -> Void = { _ in }
-    var pasteData: (Data) -> Void = { _ in }
+    var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateHeight: () -> Void = { }
     
     var updateActivity: () -> Void = { }
@@ -1310,21 +1315,34 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let pasteboard = UIPasteboard.general
         
         var images: [UIImage] = []
-        if let gifData = pasteboard.data(forPasteboardType: "com.compuserve.gif") {
-            self.pasteData(gifData)
+        if let data = pasteboard.data(forPasteboardType: "com.compuserve.gif") {
+            self.paste(.gif(data))
             return false
         } else {
-            for item in UIPasteboard.general.items {
-                if let image = item[kUTTypeJPEG as String] as? UIImage {
+            var isPNG = false
+            for item in pasteboard.items {
+                if let image = item[kUTTypePNG as String] as? UIImage {
                     images.append(image)
-                } else if let image = item[kUTTypePNG as String] as? UIImage {
+                    isPNG = true
+                } else if let image = item["com.apple.uikit.image"] as? UIImage {
+                    images.append(image)
+                    isPNG = true
+                } else if let image = item[kUTTypeJPEG as String] as? UIImage {
                     images.append(image)
                 } else if let image = item[kUTTypeGIF as String] as? UIImage {
                     images.append(image)
                 }
             }
+            
+            if isPNG && images.count == 1, let image = images.first {
+                if imageHasTransparency(image) {
+                    self.paste(.sticker(image))
+                    return false
+                }
+            }
+            
             if !images.isEmpty {
-                self.pasteImages(images)
+                self.paste(.images(images))
                 return false
             }
         }

@@ -131,7 +131,26 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.joinNode.addTarget(self, action: #selector(self.joinPressed), forControlEvents: .touchUpInside)
         
-        self.peerDisposable = (actualizedPeer(postbox: self.account.postbox, network: self.account.network, peer: self.initialPeer) |> deliverOnMainQueue).start(next: { [weak self] peer in
+        let account = self.account
+        let signal = actualizedPeer(postbox: account.postbox, network: account.network, peer: self.initialPeer)
+        |> mapToSignal({ peer -> Signal<Peer, NoError> in
+            if let peer = peer as? TelegramChannel, let username = peer.username, peer.accessHash == nil {
+                return .single(peer) |> then(resolvePeerByName(account: account, name: username)
+                |> mapToSignal({ peerId -> Signal<Peer, NoError> in
+                    if let peerId = peerId {
+                        return account.postbox.transaction({ transaction -> Peer in
+                            return transaction.getPeer(peerId) ?? peer
+                        })
+                    } else {
+                        return .single(peer)
+                    }
+                }))
+            } else {
+                return .single(peer)
+            }
+        })
+    
+        self.peerDisposable = (signal |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 strongSelf.nameNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: strongSelf.theme.panelPrimaryColor)
                 if let peer = peer as? TelegramChannel {

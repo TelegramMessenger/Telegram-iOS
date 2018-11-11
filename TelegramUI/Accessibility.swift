@@ -1,10 +1,6 @@
 import SwiftSignalKit
 import UIKit
 
-func currentReduceMotionEnabled() -> Bool {
-    return UIAccessibility.isReduceMotionEnabled
-}
-
 func reduceMotionEnabled() -> Signal<Bool, NoError> {
     return Signal { subscriber in
         subscriber.putNext(UIAccessibility.isReduceMotionEnabled)

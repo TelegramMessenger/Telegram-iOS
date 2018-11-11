@@ -9,6 +9,7 @@ enum ChatListSearchItemHeaderType: Int32 {
     case deviceContacts
     case recentPeers
     case messages
+    case phoneNumber
 }
 
 final class ChatListSearchItemHeader: ListViewItemHeader {
@@ -71,6 +72,8 @@ final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
                 self.sectionHeaderNode.title = strings.DialogList_SearchSectionMessages.uppercased()
             case .recentPeers:
                 self.sectionHeaderNode.title = strings.DialogList_SearchSectionRecent.uppercased()
+            case .phoneNumber:
+                self.sectionHeaderNode.title = strings.Contacts_PhoneNumber.uppercased()
         }
         
         self.sectionHeaderNode.action = actionTitle

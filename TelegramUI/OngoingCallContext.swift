@@ -97,6 +97,17 @@ private func ongoingNetworkTypeForType(_ type: NetworkType) -> OngoingCallNetwor
     }
 }
 
+private func ongoingDataSavingForType(_ type: VoiceCallDataSaving) -> OngoingCallDataSaving {
+    switch type {
+        case .never:
+            return .never
+        case .cellular:
+            return .cellular
+        case .always:
+            return .always
+    }
+}
+
 final class OngoingCallContext {
     let internalId: CallSessionInternalId
     
@@ -125,7 +136,7 @@ final class OngoingCallContext {
     private let audioSessionDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
     
-    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?) {
+    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
@@ -143,7 +154,7 @@ final class OngoingCallContext {
                         break
                 }
             }
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType))
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving))
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
@@ -227,3 +238,4 @@ final class OngoingCallContext {
         return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
 }
+

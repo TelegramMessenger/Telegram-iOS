@@ -55,23 +55,23 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 class PeerAvatarImageGalleryItem: GalleryItem {
     let account: Account
     let peer: Peer
-    let strings: PresentationStrings
+    let presentationData: PresentationData
     let entry: AvatarGalleryEntry
     let delete: (() -> Void)?
     
-    init(account: Account, peer: Peer, strings: PresentationStrings, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
+    init(account: Account, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
         self.account = account
         self.peer = peer
-        self.strings = strings
+        self.presentationData = presentationData
         self.entry = entry
         self.delete = delete
     }
     
     func node() -> GalleryItemNode {
-        let node = PeerAvatarImageGalleryItemNode(account: self.account, peer: self.peer)
+        let node = PeerAvatarImageGalleryItemNode(account: self.account, presentationData: self.presentationData, peer: self.peer)
         
         if let indexData = self.entry.indexData {
-            node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
+            node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
         }
         
         node.setEntry(self.entry)
@@ -83,7 +83,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode) {
         if let node = node as? PeerAvatarImageGalleryItemNode {
             if let indexData = self.entry.indexData {
-                node._title.set(.single("\(indexData.position + 1) \(self.strings.Common_of) \(indexData.totalCount)"))
+                node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
             }
             
             node.setEntry(self.entry)
@@ -100,7 +100,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
                 } else {
                     return nil
                 }
-            case let .image(image, _):
+            case let .image(image, _, _, _):
                 content = .standaloneImage(image.representations)
         }
         
@@ -125,12 +125,12 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(account: Account, peer: Peer) {
+    init(account: Account, presentationData: PresentationData, peer: Peer) {
         self.account = account
         self.peer = peer
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = AvatarGalleryItemFooterContentNode(account: account)
+        self.footerContentNode = AvatarGalleryItemFooterContentNode(account: account, presentationData: presentationData)
         
         self.statusNodeContainer = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
@@ -180,6 +180,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         if self.entry != entry {
             self.entry = entry
             
+            self.footerContentNode.setEntry(entry)
+            
             if let largestSize = largestImageRepresentation(entry.representations) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
@@ -193,7 +195,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else {
                             representations = []
                         }
-                    case let .image(image, _):
+                    case let .image(image, _, _, _):
                         representations = image.representations.map { representation in
                             return (representation, .standalone(resource: representation.resource))
                         }
@@ -372,7 +374,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             } else {
                                 representations = []
                             }
-                        case let .image(image, _):
+                        case let .image(image, _, _, _):
                             representations = image.representations.map { representation in
                                 return (representation, .standalone(resource: representation.resource))
                             }

@@ -189,9 +189,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let displayLeftInset = params.leftInset + layoutConstants.bubble.edgeInset + avatarInset
             
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: 0.0), size: CGSize(width: imageSize.width + 0.0, height: imageSize.height + 0.0))
+            let imageInset: CGFloat = 10.0
+            let innerImageSize = imageSize
+            imageSize = CGSize(width: imageSize.width + imageInset * 2.0, height: imageSize.height + imageInset * 2.0)
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
             
-            let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: CGSize(width: imageSize.width + 0.0, height: imageSize.height + 0.0), intrinsicInsets: UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0))
+            let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: innerImageSize, boundingSize: innerImageSize, intrinsicInsets: UIEdgeInsets(top: imageInset, left: imageInset, bottom: imageInset, right: imageInset))
             
             let imageApply = imageLayout(arguments)
             

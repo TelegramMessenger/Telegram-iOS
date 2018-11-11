@@ -196,6 +196,7 @@ enum ChatListSearchEntryStableId: Hashable {
     case localPeerId(PeerId)
     case globalPeerId(PeerId)
     case messageId(MessageId)
+    case addContact
     
     static func ==(lhs: ChatListSearchEntryStableId, rhs: ChatListSearchEntryStableId) -> Bool {
         switch lhs {
@@ -217,6 +218,12 @@ enum ChatListSearchEntryStableId: Hashable {
                 } else {
                     return false
                 }
+            case .addContact:
+                if case .addContact = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -228,6 +235,8 @@ enum ChatListSearchEntryStableId: Hashable {
                 return peerId.hashValue
             case let .messageId(messageId):
                 return messageId.hashValue
+            case .addContact:
+                return 0
         }
     }
 }
@@ -237,6 +246,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
     case localPeer(Peer, Peer?, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
     case globalPeer(FoundPeer, UnreadSearchBadge?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
     case message(Message, CombinedPeerReadState?, ChatListPresentationData)
+    case addContact(String, PresentationTheme, PresentationStrings)
     
     var stableId: ChatListSearchEntryStableId {
         switch self {
@@ -246,6 +256,8 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 return .globalPeerId(peer.peer.id)
             case let .message(message, _, _):
                 return .messageId(message.id)
+            case .addContact:
+                return .addContact
         }
     }
     
@@ -281,6 +293,21 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .addContact(lhsPhoneNumber, lhsTheme, lhsStrings):
+                if case let .addContact(rhsPhoneNumber, rhsTheme, rhsStrings) = rhs {
+                    if lhsPhoneNumber != rhsPhoneNumber {
+                        return false
+                    }
+                    if lhsTheme !== rhsTheme {
+                        return false
+                    }
+                    if lhsStrings !== rhsStrings {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
         }
     }
         
@@ -298,15 +325,19 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                         return false
                     case let .globalPeer(_, _, rhsIndex, _, _, _, _):
                         return lhsIndex <= rhsIndex
-                    case .message:
+                    case .message, .addContact:
                         return true
                 }
             case let .message(lhsMessage, _, _):
                 if case let .message(rhsMessage, _, _) = rhs {
                     return MessageIndex(lhsMessage) < MessageIndex(rhsMessage)
+                } else if case .addContact = rhs {
+                    return true
                 } else {
                     return false
                 }
+            case .addContact:
+                return false
         }
     }
     
@@ -399,6 +430,10 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 })
             case let .message(message, readState, presentationData):
                 return ChatListItem(presentationData: presentationData, account: account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
+            case let .addContact(phoneNumber, theme, strings):
+                return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
+                    interaction.addContact(phoneNumber)
+                })
         }
     }
 }
@@ -475,7 +510,6 @@ private func doesPeerMatchFilter(peer: Peer, filter: ChatListNodePeersFilter) ->
 
 final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let account: Account
-    private let openMessage: (Peer, MessageId) -> Void
     
     private let recentListNode: ListView
     private let listNode: ListView
@@ -502,9 +536,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         return self._isSearching.get()
     }
     
-    init(account: Account, filter: ChatListNodePeersFilter, groupId: PeerGroupId?, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void) {
+    init(account: Account, filter: ChatListNodePeersFilter, groupId: PeerGroupId?, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?) {
         self.account = account
-        self.openMessage = openMessage
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
@@ -630,6 +663,10 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                                 }
                             }
                             
+                            if addContact != nil && isViablePhoneNumber(query) {
+                                entries.append(.addContact(query, presentationData.theme, presentationData.strings))
+                            }
+                            
                             return (entries, isSearching)
                         }
                 } else {
@@ -650,6 +687,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             }
             self?.listNode.clearHighlightAnimated(true)
         }, groupSelected: { _ in 
+        }, addContact: { [weak self] phoneNumber in
+            addContact?(phoneNumber)
+            self?.listNode.clearHighlightAnimated(true)
         }, setPeerIdWithRevealedOptions: { [weak self] peerId, fromPeerId in
             if let strongSelf = self {
                 strongSelf.updateState { state in

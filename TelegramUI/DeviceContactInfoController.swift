@@ -708,7 +708,7 @@ private final class DeviceContactInfoController: ItemListController<DeviceContac
     }
 }
 
-public func deviceContactInfoController(account: Account, subject: DeviceContactInfoSubject, cancelled: (() -> Void)? = nil) -> ViewController {
+public func deviceContactInfoController(account: Account, subject: DeviceContactInfoSubject, completed: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) -> ViewController {
     var initialState = DeviceContactInfoState()
     if case let .create(peer, contactData, _) = subject {
         var peerPhoneNumber: String?
@@ -941,6 +941,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
                     if let composedContactData = composedContactData {
                         let _ = (account.telegramApplicationContext.contactDataManager.createContactWithData(composedContactData)
                         |> deliverOnMainQueue).start(next: { contactIdAndData in
+                            completed?()
                             dismissImpl?(true)
                         })
                     }

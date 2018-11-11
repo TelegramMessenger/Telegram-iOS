@@ -87,13 +87,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     return result
 }
 
-private let nameFont: UIFont = {
-    if #available(iOS 8.2, *) {
-        return UIFont.systemFont(ofSize: 14.0, weight: UIFont.Weight.medium)
-    } else {
-        return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, 14.0, nil)
-    }
-}()
+private let nameFont = Font.medium(14.0)
 
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont

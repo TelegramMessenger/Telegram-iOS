@@ -70,7 +70,7 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
                 let colorData = NSMutableData()
                 let alphaData = NSMutableData()
                 
-                let size = representation.size ?? CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+                let size = representation.size != nil ? image.size.aspectFitted(representation.size!) : CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
                 
                 let colorImage: UIImage
                 if let _ = representation.size {

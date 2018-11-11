@@ -349,6 +349,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, navigateToFirstDateMessage: { _ in
             
         }, requestRedeliveryOfFailedMessages: { _ in
+        }, addContact: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)

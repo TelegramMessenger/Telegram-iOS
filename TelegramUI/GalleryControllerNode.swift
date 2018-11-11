@@ -96,7 +96,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                 if let (updatedItems, index, progress) = itemsIndexAndProgress {
                     if let (centralId, centralItem) = strongSelf.pager.items[index].thumbnailItem() {
                         var items: [GalleryThumbnailItem]
-                        var indexes: [Int]?
+                        var indexes: [Int]
                         
                         if updatedItems != nil || strongSelf.currentThumbnailContainerNode == nil {
                             items = [centralItem]
@@ -104,7 +104,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                             for i in (0 ..< index).reversed() {
                                 if let (id, item) = strongSelf.pager.items[i].thumbnailItem(), id == centralId {
                                     items.insert(item, at: 0)
-                                    indexes?.insert(i, at: 0)
+                                    indexes.insert(i, at: 0)
                                 } else {
                                     break
                                 }
@@ -112,20 +112,26 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                             for i in (index + 1) ..< strongSelf.pager.items.count {
                                 if let (id, item) = strongSelf.pager.items[i].thumbnailItem(), id == centralId {
                                     items.append(item)
-                                    indexes?.append(i)
+                                    indexes.append(i)
                                 } else {
                                     break
                                 }
                             }
                         } else if let currentThumbnailContainerNode = strongSelf.currentThumbnailContainerNode {
                             items = currentThumbnailContainerNode.items
+                            indexes = currentThumbnailContainerNode.indexes
                         } else {
                             items = []
+                            indexes = []
                             assertionFailure()
                         }
                         
-                        if let index = items.index(where: { $0.isEqual(to: centralItem) }) {
-                            let convertedIndex = (index, progress)
+                        var convertedIndex: Int?
+                        if let firstIndex = indexes.first {
+                            convertedIndex = index - firstIndex
+                        }
+                        
+                        if let convertedIndex = convertedIndex {
                             if strongSelf.currentThumbnailContainerNode?.groupId != centralId {
                                 if items.count > 1 {
                                     node = GalleryThumbnailContainerNode(groupId: centralId)
@@ -133,13 +139,11 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                             } else {
                                 node = strongSelf.currentThumbnailContainerNode
                             }
-                            node?.updateItems(items, centralIndex: convertedIndex.0, progress: convertedIndex.1)
-                            if let indexes = indexes {
-                                node?.itemChanged = { [weak self] index in
-                                    if let strongSelf = self {
-                                        let pagerIndex = indexes[index]
-                                        strongSelf.pager.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: pagerIndex))
-                                    }
+                            node?.updateItems(items, indexes: indexes, centralIndex: convertedIndex, progress: progress)
+                            node?.itemChanged = { [weak self] index in
+                                if let strongSelf = self {
+                                    let pagerIndex = indexes[index]
+                                    strongSelf.pager.transaction(GalleryPagerTransaction(deleteItems: [], insertItems: [], updateItems: [], focusOnItem: pagerIndex))
                                 }
                             }
                         }

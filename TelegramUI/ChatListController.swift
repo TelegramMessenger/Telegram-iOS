@@ -55,6 +55,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     private var passcodeLockTooltipDisposable = MetaDisposable()
     private var didShowPasscodeLockTooltipController = false
     
+    private var suggestLocalizationDisposable = MetaDisposable()
+    private var didSuggestLocalization = false
+    
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
@@ -245,6 +248,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.badgeDisposable?.dispose()
         self.badgeIconDisposable?.dispose()
         self.passcodeLockTooltipDisposable.dispose()
+        self.suggestLocalizationDisposable.dispose()
         self.presentationDataDisposable?.dispose()
     }
     
@@ -308,9 +312,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         var items: [ActionSheetItem] = []
                         var canClear = true
                         var canStop = false
+                        
+                        var deleteTitle = strongSelf.presentationData.strings.Common_Delete
                         if let channel = peer as? TelegramChannel {
                             if case .broadcast = channel.info {
                                 canClear = false
+                                deleteTitle =  strongSelf.presentationData.strings.Channel_LeaveChannel
                             }
                             if let addressName = channel.addressName, !addressName.isEmpty {
                                 canClear = false
@@ -328,7 +335,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             }))
                         }
                         
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+                        items.append(ActionSheetButtonItem(title: deleteTitle, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             
                             if let strongSelf = self {
@@ -468,6 +475,17 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
+        self.chatListDisplayNode.requestAddContact = { [weak self] phoneNumber in
+            if let strongSelf = self {
+                strongSelf.chatListDisplayNode.view.endEditing(true)
+                openAddContact(account: strongSelf.account, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
+                    self?.present(controller, in: .window(.root), with: arguments)
+                }, completed: {
+                    self?.deactivateSearch(animated: false)
+                })
+            }
+        }
+        
         /*self.badgeIconDisposable = (self.chatListDisplayNode.chatListNode.scrollToTopOption
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] option in
@@ -529,6 +547,54 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         }
                     }
                 }))
+        }
+        
+        if !self.didSuggestLocalization {
+            self.didSuggestLocalization = true
+            
+            let network = self.account.network
+            let signal = self.account.postbox.transaction { transaction -> (String, SuggestedLocalizationEntry?) in
+                let languageCode: String
+                if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
+                    let code = current.primaryComponent.languageCode
+                    let rawSuffix = "-raw"
+                    if code.hasSuffix(rawSuffix) {
+                        languageCode = String(code.dropLast(rawSuffix.count))
+                    } else {
+                        languageCode = code
+                    }
+                } else {
+                    languageCode = "en"
+                }
+                var suggestedLocalization: SuggestedLocalizationEntry?
+                if let localization = transaction.getPreferencesEntry(key: PreferencesKeys.suggestedLocalization) as? SuggestedLocalizationEntry {
+                    suggestedLocalization = localization
+                }
+                return (languageCode, suggestedLocalization)
+            } |> mapToSignal({ value -> Signal<(String, SuggestedLocalizationInfo)?, NoError> in
+                guard let suggestedLocalization = value.1, !suggestedLocalization.isSeen && suggestedLocalization.languageCode != "en" && suggestedLocalization.languageCode != value.0 else {
+                    return .single(nil)
+                }
+                return suggestedLocalizationInfo(network: network, languageCode: suggestedLocalization.languageCode, extractKeys: LanguageSuggestionControllerStrings.keys)
+                |> map({ suggestedLocalization -> (String, SuggestedLocalizationInfo)? in
+                    return (value.0, suggestedLocalization)
+                })
+            })
+        
+            self.suggestLocalizationDisposable.set((signal |> deliverOnMainQueue).start(next: { [weak self] suggestedLocalization in
+                guard let strongSelf = self, let (currentLanguageCode, suggestedLocalization) = suggestedLocalization else {
+                    return
+                }
+                if let controller = languageSuggestionController(account: strongSelf.account, suggestedLocalization: suggestedLocalization, currentLanguageCode: currentLanguageCode, openSelection: { [weak self] in
+                    if let strongSelf = self {
+                        let controller = LocalizationListController(account: strongSelf.account)
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                    }
+                }) {
+                    strongSelf.present(controller, in: .window(.root))
+                    _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.account.postbox, languageCode: suggestedLocalization.languageCode).start()
+                }
+            }))
         }
     }
     

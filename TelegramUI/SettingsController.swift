@@ -432,14 +432,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let actionsDisposable = DisposableSet()
     
-    let cachedDataDisposable = MetaDisposable()
-    actionsDisposable.add(cachedDataDisposable)
-    
     let updateAvatarDisposable = MetaDisposable()
     actionsDisposable.add(updateAvatarDisposable)
-    
-    let updatePeerNameDisposable = MetaDisposable()
-    actionsDisposable.add(updatePeerNameDisposable)
     
     let supportPeerDisposable = MetaDisposable()
     actionsDisposable.add(supportPeerDisposable)

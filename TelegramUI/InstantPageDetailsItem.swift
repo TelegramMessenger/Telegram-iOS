@@ -69,10 +69,13 @@ final class InstantPageDetailsItem: InstantPageItem {
                 }
             }
         } else {
+            let convertedPoint = point.offsetBy(dx: 0.0, dy: -self.titleHeight)
             for item in self.items {
-                if item.frame.contains(point) {
-                    let rects = item.linkSelectionRects(at: point.offsetBy(dx: 0.0, dy: -self.titleHeight))
-                    return rects.map { $0.offsetBy(dx: item.frame.minX, dy: item.frame.minY + self.titleHeight) }
+                if item.frame.contains(convertedPoint) {
+                    let rects = item.linkSelectionRects(at: convertedPoint.offsetBy(dx: -item.frame.minX, dy: -item.frame.minY))
+                    if !rects.isEmpty {
+                        return rects.map { $0.offsetBy(dx: item.frame.minX, dy: item.frame.minY + self.titleHeight) }
+                    }
                 }
             }
         }
@@ -84,7 +87,7 @@ func layoutDetailsItem(theme: InstantPageTheme, title: NSAttributedString, bound
     let detailsInset: CGFloat = 17.0 + safeInset
     let titleInset: CGFloat = 22.0
     
-    let (titleItems, titleSize) = layoutTextItemWithString(title, boundingWidth: boundingWidth - detailsInset * 2.0 - titleInset, offset: CGPoint(x: detailsInset + titleInset, y: 0.0))
+    let (_, titleItems, titleSize) = layoutTextItemWithString(title, boundingWidth: boundingWidth - detailsInset * 2.0 - titleInset, offset: CGPoint(x: detailsInset + titleInset, y: 0.0))
     let titleHeight = max(44.0, titleSize.height + 26.0)
     var offset: CGFloat?
     for var item in titleItems {

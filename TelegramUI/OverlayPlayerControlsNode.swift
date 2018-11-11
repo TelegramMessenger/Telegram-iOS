@@ -95,6 +95,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private var displayData: SharedMediaPlaybackDisplayData?
     private var currentAlbumArtInitialized = false
     private var currentAlbumArt: SharedMediaPlaybackAlbumArt?
+    private var currentFileReference: FileMediaReference?
     private var statusDisposable: Disposable?
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
@@ -261,6 +262,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     if let source = value?.item.playbackData?.source {
                         switch source {
                             case let .telegramFile(fileReference):
+                                strongSelf.currentFileReference = fileReference
                                 if let size = fileReference.media.size {
                                     strongSelf.scrubberNode.bufferingStatus = postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
                                     |> map { ranges -> (IndexSet, Int) in
@@ -338,9 +340,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if self.currentAlbumArt != albumArt || !self.currentAlbumArtInitialized {
             self.currentAlbumArtInitialized = true
             self.currentAlbumArt = albumArt
-            self.albumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, albumArt: albumArt, thumbnail: true))
+            self.albumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: true))
             if let largeAlbumArtNode = self.largeAlbumArtNode {
-                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, albumArt: albumArt, thumbnail: false))
+                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
             }
         }
     }
@@ -397,7 +399,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 self.largeAlbumArtNode = largeAlbumArtNode
                 self.addSubnode(largeAlbumArtNode)
                 if self.currentAlbumArtInitialized {
-                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, albumArt: self.currentAlbumArt, thumbnail: false))
+                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: self.currentAlbumArt, thumbnail: false))
                 }
             }
             

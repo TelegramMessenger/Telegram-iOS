@@ -125,8 +125,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
     var sendMessages: ([EnqueueMessage]) -> Void = { _ in }
     var displayAttachmentMenu: () -> Void = { }
-    var displayPasteMenu: ([UIImage]) -> Void = { _ in }
-    var sendGif: (Data) -> Void = { _ in }
+    var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateTypingActivity: (Bool) -> Void = { _ in }
     var dismissUrlPreview: () -> Void = { }
     var setupSendActionOnViewUpdate: (@escaping () -> Void) -> Void = { _ in }
@@ -319,11 +318,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.textInputPanelNode?.pasteImages = { [weak self] images in
-            self?.displayPasteMenu(images)
-        }
-        self.textInputPanelNode?.pasteData = { [weak self] data in
-            self?.sendGif(data)
+        self.textInputPanelNode?.paste = { [weak self] data in
+            self?.paste(data)
         }
         self.textInputPanelNode?.displayAttachmentMenu = { [weak self] in
             self?.displayAttachmentMenu()

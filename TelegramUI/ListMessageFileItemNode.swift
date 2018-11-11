@@ -116,7 +116,7 @@ private struct FetchControls {
 
 private enum FileIconImage: Equatable {
     case imageRepresentation(TelegramMediaFile, TelegramMediaImageRepresentation)
-    case albumArt(SharedMediaPlaybackAlbumArt)
+    case albumArt(TelegramMediaFile, SharedMediaPlaybackAlbumArt)
     
     static func ==(lhs: FileIconImage, rhs: FileIconImage) -> Bool {
         switch lhs {
@@ -126,8 +126,8 @@ private enum FileIconImage: Equatable {
                 } else {
                     return false
                 }
-            case let .albumArt(value):
-                if case .albumArt(value) = rhs {
+            case let .albumArt(file, value):
+                if case .albumArt(file, value) = rhs {
                     return true
                 } else {
                     return false
@@ -342,7 +342,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                             descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
                             
                             if !voice {
-                                iconImage = .albumArt(SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
+                                iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
                             }
                         }
                     }
@@ -458,8 +458,8 @@ final class ListMessageFileItemNode: ListMessageNode {
                     switch iconImage {
                         case let .imageRepresentation(file, representation):
                             updateIconImageSignal = chatWebpageSnippetFile(account: item.account, fileReference: .message(message: MessageReference(message), media: file), representation: representation)
-                        case let .albumArt(albumArt):
-                            updateIconImageSignal = playerAlbumArt(postbox: item.account.postbox, albumArt: albumArt, thumbnail: true)
+                        case let .albumArt(file, albumArt):
+                            updateIconImageSignal = playerAlbumArt(postbox: item.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true)
                         
                     }
                 } else {
@@ -850,7 +850,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     }
     
     @objc private func statusPressed() {
-        guard let item = self.item, let fetchStatus = self.fetchStatus else {
+        guard let _ = self.item, let fetchStatus = self.fetchStatus else {
             return
         }
         

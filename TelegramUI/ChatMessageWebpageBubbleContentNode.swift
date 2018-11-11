@@ -57,12 +57,12 @@ func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galleryMedia
     }
     
     if !found {
-        result.insert(InstantPageGalleryEntry(index: Int32(counter), pageId: webpageId, media: InstantPageMedia(index: counter, media: galleryMedia, caption: nil), caption: nil, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0)), at: 0)
+        result.insert(InstantPageGalleryEntry(index: Int32(counter), pageId: webpageId, media: InstantPageMedia(index: counter, media: galleryMedia, url: nil, caption: nil, credit: nil), caption: nil, credit: nil, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0)), at: 0)
     }
     
     for i in 0 ..< result.count {
         let item = result[i]
-        result[i] = InstantPageGalleryEntry(index: Int32(i), pageId: item.pageId, media: item.media, caption: item.caption, location: InstantPageGalleryEntryLocation(position: Int32(i), totalCount: Int32(result.count)))
+        result[i] = InstantPageGalleryEntry(index: Int32(i), pageId: item.pageId, media: item.media, caption: item.caption, credit: item.credit, location: InstantPageGalleryEntryLocation(position: Int32(i), totalCount: Int32(result.count)))
     }
     return result
 }
@@ -71,13 +71,13 @@ private func instantPageBlockMedia(pageId: MediaId, block: InstantPageBlock, med
     switch block {
         case let .image(id, caption, _, _):
             if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, caption: caption.text), caption: caption.text, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
+                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
                 counter += 1
                 return result
             }
-        case let .video(id, caption, _, loop):
+        case let .video(id, caption, _, _):
             if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, caption: caption.text), caption: caption.text, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
+                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
                 counter += 1
                 return result
             }

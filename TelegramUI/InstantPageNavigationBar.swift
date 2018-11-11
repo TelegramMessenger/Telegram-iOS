@@ -15,6 +15,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
     private let actionButton: HighlightableButtonNode
     private let scrollToTopButton: HighlightableButtonNode
     private let arrowNode: ASImageNode
+    private let titleNode: ASTextNode
     
     private let intrinsicMoreSize: CGSize
     private let intrinsicSmallMoreSize: CGSize
@@ -57,6 +58,8 @@ final class InstantPageNavigationBar: ASDisplayNode {
         self.arrowNode.displayWithoutProcessing = true
         self.arrowNode.displaysAsynchronously = false
         
+        self.titleNode = ASTextNode()
+        
         super.init()
         
         self.backgroundColor = .black
@@ -68,6 +71,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
         self.addSubnode(self.scrollToTopButton)
         self.addSubnode(self.moreButton)
         self.addSubnode(self.actionButton)
+        self.addSubnode(self.titleNode)
         
         self.backButton.addTarget(self, action: #selector(self.backPressed), forControlEvents: .touchUpInside)
         self.actionButton.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)

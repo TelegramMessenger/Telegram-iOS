@@ -4,13 +4,17 @@ import Display
 import Postbox
 import AsyncDisplayKit
 
-final class InstantPageUrlItem {
+final class InstantPageUrlItem: Equatable {
     let url: String
     let webpageId: MediaId?
     
     init(url: String, webpageId: MediaId?) {
         self.url = url
         self.webpageId = webpageId
+    }
+    
+    public static func ==(lhs: InstantPageUrlItem, rhs: InstantPageUrlItem) -> Bool {
+        return lhs.url == rhs.url && lhs.webpageId == rhs.webpageId
     }
 }
 
@@ -428,9 +432,9 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
     }
 }
 
-func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0) -> ([InstantPageItem], CGSize) {
+func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0) -> (InstantPageTextItem?, [InstantPageItem], CGSize) {
     if string.length == 0 {
-        return ([], CGSize())
+        return (nil, [], CGSize())
     }
     
     var lines: [InstantPageTextLine] = []
@@ -445,7 +449,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     }
     let image = string.attribute(NSAttributedStringKey.init(rawValue: InstantPageMediaIdAttribute), at: 0, effectiveRange: nil)
     guard font != nil || image != nil else {
-        return ([], CGSize())
+        return (nil, [], CGSize())
     }
     
     var lineSpacingFactor: CGFloat = 1.12
@@ -602,10 +606,10 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     if let webpage = webpage {
         for imageItem in textItem.imageItems {
             if let image = media[imageItem.id] as? TelegramMediaFile {
-                items.append(InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, caption: nil), interactive: false, roundCorners: false, fit: false))
+                items.append(InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false))
             }
         }
     }
     
-    return (items, textItem.frame.size)
+    return (textItem, items, textItem.frame.size)
 }

@@ -175,6 +175,19 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     }
 }
 
+static int callControllerDataSavingForType(OngoingCallDataSaving type) {
+    switch (type) {
+        case OngoingCallDataSavingNever:
+            return tgvoip::DATA_SAVING_NEVER;
+        case OngoingCallDataSavingCellular:
+            return tgvoip::DATA_SAVING_MOBILE;
+        case OngoingCallDataSavingAlways:
+            return tgvoip::DATA_SAVING_ALWAYS;
+        default:
+            return tgvoip::DATA_SAVING_NEVER;
+    }
+}
+
 @implementation OngoingCallThreadLocalContext
 
 + (void)setupLoggingFunction:(void (*)(NSString *))loggingFunction {
@@ -211,7 +224,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
     }
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -222,7 +235,7 @@ static int callControllerNetworkTypeForType(OngoingCallNetworkType type) {
         _callRingTimeout = 90.0;
         _callConnectTimeout = 30.0;
         _callPacketTimeout = 10.0;
-        _dataSavingMode = 0;
+        _dataSavingMode = callControllerDataSavingForType(dataSaving);
         _networkType = networkType;
         
         _controller = new tgvoip::VoIPController();

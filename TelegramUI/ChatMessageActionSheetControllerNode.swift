@@ -205,7 +205,7 @@ final class ChatMessageActionSheetControllerNode: ViewControllerTracingNode {
             }
         }
         if let associatedController = self.associatedController {
-            let subpoint = self.view.convert(point, to: nil) // temporary fix of iPad landscape+keyboard issue. Point converts to portrait coordinate system otherwise
+            let subpoint = self.view.convert(point, to: nil)
             if let result = associatedController.view.hitTest(subpoint, with: event) {
                 return result
             }

@@ -21,6 +21,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     
     var nextPressed: ((PresentationStrings?) -> Void)?
     
+    private let suggestedLocalization = Promise<SuggestedLocalizationInfo?>(nil)
     private let activateLocalizationDisposable = MetaDisposable()
     
     init(postbox: Postbox, network: Network, theme: AuthorizationTheme) {
@@ -28,8 +29,11 @@ final class AuthorizationSequenceSplashController: ViewController {
         self.network = network
         self.theme = theme
         
+        self.suggestedLocalization.set(currentlySuggestedLocalization(network: network, extractKeys: ["Login.ContinueWithLocalization"]))
+        let suggestedLocalization = self.suggestedLocalization
+        
         let localizationSignal = SSignal(generator: { subscriber in
-            let disposable = currentlySuggestedLocalization(network: network, extractKeys: ["Login.ContinueWithLocalization"]).start(next: { localization in
+            let disposable = suggestedLocalization.get().start(next: { localization in
                 guard let localization = localization else {
                     return
                 }
@@ -138,15 +142,25 @@ final class AuthorizationSequenceSplashController: ViewController {
     }
     
     private func activateLocalization(_ code: String) {
-        let _ = (postbox.transaction { transaction -> String in
+        let currentCode = self.postbox.transaction { transaction -> String in
             if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
                 return current.primaryComponent.languageCode
             } else {
                 return "en"
             }
-        } |> deliverOnMainQueue).start(next: { [weak self] currentCode in
+        }
+        let suggestedCode = self.suggestedLocalization.get()
+        |> map { localization -> String? in
+            return localization?.availableLocalizations.first?.languageCode
+        }
+        
+        let _ = (combineLatest(currentCode, suggestedCode) |> deliverOnMainQueue).start(next: { [weak self] currentCode, suggestedCode in
             guard let strongSelf = self else {
                 return
+            }
+            
+            if let suggestedCode = suggestedCode {
+                _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.postbox, languageCode: suggestedCode).start()
             }
             
             if currentCode == code {

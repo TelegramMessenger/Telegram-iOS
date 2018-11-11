@@ -84,30 +84,42 @@ private func collectExternalShareItems(postbox: Postbox, collectableItems: [Coll
     for item in collectableItems {
         if let mediaReference = item.mediaReference, let file = mediaReference.media as? TelegramMediaFile {
             signals.append(collectExternalShareResource(postbox: postbox, resourceReference: mediaReference.resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes))
-            |> map { next -> ExternalShareItemStatus in
-                switch next {
-                    case .progress:
-                        return .progress
-                    case let .done(data):
-                        let fileName: String
-                        if let value = file.fileName {
-                            fileName = value
-                        } else if file.isVideo {
-                            fileName = "telegram_video.mp4"
-                        } else {
-                            fileName = "file"
-                        }
-                        let randomDirectory = UUID()
-                        let safeFileName = fileName.replacingOccurrences(of: "/", with: "_")
-                        let fileDirectory = NSTemporaryDirectory() + "\(randomDirectory)"
-                        let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: fileDirectory), withIntermediateDirectories: true, attributes: nil)
-                        let filePath = fileDirectory + "/\(safeFileName)"
-                        if let _ = try? FileManager.default.copyItem(at: URL(fileURLWithPath: data.path), to: URL(fileURLWithPath: filePath)) {
-                            return .done(.file(URL(fileURLWithPath: filePath), fileName, file.mimeType))
-                        } else {
-                            return .progress
-                        }
-                }
+                |> mapToSignal { next -> Signal<ExternalShareItemStatus, NoError> in
+                    switch next {
+                        case .progress:
+                            return .single(.progress)
+                        case let .done(data):
+                            if file.isSticker, let dimensions = file.dimensions {
+                                return chatMessageSticker(postbox: postbox, file: file, small: false, fetched: true, onlyFullSize: true)
+                                |> map { f -> ExternalShareItemStatus in
+                                    let context = f(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions, boundingSize: dimensions, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, scale: 1.0))
+                                    if let image = context?.generateImage() {
+                                        return .done(.image(image))
+                                    } else {
+                                        return .progress
+                                    }
+                                }
+                            } else {
+                                let fileName: String
+                                if let value = file.fileName {
+                                    fileName = value
+                                } else if file.isVideo {
+                                    fileName = "telegram_video.mp4"
+                                } else {
+                                    fileName = "file"
+                                }
+                                let randomDirectory = UUID()
+                                let safeFileName = fileName.replacingOccurrences(of: "/", with: "_")
+                                let fileDirectory = NSTemporaryDirectory() + "\(randomDirectory)"
+                                let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: fileDirectory), withIntermediateDirectories: true, attributes: nil)
+                                let filePath = fileDirectory + "/\(safeFileName)"
+                                if let _ = try? FileManager.default.copyItem(at: URL(fileURLWithPath: data.path), to: URL(fileURLWithPath: filePath)) {
+                                    return .single(.done(.file(URL(fileURLWithPath: filePath), fileName, file.mimeType)))
+                                } else {
+                                    return .single(.progress)
+                                }
+                            }
+                    }
             })
         } else if let mediaReference = item.mediaReference, let image = mediaReference.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
             signals.append(collectExternalShareResource(postbox: postbox, resourceReference: mediaReference.resourceReference(largest.resource), statsCategory: .image)
