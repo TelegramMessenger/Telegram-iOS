@@ -2694,11 +2694,13 @@ final class MessageHistoryTable: Table {
                 }
             }
             associatedMessageIds.append(contentsOf: attribute.associatedMessageIds)
-            for messageId in attribute.associatedMessageIds {
-                if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(messageId) {
-                    if case let .Message(index) = entry {
-                        if let message = self.getMessage(index) {
-                            associatedMessages[messageId] = self.renderMessage(message, peerTable: peerTable, addAssociatedMessages: false)
+            if addAssociatedMessages {
+                for messageId in attribute.associatedMessageIds {
+                    if let entry = self.messageHistoryIndexTable.getMaybeUninitialized(messageId) {
+                        if case let .Message(index) = entry {
+                            if let message = self.getMessage(index) {
+                                associatedMessages[messageId] = self.renderMessage(message, peerTable: peerTable, addAssociatedMessages: false)
+                            }
                         }
                     }
                 }
