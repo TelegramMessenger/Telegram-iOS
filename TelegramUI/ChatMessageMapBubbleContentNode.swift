@@ -239,7 +239,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 return (contentWidth, { boundingWidth in
-                    let arguments = TransformImageArguments(corners: imageCorners, imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                    let arguments = TransformImageArguments(corners: imageCorners, imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingMediaPlaceholderColor : item.presentationData.theme.theme.chat.bubble.outgoingMediaPlaceholderColor)
                     
                     let imageLayoutSize = CGSize(width: imageSize.width + bubbleInsets.left + bubbleInsets.right, height: imageSize.height + bubbleInsets.top + bubbleInsets.bottom)
                     

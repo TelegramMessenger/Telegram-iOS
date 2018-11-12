@@ -381,7 +381,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         }
                     }
                     
-                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground)
+                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: message.effectivelyIncoming(account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor)
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize)
                     

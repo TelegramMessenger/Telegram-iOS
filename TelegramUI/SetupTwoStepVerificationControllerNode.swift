@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 
 enum SetupTwoStepVerificationInitialState {
+    case automatic
     case createPassword
     case updatePassword(current: String, hasRecoveryEmail: Bool, hasSecureValues: Bool)
     case addEmail(hadRecoveryEmail: Bool, hasSecureValues: Bool, password: String)
@@ -75,8 +76,10 @@ private enum SetupTwoStepVerificationState: Equatable {
 }
 
 extension SetupTwoStepVerificationState {
-    init(initialState: SetupTwoStepVerificationInitialState) {
+    init?(initialState: SetupTwoStepVerificationInitialState) {
         switch initialState {
+            case .automatic:
+                return nil
             case .createPassword:
                 self = .enterPassword(mode: .create, password: "")
             case let .updatePassword(current, hasRecoveryEmail, hasSecureValues):
@@ -91,7 +94,7 @@ extension SetupTwoStepVerificationState {
 
 private struct SetupTwoStepVerificationControllerDataState: Equatable {
     var activity: Bool
-    var state: SetupTwoStepVerificationState
+    var state: SetupTwoStepVerificationState?
 }
 
 private struct SetupTwoStepVerificationControllerLayoutState: Equatable {
@@ -140,6 +143,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
     private let dismiss: () -> Void
     private var innerState: SetupTwoStepVerificationControllerInnerState
     
+    private let activityIndicator: ActivityIndicator
     private var contentNode: SetupTwoStepVerificationContentNode?
     private let actionDisposable = MetaDisposable()
     
@@ -152,11 +156,34 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
         self.dismiss = dismiss
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.innerState = SetupTwoStepVerificationControllerInnerState(layout: nil, data: SetupTwoStepVerificationControllerDataState(activity: false, state: SetupTwoStepVerificationState(initialState: initialState)))
+        self.activityIndicator = ActivityIndicator(type: .custom(self.presentationData.theme.list.itemAccentColor, 22.0, 2.0, false))
         
         super.init()
         
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.processStateUpdated()
+        
+        if self.innerState.data.state == nil {
+            self.actionDisposable.set((twoStepAuthData(account.network)
+            |> deliverOnMainQueue).start(next: { [weak self] data in
+                guard let strongSelf = self else {
+                    return
+                }
+                if data.currentPasswordDerivation != nil {
+                    strongSelf.stateUpdated(.passwordSet(password: nil, hasRecoveryEmail: data.hasRecovery, hasSecureValues: data.hasSecretValues), true)
+                } else {
+                    strongSelf.updateState({ state in
+                        var state = state
+                        if let unconfirmedEmailPattern = data.unconfirmedEmailPattern {
+                            state.data.state = .confirmEmail(state: .confirm(password: nil, hasSecureValues: data.hasSecretValues, pattern: unconfirmedEmailPattern, codeLength: nil), pattern: unconfirmedEmailPattern, codeLength: nil, code: "")
+                        } else {
+                            state.data.state = .enterPassword(mode: .create, password: "")
+                        }
+                        return state
+                    }, transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
+            }))
+        }
     }
     
     deinit {
@@ -194,8 +221,8 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
         let nextAction: SetupTwoStepVerificationNextAction
         if self.innerState.data.activity {
             nextAction = .activity
-        } else {
-            switch self.innerState.data.state {
+        } else if let state = self.innerState.data.state {
+            switch state {
                 case let .enterPassword(_, password):
                     nextAction = .button(title: self.presentationData.strings.Common_Next, isEnabled: !password.isEmpty)
                 case let .confirmPassword(_, _, confirmation):
@@ -214,6 +241,8 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                 case let .confirmEmail(_, _, _, code):
                     nextAction = .button(title: self.presentationData.strings.Common_Next, isEnabled: !code.isEmpty)
             }
+        } else {
+            nextAction = .none
         }
         self.updateBackAction(backAction)
         self.updateNextAction(nextAction)
@@ -225,6 +254,8 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
             state.layout = SetupTwoStepVerificationControllerLayoutState(layout: layout, navigationHeight: navigationBarHeight)
             return state
         }, transition: transition)
+        let indicatorSize = CGSize(width: 22.0, height: 22.0)
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: floor((layout.size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
     }
     
     private func transition(state: SetupTwoStepVerificationControllerState, transition: ContainedViewLayoutTransition) {
@@ -238,191 +269,209 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
             }
         }
         let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
-        if state.data.state.kind != self.contentNode?.kind {
-            let title: String
-            let subtitle: String
-            let inputType: SetupTwoStepVerificationInputType
-            let inputPlaceholder: String
-            let inputText: String
-            let isPassword: Bool
-            var leftAction: SetupTwoStepVerificationContentAction?
-            var rightAction: SetupTwoStepVerificationContentAction?
-            switch state.data.state {
-                case let .enterPassword(mode, password):
-                    switch mode {
-                        case .create:
-                            title = "Create a Password"
-                            subtitle = "Please create a password which will be used to protect your data."
-                        case .update:
-                            title = "Change Password"
-                            subtitle = "Please enter a new password which will be used to protect your data."
-                    }
-                    inputType = .password
-                    inputPlaceholder = "Password"
-                    inputText = password
-                    isPassword = true
-                case let .confirmPassword(_, _, confirmation):
-                    title = "Re-enter your Password"
-                    subtitle = "Please confirm your password."
-                    inputType = .password
-                    inputPlaceholder = "Password"
-                    inputText = confirmation
-                    isPassword = true
-                case let .enterHint(_, _, hint):
-                    title = "Add a Hint"
-                    subtitle = "You can create an optional hint for your password."
-                    inputType = .text
-                    inputPlaceholder = "Hint"
-                    inputText = hint
-                    isPassword = false
-                case let .enterEmail(enterState, email):
-                    title = "Recovery Email"
-                    switch enterState {
-                        case let .add(hadRecoveryEmail, _, _) where hadRecoveryEmail:
-                            subtitle = "Please enter your new recovery email. It is the only way to recover a forgotten password."
-                        default:
-                            subtitle = "Please add your valid e-mail. It is the only way to recover a forgotten password."
-                    }
-                    inputType = .email
-                    inputPlaceholder = "Email"
-                    inputText = email
-                    isPassword = false
-                case let .confirmEmail(confirmState, _, _, code):
-                    title = "Recovery Email"
-                    let emailPattern: String
-                    switch confirmState {
-                        case let .create(password, hint, email):
-                            emailPattern = email
-                            leftAction = SetupTwoStepVerificationContentAction(title: "Change E-Mail", action: { [weak self] in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.updateState({ state in
-                                    var state = state
-                                    state.data.activity = true
-                                    return state
-                                }, transition: .animated(duration: 0.5, curve: .spring))
-                                strongSelf.actionDisposable.set((updateTwoStepVerificationPassword(network: strongSelf.account.network, currentPassword: nil, updatedPassword: .none)
-                                |> deliverOnMainQueue).start(next: { _ in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    strongSelf.updateState({ state in
-                                        var state = state
-                                        state.data.activity = false
-                                        state.data.state = .enterEmail(state: .create(password: password, hint: hint), email: "")
-                                        return state
-                                    }, transition: .animated(duration: 0.5, curve: .spring))
-                                    strongSelf.stateUpdated(.noPassword, false)
-                                }, error: { _ in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
-                                    strongSelf.updateState({ state in
-                                        var state = state
-                                        state.data.activity = false
-                                        return state
-                                    }, transition: .animated(duration: 0.5, curve: .spring))
-                                }))
-                            })
-                        case let .add(password, hadRecoveryEmail, hasSecureValues, email):
-                            emailPattern = email
-                            leftAction = SetupTwoStepVerificationContentAction(title: "Change E-Mail", action: { [weak self] in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.updateState({ state in
-                                    var state = state
-                                    state.data.state = .enterEmail(state: .add(hadRecoveryEmail: hadRecoveryEmail, hasSecureValues: hasSecureValues, password: password), email: "")
-                                    return state
-                                }, transition: .animated(duration: 0.5, curve: .spring))
-                            })
-                        case let .confirm(_, _, pattern, _):
-                            emailPattern = pattern
-                    }
-                    subtitle = "Please enter the code we've just emailed at \(emailPattern)."
-                    inputType = .code
-                    inputPlaceholder = "Code"
-                    inputText = code
-                    isPassword = true
-                    rightAction = SetupTwoStepVerificationContentAction(title: "Resend Code", action: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
+        if state.data.state?.kind != self.contentNode?.kind {
+            if let dataState = state.data.state {
+                let title: String
+                let subtitle: String
+                let inputType: SetupTwoStepVerificationInputType
+                let inputPlaceholder: String
+                let inputText: String
+                let isPassword: Bool
+                var leftAction: SetupTwoStepVerificationContentAction?
+                var rightAction: SetupTwoStepVerificationContentAction?
+                switch dataState {
+                    case let .enterPassword(mode, password):
+                        switch mode {
+                            case .create:
+                                title = "Create a Password"
+                                subtitle = "Please create a password which will be used to protect your data."
+                            case .update:
+                                title = "Change Password"
+                                subtitle = "Please enter a new password which will be used to protect your data."
                         }
-                        strongSelf.updateState({ state in
-                            var state = state
-                            state.data.activity = true
-                            return state
-                        }, transition: .animated(duration: 0.5, curve: .spring))
-                        strongSelf.actionDisposable.set((resendTwoStepRecoveryEmail(network: strongSelf.account.network)
-                        |> deliverOnMainQueue).start(error: { error in
+                        inputType = .password
+                        inputPlaceholder = "Password"
+                        inputText = password
+                        isPassword = true
+                    case let .confirmPassword(_, _, confirmation):
+                        title = "Re-enter your Password"
+                        subtitle = "Please confirm your password."
+                        inputType = .password
+                        inputPlaceholder = "Password"
+                        inputText = confirmation
+                        isPassword = true
+                    case let .enterHint(_, _, hint):
+                        title = "Add a Hint"
+                        subtitle = "You can create an optional hint for your password."
+                        inputType = .text
+                        inputPlaceholder = "Hint"
+                        inputText = hint
+                        isPassword = false
+                    case let .enterEmail(enterState, email):
+                        title = "Recovery Email"
+                        switch enterState {
+                            case let .add(hadRecoveryEmail, _, _) where hadRecoveryEmail:
+                                subtitle = "Please enter your new recovery email. It is the only way to recover a forgotten password."
+                            default:
+                                subtitle = "Please add your valid e-mail. It is the only way to recover a forgotten password."
+                        }
+                        inputType = .email
+                        inputPlaceholder = "Email"
+                        inputText = email
+                        isPassword = false
+                    case let .confirmEmail(confirmState, _, _, code):
+                        title = "Recovery Email"
+                        let emailPattern: String
+                        switch confirmState {
+                            case let .create(password, hint, email):
+                                emailPattern = email
+                                leftAction = SetupTwoStepVerificationContentAction(title: "Change E-Mail", action: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.updateState({ state in
+                                        var state = state
+                                        state.data.activity = true
+                                        return state
+                                    }, transition: .animated(duration: 0.5, curve: .spring))
+                                    strongSelf.actionDisposable.set((updateTwoStepVerificationPassword(network: strongSelf.account.network, currentPassword: nil, updatedPassword: .none)
+                                    |> deliverOnMainQueue).start(next: { _ in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.updateState({ state in
+                                            var state = state
+                                            state.data.activity = false
+                                            state.data.state = .enterEmail(state: .create(password: password, hint: hint), email: "")
+                                            return state
+                                        }, transition: .animated(duration: 0.5, curve: .spring))
+                                        strongSelf.stateUpdated(.noPassword, false)
+                                    }, error: { _ in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                                        strongSelf.updateState({ state in
+                                            var state = state
+                                            state.data.activity = false
+                                            return state
+                                        }, transition: .animated(duration: 0.5, curve: .spring))
+                                    }))
+                                })
+                            case let .add(password, hadRecoveryEmail, hasSecureValues, email):
+                                emailPattern = email
+                                leftAction = SetupTwoStepVerificationContentAction(title: "Change E-Mail", action: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.updateState({ state in
+                                        var state = state
+                                        state.data.state = .enterEmail(state: .add(hadRecoveryEmail: hadRecoveryEmail, hasSecureValues: hasSecureValues, password: password), email: "")
+                                        return state
+                                    }, transition: .animated(duration: 0.5, curve: .spring))
+                                })
+                            case let .confirm(_, _, pattern, _):
+                                emailPattern = pattern
+                        }
+                        subtitle = "Please enter the code we've just emailed at \(emailPattern)."
+                        inputType = .code
+                        inputPlaceholder = "Code"
+                        inputText = code
+                        isPassword = true
+                        rightAction = SetupTwoStepVerificationContentAction(title: "Resend Code", action: { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
-                            let text: String
-                            switch error {
-                                case .flood:
-                                    text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
-                                case .generic:
-                                    text = strongSelf.presentationData.strings.Login_UnknownError
-                            }
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                             strongSelf.updateState({ state in
                                 var state = state
-                                state.data.activity = false
+                                state.data.activity = true
                                 return state
                             }, transition: .animated(duration: 0.5, curve: .spring))
-                        }, completed: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.updateState({ state in
-                                var state = state
-                                state.data.activity = false
-                                return state
-                            }, transition: .animated(duration: 0.5, curve: .spring))
-                        }))
+                            strongSelf.actionDisposable.set((resendTwoStepRecoveryEmail(network: strongSelf.account.network)
+                            |> deliverOnMainQueue).start(error: { error in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let text: String
+                                switch error {
+                                    case .flood:
+                                        text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                                    case .generic:
+                                        text = strongSelf.presentationData.strings.Login_UnknownError
+                                }
+                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                                strongSelf.updateState({ state in
+                                    var state = state
+                                    state.data.activity = false
+                                    return state
+                                }, transition: .animated(duration: 0.5, curve: .spring))
+                            }, completed: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.updateState({ state in
+                                    var state = state
+                                    state.data.activity = false
+                                    return state
+                                }, transition: .animated(duration: 0.5, curve: .spring))
+                            }))
+                        })
+                }
+                let contentNode = SetupTwoStepVerificationContentNode(theme: self.presentationData.theme, kind: dataState.kind, title: title, subtitle: subtitle, inputType: inputType, placeholder: inputPlaceholder, text: inputText, isPassword: isPassword, textUpdated: { [weak self] text in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    var inplicitelyActivateNextAction = false
+                    if case let .confirmEmail(confirmEmail)? = strongSelf.innerState.data.state, let codeLength = confirmEmail.codeLength, confirmEmail.code.count != codeLength, text.count == codeLength {
+                        inplicitelyActivateNextAction = true
+                    }
+                    strongSelf.updateState({ state in
+                        var state = state
+                        state.data.state?.updateInputText(text)
+                        return state
+                    }, transition: .immediate)
+                    if inplicitelyActivateNextAction {
+                        strongSelf.activateNextAction()
+                    }
+                }, returnPressed: { [weak self] in
+                    self?.activateNextAction()
+                }, leftAction: leftAction, rightAction: rightAction)
+                self.insertSubnode(contentNode, at: 0)
+                contentNode.updateIsEnabled(!state.data.activity)
+                contentNode.updateLayout(size: contentFrame.size, insets: insets, visibleInsets: visibleInsets, transition: .immediate)
+                contentNode.frame = contentFrame
+                contentNode.activate()
+                if let currentContentNode = self.contentNode {
+                    if currentContentNode.kind.rawValue < contentNode.kind.rawValue {
+                        transition.updatePosition(node: currentContentNode, position: CGPoint(x: -contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
+                            currentContentNode?.removeFromSupernode()
+                        })
+                        transition.animateHorizontalOffsetAdditive(node: contentNode, offset: -contentFrame.width)
+                    } else {
+                        transition.updatePosition(node: currentContentNode, position: CGPoint(x: contentFrame.size.width + contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
+                            currentContentNode?.removeFromSupernode()
+                        })
+                        transition.animateHorizontalOffsetAdditive(node: contentNode, offset: contentFrame.width)
+                    }
+                } else if transition.isAnimated {
+                    contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                }
+                if self.activityIndicator.supernode != nil {
+                    transition.updateAlpha(node: self.activityIndicator, alpha: 0.0, completion: { [weak self] _ in
+                        self?.activityIndicator.removeFromSupernode()
                     })
+                }
+                self.contentNode = contentNode
+            } else if let currentContentNode = self.contentNode {
+                transition.updateAlpha(node: currentContentNode, alpha: 0.0, completion: { [weak currentContentNode] _ in
+                    currentContentNode?.removeFromSupernode()
+                })
+                if self.activityIndicator.supernode == nil {
+                    self.addSubnode(self.activityIndicator)
+                    transition.updateAlpha(node: self.activityIndicator, alpha: 1.0)
+                }
+                self.contentNode = nil
             }
-            let contentNode = SetupTwoStepVerificationContentNode(theme: self.presentationData.theme, kind: state.data.state.kind, title: title, subtitle: subtitle, inputType: inputType, placeholder: inputPlaceholder, text: inputText, isPassword: isPassword, textUpdated: { [weak self] text in
-                guard let strongSelf = self else {
-                    return
-                }
-                var inplicitelyActivateNextAction = false
-                if case let .confirmEmail(confirmEmail) = strongSelf.innerState.data.state, let codeLength = confirmEmail.codeLength, confirmEmail.code.count != codeLength, text.count == codeLength {
-                    inplicitelyActivateNextAction = true
-                }
-                strongSelf.updateState({ state in
-                    var state = state
-                    state.data.state.updateInputText(text)
-                    return state
-                }, transition: .immediate)
-                if inplicitelyActivateNextAction {
-                    strongSelf.activateNextAction()
-                }
-            }, returnPressed: { [weak self] in
-                self?.activateNextAction()
-            }, leftAction: leftAction, rightAction: rightAction)
-            self.insertSubnode(contentNode, at: 0)
-            contentNode.updateIsEnabled(!state.data.activity)
-            contentNode.updateLayout(size: contentFrame.size, insets: insets, visibleInsets: visibleInsets, transition: .immediate)
-            contentNode.frame = contentFrame
-            contentNode.activate()
-            if let currentContentNode = self.contentNode {
-                if currentContentNode.kind.rawValue < contentNode.kind.rawValue {
-                    transition.updatePosition(node: currentContentNode, position: CGPoint(x: -contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
-                        currentContentNode?.removeFromSupernode()
-                    })
-                    transition.animateHorizontalOffsetAdditive(node: contentNode, offset: -contentFrame.width)
-                } else {
-                    transition.updatePosition(node: currentContentNode, position: CGPoint(x: contentFrame.size.width + contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
-                        currentContentNode?.removeFromSupernode()
-                    })
-                    transition.animateHorizontalOffsetAdditive(node: contentNode, offset: contentFrame.width)
-                }
-            }
-            self.contentNode = contentNode
         } else if let contentNode = self.contentNode {
             contentNode.updateIsEnabled(!state.data.activity)
             transition.updateFrame(node: contentNode, frame: contentFrame)
@@ -436,13 +485,15 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
         }
         self.updateState({ state in
             var state = state
-            switch state.data.state {
-                case let .confirmPassword(mode, _, _):
-                    state.data.state = .enterPassword(mode: mode, password: "")
-                case let .enterHint(mode, _, _):
-                    state.data.state = .enterPassword(mode: mode, password: "")
-                default:
-                    break
+            if let dataState = state.data.state {
+                switch dataState {
+                    case let .confirmPassword(mode, _, _):
+                        state.data.state = .enterPassword(mode: mode, password: "")
+                    case let .enterHint(mode, _, _):
+                        state.data.state = .enterPassword(mode: mode, password: "")
+                    default:
+                        break
+                }
             }
             return state
         }, transition: .animated(duration: 0.5, curve: .spring))
@@ -457,8 +508,12 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                 return
             }
             strongSelf.updateState({ state in
+                guard let dataState = state.data.state else {
+                    return state
+                }
                 var state = state
-                switch state.data.state {
+                
+                switch dataState {
                     case let .enterPassword(mode, password):
                         state.data.state = .confirmPassword(mode: mode, password: password, confirmation: "")
                     case let .confirmPassword(mode, password, confirmation):
@@ -592,11 +647,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                 }))
                         }
                     case let .confirmEmail(confirmState, _, _, code):
-                        strongSelf.updateState({ state in
-                            var state = state
-                            state.data.activity = true
-                            return state
-                        }, transition: .animated(duration: 0.5, curve: .spring))
+                        state.data.activity = true
                         strongSelf.actionDisposable.set((confirmTwoStepRecoveryEmail(network: strongSelf.account.network, code: code)
                         |> deliverOnMainQueue).start(error: { error in
                             guard let strongSelf = self else {
@@ -640,7 +691,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                 return state
             }, transition: .animated(duration: 0.5, curve: .spring))
         }
-        if case let .enterEmail(enterEmail) = self.innerState.data.state, case .create = enterEmail.state, enterEmail.email.isEmpty {
+        if case let .enterEmail(enterEmail)? = self.innerState.data.state, case .create = enterEmail.state, enterEmail.email.isEmpty {
             self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: nil, text: self.presentationData.strings.TwoStepAuth_EmailSkipAlert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: self.presentationData.strings.TwoStepAuth_EmailSkip, action: {
                 continueImpl()
             })]), nil)

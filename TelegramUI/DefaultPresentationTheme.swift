@@ -100,7 +100,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
             placeholderColor: UIColor(rgb: 0x96979d),
             primaryColor: .black,
             controlColor: UIColor(rgb: 0x96979d)
-        )
+        ),
+        mediaPlaceholderColor: .lightGray
     )
     
     let chatList = PresentationThemeChatList(
@@ -212,7 +213,9 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         selectionControlForegroundColor: .white,
         mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
         deliveryFailedFillColor: destructiveColor,
-        deliveryFailedForegroundColor: .white
+        deliveryFailedForegroundColor: .white,
+        incomingMediaPlaceholderColor: .gray,
+        outgoingMediaPlaceholderColor: .green
     )
     
     let bubbleDay = PresentationThemeChatBubble(
@@ -264,7 +267,9 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         selectionControlForegroundColor: .white,
         mediaHighlightOverlayColor: UIColor(rgb: 0xffffff, alpha: 0.6),
         deliveryFailedFillColor: destructiveColor,
-        deliveryFailedForegroundColor: .white
+        deliveryFailedForegroundColor: .white,
+        incomingMediaPlaceholderColor: .gray,
+        outgoingMediaPlaceholderColor: .green
     )
     
     let serviceMessage = PresentationThemeServiceMessage(

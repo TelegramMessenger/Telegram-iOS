@@ -259,7 +259,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         self.itemNodes.remove(at: internalIndex)
     }
     
-    private func updateItemNodes(transition: ContainedViewLayoutTransition, forceOffsetReset: Bool = false) {
+    private func updateItemNodes(transition: ContainedViewLayoutTransition, forceOffsetReset: Bool = false, forceLoad: Bool = false) {
         if self.items.isEmpty || self.containerLayout == nil {
             return
         }
@@ -285,7 +285,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if let centralItemIndex = self.centralItemIndex, let centralItemNode = self.visibleItemNode(at: centralItemIndex) {
             if centralItemIndex != 0 {
-                if self.visibleItemNode(at: centralItemIndex - 1) == nil {
+                if self.shouldLoadItems(force: forceLoad) && self.visibleItemNode(at: centralItemIndex - 1) == nil {
                     let node = self.makeNodeForItem(at: centralItemIndex - 1)
                     node.frame = centralItemNode.frame.offsetBy(dx: -centralItemNode.frame.size.width - self.pageGap, dy: 0.0)
                     if let containerLayout = self.containerLayout {
@@ -296,7 +296,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             if centralItemIndex != items.count - 1 {
-                if self.visibleItemNode(at: centralItemIndex + 1) == nil {
+                if self.shouldLoadItems(force: forceLoad) && self.visibleItemNode(at: centralItemIndex + 1) == nil {
                     let node = self.makeNodeForItem(at: centralItemIndex + 1)
                     node.frame = centralItemNode.frame.offsetBy(dx: centralItemNode.frame.size.width + self.pageGap, dy: 0.0)
                     if let containerLayout = self.containerLayout {
@@ -314,7 +314,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.scrollView.contentOffset = CGPoint(x: centralItemNode.frame.minX - self.pageGap, y: 0.0)
             }
             
-            if let centralItemCandidateNode = self.centralItemCandidate(), centralItemCandidateNode.index != centralItemIndex {
+            if self.shouldLoadItems(force: forceLoad), let centralItemCandidateNode = self.centralItemCandidate(), centralItemCandidateNode.index != centralItemIndex {
                 for i in (0 ..< self.itemNodes.count).reversed() {
                     let node = self.itemNodes[i]
                     if node.index < centralItemCandidateNode.index - 1 || node.index > centralItemCandidateNode.index + 1 {
@@ -328,7 +328,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 notifyCentralItemUpdated = true
                 
                 if centralItemCandidateNode.index != 0 {
-                    if self.visibleItemNode(at: centralItemCandidateNode.index - 1) == nil {
+                    if self.shouldLoadItems(force: forceLoad) && self.visibleItemNode(at: centralItemCandidateNode.index - 1) == nil {
                         let node = self.makeNodeForItem(at: centralItemCandidateNode.index - 1)
                         node.frame = centralItemCandidateNode.frame.offsetBy(dx: -centralItemCandidateNode.frame.size.width - self.pageGap, dy: 0.0)
                         if let containerLayout = self.containerLayout {
@@ -339,7 +339,7 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 
                 if centralItemCandidateNode.index != items.count - 1 {
-                    if self.visibleItemNode(at: centralItemCandidateNode.index + 1) == nil {
+                    if self.shouldLoadItems(force: forceLoad) && self.visibleItemNode(at: centralItemCandidateNode.index + 1) == nil {
                         let node = self.makeNodeForItem(at: centralItemCandidateNode.index + 1)
                         node.frame = centralItemCandidateNode.frame.offsetBy(dx: centralItemCandidateNode.frame.size.width + self.pageGap, dy: 0.0)
                         if let containerLayout = self.containerLayout {
@@ -381,6 +381,28 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         if !self.ignoreDidScroll {
             self.updateItemNodes(transition: .immediate)
         }
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            self.ensureItemsLoaded(force: false)
+        }
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.ensureItemsLoaded(force: true)
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.ensureItemsLoaded(force: true)
+    }
+    
+    private func shouldLoadItems(force: Bool) -> Bool {
+        return force || (!self.scrollView.isDecelerating && !self.scrollView.isDragging)
+    }
+    
+    private func ensureItemsLoaded(force: Bool) {
+        self.updateItemNodes(transition: .immediate, forceLoad: force)
     }
     
     private func centralItemCandidate() -> GalleryItemNode? {

@@ -303,9 +303,9 @@ final class GridMessageItemNode: GridItemNode {
         let imageFrame = self.bounds.insetBy(dx: 1.0, dy: 1.0)
         self.imageNode.frame = imageFrame
         
-        if let (_, _, mediaDimensions) = self.currentState {
+        if let item = self.item, let (_, _, mediaDimensions) = self.currentState {
             let imageSize = mediaDimensions.aspectFilled(imageFrame.size)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets()))()
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor))()
         }
         
         self.selectionNode?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)

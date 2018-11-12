@@ -135,7 +135,7 @@ final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFi
         }
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.width - progressSize) / 2.0), y: imageFrame.minY + floor((imageFrame.height - progressSize) / 2.0)), size: CGSize(width: progressSize, height: progressSize)))
         let makeLayout = self.imageNode.asyncLayout()
-        makeLayout(TransformImageArguments(corners: ImageCorners(radius: 6.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+        makeLayout(TransformImageArguments(corners: ImageCorners(radius: 6.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: theme.list.mediaPlaceholderColor))()
         if resourceUpdated {
             if let resource = item.document?.resource {
                 self.imageNode.setSignal(securePhoto(account: item.account, resource: resource, accessContext: item.context))

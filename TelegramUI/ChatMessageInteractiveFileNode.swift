@@ -510,7 +510,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     iconNode = TransformImageNode()
                                     strongSelf.iconNode = iconNode
                                     strongSelf.insertSubnode(iconNode, at: 0)
-                                    let arguments = TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: CGSize(width: 74.0, height: 74.0), boundingSize: CGSize(width: 74.0, height: 74.0), intrinsicInsets: UIEdgeInsets())
+                                    let arguments = TransformImageArguments(corners: ImageCorners(radius: 8.0), imageSize: CGSize(width: 74.0, height: 74.0), boundingSize: CGSize(width: 74.0, height: 74.0), intrinsicInsets: UIEdgeInsets(), emptyColor: incoming ? bubbleTheme.incomingMediaPlaceholderColor : bubbleTheme.outgoingMediaPlaceholderColor)
                                     let apply = iconNode.asyncLayout()(arguments)
                                     apply()
                                 }

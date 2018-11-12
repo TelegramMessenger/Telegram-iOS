@@ -298,7 +298,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             if let iconImageReferenceAndRepresentation = iconImageReferenceAndRepresentation {
                 let iconSize = CGSize(width: 42.0, height: 42.0)
                 let imageCorners = ImageCorners(topLeft: .Corner(2.0), topRight: .Corner(2.0), bottomLeft: .Corner(2.0), bottomRight: .Corner(2.0))
-                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconImageReferenceAndRepresentation.1.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
+                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconImageReferenceAndRepresentation.1.dimensions.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
                 iconImageApply = iconImageLayout(arguments)
             }
             
