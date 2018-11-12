@@ -471,6 +471,9 @@ func twoStepVerificationUnlockSettingsController(account: Account, mode: TwoStep
                                             dataPromise.set(.single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: .notSet(pendingEmail: nil))))
                                             controller?.view.endEditing(true)
                                             controller?.dismiss()
+                                            
+                                            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.TwoStepAuth_DisableSuccess)), nil)
                                         }
                                         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }, error: { _ in

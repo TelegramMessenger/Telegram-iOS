@@ -568,13 +568,9 @@ final class SecureIdAuthController: ViewController {
                     if let password = password {
                         strongSelf.checkPassword(password: password, inBackground: true, completion: { [weak controller] in
                             controller?.dismiss()
-                            if let strongSelf = self {
-                                strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.TwoStepAuth_EnabledSuccess)), in: .window(.root))
-                            }
                         })
                     } else if shouldDismiss {
                         controller.dismiss()
-                        strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.TwoStepAuth_EnabledSuccess)), in: .window(.root))
                     }
             }
         })

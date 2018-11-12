@@ -32,7 +32,7 @@ private enum EnterEmailState: Equatable {
 
 private enum ConfirmEmailState: Equatable {
     case create(password: String, hint: String, email: String)
-    case add(password: String, hasSecureValues: Bool, email: String)
+    case add(password: String, hadRecoveryEmail: Bool, hasSecureValues: Bool, email: String)
     case confirm(password: String?, hasSecureValues: Bool, pattern: String, codeLength: Int32?)
 }
 
@@ -326,8 +326,18 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                     }, transition: .animated(duration: 0.5, curve: .spring))
                                 }))
                             })
-                        case let .add(_, _, email):
+                        case let .add(password, hadRecoveryEmail, hasSecureValues, email):
                             emailPattern = email
+                            leftAction = SetupTwoStepVerificationContentAction(title: "Change E-Mail", action: { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.updateState({ state in
+                                    var state = state
+                                    state.data.state = .enterEmail(state: .add(hadRecoveryEmail: hadRecoveryEmail, hasSecureValues: hasSecureValues, password: password), email: "")
+                                    return state
+                                }, transition: .animated(duration: 0.5, curve: .spring))
+                            })
                         case let .confirm(_, _, pattern, _):
                             emailPattern = pattern
                     }
@@ -541,7 +551,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                         return state
                                     }, transition: .animated(duration: 0.5, curve: .spring))
                                 }))
-                            case let .add(_, hasSecureValues, password):
+                            case let .add(hadRecoveryEmail, hasSecureValues, password):
                                 strongSelf.updateState({ state in
                                     var state = state
                                     state.data.activity = true
@@ -561,7 +571,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                                 break
                                             case let .password(password, pendingEmail):
                                                 if let pendingEmail = pendingEmail {
-                                                    state.data.state = .confirmEmail(state: .add(password: password, hasSecureValues: hasSecureValues, email: email), pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength, code: "")
+                                                    state.data.state = .confirmEmail(state: .add(password: password, hadRecoveryEmail: hadRecoveryEmail, hasSecureValues: hasSecureValues, email: email), pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength, code: "")
                                                     strongSelf.stateUpdated(.awaitingEmailConfirmation(password: password, pattern: pendingEmail.pattern, codeLength: pendingEmail.codeLength), false)
                                                 } else {
                                                     strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: hasSecureValues), true)
@@ -598,6 +608,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                     text = strongSelf.presentationData.strings.TwoStepAuth_EmailInvalid
                                 case .invalidCode:
                                     text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                                    strongSelf.contentNode?.dataEntryError()
                                 case .expired:
                                     text = strongSelf.presentationData.strings.TwoStepAuth_EmailCodeExpired
                                 case .flood:
@@ -619,7 +630,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                             switch confirmState {
                                 case let .create(password, _, _):
                                     strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: false), true)
-                                case let .add(password, hasSecureValues, email):
+                                case let .add(password, _, hasSecureValues, email):
                                     strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: !email.isEmpty, hasSecureValues: hasSecureValues), true)
                                 case let .confirm(password, hasSecureValues, _, _):
                                     strongSelf.stateUpdated(.passwordSet(password: password, hasRecoveryEmail: true, hasSecureValues: hasSecureValues), true)
