@@ -633,32 +633,69 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
                 if thumbnailImage == nil && fullSizeImage == nil {
                     let color = arguments.emptyColor ?? UIColor.white
                     c.setFillColor(color.cgColor)
-                    c.fill(fittedRect)
+                    c.fill(drawingRect)
                 } else {
                     if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
                         let blurSourceImage = thumbnailImage ?? fullSizeImage
                         
                         if let fullSizeImage = blurSourceImage {
                             let thumbnailSize = CGSize(width: fullSizeImage.width, height: fullSizeImage.height)
-                            let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 74.0, height: 74.0))
-                            let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
-                            thumbnailContext.withFlippedContext { c in
-                                c.interpolationQuality = .none
-                                c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
-                            }
-                            telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                            telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                             
-                            if let blurredImage = thumbnailContext.generateImage() {
+                            var sideBlurredImage: UIImage?
+                            if true {
+                                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 100.0, height: 100.0))
+                                
+                                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                                thumbnailContext.withFlippedContext { c in
+                                    c.interpolationQuality = .none
+                                    c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                                }
+                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                
+                                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
+                                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
+                                }
+                                
+                                if thumbnailContextFittingSize.width > thumbnailContextSize.width {
+                                    let additionalContextSize = thumbnailContextFittingSize
+                                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
+                                    additionalBlurContext.withFlippedContext { c in
+                                        c.interpolationQuality = .default
+                                        if let image = thumbnailContext.generateImage()?.cgImage {
+                                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
+                                        }
+                                    }
+                                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                                    sideBlurredImage = additionalBlurContext.generateImage()
+                                } else {
+                                    sideBlurredImage = thumbnailContext.generateImage()
+                                }
+                            } else {
+                                let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 74.0, height: 74.0))
+                                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                                thumbnailContext.withFlippedContext { c in
+                                    c.interpolationQuality = .none
+                                    c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                                }
+                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                sideBlurredImage = thumbnailContext.generateImage()
+                            }
+                                
+                                
+                            if let blurredImage = sideBlurredImage {
                                 let filledSize = thumbnailSize.aspectFilled(arguments.drawingRect.size)
                                 c.interpolationQuality = .medium
                                 c.draw(blurredImage.cgImage!, in: CGRect(origin: CGPoint(x:arguments.drawingRect.minX + (arguments.drawingRect.width - filledSize.width) / 2.0, y: arguments.drawingRect.minY + (arguments.drawingRect.height - filledSize.height) / 2.0), size: filledSize))
                                 c.setBlendMode(.normal)
-                                c.setFillColor((arguments.emptyColor ?? UIColor.white).withAlphaComponent(0.5).cgColor)
+                                c.setFillColor((arguments.emptyColor ?? UIColor.white).withAlphaComponent(0.05).cgColor)
                                 c.fill(arguments.drawingRect)
                                 c.setBlendMode(.copy)
                             }
                         } else {
+                            c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
                             c.fill(arguments.drawingRect)
                         }
                     }

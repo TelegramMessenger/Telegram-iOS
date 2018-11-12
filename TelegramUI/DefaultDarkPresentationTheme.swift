@@ -101,7 +101,7 @@ private let list = PresentationThemeList(
         primaryColor: .white,
         controlColor: UIColor(rgb: 0x4d4d4d)
     ),
-    mediaPlaceholderColor: .lightGray
+    mediaPlaceholderColor: UIColor(rgb: 0x1c1c1d)
 )
 
 private let chatList = PresentationThemeChatList(
@@ -184,8 +184,8 @@ private let bubble = PresentationThemeChatBubble(
     mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
     deliveryFailedFillColor: destructiveColor,
     deliveryFailedForegroundColor: .white,
-    incomingMediaPlaceholderColor: .gray,
-    outgoingMediaPlaceholderColor: .green
+    incomingMediaPlaceholderColor: UIColor(rgb: 0x1f1f1f).mixedWith(.white, alpha: 0.05),
+    outgoingMediaPlaceholderColor: UIColor(rgb: 0x313131).mixedWith(.white, alpha: 0.05)
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(
