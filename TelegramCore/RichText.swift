@@ -21,6 +21,7 @@ private enum RichTextTypes: Int32 {
     case marked = 12
     case phone = 13
     case image = 14
+    case anchor = 15
 }
 
 public indirect enum RichText: PostboxCoding, Equatable {
@@ -39,6 +40,7 @@ public indirect enum RichText: PostboxCoding, Equatable {
     case marked(RichText)
     case phone(text: RichText, phone: String)
     case image(id: MediaId, dimensions: CGSize)
+    case anchor(text: RichText, name: String)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -78,6 +80,8 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 self = .phone(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, phone: decoder.decodeStringForKey("p", orElse: ""))
             case RichTextTypes.image.rawValue:
                 self = .image(id: MediaId(namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0)), dimensions: CGSize(width: CGFloat(decoder.decodeInt32ForKey("sw", orElse: 0)), height: CGFloat(decoder.decodeInt32ForKey("sh", orElse: 0))))
+            case RichTextTypes.anchor.rawValue:
+                self = .anchor(text: decoder.decodeObjectForKey("t", decoder: { RichText(decoder: $0) }) as! RichText, name: decoder.decodeStringForKey("n", orElse: ""))
             default:
                 self = .empty
         }
@@ -142,6 +146,10 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 encoder.encodeInt64(id.id, forKey: "i.i")
                 encoder.encodeInt32(Int32(dimensions.width), forKey: "sw")
                 encoder.encodeInt32(Int32(dimensions.height), forKey: "sh")
+            case let .anchor(text, name):
+                encoder.encodeInt32(RichTextTypes.anchor.rawValue, forKey: "r")
+                encoder.encodeObject(text, forKey: "t")
+                encoder.encodeString(name, forKey: "n")
         }
     }
     
@@ -237,6 +245,12 @@ public indirect enum RichText: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
+            case let .anchor(text, name):
+                if case .anchor(text, name) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -278,6 +292,8 @@ public extension RichText {
                 return text.plainText
             case .image:
                 return ""
+            case let .anchor(text, _):
+                return text.plainText
         }
     }
 }
@@ -316,7 +332,7 @@ extension RichText {
             case let .textImage(documentId, w, h):
                 self = .image(id: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)))
             case let .textAnchor(text, name):
-                self = RichText(apiText: text)
+                self = .anchor(text: RichText(apiText: text), name: name)
         }
     }
 }
