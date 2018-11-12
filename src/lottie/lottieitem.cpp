@@ -1095,15 +1095,20 @@ void LOTDrawable::sync()
         mCNode->mColor.b = mBrush.mColor.b;
         mCNode->mColor.a = mBrush.mColor.a;
         break;
-    case VBrush::Type::LinearGradient:
+    case VBrush::Type::LinearGradient: {
         mCNode->mBrushType = LOTBrushType::BrushGradient;
         mCNode->mGradient.type = LOTGradientType::GradientLinear;
-        mCNode->mGradient.start.x = mBrush.mGradient->linear.x1;
-        mCNode->mGradient.start.y = mBrush.mGradient->linear.y1;
-        mCNode->mGradient.end.x = mBrush.mGradient->linear.x2;
-        mCNode->mGradient.end.y = mBrush.mGradient->linear.y2;
+        VPointF s = mBrush.mGradient->mMatrix.map({mBrush.mGradient->linear.x1,
+                                                   mBrush.mGradient->linear.y1});
+        VPointF e = mBrush.mGradient->mMatrix.map({mBrush.mGradient->linear.x2,
+                                                   mBrush.mGradient->linear.y2});
+        mCNode->mGradient.start.x = s.x();
+        mCNode->mGradient.start.y = s.y();
+        mCNode->mGradient.end.x = e.x();
+        mCNode->mGradient.end.y = e.y();
         updateGStops(mCNode.get(), mBrush.mGradient);
         break;
+     }
     case VBrush::Type::RadialGradient:
         mCNode->mBrushType = LOTBrushType::BrushGradient;
         mCNode->mGradient.type = LOTGradientType::GradientRadial;
