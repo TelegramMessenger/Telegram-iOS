@@ -353,12 +353,24 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
     var columnCount: Int = 0
     
     var columnSpans: [Range<Int> : (CGFloat, CGFloat)] = [:]
+    var rowSpans: [Int : [(Int, Int)]] = [:]
     
+    var r: Int = 0
     for row in rows {
         var minColumnWidths: [Int : CGFloat] = [:]
         var maxColumnWidths: [Int : CGFloat] = [:]
         var i: Int = 0
         for cell in row.cells {
+            if let rowSpan = rowSpans[r] {
+                for columnAndSpan in rowSpan {
+                    if columnAndSpan.0 == i {
+                        i += columnAndSpan.1
+                    } else {
+                        break
+                    }
+                }
+            }
+            
             var minCellWidth: CGFloat = 1.0
             var maxCellWidth: CGFloat = 1.0
             if let text = cell.text {
@@ -384,13 +396,26 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
                 minColumnWidths[i] = minCellWidth
                 maxColumnWidths[i] = maxCellWidth
             }
-            i += cell.colspan > 1 ? Int(clamping: cell.colspan) : 1
+            
+            let colspan = cell.colspan > 1 ? Int(clamping: cell.colspan) : 1
+            if cell.rowspan > 1 {
+                for j in r ..< r + Int(cell.rowspan) {
+                    if rowSpans[j] == nil {
+                        rowSpans[j] = [(i, colspan)]
+                    } else {
+                        rowSpans[j]!.append((i, colspan))
+                    }
+                }
+            }
+            
+            i += colspan
         }
         tableRows.append(TableRow(minColumnWidths: minColumnWidths, maxColumnWidths: maxColumnWidths))
         columnCount = max(columnCount, row.cells.count)
+        r += 1
     }
     
-    let maxContentWidth = boundingWidth - borderWidth // - borderWidth * CGFloat(columnCount - 1)
+    let maxContentWidth = boundingWidth - borderWidth
     var availableWidth = maxContentWidth
     var minColumnWidths: [Int : CGFloat] = [:]
     var maxColumnWidths: [Int : CGFloat] = [:]
@@ -484,32 +509,32 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
     
     for i in 0 ..< rows.count {
         let row = rows[i]
-        var maxRowHeight: CGFloat = 1.0
+        var maxRowHeight: CGFloat = 0.0
         var isEmptyRow = true
         origin.x = borderWidth / 2.0
         
         var k: Int = 0
         var rowCells: [InstantPageTableCellItem] = []
-        
-        if let cells = awaitingSpanCells[i] {
-            isEmptyRow = false
-            for colAndCell in cells {
-                let cell = colAndCell.1
-                if cell.position.column == k {
-                    for j in 0 ..< cell.colspan {
-                        if let width = finalColumnWidths[k + j] {
-                            origin.x += width
+                
+        for cell in row.cells {
+            if let cells = awaitingSpanCells[i] {
+                isEmptyRow = false
+                for colAndCell in cells {
+                    let cell = colAndCell.1
+                    if cell.position.column == k {
+                        for j in 0 ..< cell.colspan {
+                            if let width = finalColumnWidths[k + j] {
+                                origin.x += width
+                            }
                         }
+                        
+                        k += cell.colspan
+                    } else {
+                        break
                     }
-                    //origin.x += borderWidth * CGFloat(cell.colspan)
-                    k += cell.colspan
-                } else {
-                    break
                 }
             }
-        }
-        
-        for cell in row.cells {
+            
             var cellWidth: CGFloat = 0.0
             let colspan: Int = cell.colspan > 1 ? Int(clamping: cell.colspan) : 1
             let rowspan: Int = cell.rowspan > 1 ? Int(clamping: cell.rowspan) : 1
@@ -518,16 +543,14 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
                     cellWidth += width
                 }
             }
-            //cellWidth += borderWidth * CGFloat(colspan - 1)
             
             var item: InstantPageTextItem?
             var additionalItems: [InstantPageItem] = []
             var cellHeight: CGFloat?
             if let text = cell.text {
-                let (textItem, items, _) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidth - totalCellPadding, offset: CGPoint(), media: media, webpage: webpage)
+                let (textItem, items, _) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidth - totalCellPadding, alignment: cell.alignment.textAlignment, offset: CGPoint(), media: media, webpage: webpage)
                 if let textItem = textItem {
                     isEmptyRow = false
-                    textItem.alignment = cell.alignment.textAlignment
                     textItem.frame = textItem.frame.offsetBy(dx: tableCellInsets.left, dy: 0.0)
                     cellHeight = ceil(textItem.frame.height) + tableCellInsets.top + tableCellInsets.bottom
                     
@@ -535,9 +558,12 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
                 }
                 for var item in items where !(item is InstantPageTextItem) {
                     isEmptyRow = false
-                    let offset = offsetForHorizontalAlignment(cell.alignment, width: item.frame.width, boundingWidth: cellWidth, insets: tableCellInsets)
-                    item.frame = item.frame.offsetBy(dx: offset, dy: 0.0)
-                    
+                    if textItem == nil {
+                        let offset = offsetForHorizontalAlignment(cell.alignment, width: item.frame.width, boundingWidth: cellWidth, insets: tableCellInsets)
+                        item.frame = item.frame.offsetBy(dx: offset, dy: 0.0)
+                    } else {
+                        item.frame = item.frame.offsetBy(dx: tableCellInsets.left, dy: 0.0)
+                    }
                     let height = ceil(item.frame.height) + tableCellInsets.top + tableCellInsets.bottom - 10.0
                     if let currentCellHeight = cellHeight {
                         cellHeight = max(currentCellHeight, height)
@@ -582,7 +608,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
             }
 
             k += colspan
-            origin.x += cellWidth //+ borderWidth
+            origin.x += cellWidth
         }
         
         let finalizeCell: (InstantPageTableCellItem, inout [InstantPageTableCellItem], CGFloat) -> Void = { cell, cells, height in
@@ -633,7 +659,6 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
                         completedSpans[k]!.insert(colAndCell.0)
                     }
                 }
-                //cellHeight += borderWidth * CGFloat(cell.rowspan - 1)
                 
                 if cell.frame.height > cellHeight {
                     let delta = cell.frame.height - cellHeight
@@ -669,11 +694,10 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
         
         if !isEmptyRow {
             totalHeight += maxRowHeight
-            origin.y += maxRowHeight //+ borderWidth
+            origin.y += maxRowHeight
         }
     }
     totalHeight += borderWidth
-    //totalHeight += borderWidth * CGFloat(rowHeights.count - 1)
     
     if rtl {
         finalizedCells = finalizedCells.map { $0.withRTL(totalWidth) }

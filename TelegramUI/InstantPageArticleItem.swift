@@ -84,18 +84,16 @@ func layoutArticleItem(theme: InstantPageTheme, webPage: TelegramMediaWebpage, t
     if let textItem = titleTextItem {
         availableLines -= textItem.lines.count
         if textItem.containsRTL {
-            textItem.alignment = .right
             hasRTL = true
         }
     }
     
     if availableLines > 0 {
-        let (descriptionTextItem, descriptionItems, descriptionSize) = layoutTextItemWithString(description, boundingWidth: boundingWidth - inset - sideInset, offset: CGPoint(x: inset, y: 15.0 + titleSize.height + 14.0), maxNumberOfLines: availableLines)
+        let (descriptionTextItem, descriptionItems, descriptionSize) = layoutTextItemWithString(description, boundingWidth: boundingWidth - inset - sideInset, alignment: hasRTL ? .right : .natural, offset: CGPoint(x: inset, y: 15.0 + titleSize.height + 14.0), maxNumberOfLines: availableLines)
         contentItems.append(contentsOf: descriptionItems)
         
         if let textItem = descriptionTextItem {
             if textItem.containsRTL || hasRTL {
-                textItem.alignment = .right
                 hasRTL = true
             }
         }

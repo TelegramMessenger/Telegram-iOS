@@ -135,16 +135,11 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                 }
             }
             if let text = text {
-                let (textItem, items, contentSize) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint(x: horizontalInset, y: 0.0), media: media, webpage: webpage)
-                if let textItem = textItem {
-                    var previousItemHasRTL = false
-                    if let previousItem = previousItems.last as? InstantPageTextItem, previousItem.containsRTL {
-                        previousItemHasRTL = true
-                    }
-                    if rtl || previousItemHasRTL {
-                        textItem.alignment = .right
-                    }
+                var previousItemHasRTL = false
+                if let previousItem = previousItems.last as? InstantPageTextItem, previousItem.containsRTL {
+                    previousItemHasRTL = true
                 }
+                let (_, items, contentSize) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, alignment: rtl || previousItemHasRTL ? .right : .natural, offset: CGPoint(x: horizontalInset, y: 0.0), media: media, webpage: webpage)
                 return InstantPageLayout(origin: CGPoint(), contentSize: contentSize, items: items)
             } else {
                 return InstantPageLayout(origin: CGPoint(), contentSize: CGSize(), items: [])
@@ -338,10 +333,9 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             setupStyleStack(styleStack, theme: theme, category: .paragraph, link: false)
             styleStack.push(.italic)
             
-            let (textItem, textItems, textContentSize) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint(x: 0.0, y: contentSize.height), media: media, webpage: webpage)
+            let (textItem, textItems, textContentSize) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, alignment: .center, offset: CGPoint(x: 0.0, y: contentSize.height), media: media, webpage: webpage)
             if let textItem = textItem {
                 textItem.frame = textItem.frame.offsetBy(dx: floor(boundingWidth - textItem.frame.width) / 2.0, dy: contentSize.height)
-                textItem.alignment = .center
             }
             
             contentSize.height += textContentSize.height
@@ -354,10 +348,9 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                 let styleStack = InstantPageTextStyleStack()
                 setupStyleStack(styleStack, theme: theme, category: .caption, link: false)
                 
-                let (textItem, captionItems, captionContentSize) = layoutTextItemWithString(attributedStringForRichText(caption, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint(x: 0.0, y: contentSize.height), media: media, webpage: webpage)
+                let (textItem, captionItems, captionContentSize) = layoutTextItemWithString(attributedStringForRichText(caption, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, alignment: .center, offset: CGPoint(x: 0.0, y: contentSize.height), media: media, webpage: webpage)
                 if let textItem = textItem {
                     textItem.frame = textItem.frame.offsetBy(dx: floor(boundingWidth - textItem.frame.width) / 2.0, dy: contentSize.height)
-                    textItem.alignment = .center
                 }
                 
                 contentSize.height += captionContentSize.height
@@ -665,10 +658,9 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             var styleStack = InstantPageTextStyleStack()
             setupStyleStack(styleStack, theme: theme, category: .caption, link: false)
             let backgroundInset: CGFloat = 0.0
-            let (textItem, textItems, textContentSize) = layoutTextItemWithString(attributedStringForRichText(title, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0 - backgroundInset * 2.0, offset: CGPoint(), media: media, webpage: webpage)
+            let (textItem, textItems, textContentSize) = layoutTextItemWithString(attributedStringForRichText(title, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0 - backgroundInset * 2.0, alignment: .center, offset: CGPoint(), media: media, webpage: webpage)
             if let textItem = textItem {
                 textItem.frame = textItem.frame.offsetBy(dx: floor(boundingWidth - textItem.frame.width) / 2.0, dy: 0.0)
-                textItem.alignment = .center
             }
             items.append(contentsOf: textItems)
             contentSize.height += textContentSize.height + 10.0

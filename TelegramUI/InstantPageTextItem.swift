@@ -53,12 +53,22 @@ final class InstantPageTextLine {
     }
 }
 
+private func frameForLine(_ line: InstantPageTextLine, boundingWidth: CGFloat, alignment: NSTextAlignment) -> CGRect {
+    var lineFrame = line.frame
+    if alignment == .center {
+        lineFrame.origin.x = floor((boundingWidth - lineFrame.size.width) / 2.0)
+    } else if alignment == .right || (alignment == .natural && line.isRTL) {
+        lineFrame.origin.x = boundingWidth - lineFrame.size.width
+    }
+    return lineFrame
+}
+
 final class InstantPageTextItem: InstantPageItem {
     let attributedString: NSAttributedString
     let lines: [InstantPageTextLine]
     let rtlLineIndices: Set<Int>
     var frame: CGRect
-    var alignment: NSTextAlignment = .natural
+    let alignment: NSTextAlignment
     let medias: [InstantPageMedia] = []
     let wantsNode: Bool = false
     let separatesTiles: Bool = false
@@ -68,16 +78,9 @@ final class InstantPageTextItem: InstantPageItem {
         return !self.rtlLineIndices.isEmpty
     }
     
-    var imageItems: [InstantPageTextImageItem] {
-        return self.lines.reduce([InstantPageTextImageItem]()) { (items, line) in
-            var items = items
-            items.append(contentsOf: line.imageItems)
-            return items
-        }
-    }
-    
-    init(frame: CGRect, attributedString: NSAttributedString, lines: [InstantPageTextLine]) {
+    init(frame: CGRect, attributedString: NSAttributedString, alignment: NSTextAlignment, lines: [InstantPageTextLine]) {
         self.attributedString = attributedString
+        self.alignment = alignment
         self.frame = frame
         self.lines = lines
         var index = 0
@@ -105,20 +108,12 @@ final class InstantPageTextItem: InstantPageItem {
         for i in 0 ..< self.lines.count {
             let line = self.lines[i]
             
-            let lineFrame = line.frame
+            let lineFrame = frameForLine(line, boundingWidth: boundsWidth, alignment: self.alignment)
             if lineFrame.maxY < upperOriginBound || lineFrame.minY > lowerOriginBound {
                 continue
             }
             
-            var lineOrigin = lineFrame.origin
-            if self.alignment == .center {
-                lineOrigin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
-            } else if self.alignment == .right {
-                lineOrigin.x = boundsWidth - lineFrame.size.width
-            } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
-                lineOrigin.x = boundsWidth - lineFrame.size.width
-            }
-            
+            let lineOrigin = lineFrame.origin
             context.textPosition = CGPoint(x: lineOrigin.x, y: lineOrigin.y + lineFrame.size.height)
             
             if !line.markedItems.isEmpty {
@@ -153,14 +148,7 @@ final class InstantPageTextItem: InstantPageItem {
         for i in 0 ..< self.lines.count {
             let line = self.lines[i]
             
-            var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
-            if self.alignment == .center {
-                lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
-            } else if self.alignment == .right {
-                lineFrame.origin.x = boundsWidth - lineFrame.size.width
-            } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
-                lineFrame.origin.x = boundsWidth - lineFrame.size.width
-            }
+            let lineFrame = frameForLine(line, boundingWidth: boundsWidth, alignment: self.alignment)
             if lineFrame.insetBy(dx: -5.0, dy: -5.0).contains(transformedPoint) {
                 var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
                 if index == attributedString.length {
@@ -199,14 +187,7 @@ final class InstantPageTextItem: InstantPageItem {
                     if lineRange.location + lineRange.length != line.range.length {
                         rightOffset = ceil(CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, nil))
                     }
-                    var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
-                    if self.alignment == .center {
-                        lineFrame.origin.x = floor((boundsWidth - lineFrame.size.width) / 2.0)
-                    } else if self.alignment == .right {
-                        lineFrame.origin.x = boundsWidth - lineFrame.size.width
-                    } else if self.alignment == .natural && self.rtlLineIndices.contains(i) {
-                        lineFrame.origin.x = boundsWidth - lineFrame.size.width
-                    }
+                    let lineFrame = frameForLine(line, boundingWidth: boundsWidth, alignment: self.alignment)
                     rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset, y: lineFrame.minY), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height)))
                 }
             }
@@ -247,7 +228,7 @@ final class InstantPageTextItem: InstantPageItem {
         for i in 0 ..< self.lines.count {
             let line = self.lines[i]
             
-            var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y), size: line.frame.size)
+            var lineFrame = line.frame
             for imageItem in line.imageItems {
                 if imageItem.frame.minY < lineFrame.minY {
                     let delta = lineFrame.minY - imageItem.frame.minY - 2.0
@@ -432,12 +413,13 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
     }
 }
 
-func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0) -> (InstantPageTextItem?, [InstantPageItem], CGSize) {
+func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, alignment: NSTextAlignment = .natural, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0) -> (InstantPageTextItem?, [InstantPageItem], CGSize) {
     if string.length == 0 {
         return (nil, [], CGSize())
     }
     
     var lines: [InstantPageTextLine] = []
+    var imageItems: [InstantPageTextImageItem] = []
     var font = string.attribute(NSAttributedStringKey.font, at: 0, effectiveRange: nil) as? UIFont
     if font == nil {
         let range = NSMakeRange(0, string.length)
@@ -529,7 +511,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             }
             
             extraDescent = 0.0
-            var imageItems: [InstantPageTextImageItem] = []
+            var lineImageItems: [InstantPageTextImageItem] = []
             var isRTL = false
             if let glyphRuns = CTLineGetGlyphRuns(line) as? [CTRun], !glyphRuns.isEmpty {
                 if let run = glyphRuns.first, CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
@@ -562,21 +544,22 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                                 extraDescent = max(extraDescent, imageFrame.maxY - (currentLineOrigin.y + fontLineHeight + minSpacing))
                             }
                             maxImageHeight = max(maxImageHeight, imageFrame.height)
-                            imageItems.append(InstantPageTextImageItem(frame: imageFrame, range: range, id: MediaId(namespace: Namespaces.Media.CloudFile, id: id)))
+                            lineImageItems.append(InstantPageTextImageItem(frame: imageFrame, range: range, id: MediaId(namespace: Namespaces.Media.CloudFile, id: id)))
                         }
                     }
                 }
             }
             
-            if !minimizeWidth && !hadIndexOffset && lineCharacterCount > 1 && lineWidth > currentMaxWidth, let imageItem = imageItems.last {
+            if !minimizeWidth && !hadIndexOffset && lineCharacterCount > 1 && lineWidth > currentMaxWidth, let imageItem = lineImageItems.last {
                 indexOffset = -(lastIndex + lineCharacterCount - imageItem.range.lowerBound)
                 continue
             }
             
             let height = !fontLineHeight.isZero ? fontLineHeight : maxImageHeight
-            let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: height), strikethroughItems: strikethroughItems, markedItems: markedItems, imageItems: imageItems, isRTL: isRTL)
+            let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: height), strikethroughItems: strikethroughItems, markedItems: markedItems, imageItems: lineImageItems, isRTL: isRTL)
             
             lines.append(textLine)
+            imageItems.append(contentsOf: lineImageItems)
             
             currentLineOrigin.x = 0.0;
             currentLineOrigin.y += fontLineHeight + fontLineSpacing + extraDescent
@@ -596,17 +579,20 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         height = lines.last!.frame.maxY + extraDescent
     }
     
-    let textItem = InstantPageTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: height), attributedString: string, lines: lines)
+    let textItem = InstantPageTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth, height: height), attributedString: string, alignment: alignment, lines: lines)
     textItem.frame = textItem.frame.offsetBy(dx: offset.x, dy: offset.y)
     var items: [InstantPageItem] = []
-    if textItem.imageItems.isEmpty || string.length > 1 {
+    if imageItems.isEmpty || string.length > 1 {
         items.append(textItem)
     }
     
     if let webpage = webpage {
-        for imageItem in textItem.imageItems {
-            if let image = media[imageItem.id] as? TelegramMediaFile {
-                items.append(InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false))
+        for line in textItem.lines {
+            let lineFrame = frameForLine(line, boundingWidth: boundingWidth, alignment: alignment)
+            for imageItem in line.imageItems {
+                if let image = media[imageItem.id] as? TelegramMediaFile {
+                    items.append(InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false))
+                }
             }
         }
     }
