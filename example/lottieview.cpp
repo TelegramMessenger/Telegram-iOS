@@ -72,7 +72,35 @@ void LottieView::createVgNode(LOTNode *node, Efl_VG *parent)
         }
 
     } else if (node->mBrushType == LOTBrushType::BrushGradient) {
-        //TODO fill the gradient info
+        Efl_VG *grad = nullptr;
+        if (node->mGradient.type == GradientLinear) {
+            grad = evas_vg_gradient_linear_add(parent);
+            evas_vg_gradient_linear_start_set(grad, node->mGradient.start.x, node->mGradient.start.y);
+            evas_vg_gradient_linear_end_set(grad, node->mGradient.end.x, node->mGradient.end.y);
+        } else {
+            grad = evas_vg_gradient_radial_add(parent);
+            evas_vg_gradient_radial_center_set(grad, node->mGradient.center.x, node->mGradient.center.y);
+            evas_vg_gradient_radial_radius_set(grad, node->mGradient.cradius);
+            evas_vg_gradient_radial_focal_set(grad, node->mGradient.focal.x, node->mGradient.focal.y);
+        }
+        int stop_count = node->mGradient.stopCount;
+        if (stop_count)
+          {
+             Efl_Gfx_Gradient_Stop *stops = (Efl_Gfx_Gradient_Stop *)calloc(stop_count, sizeof(Efl_Gfx_Gradient_Stop));
+             for (int i = 0; i <stop_count; i++) {
+                 stops[i].offset = node->mGradient.stopPtr[i].pos;
+                 stops[i].r = (node->mGradient.stopPtr[i].r * node->mGradient.stopPtr[i].a)/255;
+                 stops[i].g = (node->mGradient.stopPtr[i].g * node->mGradient.stopPtr[i].a)/255;
+                 stops[i].b = (node->mGradient.stopPtr[i].b * node->mGradient.stopPtr[i].a)/255;
+                 stops[i].a = node->mGradient.stopPtr[i].a;
+             }
+             evas_vg_gradient_stop_set(grad, stops, stop_count);
+          }
+        if (node->mStroke.enable) {
+            evas_vg_shape_stroke_fill_set(shape, grad);
+        } else {
+            evas_vg_shape_fill_set(shape, grad);
+        }
     }
 }
 
