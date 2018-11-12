@@ -2360,7 +2360,7 @@ func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumA
     
     if let albumArt = albumArt {
         if thumbnail {
-            return albumArtThumbnailData(postbox: postbox, thumbnail: fileThumbnailResource ?? albumArt.thumbnailResource) |> map { thumbnailData in
+            return albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource) |> map { thumbnailData in
                 return { arguments in
                     let context = DrawingContext(size: arguments.drawingSize, clear: true)
                     
