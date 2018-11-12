@@ -179,14 +179,17 @@ final class ActivityIndicator: ASDisplayNode {
     
     private func layoutContents(size: CGSize) {
         let indicatorSize: CGSize
+        let shouldScale: Bool
         switch self.type {
             case .navigationAccent:
                 indicatorSize = CGSize(width: 22.0, height: 22.0)
-            case let .custom(_, diameter, _, _):
+                shouldScale = false
+            case let .custom(_, diameter, _, forceDefault):
                 indicatorSize = CGSize(width: diameter, height: diameter)
+                shouldScale = !forceDefault
         }
         self.indicatorNode.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
-        if let indicatorView = self.indicatorView {
+        if shouldScale, let indicatorView = self.indicatorView {
             let intrinsicSize = indicatorView.bounds.size
             self.subnodeTransform = CATransform3DMakeScale(min(1.0, indicatorSize.width / intrinsicSize.width), min(1.0, indicatorSize.height / intrinsicSize.height), 1.0)
             indicatorView.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)

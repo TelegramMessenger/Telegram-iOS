@@ -78,7 +78,7 @@ final class ChatTitleProxyNode: ASDisplayNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.image = generateIcon(color: theme.rootController.navigationBar.accentTextColor, connected: false, off: true)
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.accentTextColor, 10.0, 1.0, false), speed: .slow)
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.rootController.navigationBar.accentTextColor, 10.0, 1.0, true), speed: .slow)
         
         super.init()
         

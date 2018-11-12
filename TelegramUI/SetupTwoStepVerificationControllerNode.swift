@@ -283,49 +283,49 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                     case let .enterPassword(mode, password):
                         switch mode {
                             case .create:
-                                title = "Create a Password"
-                                subtitle = "Please create a password which will be used to protect your data."
+                                title = self.presentationData.strings.TwoStepAuth_SetupPasswordTitle
+                                subtitle = self.presentationData.strings.TwoStepAuth_SetupPasswordDescription
                             case .update:
-                                title = "Change Password"
-                                subtitle = "Please enter a new password which will be used to protect your data."
+                                title = self.presentationData.strings.TwoStepAuth_ChangePassword
+                                subtitle = self.presentationData.strings.TwoStepAuth_ChangePasswordDescription
                         }
                         inputType = .password
-                        inputPlaceholder = "Password"
+                        inputPlaceholder = self.presentationData.strings.LoginPassword_PasswordPlaceholder
                         inputText = password
                         isPassword = true
                     case let .confirmPassword(_, _, confirmation):
-                        title = "Re-enter your Password"
-                        subtitle = "Please confirm your password."
+                        title = self.presentationData.strings.TwoStepAuth_ReEnterPasswordTitle
+                        subtitle = self.presentationData.strings.TwoStepAuth_ReEnterPasswordDescription
                         inputType = .password
-                        inputPlaceholder = "Password"
+                        inputPlaceholder = self.presentationData.strings.LoginPassword_PasswordPlaceholder
                         inputText = confirmation
                         isPassword = true
                     case let .enterHint(_, _, hint):
-                        title = "Add a Hint"
-                        subtitle = "You can create an optional hint for your password."
+                        title = self.presentationData.strings.TwoStepAuth_AddHintTitle
+                        subtitle = self.presentationData.strings.TwoStepAuth_AddHintDescription
                         inputType = .text
-                        inputPlaceholder = "Hint"
+                        inputPlaceholder = self.presentationData.strings.TwoStepAuth_HintPlaceholder
                         inputText = hint
                         isPassword = false
                     case let .enterEmail(enterState, email):
-                        title = "Recovery Email"
+                        title = self.presentationData.strings.TwoStepAuth_RecoveryEmailTitle
                         switch enterState {
                             case let .add(hadRecoveryEmail, _, _) where hadRecoveryEmail:
-                                subtitle = "Please enter your new recovery email. It is the only way to recover a forgotten password."
+                                subtitle = self.presentationData.strings.TwoStepAuth_RecoveryEmailChangeDescription
                             default:
-                                subtitle = "Please add your valid e-mail. It is the only way to recover a forgotten password."
+                                subtitle = self.presentationData.strings.TwoStepAuth_RecoveryEmailAddDescription
                         }
                         inputType = .email
-                        inputPlaceholder = "Email"
+                        inputPlaceholder = self.presentationData.strings.TwoStepAuth_EmailPlaceholder
                         inputText = email
                         isPassword = false
                     case let .confirmEmail(confirmState, _, _, code):
-                        title = "Recovery Email"
+                        title = self.presentationData.strings.TwoStepAuth_RecoveryEmailTitle
                         let emailPattern: String
                         switch confirmState {
                             case let .create(password, hint, email):
                                 emailPattern = email
-                                leftAction = SetupTwoStepVerificationContentAction(title: "Change E-Mail", action: { [weak self] in
+                                leftAction = SetupTwoStepVerificationContentAction(title: self.presentationData.strings.TwoStepAuth_ChangeEmail, action: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -360,7 +360,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                 })
                             case let .add(password, hadRecoveryEmail, hasSecureValues, email):
                                 emailPattern = email
-                                leftAction = SetupTwoStepVerificationContentAction(title: "Change E-Mail", action: { [weak self] in
+                                leftAction = SetupTwoStepVerificationContentAction(title: self.presentationData.strings.TwoStepAuth_ChangeEmail, action: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -373,12 +373,12 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                             case let .confirm(_, _, pattern, _):
                                 emailPattern = pattern
                         }
-                        subtitle = "Please enter the code we've just emailed at \(emailPattern)."
+                        subtitle = self.presentationData.strings.TwoStepAuth_ConfirmEmailDescription(emailPattern).0
                         inputType = .code
-                        inputPlaceholder = "Code"
+                        inputPlaceholder = self.presentationData.strings.TwoStepAuth_ConfirmEmailCodePlaceholder
                         inputText = code
                         isPassword = true
-                        rightAction = SetupTwoStepVerificationContentAction(title: "Resend Code", action: { [weak self] in
+                        rightAction = SetupTwoStepVerificationContentAction(title: self.presentationData.strings.TwoStepAuth_ConfirmEmailResendCode, action: { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
