@@ -111,7 +111,7 @@ static bool TGProxyWindowIsLight = true;
         UIColor *color = _light ? UIColorRGB(0x5a5a5a) : [UIColor whiteColor];
         
         UIImage *image = nil;
-        if (_shield) {
+        if (_shieldIcon) {
             image = generateShieldImage(color);
         } else {
             CGSize size = CGSizeMake(66.0, 66.0);
