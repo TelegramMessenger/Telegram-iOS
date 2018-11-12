@@ -67,6 +67,30 @@ public extension UIColor {
         
         return UIColor(hue: hue, saturation: saturation, brightness: max(0.0, min(1.0, brightness * factor)), alpha: alpha)
     }
+    
+    func mixedWith(_ other: UIColor, alpha: CGFloat) -> UIColor {
+        let alpha = min(1.0, max(0.0, alpha))
+        let oneMinusAlpha = 1.0 - alpha
+        
+        var r1: CGFloat = 0.0
+        var r2: CGFloat = 0.0
+        var g1: CGFloat = 0.0
+        var g2: CGFloat = 0.0
+        var b1: CGFloat = 0.0
+        var b2: CGFloat = 0.0
+        var a1: CGFloat = 0.0
+        var a2: CGFloat = 0.0
+        if self.getRed(&r1, green: &g1, blue: &b1, alpha: &a1) &&
+            other.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        {
+            let r = r1 * oneMinusAlpha + r2 * alpha
+            let g = g1 * oneMinusAlpha + g2 * alpha
+            let b = b1 * oneMinusAlpha + b2 * alpha
+            let a = a1 * oneMinusAlpha + a2 * alpha
+            return UIColor(red: r, green: g, blue: b, alpha: a)
+        }
+        return self
+    }
 }
 
 public extension CGSize {
