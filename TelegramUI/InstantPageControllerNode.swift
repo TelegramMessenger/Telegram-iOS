@@ -893,11 +893,16 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func findAnchorItem(_ anchor: String, items: [InstantPageItem]) -> InstantPageAnchorItem? {
+    private func findAnchorItem(_ anchor: String, items: [InstantPageItem]) -> (InstantPageItem, CGFloat)? {
         for item in items {
             if let item = item as? InstantPageAnchorItem, item.anchor == anchor {
-                return item
-            } else if let item = item as? InstantPageDetailsItem {
+                return (item, 0.0)
+            } else if let item = item as? InstantPageTextItem {
+                if let lineIndex = item.anchors[anchor] {
+                    return (item, item.lines[lineIndex].frame.minY - 10.0)
+                }
+            }
+            else if let item = item as? InstantPageDetailsItem {
                 if let anchorItem = findAnchorItem(anchor, items: item.items) {
                     return anchorItem
                 }
@@ -910,12 +915,18 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         guard let items = self.currentLayout?.items else {
             return
         }
-        
-        if let webPage = self.webPage, url.webpageId == webPage.id, let anchorRange = url.url.range(of: "#") {
-            let anchor = url.url[anchorRange.upperBound...]
+
+        var baseUrl = url.url
+        var anchor: String?
+        if let anchorRange = url.url.range(of: "#") {
+            anchor = String(baseUrl[anchorRange.upperBound...])
+            baseUrl = String(baseUrl[..<anchorRange.lowerBound])
+        }
+
+        if let webPage = self.webPage, case let .Loaded(content) = webPage.content, let page = content.instantPage, page.url == baseUrl, let anchor = anchor {
             if !anchor.isEmpty {
-                if let anchorItem = findAnchorItem(String(anchor), items: items) {
-                    self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: anchorItem.frame.origin.y - self.scrollNode.view.contentInset.top), animated: true)
+                if let (anchorItem, offset) = findAnchorItem(String(anchor), items: items) {
+                    self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: anchorItem.frame.minY + offset - self.scrollNode.view.contentInset.top), animated: true)
                     return
                 }
             }

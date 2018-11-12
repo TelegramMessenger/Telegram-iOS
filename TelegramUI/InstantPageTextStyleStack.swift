@@ -16,11 +16,13 @@ enum InstantPageTextStyle {
     case superscript
     case markerColor(UIColor)
     case marker
+    case anchor(String)
 }
 
 let InstantPageLineSpacingFactorAttribute = "LineSpacingFactorAttribute"
 let InstantPageMarkerColorAttribute = "MarkerColorAttribute"
 let InstantPageMediaIdAttribute = "MediaIdAttribute"
+let InstantPageAnchorAttribute = "AnchorAttribute"
 
 final class InstantPageTextStyleStack {
     private var items: [InstantPageTextStyle] = []
@@ -48,6 +50,7 @@ final class InstantPageTextStyleStack {
         var baselineOffset: CGFloat?
         var markerColor: UIColor?
         var marker: Bool?
+        var anchor: String?
         
         for item in self.items.reversed() {
             switch item {
@@ -103,6 +106,10 @@ final class InstantPageTextStyleStack {
                 case .marker:
                     if marker == nil {
                         marker = true
+                    }
+                case let .anchor(name):
+                    if anchor == nil {
+                        anchor = name
                     }
             }
         }
@@ -175,6 +182,10 @@ final class InstantPageTextStyleStack {
         
         if marker != nil && marker!, let markerColor = markerColor {
             attributes[NSAttributedStringKey(rawValue: InstantPageMarkerColorAttribute)] = markerColor
+        }
+        
+        if let anchor = anchor {
+            attributes[NSAttributedStringKey(rawValue: InstantPageAnchorAttribute)] = anchor
         }
         
         return attributes

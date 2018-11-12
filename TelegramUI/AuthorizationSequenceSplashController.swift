@@ -21,7 +21,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     
     var nextPressed: ((PresentationStrings?) -> Void)?
     
-    private let suggestedLocalization = Promise<SuggestedLocalizationInfo?>(nil)
+    private let suggestedLocalization = Promise<SuggestedLocalizationInfo?>()
     private let activateLocalizationDisposable = MetaDisposable()
     
     init(postbox: Postbox, network: Network, theme: AuthorizationTheme) {
@@ -29,7 +29,8 @@ final class AuthorizationSequenceSplashController: ViewController {
         self.network = network
         self.theme = theme
         
-        self.suggestedLocalization.set(currentlySuggestedLocalization(network: network, extractKeys: ["Login.ContinueWithLocalization"]))
+        self.suggestedLocalization.set(.single(nil)
+        |> then(currentlySuggestedLocalization(network: network, extractKeys: ["Login.ContinueWithLocalization"])))
         let suggestedLocalization = self.suggestedLocalization
         
         let localizationSignal = SSignal(generator: { subscriber in

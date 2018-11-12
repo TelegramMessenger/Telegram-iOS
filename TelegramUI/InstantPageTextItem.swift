@@ -33,6 +33,10 @@ struct InstantPageTextImageItem {
     let id: MediaId
 }
 
+struct InstantPageTextAnchorItem {
+    let name: String
+}
+
 final class InstantPageTextLine {
     let line: CTLine
     let range: NSRange
@@ -40,15 +44,17 @@ final class InstantPageTextLine {
     let strikethroughItems: [InstantPageTextStrikethroughItem]
     let markedItems: [InstantPageTextMarkedItem]
     let imageItems: [InstantPageTextImageItem]
+    let anchorItems: [InstantPageTextAnchorItem]
     let isRTL: Bool
     
-    init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem], markedItems: [InstantPageTextMarkedItem], imageItems: [InstantPageTextImageItem], isRTL: Bool) {
+    init(line: CTLine, range: NSRange, frame: CGRect, strikethroughItems: [InstantPageTextStrikethroughItem], markedItems: [InstantPageTextMarkedItem], imageItems: [InstantPageTextImageItem], anchorItems: [InstantPageTextAnchorItem], isRTL: Bool) {
         self.line = line
         self.range = range
         self.frame = frame
         self.strikethroughItems = strikethroughItems
         self.markedItems = markedItems
         self.imageItems = imageItems
+        self.anchorItems = anchorItems
         self.isRTL = isRTL
     }
 }
@@ -70,6 +76,7 @@ final class InstantPageTextItem: InstantPageItem {
     var frame: CGRect
     let alignment: NSTextAlignment
     let medias: [InstantPageMedia] = []
+    let anchors: [String: Int]
     let wantsNode: Bool = false
     let separatesTiles: Bool = false
     var selectable: Bool = true
@@ -85,13 +92,18 @@ final class InstantPageTextItem: InstantPageItem {
         self.lines = lines
         var index = 0
         var rtlLineIndices = Set<Int>()
+        var anchors: [String: Int] = [:]
         for line in lines {
             if line.isRTL {
                 rtlLineIndices.insert(index)
             }
+            for anchor in line.anchorItems {
+                anchors[anchor.name] = index
+            }
             index += 1
         }
         self.rtlLineIndices = rtlLineIndices
+        self.anchors = anchors
     }
     
     func drawInTile(context: CGContext) {
@@ -410,6 +422,15 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
             let delegate = CTRunDelegateCreate(&callbacks, extentBuffer)
             let attrDictionaryDelegate = [(kCTRunDelegateAttributeName as NSAttributedStringKey): (delegate as Any), NSAttributedStringKey(rawValue: InstantPageMediaIdAttribute): id.id]
             return NSAttributedString(string: " ", attributes: attrDictionaryDelegate)
+        case let .anchor(text, name):
+            styleStack.push(.anchor(name))
+            var text = text
+            if case .empty = text {
+                text = .plain("\u{200b}")
+            }
+            let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
+            styleStack.pop()
+            return result
     }
 }
 
@@ -497,6 +518,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             
             var strikethroughItems: [InstantPageTextStrikethroughItem] = []
             var markedItems: [InstantPageTextMarkedItem] = []
+            var anchorItems: [InstantPageTextAnchorItem] = []
             
             string.enumerateAttributes(in: lineRange, options: []) { attributes, range, _ in
                 if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
@@ -507,6 +529,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                     let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
                     markedItems.append(InstantPageTextMarkedItem(frame: CGRect(x: currentLineOrigin.x + lowerX, y: currentLineOrigin.y, width: upperX - lowerX, height: fontLineHeight), color: item))
+                } else if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageAnchorAttribute)] as? String {
+                    anchorItems.append(InstantPageTextAnchorItem(name: item))
                 }
             }
             
@@ -556,7 +580,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             }
             
             let height = !fontLineHeight.isZero ? fontLineHeight : maxImageHeight
-            let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: height), strikethroughItems: strikethroughItems, markedItems: markedItems, imageItems: lineImageItems, isRTL: isRTL)
+            let textLine = InstantPageTextLine(line: line, range: lineRange, frame: CGRect(x: currentLineOrigin.x, y: currentLineOrigin.y, width: lineWidth, height: height), strikethroughItems: strikethroughItems, markedItems: markedItems, imageItems: lineImageItems, anchorItems: anchorItems, isRTL: isRTL)
             
             lines.append(textLine)
             imageItems.append(contentsOf: lineImageItems)
