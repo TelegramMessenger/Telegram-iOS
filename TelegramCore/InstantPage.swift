@@ -848,12 +848,14 @@ public final class InstantPage: PostboxCoding, Equatable {
     public let media: [MediaId: Media]
     public let isComplete: Bool
     public let rtl: Bool
+    public let url: String
     
-    init(blocks: [InstantPageBlock], media: [MediaId: Media], isComplete: Bool, rtl: Bool) {
+    init(blocks: [InstantPageBlock], media: [MediaId: Media], isComplete: Bool, rtl: Bool, url: String) {
         self.blocks = blocks
         self.media = media
         self.isComplete = isComplete
         self.rtl = rtl
+        self.url = url
     }
     
     public init(decoder: PostboxDecoder) {
@@ -861,6 +863,7 @@ public final class InstantPage: PostboxCoding, Equatable {
         self.media = MediaDictionary(decoder: decoder).dict
         self.isComplete = decoder.decodeInt32ForKey("c", orElse: 0) != 0
         self.rtl = decoder.decodeInt32ForKey("r", orElse: 0) != 0
+        self.url = decoder.decodeStringForKey("url", orElse: "")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -868,6 +871,7 @@ public final class InstantPage: PostboxCoding, Equatable {
         MediaDictionary(dict: self.media).encode(encoder)
         encoder.encodeInt32(self.isComplete ? 1 : 0, forKey: "c")
         encoder.encodeInt32(self.rtl ? 1 : 0, forKey: "r")
+        encoder.encodeString(self.url, forKey: "url")
     }
     
     public static func ==(lhs: InstantPage, rhs: InstantPage) -> Bool {
@@ -893,6 +897,9 @@ public final class InstantPage: PostboxCoding, Equatable {
         if lhs.rtl != rhs.rtl {
             return false
         }
+        if lhs.url != rhs.url {
+            return false
+        }
         return true
     }
 }
@@ -900,8 +907,8 @@ public final class InstantPage: PostboxCoding, Equatable {
 extension InstantPageCaption {
     convenience init(apiCaption: Api.PageCaption) {
         switch apiCaption {
-        case let .pageCaption(text, credit):
-            self.init(text: RichText(apiText: text), credit: RichText(apiText: credit))
+            case let .pageCaption(text, credit):
+                self.init(text: RichText(apiText: text), credit: RichText(apiText: credit))
         }
     }
 }
@@ -1063,13 +1070,15 @@ extension InstantPage {
         let files: [Api.Document]
         let isComplete: Bool
         let rtl: Bool
+        let url: String
         switch apiPage {
-            case let .page(flags, apiBlocks, apiPhotos, apiVideos):
-                blocks = apiBlocks
-                photos = apiPhotos
-                files = apiVideos
-                isComplete = (flags & (1 << 0)) == 0
-                rtl = (flags & (1 << 1)) != 0
+            case let .page(page):
+                url = page.url
+                blocks = page.blocks
+                photos = page.photos
+                files = page.documents
+                isComplete = (page.flags & (1 << 0)) == 0
+                rtl = (page.flags & (1 << 1)) != 0
         }
         var media: [MediaId: Media] = [:]
         for photo in photos {
@@ -1082,6 +1091,6 @@ extension InstantPage {
                 media[id] = file
             }
         }
-        self.init(blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), media: media, isComplete: isComplete, rtl: rtl)
+        self.init(blocks: blocks.map({ InstantPageBlock(apiBlock: $0) }), media: media, isComplete: isComplete, rtl: rtl, url: url)
     }
 }

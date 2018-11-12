@@ -315,6 +315,8 @@ extension RichText {
                 self = .phone(text: RichText(apiText: text), phone: phone)
             case let .textImage(documentId, w, h):
                 self = .image(id: MediaId(namespace: Namespaces.Media.CloudFile, id: documentId), dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)))
+            case let .textAnchor(text, name):
+                self = RichText(apiText: text)
         }
     }
 }

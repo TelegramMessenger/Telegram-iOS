@@ -1843,6 +1843,7 @@ extension Api {
         case textMarked(text: Api.RichText)
         case textPhone(text: Api.RichText, phone: String)
         case textImage(documentId: Int64, w: Int32, h: Int32)
+        case textAnchor(text: Api.RichText, name: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1946,6 +1947,13 @@ extension Api {
                     serializeInt32(w, buffer: buffer, boxed: false)
                     serializeInt32(h, buffer: buffer, boxed: false)
                     break
+                case .textAnchor(let text, let name):
+                    if boxed {
+                        buffer.appendInt32(894777186)
+                    }
+                    text.serialize(buffer, true)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -1981,6 +1989,8 @@ extension Api {
                 return ("textPhone", [("text", text), ("phone", phone)])
                 case .textImage(let documentId, let w, let h):
                 return ("textImage", [("documentId", documentId), ("w", w), ("h", h)])
+                case .textAnchor(let text, let name):
+                return ("textAnchor", [("text", text), ("name", name)])
     }
     }
     
@@ -2178,6 +2188,22 @@ extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.RichText.textImage(documentId: _1!, w: _2!, h: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_textAnchor(_ reader: BufferReader) -> RichText? {
+            var _1: Api.RichText?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.RichText.textAnchor(text: _1!, name: _2!)
             }
             else {
                 return nil
@@ -10006,15 +10032,16 @@ extension Api {
     
     }
     enum Page: TypeConstructorDescription {
-        case page(flags: Int32, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
+        case page(flags: Int32, url: String, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .page(let flags, let blocks, let photos, let documents):
+                case .page(let flags, let url, let blocks, let photos, let documents):
                     if boxed {
-                        buffer.appendInt32(-241590104)
+                        buffer.appendInt32(-1366746132)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(blocks.count))
                     for item in blocks {
@@ -10036,32 +10063,35 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .page(let flags, let blocks, let photos, let documents):
-                return ("page", [("flags", flags), ("blocks", blocks), ("photos", photos), ("documents", documents)])
+                case .page(let flags, let url, let blocks, let photos, let documents):
+                return ("page", [("flags", flags), ("url", url), ("blocks", blocks), ("photos", photos), ("documents", documents)])
     }
     }
     
         static func parse_page(_ reader: BufferReader) -> Page? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: [Api.PageBlock]?
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.PageBlock]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PageBlock.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PageBlock.self)
             }
-            var _3: [Api.Photo]?
+            var _4: [Api.Photo]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Photo.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Photo.self)
             }
-            var _4: [Api.Document]?
+            var _5: [Api.Document]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Page.page(flags: _1!, blocks: _2!, photos: _3!, documents: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Page.page(flags: _1!, url: _2!, blocks: _3!, photos: _4!, documents: _5!)
             }
             else {
                 return nil

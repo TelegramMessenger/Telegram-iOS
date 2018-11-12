@@ -47,3 +47,15 @@ public func resendTwoStepRecoveryEmail(network: Network) -> Signal<Never, Resend
     }
     |> ignoreValues
 }
+
+public enum CancelTwoStepRecoveryEmailError {
+    case generic
+}
+
+public func cancelTwoStepRecoveryEmail(network: Network) -> Signal<Never, CancelTwoStepRecoveryEmailError> {
+    return network.request(Api.functions.account.cancelPasswordEmail(), automaticFloodWait: false)
+    |> mapError { _ -> CancelTwoStepRecoveryEmailError in
+        return .generic
+    }
+    |> ignoreValues
+}
