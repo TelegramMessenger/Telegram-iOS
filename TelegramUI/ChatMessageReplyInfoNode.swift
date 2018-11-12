@@ -50,6 +50,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let titleString = message.author?.displayTitle ?? ""
             let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
             
+            let placeholderColor: UIColor =  message.effectivelyIncoming(account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor
             let titleColor: UIColor
             let lineImage: UIImage?
             let textColor: UIColor
@@ -110,7 +111,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     imageSize.width += 2.0
                     imageSize.height += 2.0
                 }
-                applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))
+                applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: placeholderColor))
             }
             
             var mediaUpdated = false

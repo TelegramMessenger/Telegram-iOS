@@ -486,6 +486,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             } else {
                 transition.animatePositionAdditive(layer: scrubberView.layer, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
             }
+            scrubberView.alpha = 1.0
             scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         }
         transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
@@ -507,6 +508,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             } else {
                 transition.updateFrame(view: scrubberView, frame: scrubberView.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
             }
+            scrubberView.alpha = 0.0
             scrubberView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
         }
         transition.updateFrame(node: self.textNode, frame: self.textNode.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))

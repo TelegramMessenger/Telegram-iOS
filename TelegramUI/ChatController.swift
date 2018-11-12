@@ -4799,7 +4799,32 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 disposable = MetaDisposable()
                 strongSelf.resolveUrlDisposable = disposable
             }
+            var cancelImpl: (() -> Void)?
+            let presentationData = strongSelf.presentationData
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                self?.present(controller, in: .window(.root))
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.15, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            cancelImpl = { [weak self] in
+                self?.resolveUrlDisposable?.set(nil)
+            }
             disposable.set((resolveUrl(account: strongSelf.account, url: url)
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
             |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.openResolved(result)

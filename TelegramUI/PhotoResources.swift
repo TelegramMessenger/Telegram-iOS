@@ -271,8 +271,8 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
                     }
                 }
             }
-        } |> filter({
-            return $0.0 != nil || $0.1 != nil || $0.2
+        } |> filter({ _ in
+            return true//$0.0 != nil || $0.1 != nil || $0.2
         })
         
         return signal
@@ -633,32 +633,69 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
                 if thumbnailImage == nil && fullSizeImage == nil {
                     let color = arguments.emptyColor ?? UIColor.white
                     c.setFillColor(color.cgColor)
-                    c.fill(fittedRect)
+                    c.fill(drawingRect)
                 } else {
                     if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
                         let blurSourceImage = thumbnailImage ?? fullSizeImage
                         
                         if let fullSizeImage = blurSourceImage {
                             let thumbnailSize = CGSize(width: fullSizeImage.width, height: fullSizeImage.height)
-                            let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 74.0, height: 74.0))
-                            let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
-                            thumbnailContext.withFlippedContext { c in
-                                c.interpolationQuality = .none
-                                c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
-                            }
-                            telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                            telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                             
-                            if let blurredImage = thumbnailContext.generateImage() {
+                            var sideBlurredImage: UIImage?
+                            if true {
+                                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 100.0, height: 100.0))
+                                
+                                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                                thumbnailContext.withFlippedContext { c in
+                                    c.interpolationQuality = .none
+                                    c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                                }
+                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                
+                                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
+                                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
+                                }
+                                
+                                if thumbnailContextFittingSize.width > thumbnailContextSize.width {
+                                    let additionalContextSize = thumbnailContextFittingSize
+                                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
+                                    additionalBlurContext.withFlippedContext { c in
+                                        c.interpolationQuality = .default
+                                        if let image = thumbnailContext.generateImage()?.cgImage {
+                                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
+                                        }
+                                    }
+                                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                                    sideBlurredImage = additionalBlurContext.generateImage()
+                                } else {
+                                    sideBlurredImage = thumbnailContext.generateImage()
+                                }
+                            } else {
+                                let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 74.0, height: 74.0))
+                                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                                thumbnailContext.withFlippedContext { c in
+                                    c.interpolationQuality = .none
+                                    c.draw(fullSizeImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                                }
+                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                sideBlurredImage = thumbnailContext.generateImage()
+                            }
+                                
+                                
+                            if let blurredImage = sideBlurredImage {
                                 let filledSize = thumbnailSize.aspectFilled(arguments.drawingRect.size)
                                 c.interpolationQuality = .medium
                                 c.draw(blurredImage.cgImage!, in: CGRect(origin: CGPoint(x:arguments.drawingRect.minX + (arguments.drawingRect.width - filledSize.width) / 2.0, y: arguments.drawingRect.minY + (arguments.drawingRect.height - filledSize.height) / 2.0), size: filledSize))
                                 c.setBlendMode(.normal)
-                                c.setFillColor(UIColor(white: 1.0, alpha: 0.5).cgColor)
+                                c.setFillColor((arguments.emptyColor ?? UIColor.white).withAlphaComponent(0.05).cgColor)
                                 c.fill(arguments.drawingRect)
                                 c.setBlendMode(.copy)
                             }
                         } else {
+                            c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
                             c.fill(arguments.drawingRect)
                         }
                     }
@@ -797,7 +834,7 @@ public func chatMessagePhotoThumbnail(account: Account, photoReference: ImageMed
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
-                    //c.setFillColor(UIColor(white: 0.0, alpha: 0.4).cgColor)
+                    c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
                     c.fill(arguments.drawingRect)
                 }
                 
@@ -890,7 +927,7 @@ public func chatMessageVideoThumbnail(account: Account, fileReference: FileMedia
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
-                    //c.setFillColor(UIColor(white: 0.0, alpha: 0.4).cgColor)
+                    c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
                     c.fill(arguments.drawingRect)
                 }
                 
@@ -991,7 +1028,7 @@ func chatSecretPhoto(account: Account, photoReference: ImageMediaReference) -> S
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
-                    //c.setFillColor(UIColor(white: 0.0, alpha: 0.4).cgColor)
+                    c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
                     c.fill(arguments.drawingRect)
                 }
                 
@@ -1167,7 +1204,8 @@ func avatarGalleryThumbnailPhoto(account: Account, representations: [(TelegramMe
 func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: photoReference, fullRepresentationSize: CGSize(width: 127.0, height: 127.0), autoFetchFullSize: true)
     
-    return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
+    return signal
+    |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
             assertNotOnMainThread()
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
@@ -1222,6 +1260,7 @@ func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaReference
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.boundingSize != arguments.imageSize {
+                    c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
                     c.fill(arguments.drawingRect)
                 }
                 
@@ -1439,7 +1478,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                                     c.interpolationQuality = .medium
                                     c.draw(blurredImage.cgImage!, in: CGRect(origin: CGPoint(x: arguments.drawingRect.minX + (arguments.drawingRect.width - filledSize.width) / 2.0, y: arguments.drawingRect.minY + (arguments.drawingRect.height - filledSize.height) / 2.0), size: filledSize))
                                     c.setBlendMode(.normal)
-                                    c.setFillColor(UIColor(white: 1.0, alpha: 0.5).cgColor)
+                                    c.setFillColor((arguments.emptyColor ?? UIColor.white).withAlphaComponent(0.5).cgColor)
                                     c.fill(arguments.drawingRect)
                                     c.setBlendMode(.copy)
                                 }
@@ -1447,7 +1486,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                                 c.fill(arguments.drawingRect)
                             }
                         case let .fill(color):
-                            c.setFillColor(color.cgColor)
+                            c.setFillColor((arguments.emptyColor ?? color).cgColor)
                             c.fill(arguments.drawingRect)
                     }
                 }
@@ -2134,7 +2173,7 @@ func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) 
                 } else {
                     context.withFlippedContext { c in
                         c.setBlendMode(.copy)
-                        c.setFillColor(UIColor.white.cgColor)
+                        c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
                         c.fill(arguments.drawingRect)
                         
                         c.setBlendMode(.normal)
@@ -2197,7 +2236,7 @@ func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(T
                 } else {
                     context.withFlippedContext { c in
                         c.setBlendMode(.copy)
-                        c.setFillColor(UIColor.white.cgColor)
+                        c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
                         c.fill(arguments.drawingRect)
                         
                         c.setBlendMode(.normal)

@@ -476,9 +476,33 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                                 updatedToken.saveOnServer = false
                                 applyPaymentMethod(.webToken(updatedToken))
                             }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
-                                var updatedToken = token
-                                updatedToken.saveOnServer = true
-                                applyPaymentMethod(.webToken(updatedToken))
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                if paymentForm.passwordMissing {
+                                    var updatedToken = token
+                                    updatedToken.saveOnServer = false
+                                    applyPaymentMethod(.webToken(updatedToken))
+                                    
+                                    let controller = SetupTwoStepVerificationController(account: strongSelf.account, initialState: .automatic, stateUpdated: { update, shouldDismiss, controller in
+                                        if shouldDismiss {
+                                            controller.dismiss()
+                                        }
+                                        switch update {
+                                            case .noPassword, .awaitingEmailConfirmation:
+                                                break
+                                            case .passwordSet:
+                                                var updatedToken = token
+                                                updatedToken.saveOnServer = true
+                                                applyPaymentMethod(.webToken(updatedToken))
+                                        }
+                                    })
+                                    strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                } else {
+                                    var updatedToken = token
+                                    updatedToken.saveOnServer = true
+                                    applyPaymentMethod(.webToken(updatedToken))
+                                }
                             })]), nil)
                         } else {
                             var updatedToken = token

@@ -888,42 +888,55 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
         innerState.actionState = .saving
         self.updateInnerState(transition: .immediate, with: innerState)
         
-        self.actionDisposable.set((secureIdPrepareEmailVerification(network: self.account.network, value: SecureIdEmailValue(email: value))
-            |> deliverOnMainQueue).start(next: { [weak self] result in
-                if let strongSelf = self {
-                    guard var innerState = strongSelf.innerState else {
-                        return
-                    }
-                    guard case .saving = innerState.actionState else {
-                        return
-                    }
-                    innerState.actionState = .none
-                    innerState.data = .email(.verify(EmailVerifyState(email: value, payload: result, code: "")))
-                    strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                    strongSelf.activateMainInput()
+        self.actionDisposable.set((saveSecureIdValue(postbox: self.account.postbox, network: self.account.network, context: self.context, value: .email(SecureIdEmailValue(email: value)), uploadedFiles: [:])
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.completedWithValue?(result)
+        }, error: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+        strongSelf.actionDisposable.set((secureIdPrepareEmailVerification(network: strongSelf.account.network, value: SecureIdEmailValue(email: value))
+            |> deliverOnMainQueue).start(next: { result in
+                guard let strongSelf = self else {
+                    return
                 }
-                }, error: { [weak self] error in
-                    if let strongSelf = self {
-                        guard var innerState = strongSelf.innerState else {
-                            return
-                        }
-                        guard case .saving = innerState.actionState else {
-                            return
-                        }
-                        innerState.actionState = .none
-                        strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                        let errorText: String
-                        switch error {
-                            case .generic:
-                                errorText = strongSelf.strings.Login_UnknownError
-                            case .invalidEmail:
-                                errorText = strongSelf.strings.TwoStepAuth_EmailInvalid
-                            case .flood:
-                                errorText = strongSelf.strings.Login_CodeFloodError
-                        }
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
-                    }
+                guard var innerState = strongSelf.innerState else {
+                    return
+                }
+                guard case .saving = innerState.actionState else {
+                    return
+                }
+                innerState.actionState = .none
+                innerState.data = .email(.verify(EmailVerifyState(email: value, payload: result, code: "")))
+                strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                strongSelf.activateMainInput()
+            }, error: { [weak self] error in
+                guard let strongSelf = self else {
+                    return
+                }
+                guard var innerState = strongSelf.innerState else {
+                    return
+                }
+                guard case .saving = innerState.actionState else {
+                    return
+                }
+                innerState.actionState = .none
+                strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                let errorText: String
+                switch error {
+                    case .generic:
+                        errorText = strongSelf.strings.Login_UnknownError
+                    case .invalidEmail:
+                        errorText = strongSelf.strings.TwoStepAuth_EmailInvalid
+                    case .flood:
+                        errorText = strongSelf.strings.Login_CodeFloodError
+                }
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
             }))
+        }))
     }
 }
 

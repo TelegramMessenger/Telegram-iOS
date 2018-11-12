@@ -16,6 +16,7 @@ private enum ParsedInternalUrl {
     case join(String)
     case localization(String)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
+    case internalInstantView(url: String)
 }
 
 private enum ParsedUrl {
@@ -75,6 +76,18 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         
                         if let server = server, !server.isEmpty, let port = port, let portValue = Int32(port) {
                             return .proxy(host: server, port: portValue, username: user, password: pass, secret: secret)
+                        }
+                    } else if peerName == "iv" {
+                        var url: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "url" {
+                                    url = value
+                                }
+                            }
+                        }
+                        if let _ = url {
+                            return .internalInstantView(url: "https://t.me/\(query)")
                         }
                     } else {
                         for queryItem in queryItems {
@@ -142,6 +155,9 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             return .single(.localization(identifier))
         case let .proxy(host, port, username, password, secret):
             return .single(.proxy(host: host, port: port, username: username, password: password, secret: secret))
+        case let .internalInstantView(url):
+            return resolveInstantViewUrl(account: account, url: url)
+            |> map(Optional.init)
     }
 }
 
@@ -203,19 +219,19 @@ func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
 
 func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
     return webpagePreview(account: account, url: url)
-        |> map { webpage -> ResolvedUrl in
-            if let webpage = webpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
-                var anchorValue: String?
-                if let anchorRange = url.range(of: "#") {
-                    let anchor = url[anchorRange.upperBound...]
-                    if !anchor.isEmpty {
-                        anchorValue = String(anchor)
-                    }
+    |> map { webpage -> ResolvedUrl in
+        if let webpage = webpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
+            var anchorValue: String?
+            if let anchorRange = url.range(of: "#") {
+                let anchor = url[anchorRange.upperBound...]
+                if !anchor.isEmpty {
+                    anchorValue = String(anchor)
                 }
-                return .instantView(webpage, anchorValue)
-            } else {
-                return .externalUrl(url)
             }
+            return .instantView(webpage, anchorValue)
+        } else {
+            return .externalUrl(url)
+        }
     }
 }
 

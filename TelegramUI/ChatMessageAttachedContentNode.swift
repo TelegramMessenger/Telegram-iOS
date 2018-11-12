@@ -584,7 +584,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 var imageApply: (() -> Void)?
                 if let inlineImageSize = inlineImageSize, let inlineImageDimensions = inlineImageDimensions {
                     let imageCorners = ImageCorners(topLeft: .Corner(4.0), topRight: .Corner(4.0), bottomLeft: .Corner(4.0), bottomRight: .Corner(4.0))
-                    let arguments = TransformImageArguments(corners: imageCorners, imageSize: inlineImageDimensions.aspectFilled(inlineImageSize), boundingSize: inlineImageSize, intrinsicInsets: UIEdgeInsets())
+                    let arguments = TransformImageArguments(corners: imageCorners, imageSize: inlineImageDimensions.aspectFilled(inlineImageSize), boundingSize: inlineImageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: incoming ? presentationData.theme.theme.chat.bubble.incomingMediaPlaceholderColor : presentationData.theme.theme.chat.bubble.outgoingMediaPlaceholderColor)
                     imageApply = imageLayout(arguments)
                 }
                 

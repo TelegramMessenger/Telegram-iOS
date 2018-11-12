@@ -47,8 +47,9 @@ final class NativeVideoContent: UniversalVideoContent {
     let enableSound: Bool
     let baseRate: Double
     let fetchAutomatically: Bool
+    let placeholderColor: UIColor
     
-    init(id: NativeVideoContentId, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true) {
+    init(id: NativeVideoContentId, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, placeholderColor: UIColor = .white) {
         self.id = id
         self.nativeId = id
         self.fileReference = fileReference
@@ -59,10 +60,11 @@ final class NativeVideoContent: UniversalVideoContent {
         self.enableSound = enableSound
         self.baseRate = baseRate
         self.fetchAutomatically = fetchAutomatically
+        self.placeholderColor = placeholderColor
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically)
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, placeholderColor: self.placeholderColor)
     }
     
     func isEqual(to other: UniversalVideoContent) -> Bool {
@@ -87,6 +89,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     private let playerNode: MediaPlayerNode
     private let playbackCompletedListeners = Bag<() -> Void>()
     
+    private let placeholderColor: UIColor
+    
     private var initializedStatus = false
     private let _status = Promise<MediaPlayerStatus>()
     var status: Signal<MediaPlayerStatus, NoError> {
@@ -110,9 +114,10 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var validLayout: CGSize?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, placeholderColor: UIColor) {
         self.postbox = postbox
         self.fileReference = fileReference
+        self.placeholderColor = placeholderColor
         
         self.imageNode = TransformImageNode()
         
@@ -190,7 +195,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         if let dimensions = self.dimensions {
             let imageSize = CGSize(width: floor(dimensions.width / 2.0), height: floor(dimensions.height / 2.0))
             let makeLayout = self.imageNode.asyncLayout()
-            let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.fileReference.media.isInstantVideo ? .clear : .white))
+            let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.fileReference.media.isInstantVideo ? .clear : self.placeholderColor))
             applyLayout()
         }
         
