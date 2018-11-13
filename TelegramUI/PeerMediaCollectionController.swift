@@ -87,7 +87,7 @@ public class PeerMediaCollectionController: TelegramController {
                 return openChatMessage(account: account, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
                     self?.mediaCollectionDisplayNode.view.endEditing(true)
                 }, present: { c, a in
-                    self?.present(c, in: .window(.root), with: a)
+                    self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 }, transitionNode: { messageId, media in
                     if let strongSelf = self {
                         return strongSelf.mediaCollectionDisplayNode.transitionNodeForGallery(messageId: messageId, media: media)

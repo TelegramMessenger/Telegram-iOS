@@ -4,28 +4,6 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
-//private let tabImageNone = UIImage(bundleImageName: "Chat List/Tabs/IconChats")?.precomposed()
-//private let tabImageUp = tabImageNone.flatMap({ image in
-//    return generateImage(image.size, contextGenerator: { size, context in
-//        context.clear(CGRect(origin: CGPoint(), size: size))
-//        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-//        context.setBlendMode(.copy)
-//        context.setFillColor(UIColor.clear.cgColor)
-//        context.translateBy(x: 0.0, y: 7.0)
-//        let _ = try? drawSvgPath(context, path: "M14.6557321,9.04533883 C14.9642504,8.81236784 15.4032142,8.87361104 15.6361852,9.18212936 C15.8691562,9.49064768 15.807913,9.9296115 15.4993947,10.1625825 L11.612306,13.0978342 C11.3601561,13.2882398 11.0117095,13.2861239 10.7618904,13.0926701 L6.97141581,10.1574184 C6.66574952,9.92071787 6.60984175,9.48104267 6.84654232,9.17537638 C7.08324289,8.86971009 7.5229181,8.81380232 7.82858438,9.05050289 L11.1958257,11.658013 L14.6557321,9.04533883 Z ")
-//    })
-//})
-//private let tabImageUnread = tabImageNone.flatMap({ image in
-//    return generateImage(image.size, contextGenerator: { size, context in
-//        context.clear(CGRect(origin: CGPoint(), size: size))
-//        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-//        context.setBlendMode(.copy)
-//        context.setFillColor(UIColor.clear.cgColor)
-//        context.translateBy(x: 0.0, y: 7.0)
-//        let _ = try? drawSvgPath(context, path: "M14.6557321,12.0977948 L11.1958257,9.48512064 L7.82858438,12.0926307 C7.5229181,12.3293313 7.08324289,12.2734235 6.84654232,11.9677572 C6.60984175,11.662091 6.66574952,11.2224158 6.97141581,10.9857152 L10.7618904,8.05046348 C11.0117095,7.85700968 11.3601561,7.85489378 11.612306,8.04529942 L15.4993947,10.9805511 C15.807913,11.2135221 15.8691562,11.6524859 15.6361852,11.9610043 C15.4032142,12.2695226 14.9642504,12.3307658 14.6557321,12.0977948 Z ")
-//    })
-//})
-
 public class ChatListController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -284,7 +262,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(account: self.account, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData)
+        self.displayNode = ChatListControllerNode(account: self.account, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -520,7 +498,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
             if #available(iOSApplicationExtension 9.0, *) {
-                self.registerForPreviewing(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme), onlyNative: false)
+                self.registerForPreviewingNonNative(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme))
             }
         }
         
@@ -678,6 +656,19 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
+        if #available(iOSApplicationExtension 9.0, *) {
+            if let (controller, rect) = self.previewingController(from: previewingContext.sourceView, for: location) {
+                previewingContext.sourceRect = rect
+                return controller
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
         guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
             return nil
         }
@@ -693,11 +684,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         if let searchController = self.chatListDisplayNode.searchDisplayController {
             if let (view, action) = searchController.previewViewAndActionAtLocation(location) {
                 if let peerId = action as? PeerId, peerId.namespace != Namespaces.Peer.SecretChat {
-                    if #available(iOSApplicationExtension 9.0, *) {
-                        var sourceRect = view.superview!.convert(view.frame, to: self.view)
-                        sourceRect.size.height -= UIScreenPixel
-                        previewingContext.sourceRect = sourceRect
-                    }
+                    var sourceRect = view.superview!.convert(view.frame, to: sourceView)
+                    sourceRect.size.height -= UIScreenPixel
                     
                     let chatController = ChatController(account: self.account, chatLocation: .peer(peerId), mode: .standard(previewing: true))
 //                    chatController.peekActions = .remove({ [weak self] in
@@ -709,18 +697,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
 //                    })
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
-                    return chatController
+                    return (chatController, sourceRect)
                 } else if let messageId = action as? MessageId, messageId.peerId.namespace != Namespaces.Peer.SecretChat {
-                    if #available(iOSApplicationExtension 9.0, *) {
-                        var sourceRect = view.superview!.convert(view.frame, to: self.view)
-                        sourceRect.size.height -= UIScreenPixel
-                        previewingContext.sourceRect = sourceRect
-                    }
+                    var sourceRect = view.superview!.convert(view.frame, to: sourceView)
+                    sourceRect.size.height -= UIScreenPixel
                     
                     let chatController = ChatController(account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
-                    return chatController
+                    return (chatController, sourceRect)
                 }
             }
             return nil
@@ -745,25 +730,22 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         if let selectedNode = selectedNode, let item = selectedNode.item {
-            if #available(iOSApplicationExtension 9.0, *) {
-                var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: self.view)
-                sourceRect.size.height -= UIScreenPixel
-                previewingContext.sourceRect = sourceRect
-            }
+            var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: sourceView)
+            sourceRect.size.height -= UIScreenPixel
             switch item.content {
                 case let .peer(_, peer, _, _, _, _, _, _, _):
                     if peer.peerId.namespace != Namespaces.Peer.SecretChat {
                         let chatController = ChatController(account: self.account, chatLocation: .peer(peer.peerId), mode: .standard(previewing: true))
                         chatController.canReadHistory.set(false)
                         chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
-                        return chatController
+                        return (chatController, sourceRect)
                     } else {
                         return nil
                     }
                 case let .groupReference(groupId, _, _, _):
                     let chatListController = ChatListController(account: self.account, groupId: groupId, controlsHistoryPreload: false)
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
-                    return chatListController
+                    return (chatListController, sourceRect)
             }
         } else {
             return nil
@@ -771,6 +753,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
+        self.previewingCommit(viewControllerToCommit)
+    }
+    
+    func previewingCommit(_ viewControllerToCommit: UIViewController) {
         if let viewControllerToCommit = viewControllerToCommit as? ViewController {
             if let chatController = viewControllerToCommit as? ChatController {
                 chatController.canReadHistory.set(true)

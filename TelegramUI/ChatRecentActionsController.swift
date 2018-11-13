@@ -109,7 +109,7 @@ final class ChatRecentActionsController: TelegramController {
         self.displayNode = ChatRecentActionsControllerNode(account: self.account, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)
         }, presentController: { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a)
+            self?.present(c, in: .window(.root), with: a, blockInteraction: true)
         }, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         })

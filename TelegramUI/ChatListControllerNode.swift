@@ -4,6 +4,18 @@ import Display
 import Postbox
 import TelegramCore
 
+private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHostView {
+    var previewingDelegate: PreviewingHostViewDelegate? {
+        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
+            return self?.controller?.previewingController(from: sourceView, for: point)
+        }, commitController: { [weak self] controller in
+            self?.controller?.previewingCommit(controller)
+        })
+    }
+    
+    weak var controller: ChatListController?
+}
+
 class ChatListControllerNode: ASDisplayNode {
     private let account: Account
     private let groupId: PeerGroupId?
@@ -11,6 +23,7 @@ class ChatListControllerNode: ASDisplayNode {
     private var chatListEmptyNode: ChatListEmptyNode?
     let chatListNode: ChatListNode
     var navigationBar: NavigationBar?
+    weak var controller: ChatListController?
     
     private(set) var searchDisplayController: SearchDisplayController?
     
@@ -24,17 +37,19 @@ class ChatListControllerNode: ASDisplayNode {
     
     var themeAndStrings: (PresentationTheme, PresentationStrings, dateTimeFormat: PresentationDateTimeFormat)
     
-    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData) {
+    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
         self.account = account
         self.groupId = groupId
         self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         self.themeAndStrings = (presentationData.theme, presentationData.strings, presentationData.dateTimeFormat)
         
+        self.controller = controller
+        
         super.init()
         
         self.setViewBlock({
-            return UITracingLayerView()
+            return ChatListControllerNodeView()
         })
         
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
@@ -60,6 +75,12 @@ class ChatListControllerNode: ASDisplayNode {
                 })
             }
         }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        (self.view as? ChatListControllerNodeView)?.controller = self.controller
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {

@@ -22,7 +22,7 @@ private func presentLiveLocationController(account: Account, peerId: PeerId, con
             let _ = openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
                 controller?.view.endEditing(true)
             }, present: { c, a in
-                controller?.present(c, in: .window(.root), with: a)
+                controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, transitionNode: { _, _ in
                 return nil
             }, addToTransitionSurface: { _ in
