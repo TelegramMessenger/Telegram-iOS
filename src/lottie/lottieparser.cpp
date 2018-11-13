@@ -924,9 +924,7 @@ void LottieParserImpl::parseObject(LOTGroupData *parent)
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "ty")) {
             auto child = parseObjectTypeAttr();
-            if (child) {
-                if (child) parent->mChildren.push_back(child);
-            }
+            if (child && !child->hidden()) parent->mChildren.push_back(child);
         } else {
             Skip(key);
         }
@@ -983,6 +981,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseRectObject()
             parseProperty(obj->mRound);
         } else if (0 == strcmp(key, "d")) {
             obj->mDirection = GetInt();
+        } else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
             Skip(key);
         }
@@ -1008,6 +1008,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseEllipseObject()
             parseProperty(obj->mSize);
         } else if (0 == strcmp(key, "d")) {
             obj->mDirection = GetInt();
+        } else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
             Skip(key);
         }
@@ -1030,6 +1032,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseShapeObject()
             parseShapeProperty(obj->mShape);
         } else if (0 == strcmp(key, "d")) {
             obj->mDirection = GetInt();
+        } else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
 #ifdef DEBUG_PARSER
             vDebug << "Shape property ignored :" << key;
@@ -1072,6 +1076,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parsePolystarObject()
             if (starType == 2) obj->mType = LOTPolystarData::PolyType::Polygon;
         } else if (0 == strcmp(key, "d")) {
             obj->mDirection = GetInt();
+        } else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
 #ifdef DEBUG_PARSER
             vDebug << "Polystar property ignored :" << key;
@@ -1121,6 +1127,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseTrimObject()
             parseProperty(obj->mOffset);
         } else if (0 == strcmp(key, "m")) {
             obj->mTrimType = getTrimType();
+        } else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
 #ifdef DEBUG_PARSER
             vDebug << "Trim property ignored :" << key;
@@ -1146,6 +1154,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
             parseProperty(obj->mOffset);
         } else if (0 == strcmp(key, "tr")) {
             obj->mTransform = parseTransformObject();
+        } else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
 #ifdef DEBUG_PARSER
             vDebug << "Repeater property ignored :" << key;
@@ -1196,6 +1206,8 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject()
             parseProperty(obj->mSkewAxis);
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOpacity);
+        }  else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
             Skip(key);
         }
@@ -1229,6 +1241,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseFillObject()
             obj->mEnabled = GetBool();
         } else if (0 == strcmp(key, "r")) {
             obj->mFillRule = getFillRule();
+        }  else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
 #ifdef DEBUG_PARSER
             vWarning << "Fill property skipped = " << key;
@@ -1322,6 +1336,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseStrokeObject()
             obj->mMeterLimit = GetDouble();
         } else if (0 == strcmp(key, "d")) {
             parseDashProperty(obj->mDash);
+        } else if (0 == strcmp(key, "hd")) {
+            obj->mHidden = GetBool();
         } else {
 #ifdef DEBUG_PARSER
             vWarning << "Stroke property skipped = " << key;
@@ -1360,6 +1376,8 @@ void LottieParserImpl::parseGradientProperty(LOTGradient *obj, const char *key)
                 Skip(nullptr);
             }
         }
+    } else if (0 == strcmp(key, "hd")) {
+        obj->mHidden = GetBool();
     } else {
 #ifdef DEBUG_PARSER
         vWarning << "Gradient property skipped = " << key;

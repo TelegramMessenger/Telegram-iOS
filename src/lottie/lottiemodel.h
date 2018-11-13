@@ -247,8 +247,10 @@ public:
     inline LOTData::Type type() const {return mType;}
     bool isStatic() const{return mStatic;}
     void setStatic(bool value) {mStatic = value;}
+    bool hidden() const {return mHidden;}
 public:
     bool                mStatic{true};
+    bool                mHidden{false};
     LOTData::Type       mType;
 };
 
