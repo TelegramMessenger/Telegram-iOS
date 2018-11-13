@@ -1108,18 +1108,25 @@ void LOTDrawable::sync()
         mCNode->mGradient.end.y = e.y();
         updateGStops(mCNode.get(), mBrush.mGradient);
         break;
-     }
-    case VBrush::Type::RadialGradient:
+    }
+    case VBrush::Type::RadialGradient: {
         mCNode->mBrushType = LOTBrushType::BrushGradient;
         mCNode->mGradient.type = LOTGradientType::GradientRadial;
-        mCNode->mGradient.center.x = mBrush.mGradient->radial.cx;
-        mCNode->mGradient.center.y = mBrush.mGradient->radial.cy;
-        mCNode->mGradient.focal.x = mBrush.mGradient->radial.fx;
-        mCNode->mGradient.focal.y = mBrush.mGradient->radial.fy;
-        mCNode->mGradient.cradius = mBrush.mGradient->radial.cradius;
-        mCNode->mGradient.fradius = mBrush.mGradient->radial.fradius;
+        VPointF c = mBrush.mGradient->mMatrix.map({mBrush.mGradient->radial.cx,
+                                                   mBrush.mGradient->radial.cy});
+        VPointF f = mBrush.mGradient->mMatrix.map({mBrush.mGradient->radial.fx,
+                                                   mBrush.mGradient->radial.fy});
+        mCNode->mGradient.center.x = c.x();
+        mCNode->mGradient.center.y = c.y();
+        mCNode->mGradient.focal.x = f.x();
+        mCNode->mGradient.focal.y = f.y();
+
+        float scale = getScale(mBrush.mGradient->mMatrix);
+        mCNode->mGradient.cradius = mBrush.mGradient->radial.cradius * scale;
+        mCNode->mGradient.fradius = mBrush.mGradient->radial.fradius * scale;
         updateGStops(mCNode.get(), mBrush.mGradient);
         break;
+    }
     default:
         break;
     }
