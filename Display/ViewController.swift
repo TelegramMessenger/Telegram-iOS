@@ -385,6 +385,18 @@ open class ViewControllerPresentationArguments {
     }
     
     @available(iOSApplicationExtension 9.0, *)
+    public func registerForPreviewingNonNative(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme) {
+        if self.traitCollection.forceTouchCapability != .available {
+            if self.previewingContext == nil {
+                let previewingContext = SimulatedViewControllerPreviewing(theme: theme, delegate: delegate, sourceView: sourceView, node: self.displayNode, present: { [weak self] c, a in
+                    self?.presentInGlobalOverlay(c, with: a)
+                })
+                self.previewingContext = previewingContext
+            }
+        }
+    }
+    
+    @available(iOSApplicationExtension 9.0, *)
     open override func unregisterForPreviewing(withContext previewing: UIViewControllerPreviewing) {
         if self.previewingContext != nil {
             self.previewingContext = nil

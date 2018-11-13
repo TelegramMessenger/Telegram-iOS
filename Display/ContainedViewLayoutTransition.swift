@@ -227,9 +227,7 @@ public extension ContainedViewLayoutTransition {
                 case .spring:
                     timingFunction = kCAMediaTimingFunctionSpring
                 }
-                node.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: duration, timingFunction: timingFunction, completion: { completed in
-                    print("completed \(completed)")
-                })
+                node.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: duration, timingFunction: timingFunction)
         }
     }
     
