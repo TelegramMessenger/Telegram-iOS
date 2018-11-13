@@ -13,7 +13,6 @@ private enum LanguageListSection: ItemListSectionId {
 private enum LanguageListEntryId: Hashable {
     case search
     case localization(String)
-    case unofficialHeader
 }
 
 private enum LanguageListEntryType {
@@ -24,7 +23,6 @@ private enum LanguageListEntryType {
 private enum LanguageListEntry: Comparable, Identifiable {
     case search(Int)
     case localization(index: Int, info: LocalizationInfo, type: LanguageListEntryType, selected: Bool, activity: Bool, revealed: Bool, editing: Bool)
-    case unofficialHeader(Int)
     
     var stableId: LanguageListEntryId {
         switch self {
@@ -32,8 +30,6 @@ private enum LanguageListEntry: Comparable, Identifiable {
                 return .search
             case let .localization(_, info, _, _, _, _, _):
                 return .localization(info.languageCode)
-            case .unofficialHeader:
-                return .unofficialHeader
         }
     }
     
@@ -42,8 +38,6 @@ private enum LanguageListEntry: Comparable, Identifiable {
             case let .search(index):
                 return index
             case let .localization(index, _, _, _, _, _, _):
-                return index
-            case let .unofficialHeader(index):
                 return index
         }
     }
@@ -62,8 +56,6 @@ private enum LanguageListEntry: Comparable, Identifiable {
                 return LocalizationListItem(theme: theme, strings: strings, id: info.languageCode, title: info.title, subtitle: info.localizedTitle, checked: selected, activity: activity, editing: LocalizationListItemEditing(editable: !searchMode && !info.isOfficial, editing: editing, revealed: revealed, reorderable: false), sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
                     selectLocalization(info)
                 }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem)
-            case .unofficialHeader:
-                return ItemListSectionHeaderItem(theme: theme, text: strings.Settings_AppLanguage_Unofficial, sectionId: LanguageListSection.unofficial.rawValue)
         }
     }
 }
@@ -396,7 +388,6 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                     updateCanStartEditing(isEditing)
                 }
                 if !availableSavedLocalizations.isEmpty {
-                    //entries.append(.unofficialHeader(entries.count))
                     for info in availableSavedLocalizations {
                         if existingIds.contains(info.languageCode) {
                             continue

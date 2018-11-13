@@ -13,30 +13,13 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         return 0
     }
     let context = Unmanaged<FetchVideoThumbnailSource>.fromOpaque(userData!).takeUnretainedValue()
-    var bufferPointer = 0
-    while bufferPointer < Int(bufferSize) && context.readOffset < context.size {
-        let bytesRemaining = Int(bufferSize) - bufferPointer
-        if context.readOffset < context.header.count {
-            let currentRead = min(bytesRemaining, context.header.count - context.readOffset)
-            if currentRead != 0 {
-                context.header.copyBytes(to: buffer.advanced(by: bufferPointer), from: context.readOffset ..< (context.readOffset + currentRead))
-                context.readOffset += currentRead
-                bufferPointer += currentRead
-            }
-        } else if context.readOffset >= context.header.count && context.readOffset < context.header.count + context.spacing {
-            let currentRead = min(bytesRemaining, context.header.count + context.spacing - context.readOffset)
-            memset(buffer, 0, currentRead)
-            context.readOffset += currentRead
-            bufferPointer += currentRead
-        } else if context.readOffset >= context.header.count + context.spacing {
-            let normalizedReadOffset = context.readOffset - (context.header.count + context.spacing)
-            let currentRead = min(bytesRemaining, context.tail.count - normalizedReadOffset)
-            context.tail.copyBytes(to: buffer.advanced(by: bufferPointer), from: normalizedReadOffset ..< (normalizedReadOffset + currentRead))
-            context.readOffset += currentRead
-            bufferPointer += currentRead
+    while !context.cancelled && !context.readingError {
+        if !RunLoop.current.run(mode: RunLoopMode.defaultRunLoopMode, before: .distantFuture) {
+            break
         }
     }
-    return Int32(bufferPointer)
+    return -1
+    //return Int32(bufferPointer)
 }
 
 private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
@@ -70,24 +53,24 @@ private final class SoftwareVideoStream {
 }
 
 private final class FetchVideoThumbnailSource {
-    fileprivate let header: Data
-    fileprivate let spacing: Int
-    fileprivate let tail: Data
+    fileprivate let mediaBox: MediaBox
+    fileprivate let resourceReference: MediaResourceReference
+    fileprivate let size: Int32
     fileprivate var readOffset: Int = 0
     
-    private var readingError = false
+    fileprivate var cancelled = false
+    fileprivate var readingError = false
+    
     private var videoStream: SoftwareVideoStream?
     private var avIoContext: UnsafeMutablePointer<AVIOContext>?
     private var avFormatContext: UnsafeMutablePointer<AVFormatContext>?
-    fileprivate let size: Int32
     
-    init(header: Data, spacing: Int, tail: Data) {
+    init(mediaBox: MediaBox, resourceReference: MediaResourceReference, size: Int32) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
-        self.header = header
-        self.spacing = spacing
-        self.tail = tail
         
-        self.size = Int32(header.count + spacing + tail.count)
+        self.mediaBox = mediaBox
+        self.resourceReference = resourceReference
+        self.size = size
         
         var avFormatContextRef = avformat_alloc_context()
         guard let avFormatContext = avFormatContextRef else {
@@ -235,12 +218,26 @@ private final class FetchVideoThumbnailSource {
 }
 
 private final class FetchVideoThumbnailSourceParameters: NSObject {
+    let mediaBox: MediaBox
+    let resourceReference: MediaResourceReference
+    let size: Int32
     
+    init(mediaBox: MediaBox, resourceReference: MediaResourceReference, size: Int32) {
+        self.mediaBox = mediaBox
+        self.resourceReference = resourceReference
+        self.size = size
+    }
 }
 
 private final class FetchVideoThumbnailSourceTimerTarget: NSObject {
     @objc func noop() {
     }
+}
+
+private let threadContextKey = "FetchVideoThumbnailSourceThreadContext"
+
+private final class FetchVideoThumbnailSourceThreadContext {
+    
 }
 
 private final class FetchVideoThumbnailSourceThreadImpl: NSObject {
@@ -259,6 +256,7 @@ private final class FetchVideoThumbnailSourceThreadImpl: NSObject {
     }
     
     @objc func entryPoint() {
+        Thread.current.threadDictionary[threadContextKey] = FetchVideoThumbnailSourceThreadContext()
         RunLoop.current.add(self.timer, forMode: RunLoopMode.defaultRunLoopMode)
         while !self.disposed {
             if !RunLoop.current.run(mode: RunLoopMode.defaultRunLoopMode, before: .distantFuture) {
@@ -268,36 +266,8 @@ private final class FetchVideoThumbnailSourceThreadImpl: NSObject {
     }
     
     @objc func fetch(_ parameters: FetchVideoThumbnailSourceParameters) {
-        print("fetch")
-    }
-}
-
-private let headerSize = 250 * 1024
-private let tailSize = 16 * 1024
-
-func fetchedPartialVideoThumbnailData(postbox: Postbox, fileReference: FileMediaReference) -> Signal<Void, NoError> {
-    return Signal { subscriber in
-        guard let size = fileReference.media.size else {
-            subscriber.putCompletion()
-            return EmptyDisposable
-        }
-        let fetchedHead = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(fileReference.media.resource), range: (0 ..< min(size, headerSize), .elevated), statsCategory: .video, reportResultStatus: false, preferBackgroundReferenceRevalidation: false).start()
-        let fetchedTail = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(fileReference.media.resource), range: (max(0, size - tailSize) ..< size, .elevated), statsCategory: .video, reportResultStatus: false, preferBackgroundReferenceRevalidation: false).start()
-        
-        return ActionDisposable {
-            fetchedHead.dispose()
-            fetchedTail.dispose()
-        }
-    }
-}
-
-private func partialVideoThumbnailData(postbox: Postbox, resource: MediaResource) -> Signal<(Data, Int, Data), NoError> {
-    guard let size = resource.size else {
-        return .complete()
-    }
-    return combineLatest(postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, headerSize)), postbox.mediaBox.resourceData(resource, size: size, in: max(0, size - tailSize) ..< size))
-    |> mapToSignal { header, tail -> Signal<(Data, Int, Data), NoError> in
-        return .single((header, max(0, size - header.count - tail.count), tail))
+        let source = FetchVideoThumbnailSource(mediaBox: parameters.mediaBox, resourceReference: parameters.resourceReference, size: parameters.size)
+        let _ = source.readFrame()
     }
 }
 
@@ -363,7 +333,7 @@ private func imageFromSampleBuffer(sampleBuffer: CMSampleBuffer) -> UIImage? {
 }
 
 
-func fetchPartialVideoThumbnail(postbox: Postbox, resource: MediaResource) -> Signal<Data?, NoError> {
+/*func fetchPartialVideoThumbnail(postbox: Postbox, resource: MediaResource) -> Signal<Data?, NoError> {
     return partialVideoThumbnailData(postbox: postbox, resource: resource)
     |> take(1)
     |> mapToSignal { header, spacing, tail -> Signal<Data?, NoError> in
@@ -400,4 +370,37 @@ func fetchPartialVideoThumbnail(postbox: Postbox, resource: MediaResource) -> Si
             impl.perform(#selector(impl.dispose), on: thread, with: nil, waitUntilDone: false)
         }
     }*/
+}*/
+
+func fetchedStreamingVideoThumbnail(postbox: Postbox, fileReference: FileMediaReference) -> Signal<Never, NoError> {
+    return Signal { subscriber in
+        let resourceReference = fileReference.resourceReference(fileReference.media.resource)
+        guard let size = resourceReference.resource.size else {
+            subscriber.putCompletion()
+            return EmptyDisposable
+        }
+        let impl = FetchVideoThumbnailSourceThreadImpl()
+        let thread = Thread(target: impl, selector: #selector(impl.entryPoint), object: nil)
+        thread.name = "fetchedStreamingVideoThumbnail"
+        impl.perform(#selector(impl.fetch(_:)), on: thread, with: FetchVideoThumbnailSourceParameters(mediaBox: postbox.mediaBox, resourceReference: resourceReference, size: Int32(size)), waitUntilDone: false)
+        thread.start()
+        
+        return ActionDisposable {
+            impl.perform(#selector(impl.dispose), on: thread, with: nil, waitUntilDone: false)
+        }
+    }
+}
+
+func streamingVideoThumbnail(postbox: Postbox, fileReference: FileMediaReference) -> Signal<Data?, NoError> {
+    return Signal { subscriber in
+        let impl = FetchVideoThumbnailSourceThreadImpl()
+        let thread = Thread(target: impl, selector: #selector(impl.entryPoint), object: nil)
+        thread.name = "streamingVideoThumbnail"
+        //impl.perform(#selector(impl.fetch(_:)), on: thread, with: FetchVideoThumbnailSourceParameters(), waitUntilDone: false)
+        thread.start()
+        
+        return ActionDisposable {
+            impl.perform(#selector(impl.dispose), on: thread, with: nil, waitUntilDone: false)
+        }
+    }
 }

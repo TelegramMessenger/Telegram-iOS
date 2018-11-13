@@ -53,7 +53,13 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
         }
         self.textNode.tapAttributeAction = { attributes in
             if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
-                openTranslationUrl("https://translations.telegram.org/\(localizationInfo.languageCode)/")
+                let url: String
+                if localizationInfo.platformUrl.isEmpty {
+                    url = localizationInfo.platformUrl
+                } else {
+                    url = "https://translations.telegram.org/\(localizationInfo.languageCode)/"
+                }
+                openTranslationUrl(url)
             }
         }
     }
