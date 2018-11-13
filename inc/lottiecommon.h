@@ -77,6 +77,57 @@ typedef struct LOTGradientStop
     unsigned char r, g, b, a;
 } LOTGradientStop;
 
+struct LOTNode;
+
+typedef enum
+{
+    MaskModeAdd = 0,
+    MaskModeSubstract,
+    MaskModeIntersect,
+    MaskModeDifference
+} LOTMaskMode;
+
+typedef struct _LOTMask {
+    struct {
+        const float *ptPtr;
+        int          ptCount;
+        const char*  elmPtr;
+        int          elmCount;
+    } mPath;
+    LOTMaskMode mMode;
+}LOTMask;
+
+typedef enum
+{
+    MatteNone = 0,
+    MatteAlpha,
+    MatteAlphaInv,
+    MatteLuma,
+    MatteLumaInv
+} LOTMatteType;
+
+typedef struct LOTLayerNode {
+
+    struct {
+        LOTMask        *ptr;
+        unsigned int    size;
+    }mMaskList;
+
+    struct {
+        LOTLayerNode   **ptr;
+        unsigned int    size;
+    }mLayerList;
+
+    struct {
+        LOTNode       **ptr;
+        unsigned int   size;
+    }mNodeList;
+
+    LOTMatteType mMatte;
+    int          mVisible;
+
+}LOTLayerNode;
+
 typedef struct LOTNode {
 
 #define ChangeFlagNone 0x0000

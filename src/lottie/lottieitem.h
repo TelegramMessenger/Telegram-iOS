@@ -38,6 +38,8 @@ public:
    VSize size() const;
    const std::vector<LOTNode *>& renderList()const;
    void buildRenderList();
+   void buildRenderTree();
+   const LOTLayerNode * renderTree()const;
    bool render(const lottie::Surface &surface);
 private:
    VMatrix                                    mScaleMatrix;
@@ -68,7 +70,8 @@ public:
    virtual void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource);
    bool hasMatte() { if (mLayerData->mMatteType == MatteType::None) return false; return true; }
    bool visible() const;
-
+   virtual void buildLayerNode();
+   LOTLayerNode * layerNode() const {return mLayerCNode.get();}
 protected:
    virtual void updateContent() = 0;
    inline VMatrix combinedMatrix() const {return mCombinedMatrix;}
@@ -80,6 +83,7 @@ protected:
    VRle maskRle(const VRect &clipRect);
    bool hasMask() const {return !mMasks.empty();}
 protected:
+   std::unique_ptr<LOTLayerNode>               mLayerCNode;
    std::vector<VDrawable *>                    mDrawableList;
    std::vector<std::unique_ptr<LOTMaskItem>>   mMasks;
    LOTLayerData                               *mLayerData{nullptr};
@@ -99,9 +103,11 @@ public:
    void renderList(std::vector<VDrawable *> &list)final;
    void updateStaticProperty() final;
    void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource) final;
+   void buildLayerNode() final;
 protected:
    void updateContent() final;
 private:
+   std::vector<LOTLayerNode *>                  mLayersCNode;
    std::vector<std::unique_ptr<LOTLayerItem>>   mLayers;
    int                                          mLastFrame;
 };
@@ -110,10 +116,12 @@ class LOTSolidLayerItem: public LOTLayerItem
 {
 public:
    LOTSolidLayerItem(LOTLayerData *layerData);
+   void buildLayerNode() final;
 protected:
    void updateContent() final;
    void renderList(std::vector<VDrawable *> &list) final;
 private:
+   std::vector<LOTNode *>       mCNodeList;
    std::unique_ptr<VDrawable>   mRenderNode;
 };
 
@@ -125,8 +133,10 @@ public:
    LOTShapeLayerItem(LOTLayerData *layerData);
    static std::unique_ptr<LOTContentItem> createContentItem(LOTData *contentData);
    void renderList(std::vector<VDrawable *> &list)final;
+   void buildLayerNode() final;
 protected:
    void updateContent() final;
+   std::vector<LOTNode *>               mCNodeList;
    std::unique_ptr<LOTContentGroupItem> mRoot;
 };
 

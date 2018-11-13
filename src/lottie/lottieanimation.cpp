@@ -22,6 +22,8 @@ public:
 
     const std::vector<LOTNode *> &
                  renderList(size_t frameNo, const VSize &size);
+    const LOTLayerNode *
+                 renderTree(size_t frameNo, const VSize &size);
 private:
     std::string                  mFilePath;
     std::shared_ptr<LOTModel>    mModel;
@@ -35,6 +37,14 @@ const std::vector<LOTNode *> &AnimationImpl::renderList(size_t frameNo, const VS
        mCompItem->buildRenderList();
     }
     return mCompItem->renderList();
+}
+
+const LOTLayerNode *AnimationImpl::renderTree(size_t frameNo, const VSize &size)
+{
+    if (update(frameNo, size)) {
+       mCompItem->buildRenderTree();
+    }
+    return mCompItem->renderTree();
 }
 
 bool AnimationImpl::update(size_t frameNo, const VSize &size)
@@ -230,6 +240,12 @@ const std::vector<LOTNode *> &
 Animation::renderList(size_t frameNo, size_t width, size_t height) const
 {
     return d->renderList(frameNo, VSize(width, height));
+}
+
+const LOTLayerNode *
+Animation::renderTree(size_t frameNo, size_t width, size_t height) const
+{
+    return d->renderTree(frameNo, VSize(width, height));
 }
 
 std::future<Surface> Animation::render(size_t frameNo, Surface surface)

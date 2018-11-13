@@ -29,6 +29,7 @@
 
 class AnimationImpl;
 struct LOTNode;
+struct LOTLayerNode;
 
 namespace lottie {
 
@@ -203,6 +204,18 @@ public:
      *  @return render node list.
      */
     const std::vector<LOTNode *> &renderList(size_t frameNo, size_t width, size_t height) const;
+
+    /**
+     *  @brief Returns root layer of the composition updated with
+     *         content of the lottie resource at frame number {frameNo}.
+     *
+     *  @param[in] frameNo Content corresponds to the frameno needs to be extracted.
+     *  @param[in] width   content viewbox width
+     *  @param[in] height  content viewbox height
+     *
+     *  @return Root layer node.
+     */
+    const LOTLayerNode * renderTree(size_t frameNo, size_t width, size_t height) const;
 
     /**
      *  @brief default destructor

@@ -51,6 +51,8 @@ public:
 private:
     void createVgNode(LOTNode *node, Efl_VG *root);
     void update(const std::vector<LOTNode *> &);
+    void updateTree(const LOTLayerNode *);
+    void update(const LOTLayerNode *, Efl_VG *parent);
     void restart();
 public:
     int                      mw;

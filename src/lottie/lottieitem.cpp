@@ -106,6 +106,16 @@ const std::vector<LOTNode *> &LOTCompItem::renderList() const
     return mRenderList;
 }
 
+void LOTCompItem::buildRenderTree()
+{
+    mRootLayer->buildLayerNode();
+}
+
+const LOTLayerNode * LOTCompItem::renderTree() const
+{
+    return mRootLayer->layerNode();
+}
+
 bool LOTCompItem::render(const lottie::Surface &surface)
 {
     VBitmap bitmap((uchar *)surface.buffer(), surface.width(), surface.height(),
@@ -157,6 +167,45 @@ VRle LOTMaskItem::rle()
         if (mData->mInv) mRle.invert();
     }
     return mRle;
+}
+
+void LOTLayerItem::buildLayerNode()
+{
+    if (!mLayerCNode) {
+        mLayerCNode = std::make_unique<LOTLayerNode>();
+        mLayerCNode->mMaskList.ptr = nullptr;
+        mLayerCNode->mMaskList.size = 0;
+        mLayerCNode->mLayerList.ptr = nullptr;
+        mLayerCNode->mLayerList.size = 0;
+        mLayerCNode->mNodeList.ptr = nullptr;
+        mLayerCNode->mNodeList.size = 0;
+        mLayerCNode->mMatte = MatteNone;
+        mLayerCNode->mVisible = 0;
+    }
+    mLayerCNode->mVisible = visible();
+    // update matte
+    if (hasMatte()) {
+        switch (mLayerData->mMatteType) {
+        case MatteType::Alpha:
+            mLayerCNode->mMatte = MatteAlpha;
+            break;
+        case MatteType::AlphaInv:
+            mLayerCNode->mMatte = MatteAlphaInv;
+            break;
+        case MatteType::Luma:
+            mLayerCNode->mMatte = MatteLuma;
+            break;
+        case MatteType::LumaInv:
+            mLayerCNode->mMatte = MatteLumaInv;
+            break;
+        default:
+            mLayerCNode->mMatte = MatteNone;
+            break;
+        }
+    }
+    if (hasMask()) {
+        //TODO populate mask property
+    }
 }
 
 void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &inheritMatte, LOTLayerItem *matteSource)
@@ -351,6 +400,23 @@ void LOTCompLayerItem::updateStaticProperty()
     }
 }
 
+void LOTCompLayerItem::buildLayerNode()
+{
+    LOTLayerItem::buildLayerNode();
+    if (mLayers.size() != mLayersCNode.size()) {
+        for (const auto &layer : mLayers) {
+            layer->buildLayerNode();
+            mLayersCNode.push_back(layer->layerNode());
+        }
+        layerNode()->mLayerList.ptr = mLayersCNode.data();
+        layerNode()->mLayerList.size = mLayersCNode.size();
+    } else {
+        for (const auto &layer : mLayers) {
+            layer->buildLayerNode();
+        }
+    }
+}
+
 void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &inheritMatte, LOTLayerItem *matteSource)
 {
     VRle matteRle;
@@ -443,6 +509,23 @@ void LOTSolidLayerItem::updateContent()
     }
 }
 
+void LOTSolidLayerItem::buildLayerNode()
+{
+    LOTLayerItem::buildLayerNode();
+
+    mDrawableList.clear();
+    renderList(mDrawableList);
+
+    mCNodeList.clear();
+    for (auto &i : mDrawableList) {
+        LOTDrawable *lotDrawable = static_cast<LOTDrawable *>(i);
+        lotDrawable->sync();
+        mCNodeList.push_back(lotDrawable->mCNode.get());
+    }
+    layerNode()->mNodeList.ptr = mCNodeList.data();
+    layerNode()->mNodeList.size = mCNodeList.size();
+}
+
 void LOTSolidLayerItem::renderList(std::vector<VDrawable *> &list)
 {
     if (!visible()) return;
@@ -533,6 +616,23 @@ void LOTShapeLayerItem::updateContent()
     if (mLayerData->hasPathOperator()) {
         mRoot->applyTrim();
     }
+}
+
+void LOTShapeLayerItem::buildLayerNode()
+{
+    LOTLayerItem::buildLayerNode();
+
+    mDrawableList.clear();
+    renderList(mDrawableList);
+
+    mCNodeList.clear();
+    for (auto &i : mDrawableList) {
+        LOTDrawable *lotDrawable = static_cast<LOTDrawable *>(i);
+        lotDrawable->sync();
+        mCNodeList.push_back(lotDrawable->mCNode.get());
+    }
+    layerNode()->mNodeList.ptr = mCNodeList.data();
+    layerNode()->mNodeList.size = mCNodeList.size();
 }
 
 void LOTShapeLayerItem::renderList(std::vector<VDrawable *> &list)

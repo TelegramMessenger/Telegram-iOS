@@ -159,6 +159,46 @@ void LottieView::update(const std::vector<LOTNode *> &renderList)
     evas_object_vg_root_node_set(mVg, root);
 }
 
+void LottieView::updateTree(const LOTLayerNode * node)
+{
+    Efl_VG *root = evas_vg_container_add(mVg);
+    update(node, root);
+    evas_object_vg_root_node_set(mVg, root);
+}
+
+void LottieView::update(const LOTLayerNode * node, Efl_VG *parent)
+{
+    // if the layer is invisible return
+    if (!node->mVisible) return;
+
+    // check if this layer is a container layer
+    bool hasMatte = false;
+    if (node->mLayerList.size) {
+        for (unsigned int i = 0; i < node->mLayerList.size; i++) {
+            if (hasMatte) {
+                hasMatte = false;
+                continue;
+            }
+            // if the layer has matte then
+            // the next layer has to be rendered using this layer
+            // as matte source
+            if (node->mLayerList.ptr[i]->mMatte != MatteNone) {
+                hasMatte = true;
+                printf("Matte is not supported Yet\n");
+                continue;
+            }
+            update(node->mLayerList.ptr[i], parent);
+        }
+    }
+
+    // check if this layer has drawable
+    if (node->mNodeList.size) {
+        for (unsigned int i = 0; i < node->mNodeList.size; i++) {
+            createVgNode(node->mNodeList.ptr[i], parent);
+        }
+    }
+}
+
 static void mImageDelCb(void *data, Evas *evas, Evas_Object *obj, void *)
 {
     LottieView *lottie = (LottieView *)data;
@@ -280,8 +320,8 @@ void LottieView::seek(float pos)
             evas_object_image_data_update_add(mImage, 0 , 0, surface.width(), surface.height());
         }
     } else {
-        const std::vector<LOTNode *> &renderList = mPlayer->renderList(mCurFrame, mw, mh);
-        update(renderList);
+        const LOTLayerNode *root = mPlayer->renderTree(mCurFrame, mw, mh);
+        updateTree(root);
     }
 }
 
