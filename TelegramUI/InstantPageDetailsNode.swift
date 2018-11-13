@@ -535,10 +535,6 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        let inset = detailsInset + self.item.safeInset
-        
-        let lineSize = CGSize(width: self.frame.width - inset, height: UIScreenPixel)
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: item.rtl ? 0.0 : inset, y: size.height - lineSize.height), size: lineSize))
     }
     
     override func layout() {
@@ -552,6 +548,9 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: self.item.titleHeight))
         self.arrowNode.frame = CGRect(x: inset, y: floorToScreenPixels((self.item.titleHeight - 8.0) / 2.0) + 1.0, width: 13.0, height: 8.0)
         self.contentNode.frame = CGRect(x: 0.0, y: self.item.titleHeight, width: size.width, height: self.item.frame.height - self.item.titleHeight)
+        
+        let lineSize = CGSize(width: self.frame.width - inset, height: UIScreenPixel)
+        self.separatorNode.frame = CGRect(origin: CGPoint(x: self.item.rtl ? 0.0 : inset, y: self.item.titleHeight - lineSize.height), size: lineSize)
     }
     
     func updateIsVisible(_ isVisible: Bool) {
