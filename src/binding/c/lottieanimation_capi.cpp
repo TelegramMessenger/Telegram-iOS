@@ -99,6 +99,16 @@ LOT_EXPORT const LOTNode* lottie_animation_get_node(const Lottie_Animation_S *an
    return animation->mAnimation->renderList(animation->mFrameNo, animation->mWidth, animation->mHeight)[idx];
 }
 
+LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation_S *animation, size_t frameNo, size_t w, size_t h)
+{
+    if (!animation) return nullptr;
+
+    animation->mFrameNo = frameNo;
+    animation->mWidth = w;
+    animation->mHeight = h;
+    return animation->mAnimation->renderTree(frameNo, w, h);
+}
+
 LOT_EXPORT void
 lottie_animation_render_async(Lottie_Animation_S *animation,
                               size_t frame_number,
