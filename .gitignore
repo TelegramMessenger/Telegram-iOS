@@ -1,33 +1,24 @@
-# Xcode
-build
+fastlane/README.md
+fastlane/report.xml
+fastlane/test_output/*
 *.pbxuser
 !default.pbxuser
-*.mode?v3
-!default.mode?v3
-*.perspective
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
 *.perspectivev3
 !default.perspectivev3
-!default.xcworkspace
-!project.xcworkspace
 xcuserdata
-xccheckout
-profile
+*.xccheckout
+*.xcscmblueprint
 *.moved-aside
-
-# osx noise
-.DS_Store
+DerivedData
+*.hmap
 *.ipa
-*.swp
-*~.nib
-profile
-
-
-# App Code
-**/.idea/
-**/.idea/**
-
-# Infer
-**/infer-out
-
-Generated/
-Products/
+*.xcuserstate
+.DS_Store
+*.dSYM
+*.dSYM.zip
+*.ipa
+*/xcuserdata/*
