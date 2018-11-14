@@ -5,14 +5,14 @@ import TelegramCore
 import Contacts
 import Intents
 
-struct MathingDeviceContact {
+struct MatchingDeviceContact {
     let stableId: String
     let firstName: String
     let lastName: String
     let phoneNumbers: [String]
 }
 
-func matchingDeviceContacts(stableIds: [String]) -> Signal<[MathingDeviceContact], NoError> {
+func matchingDeviceContacts(stableIds: [String]) -> Signal<[MatchingDeviceContact], NoError> {
     guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
         return .single([])
     }
@@ -30,11 +30,11 @@ func matchingDeviceContacts(stableIds: [String]) -> Signal<[MathingDeviceContact
             }
         })
         
-        return MathingDeviceContact(stableId: contact.identifier, firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers)
+        return MatchingDeviceContact(stableId: contact.identifier, firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers)
     }))
 }
 
-func matchingCloudContacts(postbox: Postbox, contacts: [MathingDeviceContact]) -> Signal<[(String, TelegramUser)], NoError> {
+func matchingCloudContacts(postbox: Postbox, contacts: [MatchingDeviceContact]) -> Signal<[(String, TelegramUser)], NoError> {
     return postbox.transaction { transaction -> [(String, TelegramUser)] in
         var result: [(String, TelegramUser)] = []
         outer: for peerId in transaction.getContactPeerIds() {
