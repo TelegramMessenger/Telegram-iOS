@@ -221,6 +221,7 @@
 		D00ED75A1FE94630001F38BD /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = D00ED7581FE94630001F38BD /* AppIntentVocabulary.plist */; };
 		D00ED75D1FE95287001F38BD /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D00ED75B1FE95287001F38BD /* InfoPlist.strings */; };
 		D01A47551F4DBED700383CC1 /* HockeySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01A47541F4DBED700383CC1 /* HockeySDK.framework */; };
+		D021D4D9219CAEDD0064BEBA /* Config-Fork.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */; };
 		D02CF5FD215D9ABF00E0F56A /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AA1A671D568BA400152314 /* UserNotifications.framework */; };
 		D02CF5FE215D9ABF00E0F56A /* UserNotificationsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AA1A691D568BA400152314 /* UserNotificationsUI.framework */; };
 		D02CF601215D9ABF00E0F56A /* NotificationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02CF600215D9ABF00E0F56A /* NotificationViewController.swift */; };
@@ -890,6 +891,12 @@
 		D00ED75C1FE95287001F38BD /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		D01A47521F4DBEB100383CC1 /* libHockeySDK.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libHockeySDK.a; path = "../../build/HockeySDK-iOS/Support/build/Debug-iphoneos/libHockeySDK.a"; sourceTree = "<group>"; };
 		D01A47541F4DBED700383CC1 /* HockeySDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = HockeySDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D021D4D7219CAEDD0064BEBA /* Telegram-iOS-Fork.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-Fork.entitlements"; sourceTree = "<group>"; };
+		D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-Fork.xcconfig"; sourceTree = "<group>"; };
+		D021D4DA219CB0EF0064BEBA /* Share-Fork.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Share-Fork.entitlements"; sourceTree = "<group>"; };
+		D021D4DB219CB1020064BEBA /* SiriIntents-Fork.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "SiriIntents-Fork.entitlements"; sourceTree = "<group>"; };
+		D021D4DC219CB1160064BEBA /* NotificationContent-Fork.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "NotificationContent-Fork.entitlements"; sourceTree = "<group>"; };
+		D021D4DD219CB1280064BEBA /* Widget-Fork.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Widget-Fork.entitlements"; sourceTree = "<group>"; };
 		D02CF5FC215D9ABE00E0F56A /* NotificationContent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationContent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D02CF600215D9ABF00E0F56A /* NotificationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationViewController.swift; sourceTree = "<group>"; };
 		D02CF603215D9ABF00E0F56A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
@@ -1901,9 +1908,11 @@
 				D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */,
 				D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */,
 				D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */,
+				D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */,
 				D0ADF913212B398000310BBC /* Telegram-iOS-AppStoreLLC.entitlements */,
 				D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */,
 				D0E3A7071B285B5000A402D9 /* Telegram-iOS-Hockeyapp.entitlements */,
+				D021D4D7219CAEDD0064BEBA /* Telegram-iOS-Fork.entitlements */,
 				D00859A11B28189D00EAF753 /* AppDelegate.swift */,
 				D0BEAF721E54C9A900BD963D /* ApplicationContext.swift */,
 				D053DAD22018ED2B00993D32 /* LockedWindowCoveringView.swift */,
@@ -2052,6 +2061,7 @@
 				D02CF612215DA1C900E0F56A /* NotificationContent-AppStore.entitlements */,
 				D02CF613215DA1C900E0F56A /* NotificationContent-AppStoreLLC.entitlements */,
 				D02CF611215DA1C900E0F56A /* NotificationContent-HockeyApp.entitlements */,
+				D021D4DC219CB1160064BEBA /* NotificationContent-Fork.entitlements */,
 				D02CF600215D9ABF00E0F56A /* NotificationViewController.swift */,
 				D02CF602215D9ABF00E0F56A /* MainInterface.storyboard */,
 				D02CF61D215E522400E0F56A /* NotificationContent-Bridging-Header.h */,
@@ -2067,6 +2077,7 @@
 				D0ADF953212B3B4700310BBC /* Share-AppStoreLLC.entitlements */,
 				D0EA97981FE8537000792DD6 /* Share-AppStore.entitlements */,
 				D0EA97971FE8537000792DD6 /* Share-HockeyApp.entitlements */,
+				D021D4DA219CB0EF0064BEBA /* Share-Fork.entitlements */,
 				D084104A1FABDCFD008FFE92 /* TGContactModel.h */,
 				D084104C1FABDCFD008FFE92 /* TGContactModel.m */,
 				D084104B1FABDCFD008FFE92 /* TGMimeTypeMap.h */,
@@ -2358,6 +2369,7 @@
 				D0ADF954212B3B5200310BBC /* SiriIntents-AppStoreLLC.entitlements */,
 				D0EA97961FE8536900792DD6 /* SiriIntents-Hockeyapp.entitlements */,
 				D0D268971D79AF1B00C422DA /* SiriIntents-AppStore.entitlements */,
+				D021D4DB219CB1020064BEBA /* SiriIntents-Fork.entitlements */,
 				D0D268781D79A70A00C422DA /* IntentHandler.swift */,
 				D08985062119B7FE00918162 /* IntentContacts.swift */,
 				D0D2687A1D79A70A00C422DA /* Info.plist */,
@@ -2392,6 +2404,7 @@
 				D0ADF955212B3B6400310BBC /* Widget-AppStoreLLC.entitlements */,
 				D0B2F75A204F51E400D3BFB9 /* Widget-AppStore.entitlements */,
 				D0B2F75B204F51E500D3BFB9 /* Widget-HockeyApp.entitlements */,
+				D021D4DD219CB1280064BEBA /* Widget-Fork.entitlements */,
 				D0E41A3B1D65A69C00FBFC00 /* TodayViewController.swift */,
 				D0E41A3D1D65A69C00FBFC00 /* MainInterface.storyboard */,
 				D0E41A401D65A69C00FBFC00 /* Info.plist */,
@@ -2832,6 +2845,7 @@
 				D0FC1948201D2DA800FEDBB2 /* SFCompactRounded-Semibold.otf in Resources */,
 				D04DCC331F71C80000B021D7 /* 6.m4a in Resources */,
 				D04DCC251F71C80000B021D7 /* 102.m4a in Resources */,
+				D021D4D9219CAEDD0064BEBA /* Config-Fork.xcconfig in Resources */,
 				D08DB0AD213F4D1D00F2ADBF /* ic_cam@2x.png in Resources */,
 				D08DB0BF213F4D1D00F2ADBF /* telegram_plane1@2x.png in Resources */,
 				D0E8B8B02044496C00605593 /* voip_ringback.caf in Resources */,
@@ -4794,6 +4808,543 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Telegram-iOS.app/Telegram-iOS";
 			};
 			name = "Release AppStore";
+		};
+		D021D4DE219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PROVISIONING_PROFILE = "a4dc3795-99a0-4552-934a-0399f5df77b2";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug Fork";
+		};
+		D021D4DF219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				BITCODE_GENERATION_MODE = marker;
+				CLANG_MODULES_AUTOLINK = NO;
+				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-Fork.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 624;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_BITCODE = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(BUILT_PRODUCTS_DIR)",
+					"$(PROJECT_DIR)/third-party",
+				);
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
+				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
+				);
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"-lz",
+				);
+				OTHER_SWIFT_FLAGS = "-D DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
+				PRODUCT_NAME = "Telegram X";
+				PROVISIONING_PROFILE = "1e62fceb-1fb5-4804-ad0f-9b9b974393b8";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
+				SWIFT_VERSION = 4.0;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = "Debug Fork";
+		};
+		D021D4E0219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)/Developer/Library/Frameworks";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "Telegram-iOSTests/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_VERSION = 3.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Telegram-iOS.app/Telegram-iOS";
+			};
+			name = "Debug Fork";
+		};
+		D021D4E1219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				BITCODE_GENERATION_MODE = marker;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				CODE_SIGN_ENTITLEMENTS = "Share/Share-Fork.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 624;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X834Q8SBVP;
+				INFOPLIST_FILE = Share/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.Share";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "6a75ec98-1ed3-4485-83ed-3d56de6a6bb1";
+				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS.Share";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "Share/Share-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.0;
+			};
+			name = "Debug Fork";
+		};
+		D021D4E2219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				BITCODE_GENERATION_MODE = marker;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-Fork.entitlements";
+				CURRENT_PROJECT_VERSION = 624;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X834Q8SBVP;
+				INFOPLIST_FILE = SiriIntents/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.SiriIntents";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "dbf0b895-1e4b-43ee-993f-b4db7ce8cbb8";
+				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS.SiriIntents";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "SiriIntents/SiriIntents-Bridging-Header.h";
+				SWIFT_VERSION = 4.0;
+			};
+			name = "Debug Fork";
+		};
+		D021D4E3219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X834Q8SBVP;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "Telegram-iOS UITests/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 11.2;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.Telegram.Telegram-iOS-UITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "df24dc18-3fdc-447c-b347-5a110cecd77d";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Telegram-iOS";
+			};
+			name = "Debug Fork";
+		};
+		D021D4E4219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = "Widget/Widget-Fork.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X834Q8SBVP;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Widget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.Widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "8a4bf8b9-8fae-4ea6-9b8f-c2ac19f3676d";
+				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS.Widget";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "Widget/Widget-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug Fork";
+		};
+		D021D4E5219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = "NotificationContent/NotificationContent-Fork.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X834Q8SBVP;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = NotificationContent/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.NotificationContent";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS.NotificationContent";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationContent/NotificationContent-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.2;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug Fork";
+		};
+		D021D4E6219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X834Q8SBVP;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IBSC_MODULE = Watch_Extension;
+				INFOPLIST_FILE = Watch/App/Info.plist;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.watchkitapp";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS.watchkitapp";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.2;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 2.2;
+			};
+			name = "Debug Fork";
+		};
+		D021D4E7219CB13A0064BEBA /* Debug Fork */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X834Q8SBVP;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = submodules/SSignalKit;
+				INFOPLIST_FILE = Watch/Extension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				LIBRARY_SEARCH_PATHS = submodules/SSignalKit;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.watchkitapp.watchkitextension";
+				PRODUCT_NAME = "${TARGET_NAME}";
+				PROVISIONING_PROFILE_SPECIFIER = "match Development org.telegram.Telegram-iOS.watchkitapp.watchkitextension";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.2;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 2.2;
+			};
+			name = "Debug Fork";
 		};
 		D02CF609215D9ABF00E0F56A /* Debug Hockeyapp */ = {
 			isa = XCBuildConfiguration;
@@ -7175,6 +7726,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				09C56FAD2172797500BDF00F /* Debug Hockeyapp */,
+				D021D4E7219CB13A0064BEBA /* Debug Fork */,
 				09C56FAE2172797500BDF00F /* Debug AppStore */,
 				09C56FAF2172797500BDF00F /* Debug AppStore LLC */,
 				09C56FB02172797500BDF00F /* Release AppStore */,
@@ -7189,6 +7741,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				09C56FA62172797500BDF00F /* Debug Hockeyapp */,
+				D021D4E6219CB13A0064BEBA /* Debug Fork */,
 				09C56FA72172797500BDF00F /* Debug AppStore */,
 				09C56FA82172797500BDF00F /* Debug AppStore LLC */,
 				09C56FA92172797500BDF00F /* Release AppStore */,
@@ -7203,6 +7756,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D00859B91B28189D00EAF753 /* Debug Hockeyapp */,
+				D021D4DE219CB13A0064BEBA /* Debug Fork */,
 				D079FCF91F06BBA40038FADE /* Debug AppStore */,
 				D0ADF915212B3A9D00310BBC /* Debug AppStore LLC */,
 				D00859BA1B28189D00EAF753 /* Release AppStore */,
@@ -7217,6 +7771,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D00859BC1B28189D00EAF753 /* Debug Hockeyapp */,
+				D021D4DF219CB13A0064BEBA /* Debug Fork */,
 				D079FCFA1F06BBA40038FADE /* Debug AppStore */,
 				D0ADF916212B3A9D00310BBC /* Debug AppStore LLC */,
 				D00859BD1B28189D00EAF753 /* Release AppStore */,
@@ -7231,6 +7786,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D00859BF1B28189D00EAF753 /* Debug Hockeyapp */,
+				D021D4E0219CB13A0064BEBA /* Debug Fork */,
 				D079FCFB1F06BBA40038FADE /* Debug AppStore */,
 				D0ADF917212B3A9E00310BBC /* Debug AppStore LLC */,
 				D00859C01B28189D00EAF753 /* Release AppStore */,
@@ -7245,6 +7801,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D02CF609215D9ABF00E0F56A /* Debug Hockeyapp */,
+				D021D4E5219CB13A0064BEBA /* Debug Fork */,
 				D02CF60A215D9ABF00E0F56A /* Debug AppStore */,
 				D02CF60B215D9ABF00E0F56A /* Debug AppStore LLC */,
 				D02CF60C215D9ABF00E0F56A /* Release AppStore */,
@@ -7259,6 +7816,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D03B0E841D63484500955575 /* Debug Hockeyapp */,
+				D021D4E1219CB13A0064BEBA /* Debug Fork */,
 				D079FCFD1F06BBA40038FADE /* Debug AppStore */,
 				D0ADF918212B3A9E00310BBC /* Debug AppStore LLC */,
 				D03B0E851D63484500955575 /* Release AppStore */,
@@ -7273,6 +7831,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0B2F743204F4C9900D3BFB9 /* Debug Hockeyapp */,
+				D021D4E4219CB13A0064BEBA /* Debug Fork */,
 				D0B2F744204F4C9900D3BFB9 /* Debug AppStore */,
 				D0ADF91B212B3A9E00310BBC /* Debug AppStore LLC */,
 				D0B2F745204F4C9900D3BFB9 /* Release AppStore */,
@@ -7287,6 +7846,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0D2688F1D79A70B00C422DA /* Debug Hockeyapp */,
+				D021D4E2219CB13A0064BEBA /* Debug Fork */,
 				D079FCFE1F06BBA40038FADE /* Debug AppStore */,
 				D0ADF919212B3A9E00310BBC /* Debug AppStore LLC */,
 				D0D268901D79A70B00C422DA /* Release AppStore */,
@@ -7301,6 +7861,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0ECCB831FE9C38500609802 /* Debug Hockeyapp */,
+				D021D4E3219CB13A0064BEBA /* Debug Fork */,
 				D0ECCB841FE9C38500609802 /* Debug AppStore */,
 				D0ADF91A212B3A9E00310BBC /* Debug AppStore LLC */,
 				D0ECCB851FE9C38500609802 /* Release AppStore */,
