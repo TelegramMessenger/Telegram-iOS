@@ -165,13 +165,13 @@ class LOTKeyFrame
 {
 public:
     T value(int frameNo) const {
-        float progress = mInterpolator->value(float(frameNo - mStartFrame) / float(mEndFrame - mStartFrame));
+        float progress = mInterpolator->value((frameNo - mStartFrame) / (mEndFrame - mStartFrame));
         return mValue.value(progress);
     }
 
 public:
-    int                 mStartFrame{0};
-    int                 mEndFrame{0};
+    float                 mStartFrame{0};
+    float                 mEndFrame{0};
     std::shared_ptr<VInterpolator> mInterpolator;
     LOTKeyFrameValue<T>  mValue;
 };
