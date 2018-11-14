@@ -1,0 +1,62 @@
+import Foundation
+import SwiftSignalKit
+import Postbox
+import TelegramCore
+import Contacts
+import Intents
+
+struct MathingDeviceContact {
+    let stableId: String
+    let firstName: String
+    let lastName: String
+    let phoneNumbers: [String]
+}
+
+func matchingDeviceContacts(stableIds: [String]) -> Signal<[MathingDeviceContact], NoError> {
+    guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
+        return .single([])
+    }
+    let store = CNContactStore()
+    guard let contacts = try? store.unifiedContacts(matching: CNContact.predicateForContacts(withIdentifiers: stableIds), keysToFetch: [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor]) else {
+        return .single([])
+    }
+    
+    return .single(contacts.map({ contact in
+        let phoneNumbers = contact.phoneNumbers.compactMap({ number -> String? in
+            if !number.value.stringValue.isEmpty {
+                return number.value.stringValue
+            } else {
+                return nil
+            }
+        })
+        
+        return MathingDeviceContact(stableId: contact.identifier, firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers)
+    }))
+}
+
+func matchingCloudContacts(postbox: Postbox, contacts: [MathingDeviceContact]) -> Signal<[(String, TelegramUser)], NoError> {
+    return postbox.transaction { transaction -> [(String, TelegramUser)] in
+        var result: [(String, TelegramUser)] = []
+        outer: for peerId in transaction.getContactPeerIds() {
+            if let peer = transaction.getPeer(peerId) as? TelegramUser, let phone = peer.phone {
+                let formattedPhone = formatPhoneNumber(phone)
+                for contact in contacts {
+                    for phoneNumber in contact.phoneNumbers {
+                        if formatPhoneNumber(phoneNumber) == formattedPhone {
+                            result.append((contact.stableId, peer))
+                            continue outer
+                        }
+                    }
+                }
+            }
+        }
+        return result
+    }
+}
+
+func personWithUser(stableId: String, user: TelegramUser) -> INPerson {
+    var nameComponents = PersonNameComponents()
+    nameComponents.givenName = user.firstName
+    nameComponents.familyName = user.lastName
+    return INPerson(personHandle: INPersonHandle(value: stableId, type: .unknown), nameComponents: nameComponents, displayName: user.displayTitle, image: nil, contactIdentifier: stableId, customIdentifier: "tg\(user.id.toInt64())")
+}
