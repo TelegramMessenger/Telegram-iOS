@@ -162,8 +162,8 @@ public:
     std::unique_ptr<LOTNode>  mCNode;
 
     ~LOTDrawable() {
-        if (mCNode.get()->mGradient.stopCount > 0)
-          free(mCNode.get()->mGradient.stopPtr);
+        if (mCNode && mCNode->mGradient.stopPtr)
+          free(mCNode->mGradient.stopPtr);
     }
 };
 
