@@ -926,7 +926,13 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
             ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.UserInfo_DeleteContact, color: .destructive, action: {
                     dismissAction()
-                    updatePeerBlockedDisposable.set(deleteContactPeerInteractively(account: account, peerId: peerId).start())
+                    let _ = (getUserPeer(postbox: account.postbox, peerId: peerId)
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let peer = peer else {
+                            return
+                        }
+                        updatePeerBlockedDisposable.set(deleteContactPeerInteractively(account: account, peerId: peer.id).start())
+                    })
                 })
             ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
