@@ -2870,7 +2870,7 @@
 			};
 			name = "Debug Fork AppStore";
 		};
-		D013CADB209C3BEC009A0B6F /* Release Fork AppStore */ = {
+		D021D4FC219CB1CD0064BEBA /* Debug Fork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2890,11 +2890,18 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = YES;
-				ENABLE_NS_ASSERTIONS = NO;
+				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -2902,20 +2909,20 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
-				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release Fork AppStore";
+			name = "Debug Fork";
 		};
-		D013CADC209C3BEC009A0B6F /* Release Fork AppStore */ = {
+		D021D4FD219CB1CD0064BEBA /* Debug Fork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEFINES_MODULE = YES;
@@ -2931,6 +2938,10 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MtProtoKitiOS/MtProtoKit-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
@@ -2945,7 +2956,7 @@
 					"$(PROJECT_DIR)/openssl/iOS",
 				);
 				MACH_O_TYPE = staticlib;
-				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "-lz";
@@ -2954,20 +2965,20 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Fork AppStore";
+			name = "Debug Fork";
 		};
-		D013CADD209C3BEC009A0B6F /* Release Fork AppStore */ = {
+		D021D4FE219CB1CD0064BEBA /* Debug Fork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEFINES_MODULE = YES;
@@ -2977,6 +2988,11 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_VERSION = A;
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+					"BETA=1",
+				);
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -2987,26 +3003,28 @@
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DMtProtoKitMacFramework=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 3.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Fork AppStore";
+			name = "Debug Fork";
 		};
-		D013CADE209C3BEC009A0B6F /* Release Fork AppStore */ = {
+		D021D4FF219CB1CD0064BEBA /* Debug Fork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				COPY_PHASE_STRIP = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -3022,6 +3040,10 @@
 					"$(PROJECT_DIR)/thirdparty",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3031,7 +3053,8 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
 				);
-				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DMtProtoKitDynamicFramework=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
@@ -3040,19 +3063,19 @@
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
 				STRIP_STYLE = debugging;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Fork AppStore";
+			name = "Debug Fork";
 		};
-		D013CADF209C3BEC009A0B6F /* Release Fork AppStore */ = {
+		D021D500219CB1CD0064BEBA /* Debug Fork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -3060,32 +3083,38 @@
 					"$(inherited)",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
 				INFOPLIST_FILE = MtProtoKitDynamicTests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.4;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Fork AppStore";
+			name = "Debug Fork";
 		};
-		D013CAE0209C3BEC009A0B6F /* Release Fork AppStore */ = {
+		D021D501219CB1CD0064BEBA /* Debug Fork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				INFOPLIST_FILE = MtProtoKitStabilityTests/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Fork AppStore";
+			name = "Debug Fork";
 		};
 		D05A833A18AFB3F9007F1076 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -5343,6 +5372,7 @@
 			buildConfigurations = (
 				D003546D1C173BF0006610DA /* Debug */,
 				D079FD151F06BE440038FADE /* Debug Hockeyapp */,
+				D021D501219CB1CD0064BEBA /* Debug Fork */,
 				D0DB57B51E5C4B470071854C /* Debug AppStore */,
 				D0ADF92D212B3ACC00310BBC /* Debug AppStore LLC */,
 				D013CADA209C3BE2009A0B6F /* Debug Fork AppStore */,
@@ -5350,7 +5380,6 @@
 				C22069C71E8EB4B300E82730 /* AppStore */,
 				D079FD1B1F06BE4D0038FADE /* Release AppStore */,
 				D0CE6EEE213DC2F900BCD44B /* Release AppStore LLC */,
-				D013CAE0209C3BEC009A0B6F /* Release Fork AppStore */,
 				D096C2D71CC3C664006D814E /* Hockeyapp */,
 				D079FD211F06BE540038FADE /* Release Hockeyapp */,
 				D0924FE11FE52BFE003F693F /* Release Hockeyapp Internal */,
@@ -5363,6 +5392,7 @@
 			buildConfigurations = (
 				D05A833A18AFB3F9007F1076 /* Debug */,
 				D079FD101F06BE440038FADE /* Debug Hockeyapp */,
+				D021D4FC219CB1CD0064BEBA /* Debug Fork */,
 				D0DB57B01E5C4B470071854C /* Debug AppStore */,
 				D0ADF928212B3ACC00310BBC /* Debug AppStore LLC */,
 				D013CAD5209C3BE2009A0B6F /* Debug Fork AppStore */,
@@ -5370,7 +5400,6 @@
 				C22069C21E8EB4B300E82730 /* AppStore */,
 				D079FD161F06BE4D0038FADE /* Release AppStore */,
 				D0CE6EE9213DC2F900BCD44B /* Release AppStore LLC */,
-				D013CADB209C3BEC009A0B6F /* Release Fork AppStore */,
 				D096C2D21CC3C664006D814E /* Hockeyapp */,
 				D079FD1C1F06BE540038FADE /* Release Hockeyapp */,
 				D0924FDC1FE52BFE003F693F /* Release Hockeyapp Internal */,
@@ -5383,6 +5412,7 @@
 			buildConfigurations = (
 				D079ABAA1AF39B8000076F59 /* Debug */,
 				D079FD121F06BE440038FADE /* Debug Hockeyapp */,
+				D021D4FE219CB1CD0064BEBA /* Debug Fork */,
 				D0DB57B21E5C4B470071854C /* Debug AppStore */,
 				D0ADF92A212B3ACC00310BBC /* Debug AppStore LLC */,
 				D013CAD7209C3BE2009A0B6F /* Debug Fork AppStore */,
@@ -5390,7 +5420,6 @@
 				C22069C41E8EB4B300E82730 /* AppStore */,
 				D079FD181F06BE4D0038FADE /* Release AppStore */,
 				D0CE6EEB213DC2F900BCD44B /* Release AppStore LLC */,
-				D013CADD209C3BEC009A0B6F /* Release Fork AppStore */,
 				D096C2D41CC3C664006D814E /* Hockeyapp */,
 				D079FD1E1F06BE540038FADE /* Release Hockeyapp */,
 				D0924FDE1FE52BFE003F693F /* Release Hockeyapp Internal */,
@@ -5403,6 +5432,7 @@
 			buildConfigurations = (
 				D0CB060A1ADC4483005E298F /* Debug */,
 				D079FD111F06BE440038FADE /* Debug Hockeyapp */,
+				D021D4FD219CB1CD0064BEBA /* Debug Fork */,
 				D0DB57B11E5C4B470071854C /* Debug AppStore */,
 				D0ADF929212B3ACC00310BBC /* Debug AppStore LLC */,
 				D013CAD6209C3BE2009A0B6F /* Debug Fork AppStore */,
@@ -5410,7 +5440,6 @@
 				C22069C31E8EB4B300E82730 /* AppStore */,
 				D079FD171F06BE4D0038FADE /* Release AppStore */,
 				D0CE6EEA213DC2F900BCD44B /* Release AppStore LLC */,
-				D013CADC209C3BEC009A0B6F /* Release Fork AppStore */,
 				D096C2D31CC3C664006D814E /* Hockeyapp */,
 				D079FD1D1F06BE540038FADE /* Release Hockeyapp */,
 				D0924FDD1FE52BFE003F693F /* Release Hockeyapp Internal */,
@@ -5423,6 +5452,7 @@
 			buildConfigurations = (
 				D0D2251E1B4D817B0085E26D /* Debug */,
 				D079FD131F06BE440038FADE /* Debug Hockeyapp */,
+				D021D4FF219CB1CD0064BEBA /* Debug Fork */,
 				D0DB57B31E5C4B470071854C /* Debug AppStore */,
 				D0ADF92B212B3ACC00310BBC /* Debug AppStore LLC */,
 				D013CAD8209C3BE2009A0B6F /* Debug Fork AppStore */,
@@ -5430,7 +5460,6 @@
 				C22069C51E8EB4B300E82730 /* AppStore */,
 				D079FD191F06BE4D0038FADE /* Release AppStore */,
 				D0CE6EEC213DC2F900BCD44B /* Release AppStore LLC */,
-				D013CADE209C3BEC009A0B6F /* Release Fork AppStore */,
 				D096C2D51CC3C664006D814E /* Hockeyapp */,
 				D079FD1F1F06BE540038FADE /* Release Hockeyapp */,
 				D0924FDF1FE52BFE003F693F /* Release Hockeyapp Internal */,
@@ -5443,6 +5472,7 @@
 			buildConfigurations = (
 				D0D225201B4D817B0085E26D /* Debug */,
 				D079FD141F06BE440038FADE /* Debug Hockeyapp */,
+				D021D500219CB1CD0064BEBA /* Debug Fork */,
 				D0DB57B41E5C4B470071854C /* Debug AppStore */,
 				D0ADF92C212B3ACC00310BBC /* Debug AppStore LLC */,
 				D013CAD9209C3BE2009A0B6F /* Debug Fork AppStore */,
@@ -5450,7 +5480,6 @@
 				C22069C61E8EB4B300E82730 /* AppStore */,
 				D079FD1A1F06BE4D0038FADE /* Release AppStore */,
 				D0CE6EED213DC2F900BCD44B /* Release AppStore LLC */,
-				D013CADF209C3BEC009A0B6F /* Release Fork AppStore */,
 				D096C2D61CC3C664006D814E /* Hockeyapp */,
 				D079FD201F06BE540038FADE /* Release Hockeyapp */,
 				D0924FE01FE52BFE003F693F /* Release Hockeyapp Internal */,
