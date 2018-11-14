@@ -32,7 +32,7 @@ float VBezier::length() const
 
     chord = VLine::length(x1, y1, x4, y4);
 
-    if (!vCompare(len, chord)) {
+    if ((len - chord) > 0.01) {
         split(&left, &right);    /* split in two */
         length = left.length() + /* try left side */
                  right.length(); /* try right side */
