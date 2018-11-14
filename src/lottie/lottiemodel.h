@@ -151,8 +151,14 @@ struct LOTKeyFrameValue<VPointF>
 
     VPointF value(float t) const {
         if (mPathKeyFrame) {
-            return VBezier::fromPoints(mStartValue, mStartValue + mOutTangent,
-                                       mEndValue + mInTangent, mEndValue).pointAt(t);
+            /*
+             * position along the path calcualated
+             * using bezier at progress length (t * bezlen)
+             */
+            VBezier b = VBezier::fromPoints(mStartValue, mStartValue + mOutTangent,
+                                       mEndValue + mInTangent, mEndValue);
+            return b.pointAt(b.tAtLength(t * b.length()));
+
         } else {
             return lerp(mStartValue, mEndValue, t);
         }
