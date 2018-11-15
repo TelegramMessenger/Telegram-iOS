@@ -21,7 +21,7 @@ public:
     void    splitAtLength(float length, VLine &left, VLine &right) const;
     VPointF p1() const { return {mX1, mY1}; }
     VPointF p2() const { return {mX2, mY2}; }
-
+    float angle() const;
     static float length(float x1, float y1, float x2, float y2);
 
 private:
@@ -30,6 +30,15 @@ private:
     float mX2{0};
     float mY2{0};
 };
+
+inline float VLine::angle() const
+{
+    const float dx = mX2 - mX1;
+    const float dy = mY2 - mY1;
+
+    const float theta = std::atan2(dy, dx) * 180.0 / M_PI;
+    return theta;
+}
 
 // approximate sqrt(x*x + y*y) using alpha max plus beta min algorithm.
 // With alpha = 1, beta = 3/8, giving results with the largest error less
