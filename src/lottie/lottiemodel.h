@@ -300,6 +300,7 @@ public:
     int solidWidth() const noexcept{return mSolidLayer.mWidth;}
     int solidHeight() const noexcept{return mSolidLayer.mHeight;}
     LottieColor solidColor() const noexcept{return mSolidLayer.mColor;}
+    bool autoOrient() const noexcept{return mAutoOrient;}
     int timeRemap(int frameNo) const;
 public:
     struct SolidLayer {
@@ -326,6 +327,7 @@ public:
     bool                 mHasRepeater{false};
     bool                 mHasGradient{false};
     bool                 mRoot{false};
+    bool                 mAutoOrient{false};
     std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
     LOTCompositionData   *mCompRef;
 };

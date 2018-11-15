@@ -791,6 +791,8 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
             layer->mHasMask = GetBool();
         } else if (0 == strcmp(key, "masksProperties")) {
             parseMaskProperty(layer);
+        } else if (0 == strcmp(key, "ao")) {
+            layer->mAutoOrient = GetInt();
         } else {
 #ifdef DEBUG_PARSER
             vWarning << "Layer Attribute Skipped : " << key;
@@ -1206,7 +1208,7 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject()
             parseProperty(obj->mSkewAxis);
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOpacity);
-        }  else if (0 == strcmp(key, "hd")) {
+        } else if (0 == strcmp(key, "hd")) {
             obj->mHidden = GetBool();
         } else {
             Skip(key);
@@ -1916,6 +1918,7 @@ public:
                << ", outFm:" << obj->mOutFrame
                << ", stFm:" << obj->mStartFrame
                << ", ts:" << obj->mTimeStreatch
+               << ", ao:" << obj->autoOrient()
                << "\n";
         visitChildren(static_cast<LOTGroupData *>(obj), level);
         vDebug << level
