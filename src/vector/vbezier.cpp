@@ -93,4 +93,29 @@ void VBezier::splitAtLength(float len, VBezier *left, VBezier *right)
     right->parameterSplitLeft(t, left);
 }
 
+VPointF VBezier::derivative(float t) const
+{
+    // p'(t) = 3 * (-(1-2t+t^2) * p0 + (1 - 4 * t + 3 * t^2) * p1 + (2 * t - 3 * t^2) * p2 + t^2 * p3)
+
+    float m_t = 1. - t;
+
+    float d = t * t;
+    float a = -m_t * m_t;
+    float b = 1 - 4 * t + 3 * d;
+    float c = 2 * t - 3 * d;
+
+    return 3 * VPointF(a * x1 + b * x2 + c * x3 + d * x4,
+                       a * y1 + b * y2 + c * y3 + d * y4);
+}
+
+
+float VBezier::angleAt(float t) const
+{
+    if (t < 0 || t > 1) {
+        return 0;
+    }
+    return VLine({}, derivative(t)).angle();
+}
+
+
 V_END_NAMESPACE

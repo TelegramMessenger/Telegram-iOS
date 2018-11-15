@@ -9,6 +9,7 @@ class VBezier {
 public:
     VBezier() = default;
     VPointF     pointAt(float t) const;
+    float       angleAt(float t) const;
     VBezier     onInterval(float t0, float t1) const;
     float       length() const;
     static void coefficients(float t, float &a, float &b, float &c, float &d);
