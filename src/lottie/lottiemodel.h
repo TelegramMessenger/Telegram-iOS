@@ -417,6 +417,13 @@ inline int LOTLayerData::timeRemap(int frameNo) const
     return frameNo / mTimeStreatch;
 }
 
+struct LOT3DData
+{
+    LOTAnimatable<float>     mRx{0};
+    LOTAnimatable<float>     mRy{0};
+    LOTAnimatable<float>     mRz{0};
+};
+
 class LOTTransformData : public LOTData
 {
 public:
@@ -425,21 +432,23 @@ public:
     float    opacity(int frameNo) const;
     void cacheMatrix();
     bool staticMatrix() const {return mStaticMatrix;}
+    bool ddd() const {return m3D ? true : false;}
 private:
     VMatrix computeMatrix(int frameNo, bool autoOrient = false) const;
 public:
-    LOTAnimatable<float>     mRotation{0};  /* "r" */
-    LOTAnimatable<VPointF>   mScale;     /* "s" */
-    LOTAnimatable<VPointF>   mPosition;  /* "p" */
-    LOTAnimatable<float>     mX{0};
-    LOTAnimatable<float>     mY{0};
-    LOTAnimatable<VPointF>   mAnchor;    /* "a" */
-    LOTAnimatable<float>     mOpacity{100};   /* "o" */
-    LOTAnimatable<float>     mSkew{0};      /* "sk" */
-    LOTAnimatable<float>     mSkewAxis{0};  /* "sa" */
-    bool                     mStaticMatrix{true};
-    bool                     mSeparate{false};
-    VMatrix                  mCachedMatrix;
+    std::unique_ptr<LOT3DData>    m3D;
+    LOTAnimatable<float>          mRotation{0};  /* "r" */
+    LOTAnimatable<VPointF>        mScale;     /* "s" */
+    LOTAnimatable<VPointF>        mPosition;  /* "p" */
+    LOTAnimatable<float>          mX{0};
+    LOTAnimatable<float>          mY{0};
+    LOTAnimatable<VPointF>        mAnchor;    /* "a" */
+    LOTAnimatable<float>          mOpacity{100};   /* "o" */
+    LOTAnimatable<float>          mSkew{0};      /* "sk" */
+    LOTAnimatable<float>          mSkewAxis{0};  /* "sa" */
+    bool                          mStaticMatrix{true};
+    bool                          mSeparate{false};
+    VMatrix                       mCachedMatrix;
 };
 
 class LOTFillData : public LOTData

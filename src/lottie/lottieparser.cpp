@@ -208,7 +208,7 @@ public:
     std::shared_ptr<LOTData>     parseShapeObject();
     std::shared_ptr<LOTData>     parsePolystarObject();
 
-    std::shared_ptr<LOTTransformData> parseTransformObject();
+    std::shared_ptr<LOTTransformData> parseTransformObject(bool ddd = false);
     std::shared_ptr<LOTData>          parseFillObject();
     std::shared_ptr<LOTData>          parseGFillObject();
     std::shared_ptr<LOTData>          parseStrokeObject();
@@ -738,6 +738,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
     LOTLayerData *layer = sharedLayer.get();
     curLayerRef = layer;
     bool hasLayerRef = false;
+    bool ddd = true;
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "ty")) { /* Type of layer*/
@@ -746,6 +747,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
                                                  parenting and expressions.*/
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             layer->mId = GetInt();
+        } else if (0 == strcmp(key, "ddd")) { /*3d layer */
+            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            ddd = GetInt();
         } else if (0 == strcmp(key, "parent")) { /*Layer Parent. Uses "ind" of parent.*/
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             layer->mParentId = GetInt();
@@ -776,7 +780,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
         } else if (0 == strcmp(key, "ks")) {
             RAPIDJSON_ASSERT(PeekType() == kObjectType);
             EnterObject();
-            layer->mTransform = parseTransformObject();
+            layer->mTransform = parseTransformObject(ddd);
         } else if (0 == strcmp(key, "shapes")) {
             parseShapesAttr(layer);
         } else if (0 == strcmp(key, "sw")) {
@@ -1174,11 +1178,13 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
 /*
  * https://github.com/airbnb/lottie-web/blob/master/docs/json/shapes/transform.json
  */
-std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject()
+std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(bool ddd)
 {
     std::shared_ptr<LOTTransformData> sharedTransform =
         std::make_shared<LOTTransformData>();
     LOTTransformData *obj = sharedTransform.get();
+
+    if (ddd) obj->m3D = std::make_unique<LOT3DData>();
 
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "a")) {
@@ -1210,6 +1216,12 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject()
             parseProperty(obj->mOpacity);
         } else if (0 == strcmp(key, "hd")) {
             obj->mHidden = GetBool();
+        } else if (0 == strcmp(key, "rx")) {
+            parseProperty(obj->m3D->mRx);
+        } else if (0 == strcmp(key, "ry")) {
+            parseProperty(obj->m3D->mRy);
+        } else if (0 == strcmp(key, "rz")) {
+            parseProperty(obj->m3D->mRz);
         } else {
             Skip(key);
         }
@@ -1218,6 +1230,10 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject()
                          obj->mRotation.isStatic() && obj->mScale.isStatic() &&
                          obj->mSkew.isStatic() && obj->mSkewAxis.isStatic() &&
                          obj->mX.isStatic() && obj->mY.isStatic();
+    if (obj->m3D) {
+        obj->mStaticMatrix = obj->mStaticMatrix && obj->m3D->mRx.isStatic() &&
+                             obj->m3D->mRy.isStatic() && obj->m3D->mRz.isStatic();
+    }
 
     obj->setStatic(obj->mStaticMatrix && obj->mOpacity.isStatic());
 
@@ -1919,6 +1935,7 @@ public:
                << ", stFm:" << obj->mStartFrame
                << ", ts:" << obj->mTimeStreatch
                << ", ao:" << obj->autoOrient()
+               << ", ddd:" << obj->mTransform->ddd()
                << "\n";
         visitChildren(static_cast<LOTGroupData *>(obj), level);
         vDebug << level

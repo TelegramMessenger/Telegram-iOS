@@ -75,11 +75,22 @@ VMatrix LOTTransformData::computeMatrix(int frameNo, bool autoOrient) const
     }
 
     float angle = autoOrient ? mPosition.angle(frameNo) : 0;
-    m.translate(position)
-        .rotate(mRotation.value(frameNo))
-        .rotate(angle)
-        .scale(mScale.value(frameNo) / 100.f)
-        .translate(-mAnchor.value(frameNo));
+    if (ddd()) {
+        m.translate(position)
+            .rotate(mRotation.value(frameNo))
+            .rotate(angle)
+            .rotate(m3D->mRz.value(frameNo))
+            .rotate(m3D->mRy.value(frameNo), VMatrix::Axis::Y)
+            .rotate(m3D->mRx.value(frameNo), VMatrix::Axis::X)
+            .scale(mScale.value(frameNo) / 100.f)
+            .translate(-mAnchor.value(frameNo));
+    } else {
+        m.translate(position)
+            .rotate(mRotation.value(frameNo))
+            .rotate(angle)
+            .scale(mScale.value(frameNo) / 100.f)
+            .translate(-mAnchor.value(frameNo));
+    }
     return m;
 }
 
