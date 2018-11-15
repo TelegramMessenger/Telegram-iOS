@@ -245,12 +245,9 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
          */
         float progress = mHighlightLength.value(frameNo) / 100.0f;
         if (vCompare(progress, 1.0f)) progress = 0.99f;
-        float dy = end.y() - start.y();
-        float dx = end.x() - start.x();
-        float slope = (dx == 0) ? dy * INFINITY : dy / dx;
-        float startAngleRad = std::atan(slope);
-        int   highlightAngle = mHighlightAngle.value(frameNo);
-        float angle = startAngleRad + (highlightAngle * M_PI / 180.0f);
+        float startAngle = VLine(start, end).angle();
+        float highlightAngle = mHighlightAngle.value(frameNo);
+        float angle = ((startAngle + highlightAngle) * M_PI) / 180.0f;
         grad->radial.fx =
             grad->radial.cx + std::cos(angle) * progress * grad->radial.cradius;
         grad->radial.fy =
