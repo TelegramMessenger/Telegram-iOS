@@ -47,12 +47,12 @@ void LOTCompositionData::processRepeaterObjects()
     visitor.visit(mRootLayer.get());
 }
 
-VMatrix LOTTransformData::matrix(int frameNo) const
+VMatrix LOTTransformData::matrix(int frameNo, bool autoOrient) const
 {
     if (mStaticMatrix)
         return mCachedMatrix;
     else
-        return computeMatrix(frameNo);
+        return computeMatrix(frameNo, autoOrient);
 }
 
 float LOTTransformData::opacity(int frameNo) const
@@ -65,7 +65,7 @@ void LOTTransformData::cacheMatrix()
     mCachedMatrix = computeMatrix(0);
 }
 
-VMatrix LOTTransformData::computeMatrix(int frameNo) const
+VMatrix LOTTransformData::computeMatrix(int frameNo, bool autoOrient) const
 {
     VMatrix m;
     VPointF position = mPosition.value(frameNo);
@@ -73,8 +73,11 @@ VMatrix LOTTransformData::computeMatrix(int frameNo) const
         position.setX(mX.value(frameNo));
         position.setY(mY.value(frameNo));
     }
+
+    float angle = autoOrient ? mPosition.angle(frameNo) : 0;
     m.translate(position)
         .rotate(mRotation.value(frameNo))
+        .rotate(angle)
         .scale(mScale.value(frameNo) / 100.f)
         .translate(-mAnchor.value(frameNo));
     return m;

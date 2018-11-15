@@ -138,6 +138,7 @@ struct LOTKeyFrameValue
     T value(float t) const {
         return lerp(mStartValue, mEndValue, t);
     }
+    float angle(float ) const { return 0;}
 };
 
 template <>
@@ -163,6 +164,15 @@ struct LOTKeyFrameValue<VPointF>
             return lerp(mStartValue, mEndValue, t);
         }
     }
+
+    float angle(float t) const {
+        if (mPathKeyFrame) {
+            VBezier b = VBezier::fromPoints(mStartValue, mStartValue + mOutTangent,
+                                       mEndValue + mInTangent, mEndValue);
+            return b.angleAt(b.tAtLength(t * b.length()));
+        }
+        return 0;
+    }
 };
 
 
@@ -170,9 +180,14 @@ template<typename T>
 class LOTKeyFrame
 {
 public:
+    float progress(int frameNo) const {
+        return mInterpolator->value((frameNo - mStartFrame) / (mEndFrame - mStartFrame));
+    }
     T value(int frameNo) const {
-        float progress = mInterpolator->value((frameNo - mStartFrame) / (mEndFrame - mStartFrame));
-        return mValue.value(progress);
+        return mValue.value(progress(frameNo));
+    }
+    float angle(int frameNo) const {
+        return mValue.angle(progress(frameNo));
     }
 
 public:
@@ -192,12 +207,25 @@ public:
         if(mKeyFrames.back().mEndFrame <= frameNo)
             return mKeyFrames.back().mValue.mEndValue;
 
-        for(auto keyFrame : mKeyFrames) {
+        for(const auto &keyFrame : mKeyFrames) {
             if (frameNo >= keyFrame.mStartFrame && frameNo < keyFrame.mEndFrame)
                 return keyFrame.value(frameNo);
         }
         return T();
     }
+
+    float angle(int frameNo) const {
+        if ((mKeyFrames.front().mStartFrame >= frameNo) ||
+            (mKeyFrames.back().mEndFrame <= frameNo) )
+            return 0;
+
+        for(const auto &keyFrame : mKeyFrames) {
+            if (frameNo >= keyFrame.mStartFrame && frameNo < keyFrame.mEndFrame)
+                return keyFrame.angle(frameNo);
+        }
+        return 0;
+    }
+
 public:
     std::vector<LOTKeyFrame<T>>    mKeyFrames;
 };
@@ -209,15 +237,15 @@ public:
     LOTAnimatable():mValue(),mAnimInfo(nullptr){}
     LOTAnimatable(const T &value): mValue(value){}
     bool isStatic() const {if (mAnimInfo) return false; else return true;}
-    T value(int frameNo) const{
-        if (isStatic())
-            return mValue;
-        else
-            return mAnimInfo->value(frameNo);
+    T value(int frameNo) const {
+        return isStatic() ? mValue : mAnimInfo->value(frameNo);
+    }
+    float angle(int frameNo) const {
+        return isStatic() ? 0 : mAnimInfo->angle(frameNo);
     }
 public:
-    T                                    mValue;
-    int                                  mPropertyIndex; /* "ix" */
+    T                                 mValue;
+    int                               mPropertyIndex; /* "ix" */
     std::unique_ptr<LOTAnimInfo<T>>   mAnimInfo;
 };
 
@@ -393,12 +421,12 @@ class LOTTransformData : public LOTData
 {
 public:
     LOTTransformData():LOTData(LOTData::Type::Transform),mScale({100, 100}){}
-    VMatrix matrix(int frameNo) const;
+    VMatrix matrix(int frameNo, bool autoOrient = false) const;
     float    opacity(int frameNo) const;
     void cacheMatrix();
     bool staticMatrix() const {return mStaticMatrix;}
 private:
-    VMatrix computeMatrix(int frameNo) const;
+    VMatrix computeMatrix(int frameNo, bool autoOrient = false) const;
 public:
     LOTAnimatable<float>     mRotation{0};  /* "r" */
     LOTAnimatable<VPointF>   mScale;     /* "s" */

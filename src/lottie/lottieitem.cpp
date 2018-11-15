@@ -299,10 +299,10 @@ float LOTLayerItem::opacity(int frameNo) const
 VMatrix LOTLayerItem::matrix(int frameNo) const
 {
     if (mParentLayer)
-        return mLayerData->mTransform->matrix(frameNo) *
+        return mLayerData->mTransform->matrix(frameNo, mLayerData->autoOrient()) *
                mParentLayer->matrix(frameNo);
     else
-        return mLayerData->mTransform->matrix(frameNo);
+        return mLayerData->mTransform->matrix(frameNo, mLayerData->autoOrient());
 }
 
 bool LOTLayerItem::visible() const
