@@ -907,7 +907,7 @@ public final class PendingMessageManager {
                 let sendMessageRequest: Signal<NetworkRequestResult<Api.Updates>, MTRpcError>
                 switch content.content {
                     case .text:
-                        sendMessageRequest = network.requestWithAcknowledgement(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities), tag: dependencyTag)
+                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
                         sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
@@ -936,6 +936,8 @@ public final class PendingMessageManager {
                         return .never()
                     }
                     switch result {
+                        case .progress:
+                            return .complete()
                         case .acknowledged:
                             return strongSelf.applyAcknowledgedMessage(postbox: postbox, message: message)
                             |> mapError { _ -> MTRpcError in

@@ -13,42 +13,20 @@ public enum SearchMessagesLocation: Equatable {
     case general
     case group(PeerGroupId)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?)
-    
-    public static func ==(lhs: SearchMessagesLocation, rhs: SearchMessagesLocation) -> Bool {
-        switch lhs {
-            case .general:
-                if case .general = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .group(groupId):
-                if case .group(groupId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .peer(lhsPeerId, lhsFromId, lhsTags):
-                if case let .peer(rhsPeerId, rhsFromId, rhsTags) = rhs, lhsPeerId == rhsPeerId, lhsFromId == rhsFromId, lhsTags == rhsTags {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
-public func searchMessages(account: Account, location: SearchMessagesLocation, query: String) -> Signal<([Message], [PeerId : CombinedPeerReadState]), NoError> {
+public func searchMessages(account: Account, location: SearchMessagesLocation, query: String, lowerBound: MessageIndex? = nil, limit: Int32 = 100) -> Signal<([Message], [PeerId : CombinedPeerReadState], Int32), NoError> {
     let remoteSearchResult: Signal<Api.messages.Messages?, NoError>
     switch location {
         case let .peer(peerId, fromId, tags):
             if peerId.namespace == Namespaces.Peer.SecretChat {
-                return account.postbox.transaction { transaction -> ([Message], [PeerId : CombinedPeerReadState]) in
+                return account.postbox.transaction { transaction -> ([Message], [PeerId : CombinedPeerReadState], Int32) in
                     var readStates: [PeerId : CombinedPeerReadState] = [:]
                     if let readState = transaction.getCombinedPeerReadState(peerId) {
                         readStates[peerId] = readState
                     }
-                    return (transaction.searchMessages(peerId: peerId, query: query, tags: tags), readStates)
+                    let result = transaction.searchMessages(peerId: peerId, query: query, tags: tags)
+                    return (result, readStates, Int32(result.count))
                 }
             }
             
@@ -69,22 +47,22 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             }
         
             remoteSearchResult = account.postbox.transaction { transaction -> (peer:Peer?, from: Peer?) in
-            if let fromId = fromId {
-                return (peer: transaction.getPeer(peerId), from: transaction.getPeer(fromId))
-            }
-            return (peer: transaction.getPeer(peerId), from: nil)
+                if let fromId = fromId {
+                    return (peer: transaction.getPeer(peerId), from: transaction.getPeer(fromId))
+                }
+                return (peer: transaction.getPeer(peerId), from: nil)
             }
             |> mapToSignal { values -> Signal<Api.messages.Messages?, NoError> in
                 if let peer = values.peer, let inputPeer = apiInputPeer(peer) {
-                    var fromInputUser:Api.InputUser? = nil
-                    var flags:Int32 = 0
+                    var fromInputUser: Api.InputUser? = nil
+                    var flags: Int32 = 0
                     if let from = values.from {
                         fromInputUser = apiInputUser(from)
                         if let _ = fromInputUser {
                             flags |= (1 << 0)
                         }
                     }
-                    return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: 0, addOffset: 0, limit: 100, maxId: Int32.max - 1, minId: 0, hash: 0))
+                    return account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                         return .single(nil)
@@ -99,7 +77,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             /*remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
                 |> mapError { _ in } |> map(Optional.init)*/
         case .general:
-            remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
+            remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: limit), automaticFloodWait: false)
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                 return .single(nil)
@@ -107,81 +85,83 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
     }
     
     let processedSearchResult = remoteSearchResult
-        |> mapToSignal { result -> Signal<([Message], [PeerId : CombinedPeerReadState]), NoError> in
-            guard let result = result else {
-                return .single(([], [:]))
-            }
-            
-            //assert(false)
-            let messages: [Api.Message]
-            let chats: [Api.Chat]
-            let users: [Api.User]
-            switch result {
-                case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
-                    messages = apiMessages
-                    chats = apiChats
-                    users = apiUsers
-                case let .messages(apiMessages, apiChats, apiUsers):
-                    messages = apiMessages
-                    chats = apiChats
-                    users = apiUsers
-                case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
-                    messages = apiMessages
-                    chats = apiChats
-                    users = apiUsers
-                case .messagesNotModified:
-                    messages = []
-                    chats = []
-                    users = []
-            }
-            
-            return account.postbox.transaction { transaction -> ([Message], [PeerId : CombinedPeerReadState]) in
-                var peers: [PeerId: Peer] = [:]
-                
-                for user in users {
-                    if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
-                        peers[user.id] = user
-                    }
-                }
-                
-                for chat in chats {
-                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                        peers[groupOrChannel.id] = groupOrChannel
-                    }
-                }
-                
-                var peerIdsSet: Set<PeerId> = Set()
-                var readStates:[PeerId : CombinedPeerReadState] = [:]
-                
-                var renderedMessages: [Message] = []
-                for message in messages {
-                    if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
-                        renderedMessages.append(renderedMessage)
-                        peerIdsSet.insert(message.id.peerId)
-                    }
-                }
-                
-                for peerId in peerIdsSet {
-                    if let readState = transaction.getCombinedPeerReadState(peerId) {
-                         readStates[peerId] = readState
-                    }
-                }
-                
-                if case .general = location {
-                    let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: nil)
-                    renderedMessages.append(contentsOf: secretMessages)
-                }
-                
-                renderedMessages.sort(by: { lhs, rhs in
-                    return MessageIndex(lhs) > MessageIndex(rhs)
-                })
-                
-                
-                
-                return (renderedMessages, readStates)
-            }
-            
+    |> mapToSignal { result -> Signal<([Message], [PeerId : CombinedPeerReadState], Int32), NoError> in
+        guard let result = result else {
+            return .single(([], [:], 0))
         }
+        
+        //assert(false)
+        let messages: [Api.Message]
+        let chats: [Api.Chat]
+        let users: [Api.User]
+        let totalCount: Int32
+        switch result {
+            case let .channelMessages(_, _, count, apiMessages, apiChats, apiUsers):
+                messages = apiMessages
+                chats = apiChats
+                users = apiUsers
+                totalCount = count
+            case let .messages(apiMessages, apiChats, apiUsers):
+                messages = apiMessages
+                chats = apiChats
+                users = apiUsers
+                totalCount = Int32(messages.count)
+            case let.messagesSlice(count, apiMessages, apiChats, apiUsers):
+                messages = apiMessages
+                chats = apiChats
+                users = apiUsers
+                totalCount = count
+            case .messagesNotModified:
+                messages = []
+                chats = []
+                users = []
+                totalCount = 0
+        }
+        
+        return account.postbox.transaction { transaction -> ([Message], [PeerId : CombinedPeerReadState], Int32) in
+            var peers: [PeerId: Peer] = [:]
+            
+            for user in users {
+                if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                    peers[user.id] = user
+                }
+            }
+            
+            for chat in chats {
+                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                    peers[groupOrChannel.id] = groupOrChannel
+                }
+            }
+            
+            var peerIdsSet: Set<PeerId> = Set()
+            var readStates:[PeerId : CombinedPeerReadState] = [:]
+            
+            var renderedMessages: [Message] = []
+            for message in messages {
+                if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                    renderedMessages.append(renderedMessage)
+                    peerIdsSet.insert(message.id.peerId)
+                }
+            }
+            
+            for peerId in peerIdsSet {
+                if let readState = transaction.getCombinedPeerReadState(peerId) {
+                     readStates[peerId] = readState
+                }
+            }
+            
+            if case .general = location {
+                let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: nil)
+                renderedMessages.append(contentsOf: secretMessages)
+            }
+            
+            renderedMessages.sort(by: { lhs, rhs in
+                return MessageIndex(lhs) > MessageIndex(rhs)
+            })
+            
+            return (renderedMessages, readStates, totalCount)
+        }
+    }
         
     return processedSearchResult
 }

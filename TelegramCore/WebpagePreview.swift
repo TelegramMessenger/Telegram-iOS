@@ -10,37 +10,71 @@ import Foundation
 #endif
 
 public func webpagePreview(account: Account, url: String, webpageId: MediaId? = nil) -> Signal<TelegramMediaWebpage?, NoError> {
-    return account.postbox.transaction { transaction -> Signal<TelegramMediaWebpage?, NoError> in
-        if let webpageId = webpageId, let webpage = transaction.getMedia(webpageId) as? TelegramMediaWebpage {
-            return .single(webpage)
+    return webpagePreviewWithProgress(account: account, url: url)
+    |> mapToSignal { next -> Signal<TelegramMediaWebpage?, NoError> in
+        if case let .result(result) = next {
+            return .single(result)
         } else {
-            return account.network.request(Api.functions.messages.getWebPagePreview(flags: 0, message: url, entities: nil))
-                |> `catch` { _ -> Signal<Api.MessageMedia, NoError> in
-                    return .single(.messageMediaEmpty)
-                }
-                |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
-                    if let preCachedResources = result.preCachedResources {
-                        for (resource, data) in preCachedResources {
-                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                        }
-                    }
-                    switch result {
-                        case let .messageMediaWebPage(webpage):
-                            if let media = telegramMediaWebpageFromApiWebpage(webpage, url: url) {
-                                if case .Loaded = media.content {
-                                    return .single(media)
-                                } else {
-                                    return .single(media) |> then(account.stateManager.updatedWebpage(media.webpageId) |> map(Optional.init))
-                                }
-                            } else {
-                                return .single(nil)
-                            }
-                        default:
-                            return .single(nil)
-                    }
-                }
+            return .complete()
         }
-    } |> switchToLatest
+    }
+}
+
+public enum WebpagePreviewWithProgressResult {
+    case result(TelegramMediaWebpage?)
+    case progress(Float)
+}
+
+public func webpagePreviewWithProgress(account: Account, url: String, webpageId: MediaId? = nil) -> Signal<WebpagePreviewWithProgressResult, NoError> {
+    return account.postbox.transaction { transaction -> Signal<WebpagePreviewWithProgressResult, NoError> in
+        if let webpageId = webpageId, let webpage = transaction.getMedia(webpageId) as? TelegramMediaWebpage {
+            return .single(.result(webpage))
+        } else {
+            return account.network.requestWithAdditionalInfo(Api.functions.messages.getWebPagePreview(flags: 0, message: url, entities: nil), info: .progress)
+            |> `catch` { _ -> Signal<NetworkRequestResult<Api.MessageMedia>, NoError> in
+                return .single(.result(.messageMediaEmpty))
+            }
+            |> mapToSignal { result -> Signal<WebpagePreviewWithProgressResult, NoError> in
+                switch result {
+                    case .acknowledged:
+                        return .complete()
+                    case let .progress(progress, packetSize):
+                        if packetSize > 1024 {
+                            return .single(.progress(progress))
+                        } else {
+                            return .complete()
+                        }
+                    case let .result(result):
+                        if let preCachedResources = result.preCachedResources {
+                            for (resource, data) in preCachedResources {
+                                account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                            }
+                        }
+                        switch result {
+                            case let .messageMediaWebPage(webpage):
+                                if let media = telegramMediaWebpageFromApiWebpage(webpage, url: url) {
+                                    if case .Loaded = media.content {
+                                        return .single(.result(media))
+                                    } else {
+                                        return .single(.result(media))
+                                        |> then(
+                                            account.stateManager.updatedWebpage(media.webpageId)
+                                            |> map { next -> WebpagePreviewWithProgressResult in
+                                                return .result(next)
+                                            }
+                                        )
+                                    }
+                                } else {
+                                    return .single(.result(nil))
+                                }
+                            default:
+                                return .single(.result(nil))
+                        }
+                }
+            }
+        }
+    }
+    |> switchToLatest
 }
 
 public func actualizedWebpage(postbox: Postbox, network: Network, webpage: TelegramMediaWebpage) -> Signal<TelegramMediaWebpage, NoError> {

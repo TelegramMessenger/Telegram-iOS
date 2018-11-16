@@ -532,9 +532,21 @@ private extension NetworkContextProxyId {
     }
 }
 
+public struct NetworkRequestAdditionalInfo: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let acknowledgement = NetworkRequestAdditionalInfo(rawValue: 1 << 0)
+    public static let progress = NetworkRequestAdditionalInfo(rawValue: 1 << 1)
+}
+
 public enum NetworkRequestResult<T> {
     case result(T)
     case acknowledged
+    case progress(Float, Int32)
 }
 
 public final class Network: NSObject, MTRequestMessageServiceDelegate {
@@ -743,7 +755,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    public func requestWithAcknowledgement<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<NetworkRequestResult<T>, MTRpcError> {
+    public func requestWithAdditionalInfo<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), info: NetworkRequestAdditionalInfo, tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<NetworkRequestResult<T>, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
@@ -768,7 +780,15 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             }
             
             request.acknowledgementReceived = {
-                subscriber.putNext(.acknowledged)
+                if info.contains(.acknowledgement) {
+                    subscriber.putNext(.acknowledged)
+                }
+            }
+            
+            request.progressUpdated = { progress, packetSize in
+                if info.contains(.progress) {
+                    subscriber.putNext(.progress(progress, Int32(clamping: packetSize)))
+                }
             }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
@@ -804,7 +824,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
         
-     public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
