@@ -125,21 +125,25 @@ public enum UserPresenceStatus: Comparable, PostboxCoding {
 
 public final class TelegramUserPresence: PeerPresence, Equatable {
     public let status: UserPresenceStatus
+    public let lastActivity: Int32
     
-    public init(status: UserPresenceStatus) {
+    public init(status: UserPresenceStatus, lastActivity: Int32) {
         self.status = status
+        self.lastActivity = lastActivity
     }
     
     public init(decoder: PostboxDecoder) {
         self.status = UserPresenceStatus(decoder: decoder)
+        self.lastActivity = decoder.decodeInt32ForKey("la", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         self.status.encode(encoder)
+        encoder.encodeInt32(self.lastActivity, forKey: "la")
     }
     
     public static func ==(lhs: TelegramUserPresence, rhs: TelegramUserPresence) -> Bool {
-        return lhs.status == rhs.status
+        return lhs.status == rhs.status && lhs.lastActivity == rhs.lastActivity
     }
     
     public func isEqual(to: PeerPresence) -> Bool {
@@ -155,17 +159,17 @@ extension TelegramUserPresence {
     convenience init(apiStatus: Api.UserStatus) {
         switch apiStatus {
             case .userStatusEmpty:
-                self.init(status: .none)
+                self.init(status: .none, lastActivity: 0)
             case let .userStatusOnline(expires):
-                self.init(status: .present(until: expires))
+                self.init(status: .present(until: expires), lastActivity: 0)
             case let .userStatusOffline(wasOnline):
-                self.init(status: .present(until: wasOnline))
+                self.init(status: .present(until: wasOnline), lastActivity: 0)
             case .userStatusRecently:
-                self.init(status: .recently)
+                self.init(status: .recently, lastActivity: 0)
             case .userStatusLastWeek:
-                self.init(status: .lastWeek)
+                self.init(status: .lastWeek, lastActivity: 0)
             case .userStatusLastMonth:
-                self.init(status: .lastMonth)
+                self.init(status: .lastMonth, lastActivity: 0)
         }
     }
     
@@ -175,7 +179,7 @@ extension TelegramUserPresence {
                 if let status = status {
                     self.init(apiStatus: status)
                 } else {
-                    self.init(status: .none)
+                    self.init(status: .none, lastActivity: 0)
                 }
             case .userEmpty:
                 return nil

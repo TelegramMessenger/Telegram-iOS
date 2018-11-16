@@ -118,5 +118,34 @@ func updatePeerPresences(transaction: Transaction, accountPeerId: PeerId, peerPr
     if peerPresences[accountPeerId] != nil {
         peerPresences.removeValue(forKey: accountPeerId)
     }
-    transaction.updatePeerPresencesInternal(peerPresences)
+    transaction.updatePeerPresencesInternal(presences: peerPresences, merge: { previous, updated in
+        if let previous = previous as? TelegramUserPresence, let updated = updated as? TelegramUserPresence, previous.lastActivity != updated.lastActivity {
+            return TelegramUserPresence(status: updated.status, lastActivity: max(previous.lastActivity, updated.lastActivity))
+        }
+        return updated
+    })
+}
+
+func updatePeerPresenceLastActivities(transaction: Transaction, accountPeerId: PeerId, activities: [PeerId: Int32]) {
+    var activities = activities
+    if activities[accountPeerId] != nil {
+        activities.removeValue(forKey: accountPeerId)
+    }
+    for (peerId, timestamp) in activities {
+        transaction.updatePeerPresenceInternal(peerId: peerId, update: { previous in
+            if let previous = previous as? TelegramUserPresence, previous.lastActivity < timestamp {
+                var updatedStatus = previous.status
+                switch updatedStatus {
+                    case let .present(until):
+                        if until < timestamp {
+                            updatedStatus = .present(until: timestamp)
+                        }
+                    default:
+                        break
+                }
+                return TelegramUserPresence(status: updatedStatus, lastActivity: timestamp)
+            }
+            return previous
+        })
+    }
 }

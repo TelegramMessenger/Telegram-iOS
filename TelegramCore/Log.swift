@@ -96,7 +96,15 @@ public final class Logger {
     }
     
     public static var shared: Logger {
-        return sharedLogger!
+        if let sharedLogger = sharedLogger {
+            return sharedLogger
+        } else {
+            assertionFailure()
+            let tempLogger = Logger(basePath: "")
+            tempLogger.logToFile = false
+            tempLogger.logToConsole = false
+            return tempLogger
+        }
     }
     
     public init(basePath: String) {

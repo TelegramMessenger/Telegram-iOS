@@ -909,11 +909,11 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
             case let .updateReadChannelInbox(channelId, maxId):
                 updatedState.readInbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadChannelOutbox(channelId, maxId):
-                updatedState.readOutbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId))
+                updatedState.readOutbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId), timestamp: nil)
             case let .updateReadHistoryInbox(peer, maxId, _, _):
                 updatedState.readInbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
-                updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId))
+                updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId), timestamp: updatesDate)
             case let .updateDialogUnreadMark(flags, peer):
                 let peerId: PeerId
                 switch peer {
@@ -1450,25 +1450,28 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
             }
             let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsWithNewMessages: Set(), chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
             return pollChannel(account, peer: peer, state: initialState)
-                |> mapToSignal { (finalState, _, timeout) -> Signal<Void, NoError> in
-                    return resolveAssociatedMessages(account: account, state: finalState)
-                        |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-                            return resolveMissingPeerNotificationSettings(account: account, state: resultingState)
-                                |> map { resultingState -> AccountFinalState in
-                                    return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false)
-                                }
-                        }
-                        |> mapToSignal { finalState -> Signal<Void, NoError> in
-                            return stateManager.addReplayAsynchronouslyBuiltFinalState(finalState)
-                                |> mapToSignal { _ -> Signal<Void, NoError> in
-                                    return .complete() |> delay(Double(timeout ?? 30), queue: Queue.concurrentDefaultQueue())
-                                }
-                        }
+            |> mapToSignal { (finalState, _, timeout) -> Signal<Void, NoError> in
+                return resolveAssociatedMessages(account: account, state: finalState)
+                |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
+                    return resolveMissingPeerNotificationSettings(account: account, state: resultingState)
+                    |> map { resultingState -> AccountFinalState in
+                        return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false)
+                    }
                 }
+                |> mapToSignal { finalState -> Signal<Void, NoError> in
+                    return stateManager.addReplayAsynchronouslyBuiltFinalState(finalState)
+                    |> mapToSignal { _ -> Signal<Void, NoError> in
+                        return .complete() |> delay(Double(timeout ?? 30), queue: Queue.concurrentDefaultQueue())
+                    }
+                }
+            }
         } else {
-            return .complete() |> delay(30.0, queue: Queue.concurrentDefaultQueue())
+            return .complete()
+            |> delay(30.0, queue: Queue.concurrentDefaultQueue())
         }
-    } |> switchToLatest |> restart
+    }
+    |> switchToLatest
+    |> restart
 }
 
 private func resetChannels(_ account: Account, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
@@ -1628,146 +1631,146 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
             pollPts = 1
         }
         return (account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: pollPts, limit: limit))
-            |> map(Optional.init)
-            |> `catch` { error -> Signal<Api.updates.ChannelDifference?, MTRpcError> in
-                if error.errorDescription == "CHANNEL_PRIVATE" {
-                    return .single(nil)
-                } else {
-                    return .fail(error)
-                }
-            })
-            |> retryRequest
-            |> map { difference -> (AccountMutableState, Bool, Int32?) in
-                var updatedState = state
-                var apiTimeout: Int32?
-                if let difference = difference {
-                    switch difference {
-                        case let .channelDifference(_, pts, timeout, newMessages, otherUpdates, chats, users):
-                            apiTimeout = timeout
-                            let channelState: ChannelState
-                            if let previousState = updatedState.chatStates[peer.id] as? ChannelState {
-                                channelState = previousState.withUpdatedPts(pts)
-                            } else {
-                                channelState = ChannelState(pts: pts, invalidatedPts: nil)
-                            }
-                            updatedState.updateChannelState(peer.id, state: channelState)
-                            
-                            updatedState.mergeChats(chats)
-                            updatedState.mergeUsers(users)
-                            
-                            for apiMessage in newMessages {
-                                if let message = StoreMessage(apiMessage: apiMessage) {
-                                    if let preCachedResources = apiMessage.preCachedResources {
-                                        for (resource, data) in preCachedResources {
-                                            updatedState.addPreCachedResource(resource, data: data)
-                                        }
-                                    }
-                                    updatedState.addMessages([message], location: .UpperHistoryBlock)
-                                }
-                            }
-                            for update in otherUpdates {
-                                switch update {
-                                    case let .updateDeleteChannelMessages(_, messages, _, _):
-                                        let peerId = peer.id
-                                        updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
-                                    case let .updateEditChannelMessage(apiMessage, _, _):
-                                        if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id, messageId.peerId == peer.id {
-                                            if let preCachedResources = apiMessage.preCachedResources {
-                                                for (resource, data) in preCachedResources {
-                                                    updatedState.addPreCachedResource(resource, data: data)
-                                                }
-                                            }
-                                            var attributes = message.attributes
-                                            attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
-                                            updatedState.editMessage(messageId, message: message.withUpdatedAttributes(attributes))
-                                        } else {
-                                            Logger.shared.log("State", "Invalid updateEditChannelMessage")
-                                        }
-                                    case let .updateChannelPinnedMessage(_, id):
-                                        updatedState.updateCachedPeerData(peer.id, { current in
-                                            let previous: CachedChannelData
-                                            if let current = current as? CachedChannelData {
-                                                previous = current
-                                            } else {
-                                                previous = CachedChannelData()
-                                            }
-                                            return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id))
-                                        })
-                                    case let .updateChannelReadMessagesContents(_, messages):
-                                        updatedState.addReadMessagesContents((peer.id, messages))
-                                    case let .updateChannelMessageViews(_, id, views):
-                                        updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
-                                    case let .updateChannelWebPage(_, apiWebpage, _, _):
-                                        switch apiWebpage {
-                                            case let .webPageEmpty(id):
-                                                updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
-                                            default:
-                                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
-                                                    updatedState.updateMedia(webpage.webpageId, media: webpage)
-                                                }
-                                        }
-                                    case let .updateChannelAvailableMessages(_, minId):
-                                        let messageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: minId)
-                                        updatedState.updateMinAvailableMessage(messageId)
-                                        updatedState.updateCachedPeerData(peer.id, { current in
-                                            let previous: CachedChannelData
-                                            if let current = current as? CachedChannelData {
-                                                previous = current
-                                            } else {
-                                                previous = CachedChannelData()
-                                            }
-                                            return previous.withUpdatedMinAvailableMessageId(messageId)
-                                        })
-                                    default:
-                                        break
-                                }
-                            }
-                        case let .channelDifferenceEmpty(_, pts, timeout):
-                            apiTimeout = timeout
-                            
-                            let channelState: ChannelState
-                            if let previousState = updatedState.chatStates[peer.id] as? ChannelState {
-                                channelState = previousState.withUpdatedPts(pts)
-                            } else {
-                                channelState = ChannelState(pts: pts, invalidatedPts: nil)
-                            }
-                            updatedState.updateChannelState(peer.id, state: channelState)
-                        case let .channelDifferenceTooLong(_, pts, timeout, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, messages, chats, users):
-                            apiTimeout = timeout
-                            
-                            let channelState = ChannelState(pts: pts, invalidatedPts: pts)
-                            updatedState.updateChannelState(peer.id, state: channelState)
-                            
-                            updatedState.mergeChats(chats)
-                            updatedState.mergeUsers(users)
-                            
-                            updatedState.setNeedsHoleFromPreviousState(peerId: peer.id, namespace: Namespaces.Message.Cloud)
-                        
-                            for apiMessage in messages {
-                                if let message = StoreMessage(apiMessage: apiMessage) {
-                                    if let preCachedResources = apiMessage.preCachedResources {
-                                        for (resource, data) in preCachedResources {
-                                            updatedState.addPreCachedResource(resource, data: data)
-                                        }
-                                    }
-                                    
-                                    let location: AddMessagesLocation
-                                    if case let .Id(id) = message.id, id.id == topMessage {
-                                        location = .UpperHistoryBlock
-                                    } else {
-                                        location = .Random
-                                    }
-                                    updatedState.addMessages([message], location: location)
-                                }
-                            }
-                        
-                            updatedState.resetReadState(peer.id, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
-                        
-                            updatedState.resetMessageTagSummary(peer.id, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
-                    }
-                }
-                return (updatedState, difference != nil, apiTimeout)
+        |> map(Optional.init)
+        |> `catch` { error -> Signal<Api.updates.ChannelDifference?, MTRpcError> in
+            if error.errorDescription == "CHANNEL_PRIVATE" {
+                return .single(nil)
+            } else {
+                return .fail(error)
             }
+        })
+        |> retryRequest
+        |> map { difference -> (AccountMutableState, Bool, Int32?) in
+            var updatedState = state
+            var apiTimeout: Int32?
+            if let difference = difference {
+                switch difference {
+                    case let .channelDifference(_, pts, timeout, newMessages, otherUpdates, chats, users):
+                        apiTimeout = timeout
+                        let channelState: ChannelState
+                        if let previousState = updatedState.chatStates[peer.id] as? ChannelState {
+                            channelState = previousState.withUpdatedPts(pts)
+                        } else {
+                            channelState = ChannelState(pts: pts, invalidatedPts: nil)
+                        }
+                        updatedState.updateChannelState(peer.id, state: channelState)
+                        
+                        updatedState.mergeChats(chats)
+                        updatedState.mergeUsers(users)
+                        
+                        for apiMessage in newMessages {
+                            if let message = StoreMessage(apiMessage: apiMessage) {
+                                if let preCachedResources = apiMessage.preCachedResources {
+                                    for (resource, data) in preCachedResources {
+                                        updatedState.addPreCachedResource(resource, data: data)
+                                    }
+                                }
+                                updatedState.addMessages([message], location: .UpperHistoryBlock)
+                            }
+                        }
+                        for update in otherUpdates {
+                            switch update {
+                                case let .updateDeleteChannelMessages(_, messages, _, _):
+                                    let peerId = peer.id
+                                    updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
+                                case let .updateEditChannelMessage(apiMessage, _, _):
+                                    if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id, messageId.peerId == peer.id {
+                                        if let preCachedResources = apiMessage.preCachedResources {
+                                            for (resource, data) in preCachedResources {
+                                                updatedState.addPreCachedResource(resource, data: data)
+                                            }
+                                        }
+                                        var attributes = message.attributes
+                                        attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
+                                        updatedState.editMessage(messageId, message: message.withUpdatedAttributes(attributes))
+                                    } else {
+                                        Logger.shared.log("State", "Invalid updateEditChannelMessage")
+                                    }
+                                case let .updateChannelPinnedMessage(_, id):
+                                    updatedState.updateCachedPeerData(peer.id, { current in
+                                        let previous: CachedChannelData
+                                        if let current = current as? CachedChannelData {
+                                            previous = current
+                                        } else {
+                                            previous = CachedChannelData()
+                                        }
+                                        return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id))
+                                    })
+                                case let .updateChannelReadMessagesContents(_, messages):
+                                    updatedState.addReadMessagesContents((peer.id, messages))
+                                case let .updateChannelMessageViews(_, id, views):
+                                    updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
+                                case let .updateChannelWebPage(_, apiWebpage, _, _):
+                                    switch apiWebpage {
+                                        case let .webPageEmpty(id):
+                                            updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
+                                        default:
+                                            if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
+                                                updatedState.updateMedia(webpage.webpageId, media: webpage)
+                                            }
+                                    }
+                                case let .updateChannelAvailableMessages(_, minId):
+                                    let messageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: minId)
+                                    updatedState.updateMinAvailableMessage(messageId)
+                                    updatedState.updateCachedPeerData(peer.id, { current in
+                                        let previous: CachedChannelData
+                                        if let current = current as? CachedChannelData {
+                                            previous = current
+                                        } else {
+                                            previous = CachedChannelData()
+                                        }
+                                        return previous.withUpdatedMinAvailableMessageId(messageId)
+                                    })
+                                default:
+                                    break
+                            }
+                        }
+                    case let .channelDifferenceEmpty(_, pts, timeout):
+                        apiTimeout = timeout
+                        
+                        let channelState: ChannelState
+                        if let previousState = updatedState.chatStates[peer.id] as? ChannelState {
+                            channelState = previousState.withUpdatedPts(pts)
+                        } else {
+                            channelState = ChannelState(pts: pts, invalidatedPts: nil)
+                        }
+                        updatedState.updateChannelState(peer.id, state: channelState)
+                    case let .channelDifferenceTooLong(_, pts, timeout, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, messages, chats, users):
+                        apiTimeout = timeout
+                        
+                        let channelState = ChannelState(pts: pts, invalidatedPts: pts)
+                        updatedState.updateChannelState(peer.id, state: channelState)
+                        
+                        updatedState.mergeChats(chats)
+                        updatedState.mergeUsers(users)
+                        
+                        updatedState.setNeedsHoleFromPreviousState(peerId: peer.id, namespace: Namespaces.Message.Cloud)
+                    
+                        for apiMessage in messages {
+                            if let message = StoreMessage(apiMessage: apiMessage) {
+                                if let preCachedResources = apiMessage.preCachedResources {
+                                    for (resource, data) in preCachedResources {
+                                        updatedState.addPreCachedResource(resource, data: data)
+                                    }
+                                }
+                                
+                                let location: AddMessagesLocation
+                                if case let .Id(id) = message.id, id.id == topMessage {
+                                    location = .UpperHistoryBlock
+                                } else {
+                                    location = .Random
+                                }
+                                updatedState.addMessages([message], location: location)
+                            }
+                        }
+                    
+                        updatedState.resetReadState(peer.id, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
+                    
+                        updatedState.resetMessageTagSummary(peer.id, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
+                }
+            }
+            return (updatedState, difference != nil, apiTimeout)
+        }
     } else {
         Logger.shared.log("State", "can't poll channel \(peer.id): can't create inputChannel")
         return single((state, true, nil), NoError.self)
@@ -1906,6 +1909,16 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
 
 private var testAddInvalidation = false
 
+private func recordPeerActivityTimestamp(peerId: PeerId, timestamp: Int32, into timestamps: inout [PeerId: Int32]) {
+    if let current = timestamps[peerId] {
+        if current < timestamp {
+            timestamps[peerId] = timestamp
+        }
+    } else {
+        timestamps[peerId] = timestamp
+    }
+}
+
 func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(transaction, finalState: finalState.state)
     if !verified {
@@ -1927,6 +1940,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
     var langPackDifferences: [String: [Api.LangPackDifference]] = [:]
     var pollLangPacks = Set<String>()
     var delayNotificatonsUntil: Int32?
+    var peerActivityTimestamps: [PeerId: Int32] = [:]
     
     var addHolesToGroupFeedIds = Set<PeerGroupId>()
     
@@ -1975,6 +1989,9 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                     for message in messages {
                         if case let .Id(id) = message.id, message.flags.contains(.Incoming) {
                             addedOperationIncomingMessageIds.append(id)
+                            if let authorId = message.authorId {
+                                recordPeerActivityTimestamp(peerId: authorId, timestamp: message.timestamp, into: &peerActivityTimestamps)
+                            }
                         }
                     }
                 }
@@ -2070,8 +2087,11 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                 updateMessageMedia(transaction: transaction, id: id, media: media)
             case let .ReadInbox(messageId):
                 transaction.applyIncomingReadMaxId(messageId)
-            case let .ReadOutbox(messageId):
+            case let .ReadOutbox(messageId, timestamp):
                 transaction.applyOutgoingReadMaxId(messageId)
+                if messageId.peerId != accountPeerId, messageId.peerId.namespace == Namespaces.Peer.CloudUser, let timestamp = timestamp {
+                    recordPeerActivityTimestamp(peerId: messageId.peerId, timestamp: timestamp, into: &peerActivityTimestamps)
+                }
             case let .ReadGroupFeedInbox(groupId, index):
                 transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
             case let .ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
@@ -2307,6 +2327,10 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
             case let .UpdateIsContact(peerId, value):
                 isContactUpdates.append((peerId, value))
         }
+    }
+    
+    if !peerActivityTimestamps.isEmpty {
+        updatePeerPresenceLastActivities(transaction: transaction, accountPeerId: accountPeerId, activities: peerActivityTimestamps)
     }
     
     for peerId in finalState.state.initialState.peerIdsWithNewMessages {

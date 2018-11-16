@@ -61,7 +61,7 @@ enum AccountStateMutationOperation {
     case EditMessage(MessageId, StoreMessage)
     case UpdateMedia(MediaId, Media?)
     case ReadInbox(MessageId)
-    case ReadOutbox(MessageId)
+    case ReadOutbox(MessageId, Int32?)
     case ResetReadState(PeerId, MessageId.Namespace, MessageId.Id, MessageId.Id, MessageId.Id, Int32, Bool?)
     case UpdatePeerChatUnreadMark(PeerId, MessageId.Namespace, Bool)
     case ResetMessageTagSummary(PeerId, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
@@ -202,8 +202,8 @@ struct AccountMutableState {
         self.addOperation(.ReadInbox(messageId))
     }
     
-    mutating func readOutbox(_ messageId: MessageId) {
-        self.addOperation(.ReadOutbox(messageId))
+    mutating func readOutbox(_ messageId: MessageId, timestamp: Int32?) {
+        self.addOperation(.ReadOutbox(messageId, timestamp))
     }
     
     mutating func readGroupFeedInbox(groupId: PeerGroupId, index: MessageIndex) {

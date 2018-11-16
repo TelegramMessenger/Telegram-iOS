@@ -857,7 +857,7 @@ public class Account {
         self.localInputActivityManager = PeerInputActivityManager()
         self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
         let _ = (postbox.transaction { transaction -> Void in
-            transaction.updatePeerPresencesInternal([peerId: TelegramUserPresence(status: .present(until: Int32.max - 1))])
+            transaction.updatePeerPresencesInternal(presences: [peerId: TelegramUserPresence(status: .present(until: Int32.max - 1), lastActivity: 0)], merge: { _, updated in return updated })
         }).start()
         self.notificationAutolockReportManager = NotificationAutolockReportManager(deadline: self.autolockReportDeadline.get(), network: network)
         self.autolockReportDeadline.set(
