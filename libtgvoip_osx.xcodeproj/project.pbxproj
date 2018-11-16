@@ -43,6 +43,10 @@
 		692AB91F1E675F7000706ACC /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 692AB91C1E675F7000706ACC /* AudioToolbox.framework */; };
 		692AB9201E675F7000706ACC /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 692AB91D1E675F7000706ACC /* AudioUnit.framework */; };
 		692AB9211E675F7000706ACC /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 692AB91E1E675F7000706ACC /* CoreAudio.framework */; };
+		694DE8A0219F2265009C09A7 /* VideoRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 694DE89C219F2265009C09A7 /* VideoRenderer.h */; };
+		694DE8A1219F2265009C09A7 /* VideoRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 694DE89D219F2265009C09A7 /* VideoRenderer.cpp */; };
+		694DE8A2219F2265009C09A7 /* VideoSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 694DE89E219F2265009C09A7 /* VideoSource.cpp */; };
+		694DE8A3219F2265009C09A7 /* VideoSource.h in Headers */ = {isa = PBXBuildFile; fileRef = 694DE89F219F2265009C09A7 /* VideoSource.h */; };
 		695B20621EBD39FF00E31757 /* DarwinSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 695B20601EBD39FF00E31757 /* DarwinSpecific.h */; };
 		6971220F20C8107F00971C2C /* PacketReassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6971220D20C8107E00971C2C /* PacketReassembler.cpp */; };
 		6971221020C8107F00971C2C /* PacketReassembler.h in Headers */ = {isa = PBXBuildFile; fileRef = 6971220E20C8107F00971C2C /* PacketReassembler.h */; };
@@ -299,6 +303,10 @@
 		692AB91C1E675F7000706ACC /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		692AB91D1E675F7000706ACC /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
 		692AB91E1E675F7000706ACC /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		694DE89C219F2265009C09A7 /* VideoRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoRenderer.h; sourceTree = "<group>"; };
+		694DE89D219F2265009C09A7 /* VideoRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoRenderer.cpp; sourceTree = "<group>"; };
+		694DE89E219F2265009C09A7 /* VideoSource.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoSource.cpp; sourceTree = "<group>"; };
+		694DE89F219F2265009C09A7 /* VideoSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoSource.h; sourceTree = "<group>"; };
 		695B20601EBD39FF00E31757 /* DarwinSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DarwinSpecific.h; path = os/darwin/DarwinSpecific.h; sourceTree = SOURCE_ROOT; };
 		6971220D20C8107E00971C2C /* PacketReassembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PacketReassembler.cpp; sourceTree = SOURCE_ROOT; };
 		6971220E20C8107F00971C2C /* PacketReassembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PacketReassembler.h; sourceTree = SOURCE_ROOT; };
@@ -530,6 +538,7 @@
 				692AB8C91E6759DD00706ACC /* VoIPServerConfig.cpp */,
 				692AB8CA1E6759DD00706ACC /* VoIPServerConfig.h */,
 				697B6FDC2136E673004C8E54 /* utils.h */,
+				694DE89B219F2265009C09A7 /* video */,
 				69A6DE201E96149300000E69 /* webrtc_dsp */,
 			);
 			name = libtgvoip;
@@ -604,6 +613,17 @@
 				6976FD0020F6A6EF0019939E /* Widget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		694DE89B219F2265009C09A7 /* video */ = {
+			isa = PBXGroup;
+			children = (
+				694DE89C219F2265009C09A7 /* VideoRenderer.h */,
+				694DE89D219F2265009C09A7 /* VideoRenderer.cpp */,
+				694DE89E219F2265009C09A7 /* VideoSource.cpp */,
+				694DE89F219F2265009C09A7 /* VideoSource.h */,
+			);
+			path = video;
 			sourceTree = "<group>";
 		};
 		697B6FC52136DBA4004C8E54 /* tests */ = {
@@ -949,6 +969,7 @@
 				69A6DF341E96149300000E69 /* ooura_fft.h in Headers */,
 				69A6DEBA1E96149300000E69 /* atomicops.h in Headers */,
 				69A6DF0A1E96149300000E69 /* aec_resampler.h in Headers */,
+				694DE8A3219F2265009C09A7 /* VideoSource.h in Headers */,
 				695B20621EBD39FF00E31757 /* DarwinSpecific.h in Headers */,
 				69A6DEE51E96149300000E69 /* spl_inl.h in Headers */,
 				69A6DF3B1E96149300000E69 /* cpu_features_wrapper.h in Headers */,
@@ -957,6 +978,7 @@
 				6976FD0420F6A7060019939E /* MessageThread.h in Headers */,
 				69A6DF441E9614B700000E69 /* AudioInputAudioUnitOSX.h in Headers */,
 				692AB8D91E6759DD00706ACC /* CongestionControl.h in Headers */,
+				694DE8A0219F2265009C09A7 /* VideoRenderer.h in Headers */,
 				69A6DF031E96149300000E69 /* aec_common.h in Headers */,
 				69A6DEBE1E96149300000E69 /* constructormagic.h in Headers */,
 				69A6DED31E96149300000E69 /* complex_fft_tables.h in Headers */,
@@ -1184,6 +1206,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				694DE8A2219F2265009C09A7 /* VideoSource.cpp in Sources */,
 				69A6DEFB1E96149300000E69 /* sqrt_of_one_minus_x_squared.c in Sources */,
 				69A6DEDD1E96149300000E69 /* filter_ar_fast_q12.c in Sources */,
 				69A6DEF41E96149300000E69 /* resample_fractional.c in Sources */,
@@ -1255,6 +1278,7 @@
 				69A6DEBC1E96149300000E69 /* checks.cc in Sources */,
 				692AB8DA1E6759DD00706ACC /* EchoCanceller.cpp in Sources */,
 				69A6DF281E96149300000E69 /* splitting_filter.cc in Sources */,
+				694DE8A1219F2265009C09A7 /* VideoRenderer.cpp in Sources */,
 				692AB8D31E6759DD00706ACC /* VoIPGroupController.cpp in Sources */,
 				692AB8CF1E6759DD00706ACC /* BlockingQueue.cpp in Sources */,
 				69A6DF2E1E96149300000E69 /* delay_estimator.cc in Sources */,

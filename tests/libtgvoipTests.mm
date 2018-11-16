@@ -44,10 +44,10 @@ using namespace tgvoip;
 	std::vector<Endpoint> endpoints1;
 	IPv4Address localhost("127.0.0.1");
 	IPv6Address emptyV6;
-	endpoints1.push_back(Endpoint(1, 1033, localhost, emptyV6, Endpoint::TYPE_UDP_RELAY, peerTags[0].data()));
+	endpoints1.push_back(Endpoint(1, 1033, localhost, emptyV6, Endpoint::Type::UDP_RELAY, peerTags[0].data()));
 	controller1->SetRemoteEndpoints(endpoints1, false, 76);
 	std::vector<Endpoint> endpoints2;
-	endpoints2.push_back(Endpoint(1, 1033, localhost, emptyV6, Endpoint::TYPE_UDP_RELAY, peerTags[1].data()));
+	endpoints2.push_back(Endpoint(1, 1033, localhost, emptyV6, Endpoint::Type::UDP_RELAY, peerTags[1].data()));
 	controller2->SetRemoteEndpoints(endpoints2, false, 76);
 	
 	char encryptionKey[256];
