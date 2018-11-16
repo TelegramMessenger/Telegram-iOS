@@ -347,9 +347,14 @@ public final class Transaction {
         return self.postbox?.cachedPeerDataTable.get(peerId)
     }
     
-    public func updatePeerPresencesInternal(_ peerPresences: [PeerId: PeerPresence]) {
+    public func updatePeerPresencesInternal(presences: [PeerId: PeerPresence], merge: (PeerPresence, PeerPresence) -> PeerPresence) {
         assert(!self.disposed)
-        self.postbox?.updatePeerPresences(peerPresences)
+        self.postbox?.updatePeerPresences(presences: presences, merge: merge)
+    }
+    
+    public func updatePeerPresenceInternal(peerId: PeerId, update: (PeerPresence) -> PeerPresence) {
+        assert(!self.disposed)
+        self.postbox?.updatePeerPresence(peerId: peerId, update: update)
     }
     
     public func getPeerPresence(peerId: PeerId) -> PeerPresence? {
@@ -607,9 +612,9 @@ public final class Transaction {
         return self.postbox?.messageHistoryTable.findClosestMessageId(peerId: peerId, timestamp: timestamp)
     }
     
-    public func findRandomMessage(peerId: PeerId, tagMask: MessageTags, ignoreId: MessageId) -> MessageIndex? {
+    public func findRandomMessage(peerId: PeerId, tagMask: MessageTags, ignoreIds: ([MessageId], Set<MessageId>)) -> MessageIndex? {
         assert(!self.disposed)
-        return self.postbox?.messageHistoryTable.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreId: ignoreId)
+        return self.postbox?.messageHistoryTable.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreIds: ignoreIds)
     }
     
     public func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
@@ -2067,12 +2072,30 @@ public final class Postbox {
         }
     }
     
-    fileprivate func updatePeerPresences(_ peerPresences: [PeerId: PeerPresence]) {
-        for (peerId, presence) in peerPresences {
-            let currentPresence = self.peerPresenceTable.get(peerId)
-            if currentPresence == nil || !(currentPresence!.isEqual(to: presence)) {
-                self.peerPresenceTable.set(id: peerId, presence: presence)
-                self.currentUpdatedPeerPresences[peerId] = presence
+    fileprivate func updatePeerPresences(presences: [PeerId: PeerPresence], merge: (PeerPresence, PeerPresence) -> PeerPresence) {
+        for (peerId, presence) in presences {
+            let updated: PeerPresence
+            let shouldUpdate: Bool
+            if let current = self.peerPresenceTable.get(peerId) {
+                updated = merge(current, presence)
+                shouldUpdate = !current.isEqual(to: updated)
+            } else {
+                updated = presence
+                shouldUpdate = true
+            }
+            if shouldUpdate {
+                self.peerPresenceTable.set(id: peerId, presence: updated)
+                self.currentUpdatedPeerPresences[peerId] = updated
+            }
+        }
+    }
+    
+    fileprivate func updatePeerPresence(peerId: PeerId, update: (PeerPresence) -> PeerPresence) {
+        if let current = self.peerPresenceTable.get(peerId) {
+            let updated = update(current)
+            if !current.isEqual(to: updated) {
+                self.peerPresenceTable.set(id: peerId, presence: updated)
+                self.currentUpdatedPeerPresences[peerId] = updated
             }
         }
     }

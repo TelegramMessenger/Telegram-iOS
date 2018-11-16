@@ -3177,8 +3177,8 @@ final class MessageHistoryTable: Table {
         return result
     }
     
-    func findRandomMessage(peerId: PeerId, tagMask: MessageTags, ignoreId: MessageId) -> MessageIndex? {
-        if let index = self.tagsTable.findRandomIndex(peerId: peerId, tagMask: tagMask, ignoreId: ignoreId, isMessage: { index in
+    func findRandomMessage(peerId: PeerId, tagMask: MessageTags, ignoreIds: ([MessageId], Set<MessageId>)) -> MessageIndex? {
+        if let index = self.tagsTable.findRandomIndex(peerId: peerId, tagMask: tagMask, ignoreIds: ignoreIds, isMessage: { index in
             return self.getMessage(index) != nil
         }) {
             return self.getMessage(index).flatMap(MessageIndex.init)

@@ -172,21 +172,34 @@ class MessageHistoryTagsTable: Table {
         return count
     }
     
-    func findRandomIndex(peerId: PeerId, tagMask: MessageTags, ignoreId: MessageId, isMessage: (MessageIndex) -> Bool) -> MessageIndex? {
+    func findRandomIndex(peerId: PeerId, tagMask: MessageTags, ignoreIds: ([MessageId], Set<MessageId>), isMessage: (MessageIndex) -> Bool) -> MessageIndex? {
         var indices: [MessageIndex] = []
         self.valueBox.range(self.table, start: self.lowerBound(tagMask, peerId: peerId), end: self.upperBound(tagMask, peerId: peerId), keys: { key in
             indices.append(MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4)))
             return true
         }, limit: 0)
         var checkedIndices = Set<Int>()
-        loop: while checkedIndices.count < indices.count {
+        while checkedIndices.count < indices.count {
             let i = Int(arc4random_uniform(UInt32(indices.count)))
             if checkedIndices.contains(i) {
-                continue loop
+                continue
             }
             checkedIndices.insert(i)
             let index = indices[i]
-            if isMessage(index) && ignoreId != index.id {
+            if isMessage(index) && !ignoreIds.1.contains(index.id) {
+                return index
+            }
+        }
+        checkedIndices.removeAll()
+        let lastId = ignoreIds.0.last
+        while checkedIndices.count < indices.count {
+            let i = Int(arc4random_uniform(UInt32(indices.count)))
+            if checkedIndices.contains(i) {
+                continue
+            }
+            checkedIndices.insert(i)
+            let index = indices[i]
+            if isMessage(index) && lastId != index.id {
                 return index
             }
         }
