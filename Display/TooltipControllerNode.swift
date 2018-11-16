@@ -25,7 +25,7 @@ final class TooltipControllerNode: ASDisplayNode {
         
         self.textNode = ImmediateTextNode()
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
         

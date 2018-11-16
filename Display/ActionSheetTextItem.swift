@@ -37,7 +37,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
         self.theme = theme
         
         self.label = ASTextNode()
-        self.label.isLayerBacked = true
+        self.label.isUserInteractionEnabled = false
         self.label.maximumNumberOfLines = 0
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail

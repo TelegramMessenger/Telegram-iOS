@@ -175,7 +175,7 @@ public final class LinkHighlightingNode: ASDisplayNode {
         self._color = color
         
         self.imageNode = ASImageNode()
-        self.imageNode.isLayerBacked = true
+        self.imageNode.isUserInteractionEnabled = false
         self.imageNode.displaysAsynchronously = false
         self.imageNode.displayWithoutProcessing = true
         

@@ -47,7 +47,7 @@ final class PeekControllerMenuItemNode: HighlightTrackingButtonNode {
         self.highlightedBackgroundNode.alpha = 0.0
         
         self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         
         let textColor: UIColor

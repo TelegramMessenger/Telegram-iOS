@@ -130,7 +130,7 @@ public final class TextAlertContentNode: AlertContentNode {
             let titleNode = ASTextNode()
             titleNode.attributedText = title
             titleNode.displaysAsynchronously = false
-            titleNode.isLayerBacked = true
+            titleNode.isUserInteractionEnabled = false
             titleNode.maximumNumberOfLines = 1
             titleNode.truncationMode = .byTruncatingTail
             self.titleNode = titleNode

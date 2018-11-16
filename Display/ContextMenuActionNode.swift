@@ -23,7 +23,7 @@ final class ContextMenuActionNode: ASDisplayNode {
         switch action.content {
             case let .text(title):
                 let textNode = ASTextNode()
-                textNode.isLayerBacked = true
+                textNode.isUserInteractionEnabled = false
                 textNode.displaysAsynchronously = false
                 textNode.attributedText = NSAttributedString(string: title, font: Font.regular(14.0), textColor: UIColor.white)
                 

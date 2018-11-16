@@ -24,7 +24,7 @@ final class NavigationBarBadgeNode: ASDisplayNode {
         self.textColor = textColor
         
         self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         
         self.backgroundNode = ASImageNode()

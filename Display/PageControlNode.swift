@@ -30,7 +30,7 @@ public final class PageControlNode: ASDisplayNode {
                     dotNode.image = self.normalDotImage
                     dotNode.displaysAsynchronously = false
                     dotNode.displayWithoutProcessing = true
-                    dotNode.isLayerBacked = true
+                    dotNode.isUserInteractionEnabled = false
                     self.dotNodes.append(dotNode)
                     self.addSubnode(dotNode)
                 }

@@ -109,16 +109,16 @@ private final class TabBarNodeContainer {
         self.imageNode = imageNode
         
         self.badgeContainerNode = ASDisplayNode()
-        self.badgeContainerNode.isLayerBacked = true
+        self.badgeContainerNode.isUserInteractionEnabled = false
         
         self.badgeBackgroundNode = ASImageNode()
-        self.badgeBackgroundNode.isLayerBacked = true
+        self.badgeBackgroundNode.isUserInteractionEnabled = false
         self.badgeBackgroundNode.displayWithoutProcessing = true
         self.badgeBackgroundNode.displaysAsynchronously = false
         
         self.badgeTextNode = ASTextNode()
         self.badgeTextNode.maximumNumberOfLines = 1
-        self.badgeTextNode.isLayerBacked = true
+        self.badgeTextNode.isUserInteractionEnabled = false
         self.badgeTextNode.displaysAsynchronously = false
         
         self.badgeContainerNode.addSubnode(self.badgeBackgroundNode)
@@ -248,7 +248,7 @@ class TabBarNode: ASDisplayNode {
             let node = TabBarItemNode()
             node.displaysAsynchronously = false
             node.displayWithoutProcessing = true
-            node.isLayerBacked = true
+            node.isUserInteractionEnabled = false
             let container = TabBarNodeContainer(item: item, imageNode: node, updateBadge: { [weak self] value in
                 self?.updateNodeBadge(i, value: value)
             }, updateTitle: { [weak self] _, _ in

@@ -95,9 +95,9 @@ public final class StatusBar: ASDisplayNode {
     
     public override init() {
         self.inCallLabel = StatusBarLabelNode()
-        self.inCallLabel.isLayerBacked = true
+        self.inCallLabel.isUserInteractionEnabled = false
         
-        self.offsetNode.isLayerBacked = true
+        self.offsetNode.isUserInteractionEnabled = false
         
         let labelSize = self.inCallLabel.measure(CGSize(width: 300.0, height: 300.0))
         self.inCallLabel.frame = CGRect(origin: CGPoint(x: 10.0, y: 20.0 + 4.0), size: labelSize)

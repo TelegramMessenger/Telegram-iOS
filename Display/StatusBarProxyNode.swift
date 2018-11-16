@@ -62,7 +62,7 @@ private class StatusBarItemNode: ASDisplayNode {
         self.targetView = targetView
         self.rootView = rootView
         self.contentNode = ASDisplayNode()
-        self.contentNode.isLayerBacked = true
+        self.contentNode.isUserInteractionEnabled = false
         
         super.init()
         
