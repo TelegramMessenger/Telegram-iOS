@@ -38,7 +38,7 @@ func loadLegacyUser(database: SqliteInterface, id: Int32) -> (TelegramUser, Tele
             status = .present(until: lastSeen)
         }
         
-        let presence = TelegramUserPresence(status: status)
+        let presence = TelegramUserPresence(status: status, lastActivity: 0)
         result = (user, presence)
         return false
     })

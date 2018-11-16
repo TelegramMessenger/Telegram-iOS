@@ -73,7 +73,7 @@ private func importDatabaseData(account: TemporaryAccount, basePath: String, dat
         if let (user, presence) = loadLegacyUser(database: database, id: accountUserId) {
             importedAccountUser = account.postbox.transaction { transaction -> Void in
                 updatePeers(transaction: transaction, peers: [user], update: { _, updated in updated })
-                transaction.updatePeerPresencesInternal([user.id: presence])
+                transaction.updatePeerPresencesInternal(presences: [user.id: presence], merge: { _, updated in return updated })
             }
             |> ignoreValues
             |> introduceError(AccountImportError.self)

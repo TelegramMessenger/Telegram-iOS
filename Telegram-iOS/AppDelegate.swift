@@ -1206,7 +1206,7 @@ private enum QueuedWakeup: Int32 {
                 case let .authorized(context):
                     context.openUrl(url)
                 case let .unauthorized(context):
-                    if let secureIdData = parseSecureIdUrl(url: url) {
+                    if let secureIdData = parseSecureIdUrl(url) {
                         let strings = context.applicationContext.currentPresentationData.with({ $0 }).strings
                         let theme = context.rootController.theme
                         context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: strings.Calls_NotNow, action: {
@@ -1214,6 +1214,8 @@ private enum QueuedWakeup: Int32 {
                                 UIApplication.shared.openURL(callbackUrl)
                             }
                         }), TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})]), on: .root, blockInteraction: false)
+                    } else if let confirmationCode = parseConfirmationCodeUrl(url) {
+                        context.rootController.applyConfirmationCode(confirmationCode)
                     }
                 default:
                     break

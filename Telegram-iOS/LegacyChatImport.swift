@@ -728,7 +728,7 @@ func loadLegacySecretChats(account: TemporaryAccount, basePath: String, accountP
             updatePeers(transaction: transaction, peers: Array(userPeers.values), update: { _, updated in
                 return updated
             })
-            transaction.updatePeerPresencesInternal(presences)
+            transaction.updatePeerPresencesInternal(presences: presences, merge: { _, updated in return updated })
             for (peer, state, seqOutValue, readStates, _) in chatInfos {
                 if userPeers[peer.regularPeerId] == nil {
                     continue

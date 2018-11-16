@@ -57,7 +57,7 @@ func snapshotSecretChat(application: UIApplication, mainWindow: UIWindow, window
             return updated
         })
         
-        transaction.updatePeerPresencesInternal([userPeer.id: TelegramUserPresence(status: .present(until: Int32.max - 1))])
+        transaction.updatePeerPresencesInternal(presences: [userPeer.id: TelegramUserPresence(status: .present(until: Int32.max - 1), lastActivity: 0)], merge: { _, updated in return updated })
         
         var date: Int32 = Int32(Date().timeIntervalSince1970) - 1000
         for message in messages {
