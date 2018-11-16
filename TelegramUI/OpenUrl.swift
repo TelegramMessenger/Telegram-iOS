@@ -86,12 +86,25 @@ public func parseSecureIdUrl(_ url: URL) -> ParsedSecureIdUrl? {
 }
 
 public func parseConfirmationCodeUrl(_ url: URL) -> Int? {
-    if url.pathComponents.count == 2 && url.pathComponents[0].lowercased() == "login" {
-        if let code = Int(url.pathComponents[1]) {
+    if url.pathComponents.count == 3 && url.pathComponents[1].lowercased() == "login" {
+        if let code = Int(url.pathComponents[2]) {
             return code
         }
     }
     return nil
+}
+
+func formattedConfirmationCode(_ code: Int) -> String {
+    let source = "\(code)"
+    let segmentLength = 3
+    var result = ""
+    for c in source {
+        if !result.isEmpty && result.count % segmentLength == 0 {
+            result.append("-")
+        }
+        result.append(c)
+    }
+    return result
 }
 
 public enum OpenURLContext {

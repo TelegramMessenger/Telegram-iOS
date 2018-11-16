@@ -452,6 +452,9 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         if self.order != order {
             self.order = order
             self.playbackStack.clear()
+            if let (message, _) = self.currentItem {
+                self.playbackStack.push(message.id)
+            }
             self.updateState()
         }
     }

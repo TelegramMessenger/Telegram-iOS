@@ -103,4 +103,8 @@ final class SecureIdPlaintextFormController: FormController<SecureIdPlaintextFor
         
         self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdPlaintextFormInnerState(type: self.type, immediatelyAvailableValue: self.immediatelyAvailableValue))
     }
+    
+    func applyPhoneCode(_ code: Int) {
+        self.controllerNode.applyPhoneCode(code)
+    }
 }

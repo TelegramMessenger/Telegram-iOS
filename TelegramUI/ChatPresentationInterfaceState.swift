@@ -76,7 +76,7 @@ enum ChatPresentationInputQueryResult: Equatable {
     
     static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
         switch lhs {
-        case let .stickers(lhsItems):
+            case let .stickers(lhsItems):
                 if case let .stickers(rhsItems) = rhs, lhsItems == rhsItems {
                     return true
                 } else {
@@ -164,7 +164,7 @@ enum ChatInputMode: Equatable {
     case inputButtons
 }
 
-enum ChatTitlePanelContext: Comparable {
+enum ChatTitlePanelContext: Equatable, Comparable {
     case pinnedMessage
     case chatInfo
     case requestInProgress
@@ -183,35 +183,6 @@ enum ChatTitlePanelContext: Comparable {
         }
     }
     
-    static func ==(lhs: ChatTitlePanelContext, rhs: ChatTitlePanelContext) -> Bool {
-        switch lhs {
-            case .pinnedMessage:
-                if case .pinnedMessage = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .chatInfo:
-                if case .chatInfo = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .requestInProgress:
-                if case .requestInProgress = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .toastAlert(text):
-                if case .toastAlert(text) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
     static func <(lhs: ChatTitlePanelContext, rhs: ChatTitlePanelContext) -> Bool {
         return lhs.index < rhs.index
     }
@@ -220,16 +191,8 @@ enum ChatTitlePanelContext: Comparable {
 struct ChatSearchResultsState: Equatable {
     let messageIndices: [MessageIndex]
     let currentId: MessageId?
-    
-    static func ==(lhs: ChatSearchResultsState, rhs: ChatSearchResultsState) -> Bool {
-        if lhs.messageIndices != rhs.messageIndices {
-            return false
-        }
-        if lhs.currentId != rhs.currentId {
-            return false
-        }
-        return false
-    }
+    let totalCount: Int32
+    let complete: Bool
 }
 
 enum ChatSearchDomain: Equatable {
@@ -252,7 +215,7 @@ enum ChatSearchDomain: Equatable {
                     return false
                 }
             case let .member(lhsPeer):
-                if case let .member(rhsPeer) = rhs, arePeersEqual(lhsPeer, rhsPeer) {
+                if case let .member(rhsPeer) = rhs, lhsPeer.isEqual(rhsPeer) {
                     return true
                 } else {
                     return false
@@ -264,23 +227,6 @@ enum ChatSearchDomain: Equatable {
 enum ChatSearchDomainSuggestionContext: Equatable {
     case none
     case members(String)
-    
-    static func ==(lhs: ChatSearchDomainSuggestionContext, rhs: ChatSearchDomainSuggestionContext) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .members(query):
-                if case .members(query) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 struct ChatSearchData: Equatable {

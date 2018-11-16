@@ -161,6 +161,29 @@ private func timeoutSignal(codeData: ChangeAccountPhoneNumberData) -> Signal<Int
     }
 }
 
+protocol ChangePhoneNumberCodeController: class {
+    func applyCode(_ code: Int)
+}
+
+private final class ChangePhoneNumberCodeControllerImpl: ItemListController<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeController {
+    private let applyCodeImpl: (Int) -> Void
+    
+    init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
+        self.applyCodeImpl = applyCodeImpl
+        
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: account.telegramApplicationContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: nil)
+    }
+    
+    required init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func applyCode(_ code: Int) {
+        self.applyCodeImpl(code)
+    }
+}
+
 func changePhoneNumberCodeController(account: Account, phoneNumber: String, codeData: ChangeAccountPhoneNumberData) -> ViewController {
     let initialState = ChangePhoneNumberCodeControllerState(codeText: "", checking: false)
     
@@ -250,7 +273,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
     let arguments = ChangePhoneNumberCodeControllerArguments(updateEntryText: { updatedText in
         var initiateCheck = false
         updateState { state in
-            if state.codeText.characters.count < 5 && updatedText.characters.count == 5 {
+            if state.codeText.count < 5 && updatedText.count == 5 {
                 initiateCheck = true
             }
             return state.withUpdatedCodeText(updatedText)
@@ -286,7 +309,12 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ChangePhoneNumberCodeControllerImpl(account: account, state: signal, applyCodeImpl: { code in
+        updateState { state in
+            return state.withUpdatedCodeText("\(code)")
+        }
+        checkCode()
+    })
     
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {

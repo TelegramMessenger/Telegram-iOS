@@ -121,9 +121,11 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         var resultsText: NSAttributedString?
         if let results = interfaceState.search?.resultsState {
             resultCount = results.messageIndices.count
+            let displayTotalCount = results.complete ? results.messageIndices.count : Int(results.totalCount)
             if let currentId = results.currentId, let index = results.messageIndices.index(where: { $0.id == currentId }) {
+                let adjustedIndex = results.messageIndices.count - 1 - index
                 resultIndex = index
-                resultsText = NSAttributedString(string: "\(index + 1) \(interfaceState.strings.Common_of) \(results.messageIndices.count)", font: labelFont, textColor: interfaceState.theme.chat.inputPanel.primaryTextColor)
+                resultsText = NSAttributedString(string: "\(adjustedIndex + 1) \(interfaceState.strings.Common_of) \(displayTotalCount)", font: labelFont, textColor: interfaceState.theme.chat.inputPanel.primaryTextColor)
             } else {
                 resultsText = NSAttributedString(string: interfaceState.strings.Conversation_SearchNoResults, font: labelFont, textColor: interfaceState.theme.chat.inputPanel.primaryTextColor)
             }

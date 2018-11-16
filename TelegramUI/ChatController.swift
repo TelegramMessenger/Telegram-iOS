@@ -2218,7 +2218,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             }
                             if let updatedIndex = updatedIndex {
                                 navigateIndex = resultsState.messageIndices[updatedIndex]
-                                return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: resultsState.messageIndices, currentId: resultsState.messageIndices[updatedIndex].id)))
+                                return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: resultsState.messageIndices, currentId: resultsState.messageIndices[updatedIndex].id, totalCount: resultsState.totalCount, complete: resultsState.complete)))
                             }
                         }
                     }
@@ -4187,36 +4187,40 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         searchDisposable = MetaDisposable()
                         self.searchDisposable = searchDisposable
                     }
-                    searchDisposable.set((searchMessages(account: self.account, location: location, query: query) |> map {$0.0}
+                    let limit: Int32 = 100
+                    searchDisposable.set((searchMessages(account: self.account, location: location, query: query, limit: limit)
+                    |> map { ($0.0, $0.2) }
                     |> delay(0.2, queue: Queue.mainQueue())
-                    |> deliverOnMainQueue).start(next: { [weak self] results in
-                        if let strongSelf = self {
-                            var navigateIndex: MessageIndex?
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
-                                if let data = current.search {
-                                    let messageIndices = results.map({ MessageIndex($0) }).sorted()
-                                    var currentIndex = messageIndices.last
-                                    if let previousResultId = data.resultsState?.currentId {
-                                        for index in messageIndices {
-                                            if index.id >= previousResultId {
-                                                currentIndex = index
-                                                break
-                                            }
+                    |> deliverOnMainQueue).start(next: { [weak self] results, totalCount in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let complete = results.count >= Int(totalCount)
+                        var navigateIndex: MessageIndex?
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
+                            if let data = current.search {
+                                let messageIndices = results.map({ MessageIndex($0) }).sorted()
+                                var currentIndex = messageIndices.last
+                                if let previousResultId = data.resultsState?.currentId {
+                                    for index in messageIndices {
+                                        if index.id >= previousResultId {
+                                            currentIndex = index
+                                            break
                                         }
                                     }
-                                    navigateIndex = currentIndex
-                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id)))
-                                } else {
-                                    return current
                                 }
-                            })
-                            if let navigateIndex = navigateIndex {
-                                switch strongSelf.chatLocation {
-                                    case .peer:
-                                        strongSelf.navigateToMessage(from: nil, to: .id(navigateIndex.id))
-                                    case .group:
-                                        strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))
-                                }
+                                navigateIndex = currentIndex
+                                return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, totalCount: totalCount, complete: complete)))
+                            } else {
+                                return current
+                            }
+                        })
+                        if let navigateIndex = navigateIndex {
+                            switch strongSelf.chatLocation {
+                                case .peer:
+                                    strongSelf.navigateToMessage(from: nil, to: .id(navigateIndex.id))
+                                case .group:
+                                    strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))
                             }
                         }
                     }, completed: { [weak self] in
@@ -4233,6 +4237,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     return interfaceState.updatedSearch(data.withUpdatedResultsState(nil))
                 }
             }
+        } else if let (query, location) = self.searchState, let search = interfaceState.search, let resultsState = search.resultsState, !resultsState.complete {
+            
         }
         return nil
     }

@@ -17,6 +17,7 @@ private enum ParsedInternalUrl {
     case localization(String)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case internalInstantView(url: String)
+    case confirmationCode(Int)
 }
 
 private enum ParsedUrl {
@@ -35,6 +36,7 @@ enum ResolvedUrl {
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case join(String)
     case localization(String)
+    case confirmationCode(Int)
 }
 
 private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -111,6 +113,10 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .join(pathComponents[1])
                 } else if pathComponents[0] == "setlanguage" {
                     return .localization(pathComponents[1])
+                } else if pathComponents[0] == "login" {
+                    if let code = Int(pathComponents[1]) {
+                        return .confirmationCode(code)
+                    }
                 } else if let value = Int(pathComponents[1]) {
                     return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
@@ -158,6 +164,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
         case let .internalInstantView(url):
             return resolveInstantViewUrl(account: account, url: url)
             |> map(Optional.init)
+        case let .confirmationCode(code):
+            return .single(.confirmationCode(code))
     }
 }
 

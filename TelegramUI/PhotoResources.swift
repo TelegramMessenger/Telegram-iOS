@@ -1360,8 +1360,16 @@ func mediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference)
     }
 }
 
-func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
-    let signal = chatMessageVideoDatas(postbox: postbox, fileReference: videoReference)
+func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference, imageReference: ImageMediaReference? = nil) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+    let signal: Signal<(Data?, (Data, String)?, Bool), NoError>
+    if let imageReference = imageReference {
+        signal = chatMessagePhotoDatas(postbox: postbox, photoReference: imageReference)
+        |> map { (thumbnailData, fullSizeData, fullSizeComplete) -> (Data?, (Data, String)?, Bool) in
+            return (thumbnailData, fullSizeData.flatMap({ ($0, "") }), fullSizeComplete)
+        }
+    } else {
+        signal = chatMessageVideoDatas(postbox: postbox, fileReference: videoReference)
+    }
     
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in

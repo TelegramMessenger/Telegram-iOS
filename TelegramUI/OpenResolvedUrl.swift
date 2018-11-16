@@ -82,5 +82,21 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
 
             dismissInput()
             present(ProxyServerActionSheetController(account: account, theme: presentationData.theme, strings: presentationData.strings, server: server), nil)
+        case let .confirmationCode(code):
+            if let topController = navigationController?.topViewController as? ChangePhoneNumberCodeController {
+                topController.applyCode(code)
+            } else {
+                var found = false
+                navigationController?.currentWindow?.forEachController({ controller in
+                    if let controller = controller as? SecureIdPlaintextFormController {
+                        controller.applyPhoneCode(code)
+                        found = true
+                    }
+                })
+                if !found {
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.AuthCode_Alert(formattedConfirmationCode(code)).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                }
+            }
     }
 }

@@ -735,47 +735,8 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                     case let .input(input):
                         self.savePhone(input.countryCode + input.number)
                         return
-                    case let .verify(verify):
-                        guard case .saveAvailable = innerState.actionInputState() else {
-                            return
-                        }
-                        innerState.actionState = .saving
-                        self.updateInnerState(transition: .immediate, with: innerState)
-                        
-                        self.actionDisposable.set((secureIdCommitPhoneVerification(postbox: self.account.postbox, network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
-                        |> deliverOnMainQueue).start(next: { [weak self] result in
-                            if let strongSelf = self {
-                                guard let innerState = strongSelf.innerState else {
-                                    return
-                                }
-                                guard case .saving = innerState.actionState else {
-                                    return
-                                }
-                                
-                                strongSelf.completedWithValue?(result)
-                            }
-                        }, error: { [weak self] error in
-                            if let strongSelf = self {
-                                guard var innerState = strongSelf.innerState else {
-                                    return
-                                }
-                                guard case .saving = innerState.actionState else {
-                                    return
-                                }
-                                innerState.actionState = .none
-                                strongSelf.updateInnerState(transition: .immediate, with: innerState)
-                                let errorText: String
-                                switch error {
-                                    case .generic:
-                                        errorText = strongSelf.strings.Login_UnknownError
-                                    case .flood:
-                                        errorText = strongSelf.strings.Login_CodeFloodError
-                                    case .invalid:
-                                        errorText = strongSelf.strings.Login_InvalidCodeError
-                                }
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
-                            }
-                        }))
+                    case let .verify:
+                        self.verifyPhoneCode()
                         
                         return
                 }
@@ -937,6 +898,76 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
             }))
         }))
+    }
+    
+    private func verifyPhoneCode() {
+        guard var innerState = self.innerState else {
+            return
+        }
+        guard case let .phone(phone) = innerState.data, case let .verify(verify) = phone else {
+            return
+        }
+        guard case .saveAvailable = innerState.actionInputState() else {
+            return
+        }
+        innerState.actionState = .saving
+        self.updateInnerState(transition: .immediate, with: innerState)
+        
+        self.actionDisposable.set((secureIdCommitPhoneVerification(postbox: self.account.postbox, network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
+    |> deliverOnMainQueue).start(next: { [weak self] result in
+        if let strongSelf = self {
+            guard let innerState = strongSelf.innerState else {
+                return
+            }
+            guard case .saving = innerState.actionState else {
+                return
+            }
+            
+            strongSelf.completedWithValue?(result)
+        }
+        }, error: { [weak self] error in
+            if let strongSelf = self {
+                guard var innerState = strongSelf.innerState else {
+                    return
+                }
+                guard case .saving = innerState.actionState else {
+                    return
+                }
+                innerState.actionState = .none
+                strongSelf.updateInnerState(transition: .immediate, with: innerState)
+                let errorText: String
+                switch error {
+                case .generic:
+                    errorText = strongSelf.strings.Login_UnknownError
+                case .flood:
+                    errorText = strongSelf.strings.Login_CodeFloodError
+                case .invalid:
+                    errorText = strongSelf.strings.Login_InvalidCodeError
+                }
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+            }
+        }))
+    }
+    
+    func applyPhoneCode(_ code: Int) {
+        guard var innerState = self.innerState else {
+            return
+        }
+        switch innerState.data {
+            case let .phone(phone):
+                switch phone {
+                    case var .verify(verify):
+                        let value = "\(code)"
+                        verify.code = value
+                        innerState.data = .phone(.verify(verify))
+                        self.updateInnerState(transition: .immediate, with: innerState)
+                        self.verifyPhoneCode()
+                    default:
+                        break
+                }
+            default:
+                break
+        }
     }
 }
 

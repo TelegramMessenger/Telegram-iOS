@@ -163,6 +163,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.addSubnode(self.currentOptionNode)
         self.addSubnode(self.nextOptionNode)
         
+        self.codeField.textField.delegate = self
         self.codeField.textField.addTarget(self, action: #selector(self.codeFieldTextChanged(_:)), for: .editingChanged)
         
         self.codeField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_Code, font: Font.regular(24.0), textColor: self.theme.textPlaceholderColor)
@@ -296,7 +297,24 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        return !self.inProgress
+        if self.inProgress {
+            return false
+        }
+        var result = ""
+        for c in string {
+            if c.unicodeScalars.count == 1 {
+                let scalar = c.unicodeScalars.first!
+                if scalar >= "0" && scalar <= "9" {
+                    result.append(c)
+                }
+            }
+        }
+        if result != string {
+            textField.text = result
+            self.codeFieldTextChanged(textField)
+            return false
+        }
+        return true
     }
     
     @objc func nextOptionNodePressed() {

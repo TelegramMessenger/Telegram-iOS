@@ -604,7 +604,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     } else {
                         location = .general
                     }
-                    let foundRemoteMessages: Signal<(([Message], [PeerId : CombinedPeerReadState]), Bool), NoError> = .single((([], [:]), true)) |> then(searchMessages(account: account, location: location, query: query)
+                    let foundRemoteMessages: Signal<(([Message], [PeerId : CombinedPeerReadState], Int32), Bool), NoError> = .single((([], [:], 0), true)) |> then(searchMessages(account: account, location: location, query: query)
                     |> map { ($0, false) }
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                     

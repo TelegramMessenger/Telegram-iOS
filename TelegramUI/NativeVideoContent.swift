@@ -40,6 +40,7 @@ final class NativeVideoContent: UniversalVideoContent {
     let id: AnyHashable
     let nativeId: NativeVideoContentId
     let fileReference: FileMediaReference
+    let imageReference: ImageMediaReference?
     let dimensions: CGSize
     let duration: Int32
     let streamVideo: Bool
@@ -49,10 +50,11 @@ final class NativeVideoContent: UniversalVideoContent {
     let fetchAutomatically: Bool
     let placeholderColor: UIColor
     
-    init(id: NativeVideoContentId, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, placeholderColor: UIColor = .white) {
+    init(id: NativeVideoContentId, fileReference: FileMediaReference, imageReference: ImageMediaReference? = nil, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, placeholderColor: UIColor = .white) {
         self.id = id
         self.nativeId = id
         self.fileReference = fileReference
+        self.imageReference = imageReference
         self.dimensions = fileReference.media.dimensions ?? CGSize(width: 128.0, height: 128.0)
         self.duration = fileReference.media.duration ?? 0
         self.streamVideo = streamVideo
@@ -64,7 +66,7 @@ final class NativeVideoContent: UniversalVideoContent {
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, placeholderColor: self.placeholderColor)
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, imageReference: self.imageReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, placeholderColor: self.placeholderColor)
     }
     
     func isEqual(to other: UniversalVideoContent) -> Bool {
@@ -114,7 +116,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var validLayout: CGSize?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, placeholderColor: UIColor) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, imageReference: ImageMediaReference?, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, placeholderColor: UIColor) {
         self.postbox = postbox
         self.fileReference = fileReference
         self.placeholderColor = placeholderColor
@@ -143,7 +145,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             self?.performActionAtEnd()
         }
         
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference) |> map { [weak self] getSize, getData in
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference, imageReference: imageReference) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {
