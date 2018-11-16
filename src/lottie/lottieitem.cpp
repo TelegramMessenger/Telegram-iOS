@@ -966,14 +966,87 @@ void LOTTrimItem::update()
     // when both path and trim are not dirty
     if (!(mDirty || pathDirty())) return;
 
-    //@TODO take the offset and trim type into account.
-    for (auto &i : mPathItems) {
-        VPathMesure pm;
-        pm.setStart(mCache.mStart);
-        pm.setEnd(mCache.mEnd);
-        pm.setOffset(mCache.mOffset);
-        i->updatePath(pm.trim(i->localPath()));
+    if (vCompare(std::fabs(mCache.mStart - mCache.mEnd) , 1)) return;
+
+    if (vCompare(mCache.mStart, mCache.mEnd)) {
+        for (auto &i : mPathItems) {
+            i->updatePath(VPath());
+        }
+        return;
     }
+
+
+    if (mData->type() == LOTTrimData::TrimType::Simultaneously) {
+        for (auto &i : mPathItems) {
+            VPathMesure pm;
+            pm.setStart(mCache.mStart);
+            pm.setEnd(mCache.mEnd);
+            pm.setOffset(mCache.mOffset);
+            i->updatePath(pm.trim(i->localPath()));
+        }
+    } else { // LOTTrimData::TrimType::Individually
+        float totalLength = 0.0;
+        for (auto &i : mPathItems) {
+            totalLength += i->localPath().length();
+        }
+        float offset = totalLength * mCache.mOffset;
+        float start = totalLength * mCache.mStart;
+        float end  = totalLength * mCache.mEnd;
+        start += offset;
+        end +=offset;
+        // normalize start, end value to 0 - totalLength
+        if (fabs(start) > totalLength) start = fmod(start, totalLength);
+        if (fabs(end) > totalLength) end = fmod(end, totalLength);
+
+        if (start >= 0 && end >= 0) {
+            if (start > end) std::swap(start, end);
+        } else if ( start < 0 && end < 0) {
+            start += totalLength;
+            end += totalLength;
+            if (start > end) std::swap(start, end);
+        } else {
+            // one is +ve and one is -ve so the
+            // segment will be wrapped from end segment to start segment.
+            // we need to split it in two segment.
+            //@TODO
+            return;
+        }
+
+        if (start < end ) {
+            float curLen = 0.0;
+            for (auto &i : mPathItems) {
+                if (curLen > end) {
+                    // update with empty path.
+                    i->updatePath(VPath());
+                    continue;
+                }
+                float len = i->localPath().length();
+
+                if (curLen < start  && curLen + len < start) {
+                    curLen += len;
+                    // update with empty path.
+                    i->updatePath(VPath());
+                    continue;
+                } else if (start <= curLen && end >= curLen + len) {
+                    // inside segment
+                    curLen += len;
+                    continue;
+                } else {
+                    float local_start = start > curLen ? start - curLen : 0;
+                    local_start /= len;
+                    float local_end = curLen + len < end ? len : end - curLen;
+                    local_end /= len;
+                    VPathMesure pm;
+                    pm.setStart(local_start);
+                    pm.setEnd(local_end);
+                    VPath p = pm.trim(i->localPath());
+                    i->updatePath(p);
+                    curLen += len;
+                }
+            }
+        }
+    }
+
 }
 
 
