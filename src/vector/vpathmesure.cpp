@@ -1,6 +1,7 @@
 #include "vpathmesure.h"
 #include "vbezier.h"
 #include "vdasher.h"
+#include <limits>
 
 V_BEGIN_NAMESPACE
 
@@ -9,7 +10,7 @@ VPath oneSegment(float start, float end, const VPath & path)
     if (start > end) {
         std::swap(start, end);
     }
-    float   array[5] = {0.0f, start, end - start, 1000, 0.0f};
+    float   array[5] = {0.0f, start, end - start, std::numeric_limits<float>::max(), 0.0f};
     VDasher dasher(array, 5);
     return dasher.dashed(path);
 }
