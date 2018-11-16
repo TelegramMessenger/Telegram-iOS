@@ -93,7 +93,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.action = action
         
         self.labelNode = TextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = true
         
         self.backgroundNode = ASImageNode()

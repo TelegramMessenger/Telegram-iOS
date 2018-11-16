@@ -38,7 +38,7 @@ final class ChatRecentActionsTitleView: UIView {
         
         self.button = HighlightTrackingButtonNode()
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
         self.arrowNode = ASImageNode()

@@ -93,7 +93,7 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
         
         self.labelNode = TextNode()
         self.labelNode.displaysAsynchronously = false
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         
         super.init()
         

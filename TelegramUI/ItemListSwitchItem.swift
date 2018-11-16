@@ -108,7 +108,7 @@ class ItemListSwitchItemNode: ListViewItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         switch type {
             case .regular:
                 self.switchNode = SwitchNode()

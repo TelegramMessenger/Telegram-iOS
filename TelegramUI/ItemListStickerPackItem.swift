@@ -165,12 +165,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.imageNode.isLayerBacked = true
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.statusNode = TextNode()
-        self.statusNode.isLayerBacked = true
+        self.statusNode.isUserInteractionEnabled = false
         self.statusNode.contentMode = .left
         self.statusNode.contentsScale = UIScreen.main.scale
         

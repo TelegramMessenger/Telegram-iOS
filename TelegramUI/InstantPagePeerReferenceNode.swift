@@ -81,7 +81,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         self.buttonNode = HighlightableButtonNode()
         
         self.nameNode = ASTextNode()
-        self.nameNode.isLayerBacked = true
+        self.nameNode.isUserInteractionEnabled = false
         self.nameNode.maximumNumberOfLines = 1
         
         self.joinNode = HighlightableButtonNode()

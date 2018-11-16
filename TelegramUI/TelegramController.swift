@@ -95,37 +95,39 @@ public class TelegramController: ViewController {
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
-        if case .none = mediaAccessoryPanelVisibility {} else if let mediaManager = account.telegramApplicationContext.mediaManager {
+        if case .none = mediaAccessoryPanelVisibility {
+        } else if let mediaManager = account.telegramApplicationContext.mediaManager {
             self.mediaStatusDisposable = (mediaManager.globalMediaPlayerState
-                |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
-                if let strongSelf = self {
-                    if !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.0, playlistStateAndType?.0.item) ||
-                        strongSelf.playlistStateAndType?.1 != playlistStateAndType?.0.order || strongSelf.playlistStateAndType?.2 != playlistStateAndType?.1 {
-                        var previousVoiceItem: SharedMediaPlaylistItem?
-                        if let playlistStateAndType = strongSelf.playlistStateAndType, playlistStateAndType.2 == .voice {
-                            previousVoiceItem = playlistStateAndType.0
-                        }
-                        
-                        var updatedVoiceItem: SharedMediaPlaylistItem?
-                        if let playlistStateAndType = playlistStateAndType, playlistStateAndType.1 == .voice {
-                            updatedVoiceItem = playlistStateAndType.0.item
-                        }
-                        
-                        strongSelf.tempVoicePlaylistItemChanged?(previousVoiceItem, updatedVoiceItem)
-                        if let playlistStateAndType = playlistStateAndType {
-                            strongSelf.playlistStateAndType = (playlistStateAndType.0.item, playlistStateAndType.0.order, playlistStateAndType.1)
-                        } else {
-                            var voiceEnded = false
-                            if strongSelf.playlistStateAndType?.2 == .voice {
-                                voiceEnded = true
-                            }
-                            strongSelf.playlistStateAndType = nil
-                            if voiceEnded {
-                                strongSelf.tempVoicePlaylistEnded?()
-                            }
-                        }
-                        strongSelf.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+            |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
+                guard let strongSelf = self else {
+                    return
+                }
+                if !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.0, playlistStateAndType?.0.item) ||
+                    strongSelf.playlistStateAndType?.1 != playlistStateAndType?.0.order || strongSelf.playlistStateAndType?.2 != playlistStateAndType?.1 {
+                    var previousVoiceItem: SharedMediaPlaylistItem?
+                    if let playlistStateAndType = strongSelf.playlistStateAndType, playlistStateAndType.2 == .voice {
+                        previousVoiceItem = playlistStateAndType.0
                     }
+                    
+                    var updatedVoiceItem: SharedMediaPlaylistItem?
+                    if let playlistStateAndType = playlistStateAndType, playlistStateAndType.1 == .voice {
+                        updatedVoiceItem = playlistStateAndType.0.item
+                    }
+                    
+                    strongSelf.tempVoicePlaylistItemChanged?(previousVoiceItem, updatedVoiceItem)
+                    if let playlistStateAndType = playlistStateAndType {
+                        strongSelf.playlistStateAndType = (playlistStateAndType.0.item, playlistStateAndType.0.order, playlistStateAndType.1)
+                    } else {
+                        var voiceEnded = false
+                        if strongSelf.playlistStateAndType?.2 == .voice {
+                            voiceEnded = true
+                        }
+                        strongSelf.playlistStateAndType = nil
+                        if voiceEnded {
+                            strongSelf.tempVoicePlaylistEnded?()
+                        }
+                    }
+                    strongSelf.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
                 }
             })
         }

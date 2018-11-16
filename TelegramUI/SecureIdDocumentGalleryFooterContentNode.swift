@@ -38,14 +38,14 @@ final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
         self.deleteButton.setImage(deleteImage, for: [.normal])
         
         self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.authorNameNode = ASTextNode()
         self.authorNameNode.maximumNumberOfLines = 1
-        self.authorNameNode.isLayerBacked = true
+        self.authorNameNode.isUserInteractionEnabled = false
         self.authorNameNode.displaysAsynchronously = false
         self.dateNode = ASTextNode()
         self.dateNode.maximumNumberOfLines = 1
-        self.dateNode.isLayerBacked = true
+        self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = false
         
         super.init()

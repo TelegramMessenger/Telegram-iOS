@@ -206,7 +206,7 @@ final class CallListControllerNode: ASDisplayNode {
         
         self.emptyTextNode = ASTextNode()
         self.emptyTextNode.alpha = 0.0
-        self.emptyTextNode.isLayerBacked = true
+        self.emptyTextNode.isUserInteractionEnabled = false
         self.emptyTextNode.displaysAsynchronously = false
         
         super.init()

@@ -104,7 +104,7 @@ class ItemListCheckboxItemNode: ListViewItemNode {
         self.iconNode.displaysAsynchronously = false
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         

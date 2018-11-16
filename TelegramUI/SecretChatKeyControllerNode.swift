@@ -49,7 +49,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         self.imageNode.displayWithoutProcessing = true
         
         self.keyTextNode = TextNode()
-        self.keyTextNode.isLayerBacked = true
+        self.keyTextNode.isUserInteractionEnabled = false
         self.keyTextNode.displaysAsynchronously = false
         
         self.infoNode = TextNode()

@@ -117,7 +117,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .left
         self.textNode.contentsScale = UIScreen.main.scale
         

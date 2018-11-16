@@ -11,7 +11,7 @@ private enum PeerMessagesMediaPlaylistLoadAnchor {
 private enum PeerMessagesMediaPlaylistNavigation {
     case earlier
     case later
-    case random
+    case random(previous: Bool)
 }
 
 struct MessageMediaPlaylistItemStableId: Hashable {
@@ -303,6 +303,54 @@ func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Boo
     }
 }
 
+private struct PlaybackStack {
+    var ids: [MessageId] = []
+    var set: Set<MessageId> = []
+    
+    mutating func resetToId(_ id: MessageId) {
+        if self.set.contains(id) {
+            if let index = self.ids.index(of: id) {
+                for i in (index + 1) ..< self.ids.count {
+                    self.set.remove(self.ids[i])
+                }
+                self.ids.removeLast(self.ids.count - index - 1)
+            } else {
+                assertionFailure()
+                self.clear()
+                self.ids.append(id)
+                self.set.insert(id)
+            }
+        } else {
+            self.push(id)
+        }
+    }
+    
+    mutating func push(_ id: MessageId) {
+        if self.set.contains(id) {
+            if let index = self.ids.index(of: id) {
+                self.ids.remove(at: index)
+            }
+        }
+        self.ids.append(id)
+        self.set.insert(id)
+    }
+    
+    mutating func pop() -> MessageId? {
+        if !self.ids.isEmpty {
+            let id = self.ids.removeLast()
+            self.set.remove(id)
+            return id
+        } else {
+            return nil
+        }
+    }
+    
+    mutating func clear() {
+        self.ids.removeAll()
+        self.set.removeAll()
+    }
+}
+
 final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     private let postbox: Postbox
     private let network: Network
@@ -313,6 +361,8 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     }
     
     private let navigationDisposable = MetaDisposable()
+    
+    private var playbackStack = PlaybackStack()
     
     private var currentItem: (current: Message, around: [Message])?
     private var loadingItem: Bool = false
@@ -383,7 +433,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                     navigation = .earlier
                                 }
                             case .random:
-                                navigation = .random
+                                navigation = .random(previous: action == .previous)
                         }
                         
                         if case .singleMessage = self.messagesLocation {
@@ -401,6 +451,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     func setOrder(_ order: MusicPlaybackSettingsOrder) {
         if self.order != order {
             self.order = order
+            self.playbackStack.clear()
             self.updateState()
         }
     }
@@ -458,6 +509,8 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             
                             strongSelf.loadingItem = false
                             if let (message, aroundMessages) = messageAndAroundMessages {
+                                strongSelf.playbackStack.clear()
+                                strongSelf.playbackStack.push(message.id)
                                 strongSelf.currentItem = (message, aroundMessages)
                                 strongSelf.playedToEnd = false
                             } else {
@@ -467,7 +520,6 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         }
                     }))
                 } else {
-                
                     self.navigationDisposable.set((self.postbox.messageAtId(messageId)
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] message in
@@ -476,6 +528,8 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             
                             strongSelf.loadingItem = false
                             if let message = message {
+                                strongSelf.playbackStack.clear()
+                                strongSelf.playbackStack.push(message.id)
                                 strongSelf.currentItem = (message, [])
                             } else {
                                 strongSelf.currentItem = nil
@@ -493,8 +547,21 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             case .regular, .reversed:
                                 inputIndex = .single(index)
                             case .random:
+                                var playbackStack = self.playbackStack
                                 inputIndex = self.postbox.transaction { transaction -> MessageIndex in
-                                    return transaction.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreId: index.id) ?? index
+                                    if case let .random(previous) = navigation, previous {
+                                        let _ = playbackStack.pop()
+                                        while true {
+                                            if let id = playbackStack.pop() {
+                                                if let message = transaction.getMessage(id) {
+                                                    return MessageIndex(message)
+                                                }
+                                            } else {
+                                                break
+                                            }
+                                        }
+                                    }
+                                    return transaction.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
                                 }
                         }
                         let historySignal = inputIndex
@@ -557,6 +624,11 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 
                                 strongSelf.loadingItem = false
                                 if let (message, aroundMessages) = messageAndAroundMessages {
+                                    if case let .random(previous) = navigation, previous {
+                                        strongSelf.playbackStack.resetToId(message.id)
+                                    } else {
+                                        strongSelf.playbackStack.push(message.id)
+                                    }
                                     strongSelf.currentItem = (message, aroundMessages)
                                     strongSelf.playedToEnd = false
                                 } else {

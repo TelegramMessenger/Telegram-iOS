@@ -45,7 +45,7 @@ final class FormControllerActionItemNode: FormBlockItemNode<FormControllerAction
     init(fullTopInset: Bool = false) {
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
         super.init(selectable: true, topSeparatorInset: fullTopInset ? .custom(0.0) : .regular)

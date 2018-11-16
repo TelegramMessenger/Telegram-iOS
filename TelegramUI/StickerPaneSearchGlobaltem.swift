@@ -91,12 +91,12 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     
     override init() {
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.descriptionNode = TextNode()
-        self.descriptionNode.isLayerBacked = true
+        self.descriptionNode.isUserInteractionEnabled = false
         self.descriptionNode.contentMode = .left
         self.descriptionNode.contentsScale = UIScreen.main.scale
         
@@ -106,7 +106,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.unreadNode.displaysAsynchronously = false
         
         self.installTextNode = TextNode()
-        self.installTextNode.isLayerBacked = true
+        self.installTextNode.isUserInteractionEnabled = false
         self.installTextNode.contentMode = .left
         self.installTextNode.contentsScale = UIScreen.main.scale
         

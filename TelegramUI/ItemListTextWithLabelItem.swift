@@ -121,12 +121,12 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.labelNode = TextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         self.labelNode.contentMode = .left
         self.labelNode.contentsScale = UIScreen.main.scale
         
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .left
         self.textNode.contentsScale = UIScreen.main.scale
         

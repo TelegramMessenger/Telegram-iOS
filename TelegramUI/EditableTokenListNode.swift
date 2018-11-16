@@ -58,7 +58,7 @@ private final class TokenNode: ASDisplayNode {
         self.theme = theme
         self.token = token
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.maximumNumberOfLines = 1
         self.isSelected = isSelected
         
@@ -112,7 +112,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.scrollNode.view.alwaysBounceVertical = true
         
         self.placeholderNode = ASTextNode()
-        self.placeholderNode.isLayerBacked = true
+        self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.maximumNumberOfLines = 1
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.placeholderTextColor)
         

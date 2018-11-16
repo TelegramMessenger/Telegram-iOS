@@ -15,7 +15,7 @@ private final class GridMessageVideoAccessoryNode : ASDisplayNode {
         super.init()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 1
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.textAlignment = .left
         self.textNode.lineSpacing = 0.1
         addSubnode(self.textNode)
@@ -118,7 +118,7 @@ final class GridMessageItemSectionNode: ASDisplayNode {
         self.strings = strings
         
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         super.init()
         

@@ -1180,7 +1180,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         strongSelf.nameNode = nameNode
                         if nameNode.supernode == nil {
                             if !nameNode.isNodeLoaded {
-                                nameNode.isLayerBacked = true
+                                nameNode.isUserInteractionEnabled = false
                             }
                             strongSelf.addSubnode(nameNode)
                         }
@@ -1191,7 +1191,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             let adminBadgeFrame = CGRect(origin: CGPoint(x: contentUpperRightCorner.x - layoutConstants.text.bubbleInsets.left - adminNodeSizeApply.0.width, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: adminNodeSizeApply.0)
                             if adminBadgeNode.supernode == nil {
                                 if !adminBadgeNode.isNodeLoaded {
-                                    adminBadgeNode.isLayerBacked = true
+                                    adminBadgeNode.isUserInteractionEnabled = false
                                 }
                                 strongSelf.addSubnode(adminBadgeNode)
                                 adminBadgeNode.frame = adminBadgeFrame

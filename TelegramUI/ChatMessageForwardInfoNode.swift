@@ -58,7 +58,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                 
                 let textNode = textApply()
                 if node.textNode == nil {
-                    textNode.isLayerBacked = true
+                    textNode.isUserInteractionEnabled = false
                     node.textNode = textNode
                     node.addSubnode(textNode)
                 }

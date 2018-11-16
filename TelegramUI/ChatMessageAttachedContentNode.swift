@@ -47,9 +47,9 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
     
     override init() {
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.highlightedTextNode = TextNode()
-        self.highlightedTextNode.isLayerBacked = true
+        self.highlightedTextNode.isUserInteractionEnabled = false
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
@@ -242,7 +242,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.lineNode.displayWithoutProcessing = true
         
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = true
         self.textNode.contentsScale = UIScreenScale
         self.textNode.contentMode = .topLeft

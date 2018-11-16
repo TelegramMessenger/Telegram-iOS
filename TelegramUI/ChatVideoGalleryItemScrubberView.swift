@@ -50,7 +50,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         
         self.fileSizeNode = ASTextNode()
         self.fileSizeNode.maximumNumberOfLines = 1
-        self.fileSizeNode.isLayerBacked = true
+        self.fileSizeNode.isUserInteractionEnabled = false
         self.fileSizeNode.displaysAsynchronously = false
         
         super.init(frame: frame)

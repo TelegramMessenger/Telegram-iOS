@@ -62,7 +62,7 @@ final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
         self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor.withAlphaComponent(0.9)
         
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         super.init()
         

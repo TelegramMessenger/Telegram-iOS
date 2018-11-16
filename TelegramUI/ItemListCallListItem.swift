@@ -123,7 +123,7 @@ class ItemListCallListItemNode: ListViewItemNode {
         self.bottomStripeNode.isLayerBacked = true
     
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.callNodes = []
         
@@ -147,11 +147,11 @@ class ItemListCallListItemNode: ListViewItemNode {
                 
                 for _ in item.messages {
                     let timeNode = TextNode()
-                    timeNode.isLayerBacked = true
+                    timeNode.isUserInteractionEnabled = false
                     self.addSubnode(timeNode)
                     
                     let typeNode = TextNode()
-                    typeNode.isLayerBacked = true
+                    typeNode.isUserInteractionEnabled = false
                     self.addSubnode(typeNode)
                     
                     self.callNodes.append((timeNode, typeNode))

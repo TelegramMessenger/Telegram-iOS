@@ -56,7 +56,7 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = theme.chatList.sectionHeaderFillColor
         
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.attributedText = NSAttributedString(string: title.uppercased(), font: sectionTitleFont, textColor: theme.list.sectionHeaderTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail

@@ -112,7 +112,7 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
         self.strings = strings
         
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = true
         self.titleNode.attributedText = NSAttributedString(string: strings.Map_OpenIn, font: titleFont, textColor: theme.primaryTextColor, paragraphAlignment: .center)
         
@@ -185,7 +185,7 @@ private final class OpenInAppNode : ASDisplayNode {
         self.iconNode.isLayerBacked = true
         
         self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = true
         
         super.init()

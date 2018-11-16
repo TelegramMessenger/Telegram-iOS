@@ -155,12 +155,12 @@ final class SecureIdAuthListFieldNode: ASDisplayNode {
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.maximumNumberOfLines = 1
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.maximumNumberOfLines = 4
         
         self.disclosureNode = ASImageNode()

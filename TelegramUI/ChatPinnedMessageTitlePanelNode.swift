@@ -40,11 +40,11 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = true
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.textNode = TextNode()
         self.textNode.displaysAsynchronously = true
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]

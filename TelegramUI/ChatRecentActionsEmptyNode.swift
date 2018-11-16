@@ -24,10 +24,10 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         self.backgroundNode.isLayerBacked = true
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         
         super.init()
         

@@ -42,7 +42,7 @@ final class PeerMediaCollectionEmptyNode: ASDisplayNode {
         self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 0
         self.textNode.textAlignment = .center
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         self.textNode.isHidden = false
         

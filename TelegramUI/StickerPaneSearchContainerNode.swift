@@ -180,7 +180,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         
         self.notFoundLabel = ImmediateTextNode()
         self.notFoundLabel.displaysAsynchronously = false
-        self.notFoundLabel.isLayerBacked = true
+        self.notFoundLabel.isUserInteractionEnabled = false
         self.notFoundLabel.attributedText = NSAttributedString(string: strings.Stickers_NoStickersFound, font: Font.medium(14.0), textColor: theme.list.freeTextColor)
         self.notFoundNode.addSubnode(self.notFoundLabel)
         

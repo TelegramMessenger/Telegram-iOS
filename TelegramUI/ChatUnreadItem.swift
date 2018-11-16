@@ -67,9 +67,9 @@ class ChatUnreadItemNode: ListViewItemNode {
         self.backgroundNode.displayWithoutProcessing = true
         
         self.labelNode = TextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         
-        super.init(layerBacked: true, dynamicBounce: true, rotated: true)
+        super.init(layerBacked: false, dynamicBounce: true, rotated: true)
         
         self.addSubnode(self.backgroundNode)
         

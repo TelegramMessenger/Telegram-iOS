@@ -48,7 +48,7 @@ final class ListSectionHeaderNode: ASDisplayNode {
         self.theme = theme
         
         self.label = ImmediateTextNode()
-        self.label.isLayerBacked = true
+        self.label.isUserInteractionEnabled = false
         
         super.init()
         

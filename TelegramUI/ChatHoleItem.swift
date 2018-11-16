@@ -54,9 +54,9 @@ class ChatHoleItemNode: ListViewItemNode {
         self.backgroundNode.displaysAsynchronously = false
         
         self.labelNode = TextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         
-        super.init(layerBacked: true)
+        super.init(layerBacked: false)
         
         self.addSubnode(self.backgroundNode)
         

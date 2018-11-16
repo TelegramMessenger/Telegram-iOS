@@ -87,7 +87,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.theme = theme
         
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
         self.titleIconNode = ASImageNode()
@@ -120,7 +120,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         })
         
         self.currentOptionNode = ASTextNode()
-        self.currentOptionNode.isLayerBacked = true
+        self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
         
         self.nextOptionNode = HighlightableButtonNode()
@@ -172,6 +172,26 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     deinit {
         self.countdownDisposable.dispose()
+    }
+    
+    func updateCode(_ code: String) {
+        self.codeField.textField.text = code
+        if let codeType = self.codeType {
+            var codeLength: Int32?
+            switch codeType {
+                case let .call(length):
+                    codeLength = length
+                case let .otherSession(length):
+                    codeLength = length
+                case let .sms(length):
+                    codeLength = length
+                default:
+                    break
+            }
+            if let codeLength = codeLength, code.count == Int(codeLength) {
+                self.loginWithCode?(code)
+            }
+        }
     }
     
     func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?) {

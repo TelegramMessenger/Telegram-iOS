@@ -76,9 +76,11 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.displaysAsynchronously = false
         self.subtitleNode = TextNode()
-        self.subtitleNode.isLayerBacked = true
+        self.subtitleNode.isUserInteractionEnabled = false
+        self.subtitleNode.displaysAsynchronously = false
         
         self.closeButton = HighlightableButtonNode()
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])

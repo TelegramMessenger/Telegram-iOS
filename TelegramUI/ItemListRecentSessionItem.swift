@@ -126,22 +126,22 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.appNode = TextNode()
-        self.appNode.isLayerBacked = true
+        self.appNode.isUserInteractionEnabled = false
         self.appNode.contentMode = .left
         self.appNode.contentsScale = UIScreen.main.scale
         
         self.locationNode = TextNode()
-        self.locationNode.isLayerBacked = true
+        self.locationNode.isUserInteractionEnabled = false
         self.locationNode.contentMode = .left
         self.locationNode.contentsScale = UIScreen.main.scale
         
         self.labelNode = TextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         self.labelNode.contentMode = .left
         self.labelNode.contentsScale = UIScreen.main.scale
         

@@ -28,7 +28,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         self.fixPaneScroll = fixPaneScroll
         
         self.emptyNode = ImmediateTextNode()
-        self.emptyNode.isLayerBacked = true
+        self.emptyNode.isUserInteractionEnabled = false
         self.emptyNode.attributedText = NSAttributedString(string: strings.Conversation_EmptyGifPanelPlaceholder, font: Font.regular(15.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         self.emptyNode.textAlignment = .center
         self.emptyNode.maximumNumberOfLines = 3

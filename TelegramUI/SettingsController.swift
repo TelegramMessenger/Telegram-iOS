@@ -273,7 +273,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     func item(_ arguments: SettingsItemArguments) -> ListViewItem {
         switch self {
             case let .userInfo(theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max)), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .settings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                     arguments.avatarTapAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingImage, action: {

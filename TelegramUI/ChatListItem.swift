@@ -252,32 +252,31 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.backgroundNode.displaysAsynchronously = false
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = true
         
         self.authorNode = TextNode()
-        self.authorNode.isLayerBacked = true
+        self.authorNode.isUserInteractionEnabled = false
         self.authorNode.displaysAsynchronously = true
         
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = true
         
         self.inputActivitiesNode = ChatListInputActivitiesNode()
+        self.inputActivitiesNode.isUserInteractionEnabled = false
         self.inputActivitiesNode.alpha = 0.0
         
         self.dateNode = TextNode()
-        self.dateNode.isLayerBacked = true
+        self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = true
         
         self.statusNode = ASImageNode()
-        self.statusNode.isLayerBacked = true
         self.statusNode.displaysAsynchronously = false
         self.statusNode.displayWithoutProcessing = true
         
@@ -292,7 +291,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.mentionBadgeNode.displayWithoutProcessing = true
         
         self.badgeTextNode = TextNode()
-        self.badgeTextNode.isLayerBacked = true
+        self.badgeTextNode.isUserInteractionEnabled = false
         self.badgeTextNode.displaysAsynchronously = true
         
         self.mutedIconNode = ASImageNode()

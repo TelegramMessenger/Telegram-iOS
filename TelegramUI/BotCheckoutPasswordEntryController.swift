@@ -99,7 +99,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         let titleNode = ASTextNode()
         titleNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Title, font: Font.semibold(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         titleNode.displaysAsynchronously = false
-        titleNode.isLayerBacked = true
+        titleNode.isUserInteractionEnabled = false
         titleNode.maximumNumberOfLines = 1
         titleNode.truncationMode = .byTruncatingTail
         self.titleNode = titleNode
@@ -107,7 +107,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.textNode = ASTextNode()
         self.textNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Text(cardTitle).0, font: Font.regular(13.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         self.textNode.displaysAsynchronously = false
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true

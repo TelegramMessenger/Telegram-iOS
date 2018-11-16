@@ -152,7 +152,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         if isGlobal, let _ = peer.addressName {
                             status = .addressName("")
                         } else {
-                            let presence = presence ?? TelegramUserPresence(status: .none)
+                            let presence = presence ?? TelegramUserPresence(status: .none, lastActivity: 0)
                             status = .presence(presence, dateTimeFormat)
                         }
                         itemPeer = .peer(peer: peer, chatPeer: peer)

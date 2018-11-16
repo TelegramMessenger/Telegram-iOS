@@ -91,21 +91,21 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
         
         var fieldNodes: [(ImmediateTextNode, ImmediateTextNode)] = []
         let serverTitleNode = ImmediateTextNode()
-        serverTitleNode.isLayerBacked = true
+        serverTitleNode.isUserInteractionEnabled = false
         serverTitleNode.displaysAsynchronously = false
         serverTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Hostname, font: textFont, textColor: theme.secondaryTextColor)
         let serverTextNode = ImmediateTextNode()
-        serverTextNode.isLayerBacked = true
+        serverTextNode.isUserInteractionEnabled = false
         serverTextNode.displaysAsynchronously = false
         serverTextNode.attributedText = NSAttributedString(string: server.host, font: textFont, textColor: theme.primaryTextColor)
         fieldNodes.append((serverTitleNode, serverTextNode))
         
         let portTitleNode = ImmediateTextNode()
-        portTitleNode.isLayerBacked = true
+        portTitleNode.isUserInteractionEnabled = false
         portTitleNode.displaysAsynchronously = false
         portTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Port, font: textFont, textColor: theme.secondaryTextColor)
         let portTextNode = ImmediateTextNode()
-        portTextNode.isLayerBacked = true
+        portTextNode.isUserInteractionEnabled = false
         portTextNode.displaysAsynchronously = false
         portTextNode.attributedText = NSAttributedString(string: "\(server.port)", font: textFont, textColor: theme.primaryTextColor)
         fieldNodes.append((portTitleNode, portTextNode))
@@ -114,11 +114,11 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
             case let .socks5(username, password):
                 if let username = username {
                     let usernameTitleNode = ImmediateTextNode()
-                    usernameTitleNode.isLayerBacked = true
+                    usernameTitleNode.isUserInteractionEnabled = false
                     usernameTitleNode.displaysAsynchronously = false
                     usernameTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Username, font: textFont, textColor: theme.secondaryTextColor)
                     let usernameTextNode = ImmediateTextNode()
-                    usernameTextNode.isLayerBacked = true
+                    usernameTextNode.isUserInteractionEnabled = false
                     usernameTextNode.displaysAsynchronously = false
                     usernameTextNode.attributedText = NSAttributedString(string: username, font: textFont, textColor: theme.primaryTextColor)
                     fieldNodes.append((usernameTitleNode, usernameTextNode))
@@ -126,22 +126,22 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
                 
                 if let password = password {
                     let passwordTitleNode = ImmediateTextNode()
-                    passwordTitleNode.isLayerBacked = true
+                    passwordTitleNode.isUserInteractionEnabled = false
                     passwordTitleNode.displaysAsynchronously = false
                     passwordTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Password, font: textFont, textColor: theme.secondaryTextColor)
                     let passwordTextNode = ImmediateTextNode()
-                    passwordTextNode.isLayerBacked = true
+                    passwordTextNode.isUserInteractionEnabled = false
                     passwordTextNode.displaysAsynchronously = false
                     passwordTextNode.attributedText = NSAttributedString(string: password, font: textFont, textColor: theme.primaryTextColor)
                     fieldNodes.append((passwordTitleNode, passwordTextNode))
                 }
             case .mtp:
                 let passwordTitleNode = ImmediateTextNode()
-                passwordTitleNode.isLayerBacked = true
+                passwordTitleNode.isUserInteractionEnabled = false
                 passwordTitleNode.displaysAsynchronously = false
                 passwordTitleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_Secret, font: textFont, textColor: theme.secondaryTextColor)
                 let passwordTextNode = ImmediateTextNode()
-                passwordTextNode.isLayerBacked = true
+                passwordTextNode.isUserInteractionEnabled = false
                 passwordTextNode.displaysAsynchronously = false
                 passwordTextNode.attributedText = NSAttributedString(string: "•••••", font: textFont, textColor: theme.primaryTextColor)
                 fieldNodes.append((passwordTitleNode, passwordTextNode))
@@ -226,7 +226,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         self.present = present
         
         self.titleNode = ImmediateTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: theme.controlAccentColor)
         

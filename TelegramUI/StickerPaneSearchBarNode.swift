@@ -46,7 +46,7 @@ private class StickerPaneSearchBarTextField: UITextField {
         self.placeholderLabel.maximumNumberOfLines = 1
         
         self.prefixLabel = ASTextNode()
-        self.prefixLabel.isLayerBacked = true
+        self.prefixLabel.isUserInteractionEnabled = false
         self.prefixLabel.displaysAsynchronously = false
         
         super.init(frame: frame)

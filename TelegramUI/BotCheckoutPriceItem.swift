@@ -84,10 +84,10 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
     
     init() {
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.labelNode = TextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         
         super.init(layerBacked: false, dynamicBounce: false)
         

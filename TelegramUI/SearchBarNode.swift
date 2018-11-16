@@ -41,13 +41,13 @@ private class SearchBarTextField: UITextField {
     
     override init(frame: CGRect) {
         self.placeholderLabel = ASTextNode()
-        self.placeholderLabel.isLayerBacked = true
+        self.placeholderLabel.isUserInteractionEnabled = false
         self.placeholderLabel.displaysAsynchronously = false
         self.placeholderLabel.maximumNumberOfLines = 1
         self.placeholderLabel.truncationMode = .byTruncatingTail
         
         self.prefixLabel = ASTextNode()
-        self.prefixLabel.isLayerBacked = true
+        self.prefixLabel.isUserInteractionEnabled = false
         self.prefixLabel.displaysAsynchronously = false
         
         super.init(frame: frame)

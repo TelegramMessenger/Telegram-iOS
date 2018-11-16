@@ -65,7 +65,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         self.avatarNode = AvatarNode(font: avatarFont)
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.titleIconNode = ASImageNode()
         self.titleIconNode.isLayerBacked = true
@@ -73,7 +73,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         self.titleIconNode.displaysAsynchronously = false
         
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         
         self.imageNode = TransformImageNode()
         

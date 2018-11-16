@@ -43,7 +43,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         
         super.init()
         
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .topLeft
         self.textNode.contentsScale = UIScreenScale
         self.textNode.displaysAsynchronously = true

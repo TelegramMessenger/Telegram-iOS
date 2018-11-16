@@ -58,19 +58,19 @@ final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFi
     init() {
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
         self.labelNode = ImmediateTextNode()
         self.labelNode.maximumNumberOfLines = 1
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
         
         self.imageNode = TransformImageNode()
         self.imageNode.isUserInteractionEnabled = false
         
         self.placeholderNode = ASImageNode()
-        self.placeholderNode.isLayerBacked = true
+        self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.displaysAsynchronously = false
         self.placeholderNode.displayWithoutProcessing = true
         self.placeholderNode.contentMode = .center

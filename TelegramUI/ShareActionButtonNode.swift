@@ -32,7 +32,7 @@ final class ShareActionButtonNode: HighlightTrackingButtonNode {
         
         self.badgeLabel = TextNode()
         self.badgeLabel.isHidden = true
-        self.badgeLabel.isLayerBacked = true
+        self.badgeLabel.isUserInteractionEnabled = false
         self.badgeLabel.displaysAsynchronously = false
         
         self.badgeBackground = ASImageNode()

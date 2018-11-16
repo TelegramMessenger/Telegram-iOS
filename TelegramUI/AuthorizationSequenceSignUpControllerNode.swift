@@ -69,12 +69,12 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.addPhoto = addPhoto
         
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: theme.primaryColor)
         
         self.currentOptionNode = ASTextNode()
-        self.currentOptionNode.isLayerBacked = true
+        self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
         self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.textPlaceholderColor, paragraphAlignment: .center)
         

@@ -45,12 +45,12 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         self.theme = theme
         
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_Title, font: Font.light(30.0), textColor: self.theme.primaryColor)
         
         self.noticeNode = ASTextNode()
-        self.noticeNode.isLayerBacked = true
+        self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
         
         self.timerTitleNode = ASTextNode()

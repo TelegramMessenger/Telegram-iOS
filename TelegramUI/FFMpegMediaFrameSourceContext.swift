@@ -259,6 +259,11 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         avFormatContext.pointee.pb = avIoContext
         
+        /*avFormatContext.pointee.flags |= AVFMT_FLAG_FAST_SEEK
+        
+        var options: UnsafeMutablePointer<AVDictionary?>
+        av_dict_set(&options, "usetoc", "1", 0)*/
+        
         guard avformat_open_input(&avFormatContextRef, nil, nil, nil) >= 0 else {
             self.readingError = true
             return

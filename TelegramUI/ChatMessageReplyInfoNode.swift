@@ -23,8 +23,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
     
     override init() {
         self.contentNode = ASDisplayNode()
+        self.contentNode.isUserInteractionEnabled = false
         self.contentNode.displaysAsynchronously = true
-        self.contentNode.isLayerBacked = true
         self.contentNode.contentMode = .left
         self.contentNode.contentsScale = UIScreenScale
         
@@ -157,13 +157,13 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 let textNode = textApply()
                 
                 if node.titleNode == nil {
-                    titleNode.isLayerBacked = true
+                    titleNode.isUserInteractionEnabled = false
                     node.titleNode = titleNode
                     node.contentNode.addSubnode(titleNode)
                 }
                 
                 if node.textNode == nil {
-                    textNode.isLayerBacked = true
+                    textNode.isUserInteractionEnabled = false
                     node.textNode = textNode
                     node.contentNode.addSubnode(textNode)
                 }

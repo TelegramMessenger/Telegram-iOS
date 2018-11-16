@@ -105,7 +105,7 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
         self.iconNode.displaysAsynchronously = false
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.keyNode = ASImageNode()
         self.keyNode.isLayerBacked = true

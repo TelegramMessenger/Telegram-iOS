@@ -47,12 +47,12 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         self.nameNode = ASTextNode()
         self.nameNode.maximumNumberOfLines = 1
-        self.nameNode.isLayerBacked = true
+        self.nameNode.isUserInteractionEnabled = false
         self.nameNode.displaysAsynchronously = false
         
         self.dateNode = ASTextNode()
         self.dateNode.maximumNumberOfLines = 1
-        self.dateNode.isLayerBacked = true
+        self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = false
         
         super.init()

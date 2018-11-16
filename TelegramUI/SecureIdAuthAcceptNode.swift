@@ -36,7 +36,7 @@ final class SecureIdAuthAcceptNode: ASDisplayNode {
         self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Secure ID/GrantIcon"), color: theme.list.itemCheckColors.foregroundColor)
         
         self.labelNode = ImmediateTextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         self.labelNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.list.itemCheckColors.foregroundColor)
         
         super.init()

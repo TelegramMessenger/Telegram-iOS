@@ -163,7 +163,12 @@ func relativeUserPresenceStatus(_ presence: TelegramUserPresence, relativeTo tim
                 return .lastSeen(at: statusTimestamp)
             }
         case .recently:
-            return .recently
+            let activeUntil = presence.lastActivity + 30
+            if activeUntil >= timestamp {
+                return .online(at: activeUntil)
+            } else {
+                return .recently
+            }
         case .lastWeek:
             return .lastWeek
         case .lastMonth:
@@ -293,7 +298,12 @@ func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeForm
                 }
             }
         case .recently:
-            return (strings.LastSeen_Lately, false)
+            let activeUntil = presence.lastActivity + 30
+            if activeUntil >= timestamp {
+                return (strings.Presence_online, true)
+            } else {
+                return (strings.LastSeen_Lately, false)
+            }
         case .lastWeek:
             return (strings.LastSeen_WithinAWeek, false)
         case .lastMonth:
@@ -315,9 +325,15 @@ func userPresenceStringRefreshTimeout(_ presence: TelegramUserPresence, relative
                 } else {
                     return Double.infinity
                 }
+            }
+        case .recently:
+            let activeUntil = presence.lastActivity + 30
+            if activeUntil >= timestamp {
+                return Double(activeUntil - timestamp + 1)
+            } else {
                 return Double.infinity
             }
-        case .recently, .none, .lastWeek, .lastMonth:
+        case .none, .lastWeek, .lastMonth:
             return Double.infinity
     }
 }

@@ -107,7 +107,7 @@ private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode
         self.iconNode.image = pictureInPictureImage
         
         self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         self.textNode.attributedText = NSAttributedString(string: strings.Embed_PlayingInPIP, font: placeholderFont, textColor: UIColor(rgb: 0x8e8e93))
         

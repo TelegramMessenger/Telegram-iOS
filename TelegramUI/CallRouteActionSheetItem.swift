@@ -49,7 +49,7 @@ public class CallRouteActionSheetItemNode: ActionSheetItemNode {
         self.button = HighlightTrackingButton()
         
         self.label = ASTextNode()
-        self.label.isLayerBacked = true
+        self.label.isUserInteractionEnabled = false
         self.label.maximumNumberOfLines = 1
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail

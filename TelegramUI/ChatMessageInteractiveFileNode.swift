@@ -51,11 +51,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     override init() {
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = true
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.descriptionNode = TextNode()
         self.descriptionNode.displaysAsynchronously = true
-        self.descriptionNode.isLayerBacked = true
+        self.descriptionNode.isUserInteractionEnabled = false
         
         self.waveformNode = AudioWaveformNode()
         self.waveformNode.isLayerBacked = true

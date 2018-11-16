@@ -305,12 +305,12 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         self.updatingAvatarOverlay.displaysAsynchronously = false
         
         self.nameNode = TextNode()
-        self.nameNode.isLayerBacked = true
+        self.nameNode.isUserInteractionEnabled = false
         self.nameNode.contentMode = .left
         self.nameNode.contentsScale = UIScreen.main.scale
         
         self.statusNode = TextNode()
-        self.statusNode.isLayerBacked = true
+        self.statusNode.isUserInteractionEnabled = false
         self.statusNode.contentMode = .left
         self.statusNode.contentsScale = UIScreen.main.scale
         
@@ -418,7 +418,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             statusText = item.strings.Bot_GenericBotStatus
                             statusColor = item.theme.list.itemSecondaryTextColor
                         } else if case .generic = item.mode, !(peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id == 777000 || peer.id.id == 333000)) {
-                            let presence = (item.presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none)
+                            let presence = (item.presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none, lastActivity: 0)
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                             let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: item.dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
                             statusText = string

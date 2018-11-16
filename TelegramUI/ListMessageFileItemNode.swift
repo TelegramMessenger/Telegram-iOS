@@ -186,10 +186,10 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.descriptionNode = TextNode()
-        self.descriptionNode.isLayerBacked = true
+        self.descriptionNode.isUserInteractionEnabled = false
         
         self.extensionIconNode = ASImageNode()
         self.extensionIconNode.isLayerBacked = true
@@ -197,7 +197,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.extensionIconNode.displayWithoutProcessing = true
         
         self.extensionIconText = TextNode()
-        self.extensionIconText.isLayerBacked = true
+        self.extensionIconText.isUserInteractionEnabled = false
         
         self.iconImageNode = TransformImageNode()
         self.iconImageNode.displaysAsynchronously = false

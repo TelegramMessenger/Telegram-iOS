@@ -122,7 +122,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.contentSubtitleNode = ASTextNode()
         self.contentSubtitleNode.maximumNumberOfLines = 1
-        self.contentSubtitleNode.isLayerBacked = true
+        self.contentSubtitleNode.isUserInteractionEnabled = false
         self.contentSubtitleNode.displaysAsynchronously = false
         self.contentSubtitleNode.truncationMode = .byTruncatingTail
         self.contentSubtitleNode.attributedText = NSAttributedString(string: strings.ShareMenu_SelectChats, font: subtitleFont, textColor: self.theme.actionSheet.secondaryTextColor)

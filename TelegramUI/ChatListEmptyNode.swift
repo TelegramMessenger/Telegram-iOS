@@ -11,7 +11,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.textAlignment = .center
         self.textNode.lineSpacing = 0.1
         

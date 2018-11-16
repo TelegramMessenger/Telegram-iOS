@@ -16,6 +16,10 @@ enum ShareExternalState {
     case done
 }
 
+func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
+    
+}
+
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let account: Account
     private var presentationData: PresentationData
@@ -537,59 +541,61 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         peersContentNode.openSearch = { [weak self] in
             if let strongSelf = self {
                 let _ = (recentlySearchedPeers(postbox: strongSelf.account.postbox)
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { peers in
-                        if let strongSelf = self {
-                            let searchContentNode = ShareSearchContainerNode(account: strongSelf.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ $0.peer }))
-                            searchContentNode.cancel = {
-                                if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
-                                    strongSelf.transitionToContentNode(peersContentNode)
-                                }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { peers in
+                    if let strongSelf = self {
+                        let searchContentNode = ShareSearchContainerNode(account: strongSelf.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ $0.peer }))
+                        searchContentNode.cancel = {
+                            if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
+                                strongSelf.transitionToContentNode(peersContentNode)
                             }
-                            strongSelf.transitionToContentNode(searchContentNode)
                         }
-                    })
+                        strongSelf.transitionToContentNode(searchContentNode)
+                    }
+                })
             }
         }
         let openShare: (Bool) -> Void = { [weak self] reportReady in
-            if let strongSelf = self, let shareExternal = strongSelf.shareExternal {
-                var loadingTimestamp: Double?
-                strongSelf.shareDisposable.set((shareExternal() |> deliverOnMainQueue).start(next: { state in
-                    if let strongSelf = self {
-                        switch state {
-                            case .preparing:
-                                if loadingTimestamp == nil {
-                                    strongSelf.inputFieldNode.deactivateInput()
-                                    let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
-                                    transition.updateAlpha(node: strongSelf.actionButtonNode, alpha: 0.0)
-                                    transition.updateAlpha(node: strongSelf.inputFieldNode, alpha: 0.0)
-                                    transition.updateAlpha(node: strongSelf.actionSeparatorNode, alpha: 0.0)
-                                    transition.updateAlpha(node: strongSelf.actionsBackgroundNode, alpha: 0.0)
-                                    strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
-                                    loadingTimestamp = CACurrentMediaTime()
-                                    if reportReady {
-                                        strongSelf.ready.set(.single(true))
-                                    }
-                                }
-                            case .done:
-                                if let loadingTimestamp = loadingTimestamp {
-                                    let minDelay = 0.6
-                                    let delay = max(0.0, (loadingTimestamp + minDelay) - CACurrentMediaTime())
-                                    Queue.mainQueue().after(delay, {
-                                        if let strongSelf = self {
-                                            strongSelf.cancel?()
-                                        }
-                                    })
-                                } else {
-                                    if reportReady {
-                                        strongSelf.ready.set(.single(true))
-                                    }
+            guard let strongSelf = self, let shareExternal = strongSelf.shareExternal else {
+                return
+            }
+            var loadingTimestamp: Double?
+            strongSelf.shareDisposable.set((shareExternal() |> deliverOnMainQueue).start(next: { state in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch state {
+                    case .preparing:
+                        if loadingTimestamp == nil {
+                            strongSelf.inputFieldNode.deactivateInput()
+                            let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
+                            transition.updateAlpha(node: strongSelf.actionButtonNode, alpha: 0.0)
+                            transition.updateAlpha(node: strongSelf.inputFieldNode, alpha: 0.0)
+                            transition.updateAlpha(node: strongSelf.actionSeparatorNode, alpha: 0.0)
+                            transition.updateAlpha(node: strongSelf.actionsBackgroundNode, alpha: 0.0)
+                            strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+                            loadingTimestamp = CACurrentMediaTime()
+                            if reportReady {
+                                strongSelf.ready.set(.single(true))
+                            }
+                        }
+                    case .done:
+                        if let loadingTimestamp = loadingTimestamp {
+                            let minDelay = 0.6
+                            let delay = max(0.0, (loadingTimestamp + minDelay) - CACurrentMediaTime())
+                            Queue.mainQueue().after(delay, {
+                                if let strongSelf = self {
                                     strongSelf.cancel?()
                                 }
+                            })
+                        } else {
+                            if reportReady {
+                                strongSelf.ready.set(.single(true))
+                            }
+                            strongSelf.cancel?()
                         }
-                    }
-                }))
-            }
+                }
+            }))
         }
         peersContentNode.openShare = {
             openShare(false)

@@ -90,7 +90,7 @@ public class ChatMessageItemView: ListViewItemNode {
     var item: ChatMessageItem?
     
     public required convenience init() {
-        self.init(layerBacked: true)
+        self.init(layerBacked: false)
     }
     
     public init(layerBacked: Bool) {

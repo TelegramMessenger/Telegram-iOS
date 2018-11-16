@@ -140,12 +140,12 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         self.activityNode.isHidden = true
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreenScale
         
         self.subtitleNode = TextNode()
-        self.subtitleNode.isLayerBacked = true
+        self.subtitleNode.isUserInteractionEnabled = false
         self.subtitleNode.contentMode = .left
         self.subtitleNode.contentsScale = UIScreenScale
         

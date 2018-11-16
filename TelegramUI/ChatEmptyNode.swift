@@ -69,13 +69,13 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.lineSpacing = 0.25
         self.titleNode.textAlignment = .center
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.maximumNumberOfLines = 0
         self.subtitleNode.lineSpacing = 0.25
-        self.subtitleNode.isLayerBacked = true
+        self.subtitleNode.isUserInteractionEnabled = false
         self.subtitleNode.displaysAsynchronously = false
         
         super.init()
@@ -132,7 +132,7 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
                     iconNode.displayWithoutProcessing = true
                     let textNode = ImmediateTextNode()
                     textNode.maximumNumberOfLines = 0
-                    textNode.isLayerBacked = true
+                    textNode.isUserInteractionEnabled = false
                     textNode.displaysAsynchronously = false
                     self.addSubnode(iconNode)
                     self.addSubnode(textNode)
@@ -205,7 +205,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.lineSpacing = 0.15
         self.titleNode.textAlignment = .center
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
         super.init()
@@ -237,7 +237,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 if i >= self.lineNodes.count {
                     let textNode = ImmediateTextNode()
                     textNode.maximumNumberOfLines = 0
-                    textNode.isLayerBacked = true
+                    textNode.isUserInteractionEnabled = false
                     textNode.displaysAsynchronously = false
                     self.addSubnode(textNode)
                     self.lineNodes.append(textNode)

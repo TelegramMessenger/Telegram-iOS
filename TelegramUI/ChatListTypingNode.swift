@@ -46,8 +46,6 @@ private final class ChatListInputActivitiesDotsNode: ASDisplayNode {
     
     override init() {
         super.init()
-        
-        self.isLayerBacked = true
     }
     
     private func beginAnimation() {
@@ -102,7 +100,6 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
     
     override init() {
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
         
         self.dotsNode = ChatListInputActivitiesDotsNode()
         

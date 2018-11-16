@@ -43,7 +43,7 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         textInputNode.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         
         self.placeholderNode = ASTextNode()
-        self.placeholderNode.isLayerBacked = true
+        self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.displaysAsynchronously = false
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.actionSheet.inputPlaceholderColor)
         

@@ -37,7 +37,7 @@ final class ItemListTextEmptyStateItemNode: ItemListControllerEmptyStateItemNode
     
     override init() {
         self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         
         super.init()
         

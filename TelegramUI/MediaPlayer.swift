@@ -77,13 +77,13 @@ private final class MediaPlayerContext {
     private var tickTimer: SwiftSignalKit.Timer?
     
     private var lastStatusUpdateTimestamp: Double?
-    private let playerStatus: ValuePromise<MediaPlayerStatus>
+    private let playerStatus: Promise<MediaPlayerStatus>
     
     fileprivate var actionAtEnd: MediaPlayerActionAtEnd = .stop
     
     private var stoppedAtEnd = false
     
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resourceReference: MediaResourceReference, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: Promise<MediaPlayerStatus>, postbox: Postbox, resourceReference: MediaResourceReference, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -232,10 +232,10 @@ private final class MediaPlayerContext {
                 duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
             }
             let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
-            self.playerStatus.set(status)
+            self.playerStatus.set(.single(status))
         } else {
             let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
-            self.playerStatus.set(status)
+            self.playerStatus.set(.single(status))
         }
         
         let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resourceReference: self.resourceReference, streamable: self.streamable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically)
@@ -716,7 +716,7 @@ private final class MediaPlayerContext {
                 reportTimestamp = timestamp
             }
             let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, dimensions: CGSize(), timestamp: min(max(reportTimestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: playbackStatus)
-            self.playerStatus.set(status)
+            self.playerStatus.set(.single(status))
         }
         
         if performActionAtEndNow {
@@ -787,7 +787,7 @@ final class MediaPlayer {
     private let queue = Queue()
     private var contextRef: Unmanaged<MediaPlayerContext>?
     
-    private let statusValue = ValuePromise<MediaPlayerStatus>(MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused), ignoreRepeated: true)
+    private let statusValue = Promise<MediaPlayerStatus>()
     
     var status: Signal<MediaPlayerStatus, NoError> {
         return self.statusValue.get()

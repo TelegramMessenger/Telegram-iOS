@@ -14,7 +14,7 @@ public struct ParsedSecureIdUrl {
     public let opaqueNonce: Data
 }
 
-public func parseSecureIdUrl(url: URL) -> ParsedSecureIdUrl? {
+public func parseSecureIdUrl(_ url: URL) -> ParsedSecureIdUrl? {
     guard let query = url.query else {
         return nil
     }
@@ -82,6 +82,15 @@ public func parseSecureIdUrl(url: URL) -> ParsedSecureIdUrl? {
         }
     }
     
+    return nil
+}
+
+public func parseConfirmationCodeUrl(_ url: URL) -> Int? {
+    if url.pathComponents.count == 2 && url.pathComponents[0].lowercased() == "login" {
+        if let code = Int(url.pathComponents[1]) {
+            return code
+        }
+    }
     return nil
 }
 

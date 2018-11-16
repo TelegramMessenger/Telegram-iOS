@@ -39,7 +39,7 @@ final class StickerPaneSearchStickerSectionNode: ASDisplayNode {
     
     init(code: String, theme: PresentationTheme) {
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         super.init()
         

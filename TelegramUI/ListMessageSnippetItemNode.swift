@@ -47,17 +47,17 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.descriptionNode = TextNode()
-        self.descriptionNode.isLayerBacked = true
+        self.descriptionNode.isUserInteractionEnabled = false
         
         self.instantViewIconNode = ASImageNode()
         self.instantViewIconNode.isLayerBacked = true
         self.instantViewIconNode.displaysAsynchronously = false
         self.instantViewIconNode.displayWithoutProcessing = true
         self.linkNode = TextNode()
-        self.linkNode.isLayerBacked = true
+        self.linkNode.isUserInteractionEnabled = false
         
         self.iconTextBackgroundNode = ASImageNode()
         self.iconTextBackgroundNode.isLayerBacked = true
@@ -65,7 +65,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         self.iconTextBackgroundNode.displayWithoutProcessing = true
         
         self.iconTextNode = TextNode()
-        self.iconTextNode.isLayerBacked = true
+        self.iconTextNode.isUserInteractionEnabled = false
         
         self.iconImageNode = TransformImageNode()
         self.iconImageNode.displaysAsynchronously = false

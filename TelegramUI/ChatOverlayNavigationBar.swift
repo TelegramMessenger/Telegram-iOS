@@ -44,7 +44,7 @@ final class ChatOverlayNavigationBar: ASDisplayNode {
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.closeButton = HighlightableButtonNode()
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)

@@ -134,10 +134,10 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         self.iconNode.displaysAsynchronously = false
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.labelNode = TextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         
         self.arrowNode = ASImageNode()
         self.arrowNode.displayWithoutProcessing = true

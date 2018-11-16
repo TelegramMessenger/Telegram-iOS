@@ -102,12 +102,12 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         self.presentationData = presentationData
         
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.ChangePhoneNumberNumber_NewNumber, font: Font.regular(14.0), textColor: self.presentationData.theme.list.sectionHeaderTextColor)
         
         self.noticeNode = ASTextNode()
-        self.noticeNode.isLayerBacked = true
+        self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
         self.noticeNode.attributedText = NSAttributedString(string: self.presentationData.strings.ChangePhoneNumberNumber_Help, font: Font.regular(14.0), textColor: self.presentationData.theme.list.freeTextColor)
         

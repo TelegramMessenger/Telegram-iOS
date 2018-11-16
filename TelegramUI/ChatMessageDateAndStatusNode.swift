@@ -115,7 +115,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     
     override init() {
         self.dateNode = TextNode()
-        self.dateNode.isLayerBacked = true
+        self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = true
         
         super.init()

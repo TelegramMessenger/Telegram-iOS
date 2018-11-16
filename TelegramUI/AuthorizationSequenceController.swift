@@ -652,4 +652,10 @@ public final class AuthorizationSequenceController: NavigationController {
             self.topViewController?.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
     }
+    
+    public func applyConfirmationCode(_ code: Int) {
+        if let controller = self.viewControllers.last as? AuthorizationSequenceCodeEntryController {
+            controller.applyConfirmationCode(code)
+        }
+    }
 }

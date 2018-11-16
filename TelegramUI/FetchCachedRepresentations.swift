@@ -72,12 +72,12 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
                 
                 let size = representation.size != nil ? image.size.aspectFitted(representation.size!) : CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
                 
-                let colorImage: UIImage
+                let colorImage: UIImage?
                 if let _ = representation.size {
                     colorImage = generateImage(size, contextGenerator: { size, context in
                         context.setBlendMode(.copy)
                         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                    }, scale: 1.0)!
+                    }, scale: 1.0)
                 } else {
                     colorImage = image
                 }
@@ -85,7 +85,9 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
                 let alphaImage = generateImage(size, contextGenerator: { size, context in
                     context.setFillColor(UIColor.white.cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
-                    context.clip(to: CGRect(origin: CGPoint(), size: size), mask: colorImage.cgImage!)
+                    if let colorImage = colorImage {
+                        context.clip(to: CGRect(origin: CGPoint(), size: size), mask: colorImage.cgImage!)
+                    }
                     context.setFillColor(UIColor.black.cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 }, scale: 1.0)
@@ -110,7 +112,9 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
                     let optionsAlpha = NSMutableDictionary()
                     optionsAlpha.setObject(alphaQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
                     
-                    CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
+                    if let colorImage = colorImage {
+                        CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
+                    }
                     CGImageDestinationAddImage(alphaDestination, alphaImage.cgImage!, optionsAlpha as CFDictionary)
                     if CGImageDestinationFinalize(colorDestination) && CGImageDestinationFinalize(alphaDestination) {
                         let finalData = NSMutableData()

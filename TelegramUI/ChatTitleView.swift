@@ -29,7 +29,7 @@ private final class ChatTitleNetworkStatusNode: ASDisplayNode {
         self.theme = theme
         
         self.titleNode = ImmediateTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.isOpaque = false
@@ -334,7 +334,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     userPresence = presence
                                     self.presenceManager?.reset(presence: presence)
                                 } else {
-                                    userPresence = TelegramUserPresence(status: .none)
+                                    userPresence = TelegramUserPresence(status: .none, lastActivity: 0)
                                 }
                                 let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: userPresence, relativeTo: Int32(timestamp))
                                 let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)

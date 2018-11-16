@@ -468,7 +468,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         case .none:
                             break
                         case let .presence(presence, dateTimeFormat):
-                            let presence = (presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none)
+                            let presence = (presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none, lastActivity: 0)
                             userPresence = presence
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                             let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))

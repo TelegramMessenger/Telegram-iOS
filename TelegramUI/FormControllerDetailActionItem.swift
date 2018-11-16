@@ -45,11 +45,11 @@ final class FormControllerDetailActionItemNode: FormBlockItemNode<FormController
     init() {
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 1
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         self.errorNode = ImmediateTextNode()
         self.errorNode.displaysAsynchronously = false

@@ -107,7 +107,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         self.editableControlNode = ItemListEditableControlNode()
         
         self.labelNode = TextNode()
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         self.labelNode.contentMode = .left
         self.labelNode.contentsScale = UIScreen.main.scale
         

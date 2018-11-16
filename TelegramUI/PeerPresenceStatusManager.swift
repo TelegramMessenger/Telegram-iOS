@@ -25,7 +25,7 @@ final class PeerPresenceStatusManager {
                 if let strongSelf = self {
                     strongSelf.update()
                 }
-                }, queue: Queue.mainQueue())
+            }, queue: Queue.mainQueue())
             self.timer?.start()
         }
     }

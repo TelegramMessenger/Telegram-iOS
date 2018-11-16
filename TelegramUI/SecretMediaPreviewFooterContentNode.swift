@@ -13,7 +13,7 @@ final class SecretMediaPreviewFooterContentNode: GalleryFooterContentNode {
     
     override init() {
         self.textNode = ImmediateTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         
         super.init()

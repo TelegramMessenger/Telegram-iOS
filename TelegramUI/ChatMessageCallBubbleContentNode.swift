@@ -32,13 +32,13 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         
         super.init()
         
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .topLeft
         self.titleNode.contentsScale = UIScreenScale
         self.titleNode.displaysAsynchronously = true
         self.addSubnode(self.titleNode)
         
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         self.labelNode.contentMode = .topLeft
         self.labelNode.contentsScale = UIScreenScale
         self.labelNode.displaysAsynchronously = true

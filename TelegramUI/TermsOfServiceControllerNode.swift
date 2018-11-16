@@ -62,12 +62,12 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         self.leftActionNode = HighlightableButtonNode()
         self.leftActionTextNode = ImmediateTextNode()
         self.leftActionTextNode.displaysAsynchronously = false
-        self.leftActionTextNode.isLayerBacked = true
+        self.leftActionTextNode.isUserInteractionEnabled = false
         self.leftActionTextNode.attributedText = NSAttributedString(string: self.strings.PrivacyPolicy_Decline, font: Font.regular(17.0), textColor: self.theme.accent)
         self.rightActionNode = HighlightableButtonNode()
         self.rightActionTextNode = ImmediateTextNode()
         self.rightActionTextNode.displaysAsynchronously = false
-        self.rightActionTextNode.isLayerBacked = true
+        self.rightActionTextNode.isUserInteractionEnabled = false
         self.rightActionTextNode.attributedText = NSAttributedString(string: self.strings.PrivacyPolicy_Accept, font: Font.semibold(17.0), textColor: self.theme.accent)
         
         super.init()

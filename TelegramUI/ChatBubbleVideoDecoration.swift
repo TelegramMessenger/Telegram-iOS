@@ -14,11 +14,11 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     
     private var validLayoutSize: CGSize?
     
-    init(cornerRadius: CGFloat, nativeSize: CGSize) {
+    init(cornerRadius: CGFloat, nativeSize: CGSize, backgroudColor: UIColor) {
         self.nativeSize = nativeSize
         
         self.contentContainerNode = ASDisplayNode()
-        self.contentContainerNode.backgroundColor = .black
+        self.contentContainerNode.backgroundColor = backgroudColor
         self.contentContainerNode.clipsToBounds = true
         self.contentContainerNode.cornerRadius = cornerRadius
     }

@@ -113,7 +113,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         self.iconTextBackgroundNode.displayWithoutProcessing = true
         
         self.iconTextNode = TextNode()
-        self.iconTextNode.isLayerBacked = true
+        self.iconTextNode.isUserInteractionEnabled = false
         
         self.iconImageNode = TransformImageNode()
         self.iconImageNode.contentAnimations = [.subsequentUpdates]

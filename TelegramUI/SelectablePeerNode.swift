@@ -92,7 +92,7 @@ final class SelectablePeerNode: ASDisplayNode {
         self.avatarNode.isLayerBacked = true
         
         self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = true
         
         

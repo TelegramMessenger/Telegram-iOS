@@ -62,7 +62,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         self.avatarNode.isLayerBacked = true
         
         self.label = ImmediateTextNode()
-        self.label.isLayerBacked = true
+        self.label.isUserInteractionEnabled = false
         self.label.displaysAsynchronously = false
         self.label.maximumNumberOfLines = 1
         

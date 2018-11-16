@@ -88,7 +88,7 @@ final class HorizontalPeerItemNode: ListViewItemNode {
         
         
         self.badgeTextNode = TextNode()
-        self.badgeTextNode.isLayerBacked = true
+        self.badgeTextNode.isUserInteractionEnabled = false
         self.badgeTextNode.displaysAsynchronously = true
         
         super.init(layerBacked: false, dynamicBounce: false)

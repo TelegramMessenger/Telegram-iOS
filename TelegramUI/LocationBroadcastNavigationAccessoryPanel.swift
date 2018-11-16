@@ -52,10 +52,10 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.wavesNode = LocationBroadcastPanelWavesNode(color: self.theme.rootController.navigationBar.accentTextColor)
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         self.subtitleNode = TextNode()
-        self.subtitleNode.isLayerBacked = true
+        self.subtitleNode.isUserInteractionEnabled = false
         
         self.closeButton = HighlightableButtonNode()
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])

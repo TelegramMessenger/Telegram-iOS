@@ -85,17 +85,17 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
         self.imageNode = TransformImageNode()
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.textNode = TextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .left
         self.textNode.contentsScale = UIScreen.main.scale
         
         self.botNameNode = TextNode()
-        self.botNameNode.isLayerBacked = true
+        self.botNameNode.isUserInteractionEnabled = false
         self.botNameNode.contentMode = .left
         self.botNameNode.contentsScale = UIScreen.main.scale
         

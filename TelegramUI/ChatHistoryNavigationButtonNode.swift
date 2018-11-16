@@ -57,7 +57,7 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         
         self.badgeTextNode = ASTextNode()
         self.badgeTextNode.maximumNumberOfLines = 1
-        self.badgeTextNode.isLayerBacked = true
+        self.badgeTextNode.isUserInteractionEnabled = false
         self.badgeTextNode.displaysAsynchronously = false
         
         super.init()
