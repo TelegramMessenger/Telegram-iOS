@@ -280,11 +280,11 @@ void AudioInputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 
 	audioClient=audioClient2;
 #endif
-	
-	
+
 	// {2C693079-3F59-49FD-964F-61C005EAA5D3}
 	const GUID guid = { 0x2c693079, 0x3f59, 0x49fd, { 0x96, 0x4f, 0x61, 0xc0, 0x5, 0xea, 0xa5, 0xd3 } };
-	res = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST | 0x80000000/*AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM*/, 60 * 10000, 0, &format, &guid);
+	// Use 500ms buffer to avoid resampling glitches on Windows 8.1 and older. This should not increase latency.
+	res = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY, 500*10000, 0, &format, &guid);
 	CHECK_RES(res, "audioClient->Initialize");
 
 	uint32_t bufSize;
@@ -358,7 +358,7 @@ void AudioInputWASAPI::RunThread() {
 			res=captureClient->GetNextPacketSize(&bufferSize);
 			CHECK_RES(res, "captureClient->GetNextPacketSize");
 			BYTE* data;
-			uint32_t framesAvailable=bufferSize;
+			uint32_t framesAvailable=0;
 			DWORD flags;
 
 			res=captureClient->GetBuffer(&data, &framesAvailable, &flags, NULL, NULL);
@@ -366,8 +366,12 @@ void AudioInputWASAPI::RunThread() {
 			size_t dataLen=framesAvailable*2;
 			assert(remainingDataLen+dataLen<sizeof(remainingData));
 
+			if(flags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY){
+				LOGW("Audio capture data discontinuity");
+			}
+
 			//double t=VoIPController::GetCurrentTime();
-			//LOGV("audio capture: %u, time %f", framesAvailable, t-prevCallback);
+			//LOGV("audio capture: %u, time %f, flags %u", framesAvailable, t-prevCallback, flags);
 			//prevCallback=t;
 
 			memcpy(remainingData+remainingDataLen, data, dataLen);
@@ -375,6 +379,7 @@ void AudioInputWASAPI::RunThread() {
 			while(remainingDataLen>960*2){
 				if(isRecording)
 					InvokeCallback(remainingData, 960*2);
+
 				//LOGV("remaining data len %u", remainingDataLen);
 				memmove(remainingData, remainingData+(960*2), remainingDataLen-960*2);
 				remainingDataLen-=960*2;
