@@ -39,18 +39,23 @@
   // ASDK Home Feed viewController & navController
   PhotoFeedNodeController *asdkHomeFeedVC      = [[PhotoFeedNodeController alloc] init];
   UINavigationController *asdkHomeFeedNavCtrl  = [[UINavigationController alloc] initWithRootViewController:asdkHomeFeedVC];
+  asdkHomeFeedNavCtrl.navigationBar.barStyle = UIBarStyleBlack;
   asdkHomeFeedNavCtrl.tabBarItem               = [[UITabBarItem alloc] initWithTitle:@"ASDK" image:[UIImage imageNamed:@"home"] tag:0];
   asdkHomeFeedNavCtrl.hidesBarsOnSwipe         = YES;
 
   // ListKit Home Feed viewController & navController
   PhotoFeedListKitViewController *listKitHomeFeedVC      = [[PhotoFeedListKitViewController alloc] init];
   UINavigationController *listKitHomeFeedNavCtrl  = [[UINavigationController alloc] initWithRootViewController:listKitHomeFeedVC];
+  listKitHomeFeedNavCtrl.navigationBar.barStyle = UIBarStyleBlack;
   listKitHomeFeedNavCtrl.tabBarItem               = [[UITabBarItem alloc] initWithTitle:@"ListKit" image:[UIImage imageNamed:@"home"] tag:0];
   listKitHomeFeedNavCtrl.hidesBarsOnSwipe         = YES;
+
+
 
   // UIKit Home Feed viewController & navController
   PhotoFeedViewController *uikitHomeFeedVC     = [[PhotoFeedViewController alloc] init];
   UINavigationController *uikitHomeFeedNavCtrl = [[UINavigationController alloc] initWithRootViewController:uikitHomeFeedVC];
+  uikitHomeFeedNavCtrl.navigationBar.barStyle = UIBarStyleBlack;
   uikitHomeFeedNavCtrl.tabBarItem              = [[UITabBarItem alloc] initWithTitle:@"UIKit" image:[UIImage imageNamed:@"home"] tag:0];
   uikitHomeFeedNavCtrl.hidesBarsOnSwipe        = YES;
 
@@ -70,10 +75,6 @@
   [[UINavigationBar appearance] setBarTintColor:[UIColor darkBlueColor]];
   [[UINavigationBar appearance] setTranslucent:NO];
   
-  // iOS8 hides the status bar in landscape orientation, this forces the status bar hidden status to NO
-  [application setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone];
-  [application setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone];
-
 #if WEAVER
   WVDebugger *debugger = [WVDebugger defaultInstance];
   [debugger enableLayoutElementDebuggingWithApplication:application];

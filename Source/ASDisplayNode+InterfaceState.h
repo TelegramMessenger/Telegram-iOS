@@ -116,4 +116,15 @@ typedef NS_OPTIONS(NSUInteger, ASInterfaceState)
  */
 - (void)hierarchyDisplayDidFinish;
 
+@optional
+/**
+ * @abstract Called when the node is about to calculate layout. This is only called before
+ * Yoga-driven layouts.
+ * @discussion Can be used for operations that are performed after the node's view is available.
+ * @note This method is guaranteed to be called on main, but implementations should be careful not
+ * to attempt to ascend the node tree when handling this, as the root node is locked when this is
+ * called.
+ */
+- (void)nodeWillCalculateLayout:(ASSizeRange)constrainedSize;
+
 @end

@@ -72,8 +72,8 @@
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
 {
-  CGSize textSize = [_textNode measure:constrainedSize];
-  CGSize shareSize = [_needyChildNode measure:constrainedSize];
+  CGSize textSize = [_textNode layoutThatFits:ASSizeRangeMake(CGSizeZero, constrainedSize)].size;
+  CGSize shareSize = [_needyChildNode layoutThatFits:ASSizeRangeMake(CGSizeZero, constrainedSize)].size;
 
   return CGSizeMake(constrainedSize.width, textSize.height + 10.0 + shareSize.height);
 }

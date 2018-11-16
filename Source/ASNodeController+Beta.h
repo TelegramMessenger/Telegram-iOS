@@ -11,7 +11,8 @@
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h> // for ASInterfaceState protocol
 
 /* ASNodeController is currently beta and open to change in the future */
-@interface ASNodeController<__covariant DisplayNodeType : ASDisplayNode *> : NSObject <ASInterfaceStateDelegate>
+@interface ASNodeController<__covariant DisplayNodeType : ASDisplayNode *>
+    : NSObject <ASInterfaceStateDelegate, NSLocking>
 
 @property (nonatomic, strong /* may be weak! */) DisplayNodeType node;
 
@@ -25,6 +26,9 @@
 // for descriptions see <ASInterfaceState> definition
 - (void)nodeDidLoad ASDISPLAYNODE_REQUIRES_SUPER;
 - (void)nodeDidLayout ASDISPLAYNODE_REQUIRES_SUPER;
+
+// This is only called during Yoga-driven layouts.
+- (void)nodeWillCalculateLayout:(ASSizeRange)constrainedSize ASDISPLAYNODE_REQUIRES_SUPER;
 
 - (void)didEnterVisibleState ASDISPLAYNODE_REQUIRES_SUPER;
 - (void)didExitVisibleState  ASDISPLAYNODE_REQUIRES_SUPER;

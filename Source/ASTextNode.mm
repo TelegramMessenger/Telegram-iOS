@@ -226,7 +226,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 
     // Accessibility
     self.isAccessibilityElement = YES;
-    self.accessibilityTraits = UIAccessibilityTraitStaticText;
+    self.accessibilityTraits = self.defaultAccessibilityTraits;
 
     // Placeholders
     // Disabled by default in ASDisplayNode, but add a few options for those who toggle
@@ -365,6 +365,17 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   };
 }
 
+- (NSString *)defaultAccessibilityLabel
+{
+  ASLockScopeSelf();
+  return _attributedText.string;
+}
+
+- (UIAccessibilityTraits)defaultAccessibilityTraits
+{
+  return UIAccessibilityTraitStaticText;
+}
+
 #pragma mark - Layout and Sizing
 
 - (void)setTextContainerInset:(UIEdgeInsets)textContainerInset
@@ -440,39 +451,46 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
   if (attributedText == nil) {
     attributedText = [[NSAttributedString alloc] initWithString:@"" attributes:nil];
   }
-  
-  // Don't hold textLock for too long.
+
   {
     ASLockScopeSelf();
     if (ASObjectIsEqual(attributedText, _attributedText)) {
       return;
     }
 
-    _attributedText = ASCleanseAttributedStringOfCoreTextAttributes(attributedText);
-#if AS_TEXTNODE_RECORD_ATTRIBUTED_STRINGS
-	  [ASTextNode _registerAttributedText:_attributedText];
-#endif
-  }
-    
-  // Since truncation text matches style of attributedText, invalidate it now.
-  [self _invalidateTruncationText];
-  
-  NSUInteger length = _attributedText.length;
-  if (length > 0) {
-    self.style.ascender = [[self class] ascenderWithAttributedString:_attributedText];
-    self.style.descender = [[_attributedText attribute:NSFontAttributeName atIndex:length - 1 effectiveRange:NULL] descender];
-  }
+    NSAttributedString *cleanedAttributedString = ASCleanseAttributedStringOfCoreTextAttributes(attributedText);
 
+    // Invalidating the truncation text must be done while we still hold the lock. Because after we release it,
+    // another thread may set a new truncation text that will then be cleared by this thread, other may draw
+    // this soon-to-be-invalidated text.
+    [self _locked_invalidateTruncationText];
+
+    NSUInteger length = cleanedAttributedString.length;
+    if (length > 0) {
+      // Updating ascender and descender in one transaction while holding the lock.
+      ASLayoutElementStyle *style = [self _locked_style];
+      style.ascender = [[self class] ascenderWithAttributedString:cleanedAttributedString];
+      style.descender = [[attributedText attribute:NSFontAttributeName atIndex:cleanedAttributedString.length - 1 effectiveRange:NULL] descender];
+    }
+   
+    // Update attributed text with cleaned attributed string
+    _attributedText = cleanedAttributedString;
+  }
+  
   // Tell the display node superclasses that the cached layout is incorrect now
   [self setNeedsLayout];
 
   // Force display to create renderer with new size and redisplay with new string
   [self setNeedsDisplay];
   
-  
   // Accessiblity
-  self.accessibilityLabel = _attributedText.string;
-  self.isAccessibilityElement = (length != 0); // We're an accessibility element by default if there is a string.
+  let currentAttributedText = self.attributedText; // Grab attributed string again in case it changed in the meantime
+  self.accessibilityLabel = self.defaultAccessibilityLabel;
+  self.isAccessibilityElement = (currentAttributedText.length != 0); // We're an accessibility element by default if there is a string.
+
+#if AS_TEXTNODE_RECORD_ATTRIBUTED_STRINGS
+  [ASTextNode _registerAttributedText:_attributedText];
+#endif
 }
 
 #pragma mark - Text Layout
@@ -589,7 +607,7 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
       return;
     }
 
-    for (NSString *attributeName in _linkAttributeNames) {
+    for (NSString *attributeName in self->_linkAttributeNames) {
       NSRange range;
       id value = [attributedString attribute:attributeName atIndex:characterIndex longestEffectiveRange:&range inRange:clampedRange];
       NSString *name = attributeName;
@@ -601,8 +619,8 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
 
       // If highlighting, check with delegate first. If not implemented, assume YES.
       if (highlighting
-          && [_delegate respondsToSelector:@selector(textNode:shouldHighlightLinkAttribute:value:atPoint:)]
-          && ![_delegate textNode:self shouldHighlightLinkAttribute:name value:value atPoint:point]) {
+          && [self->_delegate respondsToSelector:@selector(textNode:shouldHighlightLinkAttribute:value:atPoint:)]
+          && ![self->_delegate textNode:self shouldHighlightLinkAttribute:name value:value atPoint:point]) {
         value = nil;
         name = nil;
       }
@@ -955,9 +973,7 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
   NSUInteger lastCharIndex = NSIntegerMax;
   BOOL linkCrossesVisibleRange = (lastCharIndex > range.location) && (lastCharIndex < NSMaxRange(range) - 1);
 
-  if (inAdditionalTruncationMessage) {
-    return YES;
-  } else if (range.length && !linkCrossesVisibleRange && linkAttributeValue != nil && linkAttributeName != nil) {
+  if (range.length > 0 && !linkCrossesVisibleRange && linkAttributeValue != nil && linkAttributeName != nil) {
     return YES;
   } else {
     return NO;
@@ -993,7 +1009,7 @@ static CGRect ASTextNodeAdjustRenderRectForShadowPadding(CGRect rendererRect, UI
     }
     NSRange truncationMessageRange = [self _additionalTruncationMessageRangeWithVisibleRange:visibleRange];
     [self _setHighlightRange:truncationMessageRange forAttributeName:ASTextNodeTruncationTokenAttributeName value:nil animated:YES];
-  } else if (range.length && !linkCrossesVisibleRange && linkAttributeValue != nil && linkAttributeName != nil) {
+  } else if (range.length > 0 && !linkCrossesVisibleRange && linkAttributeValue != nil && linkAttributeName != nil) {
     [self _setHighlightRange:range forAttributeName:linkAttributeName value:linkAttributeValue animated:YES];
   }
 }
@@ -1166,6 +1182,7 @@ static NSAttributedString *DefaultTruncationAttributedString()
 {
   if (ASLockedSelfCompareAssignCopy(_truncationAttributedText, truncationAttributedText)) {
     [self _invalidateTruncationText];
+    [self setNeedsDisplay];
   }
 }
 
@@ -1173,6 +1190,7 @@ static NSAttributedString *DefaultTruncationAttributedString()
 {
   if (ASLockedSelfCompareAssignCopy(_additionalTruncationMessage, additionalTruncationMessage)) {
     [self _invalidateTruncationText];
+    [self setNeedsDisplay];
   }
 }
 
@@ -1196,6 +1214,11 @@ static NSAttributedString *DefaultTruncationAttributedString()
 - (BOOL)isTruncated
 {
   return ASLockedSelf([[self _locked_renderer] isTruncated]);
+}
+
+- (BOOL)shouldTruncateForConstrainedSize:(ASSizeRange)constrainedSize
+{
+  return ASLockedSelf([[self _locked_rendererWithBounds:{.size = constrainedSize.max}] isTruncated]);
 }
 
 - (void)setPointSizeScaleFactors:(NSArray<NSNumber *> *)pointSizeScaleFactors
@@ -1231,12 +1254,13 @@ static NSAttributedString *DefaultTruncationAttributedString()
 
 - (void)_invalidateTruncationText
 {
-  {
-    ASLockScopeSelf();
-    _composedTruncationText = nil;
-  }
+  ASLockScopeSelf();
+  [self _locked_invalidateTruncationText];
+}
 
-  [self setNeedsDisplay];
+- (void)_locked_invalidateTruncationText
+{
+  _composedTruncationText = nil;
 }
 
 /**
@@ -1361,6 +1385,21 @@ static NSAttributedString *DefaultTruncationAttributedString()
   } else {
     return [super allocWithZone:zone];
   }
+}
+
+@end
+
+@implementation ASTextNode (Unsupported)
+
+- (void)setTextContainerLinePositionModifier:(id)textContainerLinePositionModifier
+{
+  AS_TEXT_ALERT_UNIMPLEMENTED_FEATURE();
+}
+
+- (id)textContainerLinePositionModifier
+{
+  AS_TEXT_ALERT_UNIMPLEMENTED_FEATURE();
+  return nil;
 }
 
 @end

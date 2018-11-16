@@ -24,6 +24,7 @@ typedef NS_OPTIONS(NSUInteger, ASExperimentalFeatures) {
   ASExperimentalCollectionTeardown = 1 << 6,                // exp_collection_teardown
   ASExperimentalFramesetterCache = 1 << 7,                  // exp_framesetter_cache
   ASExperimentalClearDataDuringDeallocation = 1 << 8,       // exp_clear_data_during_deallocation
+  ASExperimentalDidEnterPreloadSkipASMLayout = 1 << 9,      // exp_did_enter_preload_skip_asm_layout
   ASExperimentalFeatureAll = 0xFFFFFFFF
 };
 

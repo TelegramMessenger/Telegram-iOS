@@ -52,6 +52,11 @@
   }
 }
 
+- (NSArray *)accessibilityElements
+{
+  return [self.asyncdisplaykit_node accessibilityElements];
+}
+
 @end
 
 @implementation ASScrollNode

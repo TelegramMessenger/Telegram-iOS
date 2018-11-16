@@ -39,4 +39,47 @@
   XCTAssertEqual([node.view indexOfAccessibilityElement:node.view.accessibilityElements.firstObject], 0);*/
 }
 
+- (void)testThatSubnodeAccessibilityLabelAggregationWorks {
+  // Setup nodes
+  ASDisplayNode *node = nil;
+  ASDisplayNode *innerNode1 = nil;
+  ASDisplayNode *innerNode2 = nil;
+  node = [[ASDisplayNode alloc] init];
+  innerNode1 = [[ASDisplayNode alloc] init];
+  innerNode2 = [[ASDisplayNode alloc] init];
+
+  // Initialize nodes with relevant accessibility data
+  node.isAccessibilityContainer = YES;
+  innerNode1.accessibilityLabel = @"hello";
+  innerNode2.accessibilityLabel = @"world";
+
+  // Attach the subnodes to the parent node, then ensure their accessibility labels have been'
+  // aggregated to the parent's accessibility label
+  [node addSubnode:innerNode1];
+  [node addSubnode:innerNode2];
+  XCTAssertEqualObjects([node.view.accessibilityElements.firstObject accessibilityLabel],
+                        @"hello, world", @"Subnode accessibility label aggregation broken %@",
+                        [node.view.accessibilityElements.firstObject accessibilityLabel]);
+}
+
+- (void)testThatContainerAccessibilityLabelOverrideStopsAggregation {
+  // Setup nodes
+  ASDisplayNode *node = nil;
+  ASDisplayNode *innerNode = nil;
+  node = [[ASDisplayNode alloc] init];
+  innerNode = [[ASDisplayNode alloc] init];
+
+  // Initialize nodes with relevant accessibility data
+  node.isAccessibilityContainer = YES;
+  node.accessibilityLabel = @"hello";
+  innerNode.accessibilityLabel = @"world";
+
+  // Attach the subnode to the parent node, then ensure the parent's accessibility label does not
+  // get aggregated with the subnode's label
+  [node addSubnode:innerNode];
+  XCTAssertEqualObjects([node.view.accessibilityElements.firstObject accessibilityLabel], @"hello",
+                        @"Container accessibility label override broken %@",
+                        [node.view.accessibilityElements.firstObject accessibilityLabel]);
+}
+
 @end

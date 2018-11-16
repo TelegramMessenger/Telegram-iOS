@@ -10,6 +10,13 @@
 
 @class ASTextNode;
 
+#define AS_TEXT_ALERT_UNIMPLEMENTED_FEATURE() { \
+  static dispatch_once_t onceToken; \
+  dispatch_once(&onceToken, ^{ \
+    NSLog(@"[Texture] Warning: Feature %@ is unimplemented in %@.", NSStringFromSelector(_cmd), NSStringFromClass(self.class)); \
+  });\
+}
+
 /**
  * Highlight styles.
  */

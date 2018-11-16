@@ -386,4 +386,13 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
 
 @end
 
+@interface ASDisplayNode (ASLayoutElementPrivate)
+
+/**
+ * Returns the internal style object or creates a new if no exists. Need to be called with lock held.
+ */
+- (ASLayoutElementStyle *)_locked_style;
+
+@end
+
 NS_ASSUME_NONNULL_END

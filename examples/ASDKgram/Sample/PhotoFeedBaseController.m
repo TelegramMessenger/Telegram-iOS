@@ -75,6 +75,11 @@
   return UIStatusBarStyleLightContent;
 }
 
+- (BOOL)prefersStatusBarHidden
+{
+  return NO;
+}
+
 - (CGSize)imageSizeForScreenWidth
 {
   CGRect screenRect   = [[UIScreen mainScreen] bounds];

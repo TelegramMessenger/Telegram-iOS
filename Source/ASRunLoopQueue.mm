@@ -191,7 +191,7 @@ static void runLoopSourceCallback(void *info) {
 #if ASRunLoopQueueLoggingEnabled
 - (void)checkRunLoop
 {
-    NSLog(@"<%@> - Jobs: %ld", self, _internalQueue.size());
+    NSLog(@"<%@> - Jobs: %ld", self, _internalQueue.count);
 }
 #endif
 
@@ -323,10 +323,8 @@ ASSynthesizeLockingMethodsWithMutex(_internalQueueLock)
   CFRunLoopRef _runLoop;
   CFRunLoopSourceRef _runLoopSource;
   CFRunLoopObserverRef _preTransactionObserver;
-  CFRunLoopObserverRef _postTransactionObserver;
   NSPointerArray *_internalQueue;
   ASDN::RecursiveMutex _internalQueueLock;
-  BOOL _CATransactionCommitInProgress;
 
   // In order to not pollute the top-level activities, each queue has 1 root activity.
   os_activity_t _rootActivity;
@@ -343,9 +341,6 @@ ASSynthesizeLockingMethodsWithMutex(_internalQueueLock)
 // CoreAnimation commit order is 2000000, the goal of this is to process shortly beforehand
 // but after most other scheduled work on the runloop has processed.
 static int const kASASCATransactionQueueOrder = 1000000;
-// This will mark the end of current loop and any node enqueued between kASASCATransactionQueueOrder
-// and kASASCATransactionQueuePostOrder will apply interface change immediately.
-static int const kASASCATransactionQueuePostOrder = 3000000;
 
 + (ASCATransactionQueue *)sharedQueue NS_RETURNS_RETAINED
 {
@@ -377,17 +372,13 @@ static int const kASASCATransactionQueuePostOrder = 3000000;
     // __unsafe_unretained allows us to avoid flagging the memory cycle detector.
     __unsafe_unretained __typeof__(self) weakSelf = self;
     void (^handlerBlock) (CFRunLoopObserverRef observer, CFRunLoopActivity activity) = ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
+      while (weakSelf->_internalQueue.count > 0) {
       [weakSelf processQueue];
-    };
-    void (^postHandlerBlock) (CFRunLoopObserverRef observer, CFRunLoopActivity activity) = ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
-      ASDN::MutexLocker l(_internalQueueLock);
-      _CATransactionCommitInProgress = NO;
+      }
     };
     _preTransactionObserver = CFRunLoopObserverCreateWithHandler(NULL, kCFRunLoopBeforeWaiting, true, kASASCATransactionQueueOrder, handlerBlock);
-    _postTransactionObserver = CFRunLoopObserverCreateWithHandler(NULL, kCFRunLoopBeforeWaiting, true, kASASCATransactionQueuePostOrder, postHandlerBlock);
 
     CFRunLoopAddObserver(_runLoop, _preTransactionObserver,  kCFRunLoopCommonModes);
-    CFRunLoopAddObserver(_runLoop, _postTransactionObserver,  kCFRunLoopCommonModes);
 
     // It is not guaranteed that the runloop will turn if it has no scheduled work, and this causes processing of
     // the queue to stop. Attaching a custom loop source to the run loop and signal it if new work needs to be done
@@ -416,19 +407,14 @@ static int const kASASCATransactionQueuePostOrder = 3000000;
   if (CFRunLoopObserverIsValid(_preTransactionObserver)) {
     CFRunLoopObserverInvalidate(_preTransactionObserver);
   }
-  if (CFRunLoopObserverIsValid(_postTransactionObserver)) {
-    CFRunLoopObserverInvalidate(_postTransactionObserver);
-  }
   CFRelease(_preTransactionObserver);
-  CFRelease(_postTransactionObserver);
   _preTransactionObserver = nil;
-  _postTransactionObserver = nil;
 }
 
 #if ASRunLoopQueueLoggingEnabled
 - (void)checkRunLoop
 {
-  NSLog(@"<%@> - Jobs: %ld", self, _internalQueue.size());
+  NSLog(@"<%@> - Jobs: %ld", self, _internalQueue.count);
 }
 #endif
 
@@ -440,11 +426,6 @@ static int const kASASCATransactionQueuePostOrder = 3000000;
 
   {
     ASDN::MutexLocker l(_internalQueueLock);
-
-    // Mark the queue will end coalescing shortly until after CATransactionCommit.
-    // This will give the queue a chance to apply any further interfaceState changes/enqueue
-    // immediately within current runloop instead of pushing the work to next runloop cycle.
-    _CATransactionCommitInProgress = YES;
 
     NSInteger internalQueueCount = _internalQueue.count;
     // Early-exit if the queue is empty.
@@ -502,7 +483,7 @@ static int const kASASCATransactionQueuePostOrder = 3000000;
     return;
   }
 
-  if (!self.enabled || _CATransactionCommitInProgress) {
+  if (!self.enabled) {
     [object prepareForCATransactionCommit];
     return;
   }

@@ -61,8 +61,8 @@
   CGFloat constrainedWidth = CGRectGetWidth(bounds);
   CGSize constrainedSize = CGSizeMake(constrainedWidth - 2 * padding, CGFLOAT_MAX);
 
-  CGSize postSize = [_postNode measure:constrainedSize];
-  CGSize imageSize = [_imageNode measure:constrainedSize];
+  CGSize postSize = [_postNode layoutThatFits:ASSizeRangeMake(CGSizeZero, constrainedSize)].size;
+  CGSize imageSize = [_imageNode layoutThatFits:ASSizeRangeMake(CGSizeZero, constrainedSize)].size;
 
   _imageNode.frame = (CGRect){padding, padding, imageSize};
   _postNode.frame = (CGRect){padding, CGRectGetMaxY(_imageNode.frame) + 10.0, postSize};

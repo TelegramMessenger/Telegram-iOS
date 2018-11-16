@@ -39,11 +39,11 @@ NSString * const kASBasicImageDownloaderContextCompletionBlock = @"kASBasicImage
 
 static NSMutableDictionary *currentRequests = nil;
 // Allocate currentRequestsLock on the heap to prevent destruction at app exit (https://github.com/TextureGroup/Texture/issues/136)
-static ASDN::StaticMutex& currentRequestsLock = *new ASDN::StaticMutex;
+static auto *currentRequestsLock = new ASDN::Mutex;
 
 + (ASBasicImageDownloaderContext *)contextForURL:(NSURL *)URL
 {
-  ASDN::StaticMutexLocker l(currentRequestsLock);
+  ASDN::MutexLocker l(*currentRequestsLock);
   if (!currentRequests) {
     currentRequests = [[NSMutableDictionary alloc] init];
   }
@@ -57,7 +57,7 @@ static ASDN::StaticMutex& currentRequestsLock = *new ASDN::StaticMutex;
 
 + (void)cancelContextWithURL:(NSURL *)URL
 {
-  ASDN::StaticMutexLocker l(currentRequestsLock);
+  ASDN::MutexLocker l(*currentRequestsLock);
   if (currentRequests) {
     [currentRequests removeObjectForKey:URL];
   }

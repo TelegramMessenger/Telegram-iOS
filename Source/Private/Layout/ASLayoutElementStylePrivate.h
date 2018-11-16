@@ -9,6 +9,7 @@
 
 #pragma once
 
+#import <AsyncDisplayKit/ASLayoutElement.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 
 @interface ASLayoutElementStyle () <ASDescriptionProvider>
@@ -24,5 +25,7 @@
  * @abstract A size constraint that should apply to this ASLayoutElement.
  */
 @property (nonatomic, readonly) ASLayoutElementSize size;
+
+@property (nonatomic, assign) ASStackLayoutAlignItems parentAlignStyle;
 
 @end

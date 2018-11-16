@@ -218,6 +218,15 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 /**
+ * @abstract Text node unsupported properties
+ */
+@interface ASTextNode (Unsupported)
+
+@property (nullable, nonatomic) id textContainerLinePositionModifier;
+
+@end
+
+/**
  * @abstract Text node deprecated properties
  */
 @interface ASTextNode (Deprecated)

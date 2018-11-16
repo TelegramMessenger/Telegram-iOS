@@ -1021,4 +1021,38 @@
     [_delegate editableTextNodeDidFinishEditing:self];
 }
 
+#pragma mark - UIAccessibilityContainer
+
+- (NSInteger)accessibilityElementCount
+{
+  if (!self.isNodeLoaded) {
+    ASDisplayNodeFailAssert(@"Cannot access accessibilityElementCount since ASEditableTextNode is not loaded");
+    return 0;
+  }
+  return 1;
+}
+
+- (NSArray *)accessibilityElements
+{
+  if (!self.isNodeLoaded) {
+    ASDisplayNodeFailAssert(@"Cannot access accessibilityElements since ASEditableTextNode is not loaded");
+    return @[];
+  }
+  return @[self.textView];
+}
+
+- (id)accessibilityElementAtIndex:(NSInteger)index
+{
+  if (!self.isNodeLoaded) {
+    ASDisplayNodeFailAssert(@"Cannot access accessibilityElementAtIndex: since ASEditableTextNode is not loaded");
+    return nil;
+  }
+  return self.textView;
+}
+
+- (NSInteger)indexOfAccessibilityElement:(id)element
+{
+  return 0;
+}
+
 @end

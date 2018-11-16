@@ -9,6 +9,8 @@
 #import <AsyncDisplayKit/ASControlNode.h>
 #import <AsyncDisplayKit/ASTextNodeCommon.h>
 
+@protocol ASTextLinePositionModifier;
+
 NS_ASSUME_NONNULL_BEGIN
 
 /**
@@ -206,6 +208,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) BOOL passthroughNonlinkTouches;
 
 + (void)enableDebugging;
+
+#pragma mark - Layout and Sizing
+
+@property (nullable, nonatomic) id<ASTextLinePositionModifier> textContainerLinePositionModifier;
 
 @end
 

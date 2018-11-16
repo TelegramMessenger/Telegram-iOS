@@ -11,11 +11,6 @@
 #import <pthread/pthread.h>
 #import <os/lock.h>
 
-// Don't import C-only header if we're in a C++ file
-#ifndef __cplusplus
-#import <stdatomic.h>
-#endif
-
 // Note: We don't use ATOMIC_VAR_INIT here because C++ compilers don't like it,
 // and it literally does absolutely nothing.
 #define AS_RECURSIVE_UNFAIR_LOCK_INIT ((ASRecursiveUnfairLock){ OS_UNFAIR_LOCK_INIT, NULL, 0})
@@ -24,7 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 OS_UNFAIR_LOCK_AVAILABILITY
 typedef struct {
-  os_unfair_lock _lock;
+  os_unfair_lock _lock OS_UNFAIR_LOCK_AVAILABILITY;
   _Atomic(pthread_t) _thread;  // Write-protected by lock
   int _count;                  // Protected by lock
 } ASRecursiveUnfairLock;

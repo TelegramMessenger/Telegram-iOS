@@ -63,6 +63,7 @@
 #define ASDisplayNodeCAssertPositiveReal(description, num) ASDisplayNodeCAssert(num >= 0 && num <= CGFLOAT_MAX, @"%@ must be a real positive integer: %f.", description, (CGFloat)num)
 #define ASDisplayNodeCAssertInfOrPositiveReal(description, num) ASDisplayNodeCAssert(isinf(num) || (num >= 0 && num <= CGFLOAT_MAX), @"%@ must be infinite or a real positive integer: %f.", description, (CGFloat)num)
 
+#define ASDisplayNodeCAssertPermanent(object) ASDisplayNodeCAssert(CFGetRetainCount((__bridge CFTypeRef)(object)) == CFGetRetainCount(kCFNull), @"Expected %s to be a permanent object.", #object)
 #define ASDisplayNodeErrorDomain @"ASDisplayNodeErrorDomain"
 #define ASDisplayNodeNonFatalErrorCode 1
 

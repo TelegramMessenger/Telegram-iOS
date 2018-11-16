@@ -38,6 +38,10 @@ As the framework has grown, many features have been added that can save develope
 
 We use Slack for real-time debugging, community updates, and general talk about Texture. [Signup](http://asdk-slack-auto-invite.herokuapp.com) yourself or email textureframework@gmail.com to get an invite.
 
+## Release process
+
+For the release process see the [RELEASE] (https://github.com/texturegroup/texture/blob/master/RELEASE.md) file.
+
 ## Contributing
 
 We welcome any contributions. See the [CONTRIBUTING](https://github.com/texturegroup/texture/blob/master/CONTRIBUTING.md) file for how to get involved.

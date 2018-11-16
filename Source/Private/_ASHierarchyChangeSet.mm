@@ -20,11 +20,19 @@
 #import <AsyncDisplayKit/ASDataController.h>
 #import <AsyncDisplayKit/ASBaseDefines.h>
 
-// If assertions are enabled, throw. Otherwise log.
+// If assertions are enabled and they haven't forced us to suppress the exception,
+// then throw, otherwise log.
 #if ASDISPLAYNODE_ASSERTIONS_ENABLED
   #define ASFailUpdateValidation(...)\
-    NSLog(__VA_ARGS__);\
-    [NSException raise:ASCollectionInvalidUpdateException format:__VA_ARGS__];
+    _Pragma("clang diagnostic push")\
+    _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")\
+    if ([ASDisplayNode suppressesInvalidCollectionUpdateExceptions]) {\
+      NSLog(__VA_ARGS__);\
+    } else {\
+      NSLog(__VA_ARGS__);\
+      [NSException raise:ASCollectionInvalidUpdateException format:__VA_ARGS__];\
+    }\
+  _Pragma("clang diagnostic pop")
 #else
   #define ASFailUpdateValidation(...) NSLog(__VA_ARGS__);
 #endif

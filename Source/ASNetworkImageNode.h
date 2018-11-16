@@ -148,6 +148,15 @@ NS_ASSUME_NONNULL_BEGIN
 @optional
 
 /**
+ * Notification that the image node started to load
+ *
+ * @param imageNode The sender.
+ *
+ * @discussion Called on the main thread.
+ */
+- (void)imageNodeDidStartFetchingData:(ASNetworkImageNode *)imageNode;
+
+/**
  * Notification that the image node finished downloading an image, with additional info.
  * If implemented, this method will be called instead of `imageNode:didLoadImage:`.
  *
@@ -170,15 +179,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)imageNode:(ASNetworkImageNode *)imageNode didLoadImage:(UIImage *)image;
 
 /**
- * Notification that the image node started to load
- *
- * @param imageNode The sender.
- *
- * @discussion Called on a background queue.
- */
-- (void)imageNodeDidStartFetchingData:(ASNetworkImageNode *)imageNode;
-
-/**
  * Notification that the image node failed to download the image.
  *
  * @param imageNode The sender.
@@ -192,6 +192,8 @@ NS_ASSUME_NONNULL_BEGIN
  * Notification that the image node finished decoding an image.
  *
  * @param imageNode The sender.
+ *
+ * @discussion Called on the main thread.
  */
 - (void)imageNodeDidFinishDecoding:(ASNetworkImageNode *)imageNode;
 

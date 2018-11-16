@@ -156,7 +156,7 @@ do {\
 @implementation ASLayoutElementStyle {
   ASDN::RecursiveMutex __instanceLock__;
   ASLayoutElementStyleExtensions _extensions;
-  
+
   std::atomic<ASLayoutElementSize> _size;
   std::atomic<CGFloat> _spacingBefore;
   std::atomic<CGFloat> _spacingAfter;
@@ -181,6 +181,7 @@ do {\
   std::atomic<ASEdgeInsets> _padding;
   std::atomic<ASEdgeInsets> _border;
   std::atomic<CGFloat> _aspectRatio;
+  ASStackLayoutAlignItems _parentAlignStyle;
 #endif
 }
 
@@ -203,6 +204,9 @@ do {\
   self = [super init];
   if (self) {
     _size = ASLayoutElementSizeMake();
+#if YOGA
+    _parentAlignStyle = ASStackLayoutAlignItemsNotSet;
+#endif
   }
   return self;
 }
@@ -778,6 +782,10 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__)
 - (ASEdgeInsets)padding                       { return _padding.load(); }
 - (ASEdgeInsets)border                        { return _border.load(); }
 - (CGFloat)aspectRatio                        { return _aspectRatio.load(); }
+// private (ASLayoutElementStylePrivate.h)
+- (ASStackLayoutAlignItems)parentAlignStyle {
+  return _parentAlignStyle;
+}
 
 - (void)setFlexWrap:(YGWrap)flexWrap {
   _flexWrap.store(flexWrap);
@@ -822,6 +830,10 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__)
 - (void)setAspectRatio:(CGFloat)aspectRatio {
   _aspectRatio.store(aspectRatio);
   ASLayoutElementStyleCallDelegate(ASYogaAspectRatioProperty);
+}
+// private (ASLayoutElementStylePrivate.h)
+- (void)setParentAlignStyle:(ASStackLayoutAlignItems)style {
+  _parentAlignStyle = style;
 }
 
 #endif /* YOGA */

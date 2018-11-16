@@ -19,6 +19,7 @@
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
 #import <AsyncDisplayKit/ASLayout.h>
+#import <AsyncDisplayKit/ASLayoutElementStylePrivate.h>
 
 #define YOGA_LAYOUT_LOGGING 0
 
@@ -31,8 +32,19 @@
 
 @implementation ASDisplayNode (Yoga)
 
+- (ASDisplayNode *)yogaRoot
+{
+  ASDisplayNode *yogaRoot = self;
+  ASDisplayNode *yogaParent = nil;
+  while ((yogaParent = yogaRoot.yogaParent)) {
+    yogaRoot = yogaParent;
+  }
+  return yogaRoot;
+}
+
 - (void)setYogaChildren:(NSArray *)yogaChildren
 {
+  ASLockScope(self.yogaRoot);
   for (ASDisplayNode *child in [_yogaChildren copy]) {
     // Make sure to un-associate the YGNodeRef tree before replacing _yogaChildren
     // If this becomes a performance bottleneck, it can be optimized by not doing the NSArray removals here.
@@ -51,11 +63,13 @@
 
 - (void)addYogaChild:(ASDisplayNode *)child
 {
+  ASLockScope(self.yogaRoot);
   [self insertYogaChild:child atIndex:_yogaChildren.count];
 }
 
 - (void)removeYogaChild:(ASDisplayNode *)child
 {
+  ASLockScope(self.yogaRoot);
   if (child == nil) {
     return;
   }
@@ -68,6 +82,7 @@
 
 - (void)insertYogaChild:(ASDisplayNode *)child atIndex:(NSUInteger)index
 {
+  ASLockScope(self.yogaRoot);
   if (child == nil) {
     return;
   }
@@ -216,6 +231,7 @@
 - (BOOL)shouldHaveYogaMeasureFunc
 {
   // Size calculation via calculateSizeThatFits: or layoutSpecThatFits:
+  // For these nodes, we assume they may need custom Baseline calculation too.
   // This will be used for ASTextNode, as well as any other node that has no Yoga children
   BOOL isLeafNode = (self.yogaChildren.count == 0);
   BOOL definesCustomLayout = [self implementsLayoutMethod];
@@ -261,11 +277,23 @@
     return;
   }
 
+  [self enumerateInterfaceStateDelegates:^(id<ASInterfaceStateDelegate>  _Nonnull delegate) {
+    if ([delegate respondsToSelector:@selector(nodeWillCalculateLayout:)]) {
+      [delegate nodeWillCalculateLayout:rootConstrainedSize];
+    }
+  }];
+
   ASLockScopeSelf();
 
   // Prepare all children for the layout pass with the current Yoga tree configuration.
-  ASDisplayNodePerformBlockOnEveryYogaChild(self, ^(ASDisplayNode * _Nonnull node) {
+  ASDisplayNodePerformBlockOnEveryYogaChild(self, ^(ASDisplayNode *_Nonnull node) {
     node.yogaLayoutInProgress = YES;
+    ASDisplayNode *yogaParent = node.yogaParent; 
+    if (yogaParent) {
+      node.style.parentAlignStyle = yogaParent.style.alignItems;
+    } else {
+      node.style.parentAlignStyle = ASStackLayoutAlignItemsNotSet;
+    };
   });
 
   if (ASSizeRangeEqualToSizeRange(rootConstrainedSize, ASSizeRangeUnconstrained)) {
@@ -293,7 +321,9 @@
 
   // Reset accessible elements, since layout may have changed.
   ASPerformBlockOnMainThread(^{
-    [(_ASDisplayView *)self.view setAccessibilityElements:nil];
+    if (self.nodeLoaded && !self.isSynchronous) {
+      [(_ASDisplayView *)self.view setAccessibilityElements:nil];
+    }
   });
 
   ASDisplayNodePerformBlockOnEveryYogaChild(self, ^(ASDisplayNode * _Nonnull node) {

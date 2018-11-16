@@ -35,6 +35,11 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (readonly) BOOL usingExperiment;
 
+/**
+ * Returns a Boolean indicating if the text node will truncate for the given constrained size
+ */
+- (BOOL)shouldTruncateForConstrainedSize:(ASSizeRange)constrainedSize;
+
 @end
 
 NS_ASSUME_NONNULL_END

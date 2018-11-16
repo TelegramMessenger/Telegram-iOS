@@ -28,6 +28,8 @@
   UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
   ASCollectionNode *node = [[ASCollectionNode alloc] initWithCollectionViewLayout:layout];
   if (self = [super initWithNode:node]) {
+    self.navigationItem.title = @"ListKit";
+
     CGRect screenRect   = [[UIScreen mainScreen] bounds];
     CGFloat screenScale = [[UIScreen mainScreen] scale];
     CGSize screenWidthImageSize = CGSizeMake(screenRect.size.width * screenScale, screenRect.size.width * screenScale);
@@ -79,6 +81,16 @@
     [_spinner startAnimating];
   }
   return _spinner;
+}
+
+- (UIStatusBarStyle)preferredStatusBarStyle
+{
+  return UIStatusBarStyleLightContent;
+}
+
+- (BOOL)prefersStatusBarHidden
+{
+  return NO;
 }
 
 #pragma mark - IGListAdapterDataSource

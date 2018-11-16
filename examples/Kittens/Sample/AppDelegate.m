@@ -24,3 +24,14 @@
 }
 
 @end
+
+@implementation ASConfiguration (UserProvided)
+
++ (ASConfiguration *)textureConfiguration
+{
+  ASConfiguration *configuration = [ASConfiguration new];
+  return configuration;
+  
+}
+
+@end

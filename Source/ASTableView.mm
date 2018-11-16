@@ -437,6 +437,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   
   _dataController.validationErrorSource = asyncDataSource;
   super.dataSource = (id<UITableViewDataSource>)_proxyDataSource;
+  [self _asyncDelegateOrDataSourceDidChange];
 }
 
 - (id<ASTableDelegate>)asyncDelegate
@@ -507,6 +508,22 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   }
   
   super.delegate = (id<UITableViewDelegate>)_proxyDelegate;
+  [self _asyncDelegateOrDataSourceDidChange];
+}
+
+- (void)_asyncDelegateOrDataSourceDidChange
+{
+  ASDisplayNodeAssertMainThread();
+ 
+  if (_asyncDataSource == nil && _asyncDelegate == nil) {
+    if (ASActivateExperimentalFeature(ASExperimentalClearDataDuringDeallocation)) {
+      if (_isDeallocating) {
+        [_dataController clearData];          
+      }
+    } else {
+      [_dataController clearData];
+    }
+  }
 }
 
 - (void)proxyTargetHasDeallocated:(ASDelegateProxy *)proxy

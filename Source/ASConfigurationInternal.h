@@ -35,6 +35,9 @@ AS_SUBCLASSING_RESTRICTED
  * Just use ASActivateExperimentalFeature to access this efficiently.
  */
 
+/* Exposed for testing purposes only */
++ (void)test_resetWithConfiguration:(nullable ASConfiguration *)configuration;
+
 @end
 
 NS_ASSUME_NONNULL_END

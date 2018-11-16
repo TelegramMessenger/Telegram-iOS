@@ -23,6 +23,7 @@
 #import <AsyncDisplayKit/ASThread.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/ASRangeController.h>
+#import <AsyncDisplayKit/ASAbstractLayoutController+FrameworkPrivate.h>
 
 #pragma mark - _ASTablePendingState
 
@@ -55,7 +56,7 @@
   self = [super init];
   if (self) {
     _rangeMode = ASLayoutRangeModeUnspecified;
-    _tuningParameters = std::vector<std::vector<ASRangeTuningParameters>> (ASLayoutRangeModeCount, std::vector<ASRangeTuningParameters> (ASLayoutRangeTypeCount, ASRangeTuningParametersZero));
+    _tuningParameters = [ASAbstractLayoutController defaultTuningParameters];
     _allowsSelection = YES;
     _allowsSelectionDuringEditing = NO;
     _allowsMultipleSelection = NO;
@@ -155,6 +156,7 @@
 
   if (_pendingState) {
     _ASTablePendingState *pendingState        = _pendingState;
+    self.pendingState                         = nil;
     view.asyncDelegate                        = pendingState.delegate;
     view.asyncDataSource                      = pendingState.dataSource;
     view.inverted                             = pendingState.inverted;
@@ -162,9 +164,17 @@
     view.allowsSelectionDuringEditing         = pendingState.allowsSelectionDuringEditing;
     view.allowsMultipleSelection              = pendingState.allowsMultipleSelection;
     view.allowsMultipleSelectionDuringEditing = pendingState.allowsMultipleSelectionDuringEditing;
-    view.contentInset                         = pendingState.contentInset;
-    self.pendingState                         = nil;
-    
+
+    UIEdgeInsets contentInset = pendingState.contentInset;
+    if (!UIEdgeInsetsEqualToEdgeInsets(contentInset, UIEdgeInsetsZero)) {
+      view.contentInset = contentInset;
+    }
+
+    CGPoint contentOffset = pendingState.contentOffset;
+    if (!CGPointEqualToPoint(contentOffset, CGPointZero)) {
+      [view setContentOffset:contentOffset animated:pendingState.animatesContentOffset];
+    }
+      
     let tuningParametersVector = pendingState->_tuningParameters;
     let tuningParametersVectorSize = tuningParametersVector.size();
     for (NSInteger rangeMode = 0; rangeMode < tuningParametersVectorSize; rangeMode++) {
@@ -172,19 +182,15 @@
       let tuningParametersVectorRangeModeSize = tuningparametersRangeModeVector.size();
       for (NSInteger rangeType = 0; rangeType < tuningParametersVectorRangeModeSize; rangeType++) {
         ASRangeTuningParameters tuningParameters = tuningparametersRangeModeVector[rangeType];
-        if (!ASRangeTuningParametersEqualToRangeTuningParameters(tuningParameters, ASRangeTuningParametersZero)) {
-          [_rangeController setTuningParameters:tuningParameters
-                                   forRangeMode:(ASLayoutRangeMode)rangeMode
-                                      rangeType:(ASLayoutRangeType)rangeType];
-        }
+        [_rangeController setTuningParameters:tuningParameters
+                                 forRangeMode:(ASLayoutRangeMode)rangeMode
+                                    rangeType:(ASLayoutRangeType)rangeType];
       }
     }
     
     if (pendingState.rangeMode != ASLayoutRangeModeUnspecified) {
       [_rangeController updateCurrentRangeWithMode:pendingState.rangeMode];
     }
-
-    [view setContentOffset:pendingState.contentOffset animated:pendingState.animatesContentOffset];
   }
 }
 

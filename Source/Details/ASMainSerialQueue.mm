@@ -40,29 +40,32 @@
 
 - (void)performBlockOnMainThread:(dispatch_block_t)block
 {
-  ASDN::MutexLocker l(_serialQueueLock);
+
+  ASDN::UniqueLock l(_serialQueueLock);
   [_blocks addObject:block];
   {
-    ASDN::MutexUnlocker u(_serialQueueLock);
+    l.unlock();
     [self runBlocks];
+    l.lock();
   }
 }
 
 - (void)runBlocks
 {
   dispatch_block_t mainThread = ^{
+    ASDN::UniqueLock l(self->_serialQueueLock);
     do {
-      ASDN::MutexLocker l(_serialQueueLock);
       dispatch_block_t block;
-      if (_blocks.count > 0) {
+      if (self->_blocks.count > 0) {
         block = _blocks[0];
-        [_blocks removeObjectAtIndex:0];
+        [self->_blocks removeObjectAtIndex:0];
       } else {
         break;
       }
       {
-        ASDN::MutexUnlocker u(_serialQueueLock);
+        l.unlock();
         block();
+        l.lock();
       }
     } while (true);
   };
