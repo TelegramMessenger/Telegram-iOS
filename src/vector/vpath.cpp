@@ -13,11 +13,16 @@ void VPath::VPathData::transform(const VMatrix &m)
     for (auto &i : m_points) {
         i = m.map(i);
     }
+    mLengthDirty = true;
 }
 
 float VPath::VPathData::length() const
 {
-    float len = 0.0;
+    if (!mLengthDirty) return mLength;
+
+    mLengthDirty = false;
+    mLength = 0.0;
+
     int   i = 0;
     for (auto e : m_elements) {
         switch (e) {
@@ -25,12 +30,12 @@ float VPath::VPathData::length() const
             i++;
             break;
         case VPath::Element::LineTo: {
-            len += VLine( m_points[i-1], m_points[i]).length();
+            mLength += VLine( m_points[i-1], m_points[i]).length();
             i++;
             break;
         }
         case VPath::Element::CubicTo: {
-            len += VBezier::fromPoints(m_points[i-1], m_points[i],
+            mLength += VBezier::fromPoints(m_points[i-1], m_points[i],
                                        m_points[i+1], m_points[i+2]).length();
             i += 3;
             break;
@@ -40,7 +45,7 @@ float VPath::VPathData::length() const
         }
     }
 
-    return len;
+    return mLength;
 }
 
 void VPath::VPathData::checkNewSegment()
@@ -58,6 +63,7 @@ void  VPath::VPathData::moveTo(float x, float y)
     m_elements.emplace_back(VPath::Element::MoveTo);
     m_points.emplace_back(x,y);
     m_segments++;
+    mLengthDirty = true;
 }
 
 void  VPath::VPathData::lineTo(float x, float y)
@@ -65,6 +71,7 @@ void  VPath::VPathData::lineTo(float x, float y)
     checkNewSegment();
     m_elements.emplace_back(VPath::Element::LineTo);
     m_points.emplace_back(x,y);
+    mLengthDirty = true;
 }
 
 void  VPath::VPathData::cubicTo(float cx1, float cy1, float cx2, float cy2,
@@ -75,6 +82,7 @@ void  VPath::VPathData::cubicTo(float cx1, float cy1, float cx2, float cy2,
     m_points.emplace_back(cx1, cy1);
     m_points.emplace_back(cx2, cy2);
     m_points.emplace_back(ex, ey);
+    mLengthDirty = true;
 }
 
 void VPath::VPathData::close()
@@ -87,6 +95,7 @@ void VPath::VPathData::close()
     }
     m_elements.push_back(VPath::Element::Close);
     mNewSegment = true;
+    mLengthDirty = true;
 }
 
 void VPath::VPathData::reset()
@@ -96,6 +105,8 @@ void VPath::VPathData::reset()
     m_elements.clear();
     m_points.clear();
     m_segments = 0;
+    mLength = 0;
+    mLengthDirty = false;
 }
 
 int VPath::VPathData::segments() const
@@ -672,6 +683,7 @@ void VPath::VPathData::addPath(const VPathData &path)
     std::copy(path.m_elements.begin(), path.m_elements.end(), back_inserter(m_elements));
 
     m_segments += segment;
+    mLengthDirty = true;
 }
 
 V_END_NAMESPACE

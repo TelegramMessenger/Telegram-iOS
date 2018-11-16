@@ -86,6 +86,8 @@ private:
         std::vector<VPath::Element> m_elements;
         int                         m_segments;
         VPointF                     mStartPoint;
+        mutable float               mLength{0};
+        mutable bool                mLengthDirty{true};
         bool                        mNewSegment;
     };
 
