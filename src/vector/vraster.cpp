@@ -17,7 +17,10 @@ public:
     {
         if (mPointSize) delete[] ft.points;
         if (mTagSize) delete[] ft.tags;
-        if (mSegmentSize) delete[] ft.contours;
+        if (mSegmentSize) {
+            delete[] ft.contours;
+            delete[] ft.contours_flag;
+        }
     }
     void reset();
     void grow(int, int);
@@ -38,7 +41,6 @@ public:
     SW_FT_Stroker_LineJoin ftJoin;
     SW_FT_Fixed            ftWidth;
     SW_FT_Fixed            ftMeterLimit;
-    SW_FT_Bool             ftClosed;
 };
 
 void FTOutline::reset()
@@ -62,8 +64,12 @@ void FTOutline::grow(int points, int segments)
     }
 
     if (segment_size > mSegmentSize) {
-        if (mSegmentSize) delete [] ft.contours;
+        if (mSegmentSize) {
+            delete [] ft.contours;
+            delete [] ft.contours_flag;
+        }
         ft.contours = new short[segment_size];
+        ft.contours_flag = new char[segment_size];
         mSegmentSize = segment_size;
     }
 
@@ -109,8 +115,6 @@ void FTOutline::convert(const VPath &path)
 void FTOutline::convert(CapStyle cap, JoinStyle join, float width,
                         float meterLimit)
 {
-    ftClosed = (SW_FT_Bool)closed;
-
     // map strokeWidth to freetype. It uses as the radius of the pen not the
     // diameter
     width = width / 2.0;
@@ -156,8 +160,11 @@ void FTOutline::moveTo(const VPointF &pt)
         ft.contours[ft.n_contours] = ft.n_points - 1;
         ft.n_contours++;
     }
+    // mark the current contour as open
+    // will be updated if ther is a close tag at the end.
+    ft.contours_flag[ft.n_contours] = 1;
+
     ft.n_points++;
-    closed = false;
 }
 
 void FTOutline::lineTo(const VPointF &pt)
@@ -166,7 +173,6 @@ void FTOutline::lineTo(const VPointF &pt)
     ft.points[ft.n_points].y = TO_FT_COORD(pt.y());
     ft.tags[ft.n_points] = SW_FT_CURVE_TAG_ON;
     ft.n_points++;
-    closed = false;
 }
 
 void FTOutline::cubicTo(const VPointF &cp1, const VPointF &cp2,
@@ -186,10 +192,12 @@ void FTOutline::cubicTo(const VPointF &cp1, const VPointF &cp2,
     ft.points[ft.n_points].y = TO_FT_COORD(ep.y());
     ft.tags[ft.n_points] = SW_FT_CURVE_TAG_ON;
     ft.n_points++;
-    closed = false;
 }
 void FTOutline::close()
 {
+    // mark the contour as a close path.
+    ft.contours_flag[ft.n_contours] = 0;
+
     int index;
     if (ft.n_contours) {
         index = ft.contours[ft.n_contours - 1] + 1;
@@ -207,7 +215,6 @@ void FTOutline::close()
     ft.points[ft.n_points].y = ft.points[index].y;
     ft.tags[ft.n_points] = SW_FT_CURVE_TAG_ON;
     ft.n_points++;
-    closed = true;
 }
 
 void FTOutline::end()
@@ -256,7 +263,7 @@ VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
 
         SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap, outRef.ftJoin,
                           outRef.ftMeterLimit);
-        SW_FT_Stroker_ParseOutline(stroker, &outRef.ft, !outRef.ftClosed);
+        SW_FT_Stroker_ParseOutline(stroker, &outRef.ft);
         SW_FT_Stroker_GetCounts(stroker, &points, &contors);
 
         outRef.grow(points, contors);

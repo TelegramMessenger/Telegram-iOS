@@ -228,9 +228,6 @@
    *   outline ::
    *     The source outline.
    *
-   *   opened ::
-   *     A boolean.  If~1, the outline is treated as an open path instead
-   *     of a closed one.
    *
    * @return:
    *   FreeType error code.  0~means success.
@@ -239,15 +236,12 @@
    *   If `opened' is~0 (the default), the outline is treated as a closed
    *   path, and the stroker generates two distinct `border' outlines.
    *
-   *   If `opened' is~1, the outline is processed as an open path, and the
-   *   stroker generates a single `stroke' outline.
    *
    *   This function calls @SW_FT_Stroker_Rewind automatically.
    */
   SW_FT_Error
   SW_FT_Stroker_ParseOutline( SW_FT_Stroker   stroker,
-                             const SW_FT_Outline*  outline,
-                             SW_FT_Bool      opened );
+                             const SW_FT_Outline*  outline);
 
 
   /**************************************************************

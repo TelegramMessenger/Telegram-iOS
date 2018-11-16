@@ -120,6 +120,7 @@ typedef struct  SW_FT_Outline_
   SW_FT_Vector*  points;          /* the outline's points               */
   char*       tags;            /* the points flags                   */
   short*      contours;        /* the contour end points             */
+  char*       contours_flag;   /* the contour open flags             */
 
   int         flags;           /* outline masks                      */
 

@@ -1741,8 +1741,7 @@ void SW_FT_Stroker_Export(SW_FT_Stroker stroker, SW_FT_Outline* outline)
  *  that we do support opened paths, and do not scale the outline.
  */
 SW_FT_Error SW_FT_Stroker_ParseOutline(SW_FT_Stroker        stroker,
-                                       const SW_FT_Outline* outline,
-                                       SW_FT_Bool           opened)
+                                       const SW_FT_Outline* outline)
 {
     SW_FT_Vector v_last;
     SW_FT_Vector v_control;
@@ -1805,7 +1804,7 @@ SW_FT_Error SW_FT_Stroker_ParseOutline(SW_FT_Stroker        stroker,
             tags--;
         }
 
-        error = SW_FT_Stroker_BeginSubPath(stroker, &v_start, opened);
+        error = SW_FT_Stroker_BeginSubPath(stroker, &v_start, outline->contours_flag[n]);
         if (error) goto Exit;
 
         while (point < limit) {
