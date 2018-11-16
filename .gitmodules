@@ -3,13 +3,13 @@
 	url = git@github.com:peter-iakovlev/AsyncDisplayKit.git
 [submodule "submodules/Display"]
 	path = submodules/Display
-url=git@github.com:../Display.git
+url=../Display.git
 [submodule "submodules/HockeySDK-iOS"]
 	path = submodules/HockeySDK-iOS
 	url = git@github.com:peter-iakovlev/HockeySDK-iOS.git
 [submodule "submodules/LegacyComponents"]
 	path = submodules/LegacyComponents
-url=git@github.com:../LegacyComponents.git
+url=../LegacyComponents.git
 [submodule "submodules/libtgvoip"]
 	path = submodules/libtgvoip
 url=git@github.com:peter-iakovlev/libtgvoip.git
@@ -21,13 +21,13 @@ url=git@github.com:peter-iakovlev/lottie-ios.git
 url=git@github.com:peter-iakovlev/MtProtoKit.git
 [submodule "submodules/Postbox"]
 	path = submodules/Postbox
-url=git@github.com:../Postbox.git
+url=../Postbox.git
 [submodule "submodules/SSignalKit"]
 	path = submodules/SSignalKit
 	url = git@github.com:peter-iakovlev/Signals.git
 [submodule "submodules/TelegramCore"]
 	path = submodules/TelegramCore
-url=git@github.com:../TelegramCore.git
+url=../TelegramCore.git
 [submodule "submodules/TelegramUI"]
 	path = submodules/TelegramUI
-url=git@github.com:../TelegramUI.git
+url=../TelegramUI.git
