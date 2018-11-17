@@ -181,3 +181,13 @@ public func deleteAllContacts(postbox: Postbox, network: Network) -> Signal<Void
         }
     }
 }
+
+public func resetSavedContacts(network: Network) -> Signal<Void, NoError> {
+    return network.request(Api.functions.contacts.resetSaved())
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
+}
