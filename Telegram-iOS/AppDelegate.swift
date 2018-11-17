@@ -1227,9 +1227,6 @@ private enum QueuedWakeup: Int32 {
                         if let userId = Int32(handle) {
                             if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
                                 let _ = context.applicationContext.callManager?.requestCall(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
-                                /*if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                                    
-                                }*/
                             }
                         }
                     }
