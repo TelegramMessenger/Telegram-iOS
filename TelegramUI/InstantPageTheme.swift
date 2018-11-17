@@ -87,6 +87,7 @@ final class InstantPageTheme {
     
     let codeBlockBackgroundColor: UIColor
     
+    let linkColor: UIColor
     let textHighlightColor: UIColor
     let linkHighlightColor: UIColor
     let markerColor: UIColor
@@ -104,11 +105,12 @@ final class InstantPageTheme {
     
     let imageEmptyColor: UIColor?
     
-    init(pageBackgroundColor: UIColor, textCategories: InstantPageTextCategories, serif: Bool, codeBlockBackgroundColor: UIColor, textHighlightColor: UIColor, linkHighlightColor: UIColor, markerColor: UIColor, panelBackgroundColor: UIColor, panelHighlightedBackgroundColor: UIColor, panelPrimaryColor: UIColor, panelSecondaryColor: UIColor, panelAccentColor: UIColor, tableBorderColor: UIColor, tableHeaderColor: UIColor, controlColor: UIColor, imageEmptyColor: UIColor?) {
+    init(pageBackgroundColor: UIColor, textCategories: InstantPageTextCategories, serif: Bool, codeBlockBackgroundColor: UIColor, linkColor: UIColor, textHighlightColor: UIColor, linkHighlightColor: UIColor, markerColor: UIColor, panelBackgroundColor: UIColor, panelHighlightedBackgroundColor: UIColor, panelPrimaryColor: UIColor, panelSecondaryColor: UIColor, panelAccentColor: UIColor, tableBorderColor: UIColor, tableHeaderColor: UIColor, controlColor: UIColor, imageEmptyColor: UIColor?) {
         self.pageBackgroundColor = pageBackgroundColor
         self.textCategories = textCategories
         self.serif = serif
         self.codeBlockBackgroundColor = codeBlockBackgroundColor
+        self.linkColor = linkColor
         self.textHighlightColor = textHighlightColor
         self.linkHighlightColor = linkHighlightColor
         self.markerColor = markerColor
@@ -124,7 +126,7 @@ final class InstantPageTheme {
     }
     
     func withUpdatedFontStyles(sizeMultiplier: CGFloat, forceSerif: Bool) -> InstantPageTheme {
-        return InstantPageTheme(pageBackgroundColor: pageBackgroundColor, textCategories: self.textCategories.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), serif: forceSerif, codeBlockBackgroundColor: codeBlockBackgroundColor, textHighlightColor: textHighlightColor, linkHighlightColor: linkHighlightColor, markerColor: markerColor, panelBackgroundColor: panelBackgroundColor, panelHighlightedBackgroundColor: panelHighlightedBackgroundColor, panelPrimaryColor: panelPrimaryColor, panelSecondaryColor: panelSecondaryColor, panelAccentColor: panelAccentColor, tableBorderColor: tableBorderColor, tableHeaderColor: tableHeaderColor, controlColor: controlColor, imageEmptyColor: imageEmptyColor)
+        return InstantPageTheme(pageBackgroundColor: pageBackgroundColor, textCategories: self.textCategories.withUpdatedFontStyles(sizeMultiplier: sizeMultiplier, forceSerif: forceSerif), serif: forceSerif, codeBlockBackgroundColor: codeBlockBackgroundColor, linkColor: linkColor, textHighlightColor: textHighlightColor, linkHighlightColor: linkHighlightColor, markerColor: markerColor, panelBackgroundColor: panelBackgroundColor, panelHighlightedBackgroundColor: panelHighlightedBackgroundColor, panelPrimaryColor: panelPrimaryColor, panelSecondaryColor: panelSecondaryColor, panelAccentColor: panelAccentColor, tableBorderColor: tableBorderColor, tableHeaderColor: tableHeaderColor, controlColor: controlColor, imageEmptyColor: imageEmptyColor)
     }
 }
 
@@ -142,8 +144,9 @@ private let lightTheme = InstantPageTheme(
     ),
     serif: false,
     codeBlockBackgroundColor: UIColor(rgb: 0xf5f8fc),
+    linkColor: UIColor(rgb: 0x007ee5),
     textHighlightColor: UIColor(rgb: 0, alpha: 0.12),
-    linkHighlightColor: UIColor(rgb: 0, alpha: 0.12),
+    linkHighlightColor: UIColor(rgb: 0x007ee5, alpha: 0.07),
     markerColor: UIColor(rgb: 0xfef3bc),
     panelBackgroundColor: UIColor(rgb: 0xf3f4f5),
     panelHighlightedBackgroundColor: UIColor(rgb: 0xe7e7e7),
@@ -170,8 +173,9 @@ private let sepiaTheme = InstantPageTheme(
     ),
     serif: false,
     codeBlockBackgroundColor: UIColor(rgb: 0xefe7d6),
+    linkColor: UIColor(rgb: 0xd19600),
     textHighlightColor: UIColor(rgb: 0, alpha: 0.1),
-    linkHighlightColor: UIColor(rgb: 0, alpha: 0.1),
+    linkHighlightColor: UIColor(rgb: 0xd19600, alpha: 0.1),
     markerColor: UIColor(rgb: 0xe5ddcd),
     panelBackgroundColor: UIColor(rgb: 0xefe7d6),
     panelHighlightedBackgroundColor: UIColor(rgb: 0xe3dccb),
@@ -198,8 +202,9 @@ private let grayTheme = InstantPageTheme(
     ),
     serif: false,
     codeBlockBackgroundColor: UIColor(rgb: 0x555556),
+    linkColor: UIColor(rgb: 0x5ac8fa),
     textHighlightColor: UIColor(rgb: 0, alpha: 0.16),
-    linkHighlightColor: UIColor(rgb: 0, alpha: 0.16),
+    linkHighlightColor: UIColor(rgb: 0x5ac8fa, alpha: 0.13),
     markerColor: UIColor(rgb: 0x4b4b4b),
     panelBackgroundColor: UIColor(rgb: 0x555556),
     panelHighlightedBackgroundColor: UIColor(rgb: 0x505051),
@@ -226,8 +231,9 @@ private let darkTheme = InstantPageTheme(
     ),
     serif: false,
     codeBlockBackgroundColor: UIColor(rgb: 0x131313),
+    linkColor: UIColor(rgb: 0x5ac8fa),
     textHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.1),
-    linkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.1),
+    linkHighlightColor: UIColor(rgb: 0x5ac8fa, alpha: 0.2),
     markerColor: UIColor(rgb: 0x313131),
     panelBackgroundColor: UIColor(rgb: 0x131313),
     panelHighlightedBackgroundColor: UIColor(rgb: 0x1f1f1f),

@@ -178,7 +178,6 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
                 
                 if itemNode == nil {
                     let itemIndex = itemIndex
-                    let embedIndex = embedIndex
                     let detailsIndex = detailsIndex
                     if let newNode = item.node(account: self.account, strings: self.strings, theme: theme, openMedia: { [weak self] media in
                         self?.openMedia(media)
@@ -187,15 +186,11 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
                     }, openUrl: { [weak self] url in
                         self?.openUrl(url)
                     }, updateWebEmbedHeight: { [weak self] height in
-                        //self?.updateWebEmbedHeight(embedIndex, height)
                     }, updateDetailsExpanded: { [weak self] expanded in
                         self?.updateDetailsExpanded(detailsIndex, expanded)
                     }, currentExpandedDetails: self.currentExpandedDetails) {
                         newNode.frame = itemFrame
                         newNode.updateLayout(size: itemFrame.size, transition: transition)
-//                        if case let .animated(duration, _) = transition {
-//                            newNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-//                        }
                         if let topNode = topNode {
                             self.insertSubnode(newNode, aboveSubnode: topNode)
                         } else {
@@ -240,9 +235,6 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
                 if self.visibleTiles[tileIndex] == nil {
                     let tileNode = InstantPageTileNode(tile: tile, backgroundColor: theme.pageBackgroundColor)
                     tileNode.frame = tileFrame
-//                    if case let .animated(duration, _) = transition {
-//                        tileNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-//                    }
                     if let topNode = topNode {
                         self.insertSubnode(tileNode, aboveSubnode: topNode)
                     } else {
@@ -339,13 +331,21 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
         return contentOffset
     }
     
-    private func effectiveSizeForDetails(_ item: InstantPageDetailsItem) -> CGSize {
+    private func nodeForDetailsItem(_ item: InstantPageDetailsItem) -> InstantPageDetailsNode? {
         for (_, itemNode) in self.visibleItemsWithNodes {
             if let detailsNode = itemNode as? InstantPageDetailsNode, detailsNode.item === item {
-                return CGSize(width: item.frame.width, height: detailsNode.effectiveContentSize.height + item.titleHeight)
+                return detailsNode
             }
         }
-        return item.frame.size
+        return nil
+    }
+    
+    private func effectiveSizeForDetails(_ item: InstantPageDetailsItem) -> CGSize {
+        if let node = nodeForDetailsItem(item) {
+            return CGSize(width: item.frame.width, height: node.effectiveContentSize.height + item.titleHeight)
+        } else {
+            return item.frame.size
+        }
     }
     
     private func effectiveFrameForTile(_ tile: InstantPageTile) -> CGRect {

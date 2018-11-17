@@ -45,6 +45,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let account: Account
     let initialPeer: Peer
     let safeInset: CGFloat
+    private let transparent: Bool
     private let rtl: Bool
     private var strings: PresentationStrings
     private var theme: InstantPageTheme
@@ -64,18 +65,18 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     
     private var joinState: JoinState = .none
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
         self.initialPeer = initialPeer
         self.safeInset = safeInset
+        self.transparent = transparent
         self.rtl = rtl
         self.openPeer = openPeer
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
-        self.highlightedBackgroundNode.backgroundColor = theme.panelHighlightedBackgroundColor
         self.highlightedBackgroundNode.alpha = 0.0
         
         self.buttonNode = HighlightableButtonNode()
@@ -97,7 +98,14 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         
         super.init()
         
-        self.backgroundColor = theme.panelBackgroundColor
+        if self.transparent {
+            self.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
+            self.highlightedBackgroundNode.backgroundColor = UIColor(white: 1.0, alpha: 0.1)
+        } else {
+            self.backgroundColor = theme.panelBackgroundColor
+            self.highlightedBackgroundNode.backgroundColor = theme.panelHighlightedBackgroundColor
+        }
+        
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.joinNode)
@@ -152,7 +160,8 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     
         self.peerDisposable = (signal |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
-                strongSelf.nameNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: strongSelf.theme.panelPrimaryColor)
+                let textColor = strongSelf.transparent ? UIColor.white : strongSelf.theme.panelPrimaryColor
+                strongSelf.nameNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: textColor)
                 if let peer = peer as? TelegramChannel {
                     var joinState = strongSelf.joinState
                     if case .member = peer.participationStatus {
@@ -195,12 +204,15 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     
     private func applyThemeAndStrings(themeUpdated: Bool) {
         if let peer = self.peer {
-            self.nameNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: self.theme.panelPrimaryColor)
+            let textColor = self.transparent ? UIColor.white : self.theme.panelPrimaryColor
+            self.nameNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: textColor)
         }
-        self.joinNode.setAttributedTitle(NSAttributedString(string: self.strings.Channel_JoinChannel, font: Font.medium(17.0), textColor: self.theme.panelAccentColor), for: [])
+        let accentColor = self.transparent ? UIColor.white : self.theme.panelAccentColor
+        self.joinNode.setAttributedTitle(NSAttributedString(string: self.strings.Channel_JoinChannel, font: Font.medium(17.0), textColor: accentColor), for: [])
         
         if themeUpdated {
-            self.checkNode.image = generateTintedImage(image: UIImage(bundleImageName: "Instant View/PanelCheck"), color: self.theme.panelSecondaryColor)
+            let secondaryColor = self.transparent ? UIColor.white : self.theme.panelSecondaryColor
+            self.checkNode.image = generateTintedImage(image: UIImage(bundleImageName: "Instant View/PanelCheck"), color: secondaryColor)
             self.activityIndicator.type = .custom(self.theme.panelAccentColor, 22.0, 2.0, false)
         }
         self.setNeedsLayout()

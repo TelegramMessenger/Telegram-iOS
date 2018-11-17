@@ -57,6 +57,8 @@
 		09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */; };
 		09C3466D2167D63A00B76780 /* Accessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C3466C2167D63A00B76780 /* Accessibility.swift */; };
 		09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */; };
+		09C9EA33219F79F600E90146 /* ID3Artwork.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA31219F79F500E90146 /* ID3Artwork.m */; };
+		09C9EA34219F79F600E90146 /* ID3Artwork.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C9EA32219F79F600E90146 /* ID3Artwork.h */; };
 		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
 		09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304172173C15700C00567 /* WatchSettingsController.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
@@ -791,7 +793,6 @@
 		D0EC6DA31EB9F58900EBF1C3 /* ChatMessageDateHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB381DCFF87B009AD9A1 /* ChatMessageDateHeader.swift */; };
 		D0EC6DA41EB9F58900EBF1C3 /* ChatMessageActionButtonsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9171DD5033100E8160F /* ChatMessageActionButtonsNode.swift */; };
 		D0EC6DA51EB9F58900EBF1C3 /* ChatBotInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C932371E09E0EA0074F044 /* ChatBotInfoItem.swift */; };
-		D0EC6DA61EB9F58900EBF1C3 /* ChatEmptyItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C48F431E81D5110075317D /* ChatEmptyItem.swift */; };
 		D0EC6DA71EB9F58900EBF1C3 /* ChatMessageBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02298361E0C34E900707F91 /* ChatMessageBackground.swift */; };
 		D0EC6DA81EB9F58900EBF1C3 /* ChatInterfaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03ADB471D703268005A521C /* ChatInterfaceState.swift */; };
 		D0EC6DA91EB9F58900EBF1C3 /* ChatPresentationInterfaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B417C21D7DE54E004562A4 /* ChatPresentationInterfaceState.swift */; };
@@ -1115,6 +1116,8 @@
 		09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySecureIdScanController.swift; sourceTree = "<group>"; };
 		09C3466C2167D63A00B76780 /* Accessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accessibility.swift; sourceTree = "<group>"; };
 		09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
+		09C9EA31219F79F500E90146 /* ID3Artwork.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ID3Artwork.m; sourceTree = "<group>"; };
+		09C9EA32219F79F600E90146 /* ID3Artwork.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ID3Artwork.h; sourceTree = "<group>"; };
 		09D304142173C0E900C00567 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
 		09D304172173C15700C00567 /* WatchSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSettingsController.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
@@ -1773,7 +1776,6 @@
 		D0C27B3C1F4B454800A4E170 /* InstantPagePlayableVideoNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPagePlayableVideoNode.swift; sourceTree = "<group>"; };
 		D0C44B631FC64D0500227BE0 /* SwipeToDismissGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeToDismissGestureRecognizer.swift; sourceTree = "<group>"; };
 		D0C45E9E213FFAFD00988156 /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C48F431E81D5110075317D /* ChatEmptyItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatEmptyItem.swift; sourceTree = "<group>"; };
 		D0C50DE81E93A07900F62E39 /* libtgvoip.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libtgvoip.framework; path = "../libtgvoip/build/Debug-iphoneos/libtgvoip.framework"; sourceTree = "<group>"; };
 		D0C50E281E93A33700F62E39 /* VoipDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VoipDynamic.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphoneos/VoipDynamic.framework"; sourceTree = "<group>"; };
 		D0C50E371E93CB1500F62E39 /* NotificationContainerController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationContainerController.swift; sourceTree = "<group>"; };
@@ -4249,7 +4251,6 @@
 				D0F7AB381DCFF87B009AD9A1 /* ChatMessageDateHeader.swift */,
 				D01AC9171DD5033100E8160F /* ChatMessageActionButtonsNode.swift */,
 				D0C932371E09E0EA0074F044 /* ChatBotInfoItem.swift */,
-				D0C48F431E81D5110075317D /* ChatEmptyItem.swift */,
 				D02298361E0C34E900707F91 /* ChatMessageBackground.swift */,
 				D0754D231EEE0F4100884F6E /* ChatMessageInteractiveMediaLabelNode.swift */,
 				D091C7A31F8EBB1E00D7DE13 /* ChatPresentationData.swift */,
@@ -4488,6 +4489,8 @@
 				09C3466C2167D63A00B76780 /* Accessibility.swift */,
 				D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */,
 				0902838C2194AEB90067EFBD /* ImageTransparency.swift */,
+				09C9EA32219F79F600E90146 /* ID3Artwork.h */,
+				09C9EA31219F79F500E90146 /* ID3Artwork.m */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -4649,6 +4652,7 @@
 				D0E9BAC61F05738600F079A4 /* STPAPIClient.h in Headers */,
 				D00ADFD91EBA2E9D00873D2E /* OngoingCallThreadLocalContext.h in Headers */,
 				D06F31E22135829B001A0F12 /* EDSunriseSet.h in Headers */,
+				09C9EA34219F79F600E90146 /* ID3Artwork.h in Headers */,
 				D0E9BA531F0559DA00F079A4 /* STPImageLibrary+Private.h in Headers */,
 				D0E9BA601F055A4300F079A4 /* STPDelegateProxy.h in Headers */,
 				096C98C121787C6700C211FF /* TGBridgeAudioDecoder.h in Headers */,
@@ -5055,6 +5059,7 @@
 				D0EC6D191EB9F58800EBF1C3 /* FFMpegMediaFrameSourceContext.swift in Sources */,
 				D02D60AE206BD47300FEFE1E /* SecureIdDocumentTypeSelectionController.swift in Sources */,
 				D079FCE11F05C9380038FADE /* BotReceiptControllerNode.swift in Sources */,
+				09C9EA33219F79F600E90146 /* ID3Artwork.m in Sources */,
 				D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */,
 				D053DADC201AAAB100993D32 /* ChatTextInputMenu.swift in Sources */,
 				D0EC6D1A1EB9F58800EBF1C3 /* FFMpegMediaFrameSourceContextHelpers.swift in Sources */,
@@ -5337,7 +5342,6 @@
 				D0EC6DA31EB9F58900EBF1C3 /* ChatMessageDateHeader.swift in Sources */,
 				D0EC6DA41EB9F58900EBF1C3 /* ChatMessageActionButtonsNode.swift in Sources */,
 				D0EC6DA51EB9F58900EBF1C3 /* ChatBotInfoItem.swift in Sources */,
-				D0EC6DA61EB9F58900EBF1C3 /* ChatEmptyItem.swift in Sources */,
 				D0E9BAE41F0574D800F079A4 /* STPBankAccountParams.m in Sources */,
 				D0E412D3206A7DC100BEE4A2 /* DateSelectionActionSheetController.swift in Sources */,
 				D06887F01F72DEE6000AB936 /* ShareInputFieldNode.swift in Sources */,

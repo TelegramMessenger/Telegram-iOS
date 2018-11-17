@@ -1,15 +1,7 @@
 import UIKit
 import Accelerate
 
-func imageHasTransparency(_ image: UIImage) -> Bool {
-    guard let cgImage = image.cgImage, cgImage.bitsPerComponent == 8, cgImage.bitsPerPixel == 32 else {
-        return false
-    }
-    let alphaInfo = cgImage.alphaInfo
-    guard alphaInfo == .first || alphaInfo == .last || alphaInfo == .premultipliedFirst || alphaInfo == .premultipliedLast else {
-        return false
-    }
-    
+private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)? {
     var sourceBuffer = vImage_Buffer()
     defer {
         free(sourceBuffer.data)
@@ -29,9 +21,9 @@ func imageHasTransparency(_ image: UIImage) -> Bool {
     var error = vImageBuffer_InitWithCGImage(&sourceBuffer, &cgImageFormat, nil, cgImage, noFlags)
     assert(error == kvImageNoError)
     
-    if alphaInfo == .premultipliedLast {
+    if cgImage.alphaInfo == .premultipliedLast {
         error = vImageUnpremultiplyData_RGBA8888(&sourceBuffer, &sourceBuffer, noFlags)
-    } else if alphaInfo == .premultipliedFirst {
+    } else if cgImage.alphaInfo == .premultipliedFirst {
         error = vImageUnpremultiplyData_ARGB8888(&sourceBuffer, &sourceBuffer, noFlags)
     }
     assert(error == kvImageNoError)
@@ -45,11 +37,43 @@ func imageHasTransparency(_ image: UIImage) -> Bool {
     error = vImageHistogramCalculation_ARGB8888(&sourceBuffer, &mutableHistogram, noFlags)
     assert(error == kvImageNoError)
     
-    let alphaBinIndex = alphaInfo == .last || alphaInfo == .premultipliedLast ? 3 : 0
-    for i in 0 ..< 255 {
-        if histogramBins[alphaBinIndex][i] > 0 {
-            return true
+    let alphaBinIndex = [.last, .premultipliedLast].contains(cgImage.alphaInfo) ? 3 : 0
+    return (histogramBins, alphaBinIndex)
+}
+
+func imageHasTransparency(_ cgImage: CGImage) -> Bool {
+    guard cgImage.bitsPerComponent == 8, cgImage.bitsPerPixel == 32 else {
+        return false
+    }
+    guard [.first, .last, .premultipliedFirst, .premultipliedLast].contains(cgImage.alphaInfo) else {
+        return false
+    }
+    if let (histogramBins, alphaBinIndex) = generateHistogram(cgImage: cgImage) {
+        for i in 0 ..< 255 {
+            if histogramBins[alphaBinIndex][i] > 0 {
+                return true
+            }
         }
     }
+    return false
+}
+
+func imageIsMonochrome(_ cgImage: CGImage) -> Bool {
+    guard cgImage.bitsPerComponent == 8, cgImage.bitsPerPixel == 32 else {
+        return false
+    }
+    if let (histogramBins, alphaBinIndex) = generateHistogram(cgImage: cgImage) {
+        
+    }
+    
+//    SSE, bias = 0, [0,0,0]
+//    if adjust_color_bias:
+//    bias = ImageStat.Stat(thumb).mean[:3]
+//    bias = [b - sum(bias)/3 for b in bias ]
+//    for pixel in thumb.getdata():
+//    mu = sum(pixel)/3
+//    SSE += sum((pixel[i] - mu - bias[i])*(pixel[i] - mu - bias[i]) for i in [0,1,2])
+    
+    
     return false
 }

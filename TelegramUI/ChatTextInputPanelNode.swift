@@ -1334,8 +1334,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
             
-            if isPNG && images.count == 1, let image = images.first {
-                if imageHasTransparency(image) {
+            if isPNG && images.count == 1, let image = images.first, let cgImage = image.cgImage {
+                if imageHasTransparency(cgImage) {
                     self.paste(.sticker(image))
                     return false
                 }

@@ -17,6 +17,9 @@ enum InstantPageTextStyle {
     case markerColor(UIColor)
     case marker
     case anchor(String)
+    case linkColor(UIColor)
+    case linkMarkerColor(UIColor)
+    case link(Bool)
 }
 
 let InstantPageLineSpacingFactorAttribute = "LineSpacingFactorAttribute"
@@ -51,6 +54,9 @@ final class InstantPageTextStyleStack {
         var markerColor: UIColor?
         var marker: Bool?
         var anchor: String?
+        var linkColor: UIColor?
+        var linkMarkerColor: UIColor?
+        var link: Bool?
         
         for item in self.items.reversed() {
             switch item {
@@ -111,6 +117,18 @@ final class InstantPageTextStyleStack {
                     if anchor == nil {
                         anchor = name
                     }
+                case let .linkColor(color):
+                    if linkColor == nil {
+                        linkColor = color
+                    }
+                case let .linkMarkerColor(color):
+                    if linkMarkerColor == nil {
+                        linkMarkerColor = color
+                    }
+                case let .link(instant):
+                    if link == nil {
+                        link = instant
+                    }
             }
         }
         
@@ -134,7 +152,7 @@ final class InstantPageTextStyleStack {
             } else if fontFixed != nil && fontFixed! {
                 attributes[NSAttributedStringKey.font] = UIFont(name: "Menlo-BoldItalic", size: parsedFontSize)
             } else {
-                attributes[NSAttributedStringKey.font] = Font.bold(parsedFontSize)
+                attributes[NSAttributedStringKey.font] = Font.semiboldItalic(parsedFontSize)
             }
         } else if bold != nil && bold! {
             if fontSerif != nil && fontSerif! {
@@ -170,10 +188,17 @@ final class InstantPageTextStyleStack {
             attributes[NSAttributedStringKey.underlineStyle] = NSUnderlineStyle.styleSingle.rawValue as NSNumber
         }
         
-        if let color = color {
-            attributes[NSAttributedStringKey.foregroundColor] = color
+        if let link = link, let linkColor = linkColor {
+            attributes[NSAttributedStringKey.foregroundColor] = linkColor
+            if link, let linkMarkerColor = linkMarkerColor {
+                attributes[NSAttributedStringKey(rawValue: InstantPageMarkerColorAttribute)] = linkMarkerColor
+            }
         } else {
-            attributes[NSAttributedStringKey.foregroundColor] = UIColor.black
+            if let color = color {
+                attributes[NSAttributedStringKey.foregroundColor] = color
+            } else {
+                attributes[NSAttributedStringKey.foregroundColor] = UIColor.black
+            }
         }
         
         if let lineSpacingFactor = lineSpacingFactor {

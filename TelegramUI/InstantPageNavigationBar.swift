@@ -17,6 +17,8 @@ final class InstantPageNavigationBar: ASDisplayNode {
     private let arrowNode: ASImageNode
     private let titleNode: ASTextNode
     
+    private let progressNode: ASDisplayNode
+    
     private let intrinsicMoreSize: CGSize
     private let intrinsicSmallMoreSize: CGSize
     private let intrinsicActionSize: CGSize
@@ -24,6 +26,8 @@ final class InstantPageNavigationBar: ASDisplayNode {
     
     private var dimmed: Bool = false
     private var buttonsAlphaFactor: CGFloat = 1.0
+    
+    private var currentTitle: String?
     
     var back: (() -> Void)?
     var share: (() -> Void)?
@@ -59,6 +63,10 @@ final class InstantPageNavigationBar: ASDisplayNode {
         self.arrowNode.displaysAsynchronously = false
         
         self.titleNode = ASTextNode()
+        self.titleNode.maximumNumberOfLines = 1
+        
+        self.progressNode = ASDisplayNode()
+        self.progressNode.backgroundColor = .white
         
         super.init()
         
@@ -72,6 +80,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
         self.addSubnode(self.moreButton)
         self.addSubnode(self.actionButton)
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.progressNode)
         
         self.backButton.addTarget(self, action: #selector(self.backPressed), forControlEvents: .touchUpInside)
         self.actionButton.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)
@@ -107,7 +116,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, minHeight: CGFloat, maxHeight: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, pageProgress: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, minHeight: CGFloat, maxHeight: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, title: String?, pageProgress: CGFloat, transition: ContainedViewLayoutTransition) {
         let progressHeight: CGFloat
         if !topInset.isZero {
             progressHeight = size.height - topInset + 11.0
@@ -149,9 +158,22 @@ final class InstantPageNavigationBar: ASDisplayNode {
             alphaFactor *= 0.5
         }
         
+        if title != self.currentTitle {
+            self.currentTitle = title
+            if let title = title {
+                self.titleNode.transform = CATransform3DIdentity
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
+                let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 44.0 - 88.0, height: size.height))
+                self.titleNode.frame = CGRect(origin: CGPoint(x: (size.width - titleSize.width) / 2.0, y: size.height - 30.0), size: titleSize)
+            }
+        }
+        
         let maxMoreOffset = self.intrinsicMoreSize.height / 2.0 + floor((44.0 - self.intrinsicMoreSize.height) / 2.0)
         let minMoreOffset = self.intrinsicSmallMoreSize.height / 2.0 + floor((20.0 - self.intrinsicSmallMoreSize.height) / 2.0)
         let moreOffset = (transitionFactor * maxMoreOffset) + ((1.0 - transitionFactor) * minMoreOffset)
+        
+        transition.updateTransformScale(node: self.titleNode, scale: 0.75 + transitionFactor * 0.25)
+        transition.updatePosition(node: self.titleNode, position: CGPoint(x: size.width / 2.0, y: size.height - moreOffset))
         
         transition.updateTransformScale(node: self.moreButton, scale: buttonScaleFactor)
         transition.updatePosition(node: self.moreButton, position: CGPoint(x: size.width - rightInset - buttonScaleFactor * self.intrinsicMoreSize.width / 2.0, y: size.height - moreOffset))

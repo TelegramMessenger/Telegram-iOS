@@ -29,7 +29,6 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, Bool)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
     case ChatInfoEntry(String, ChatPresentationData)
-    case EmptyChatInfoEntry(ChatPresentationData, MessageTags?)
     case SearchEntry(PresentationTheme, PresentationStrings)
     
     var stableId: UInt64 {
@@ -44,10 +43,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 return UInt64(3) << 40
             case .ChatInfoEntry:
                 return UInt64(4) << 40
-            case .EmptyChatInfoEntry:
-                return UInt64(5) << 40
             case .SearchEntry:
-                return UInt64(6) << 40
+                return UInt64(5) << 40
         }
     }
     
@@ -62,8 +59,6 @@ enum ChatHistoryEntry: Identifiable, Comparable {
             case let .UnreadEntry(index, _):
                 return index
             case .ChatInfoEntry:
-                return MessageIndex.absoluteLowerBound()
-            case .EmptyChatInfoEntry:
                 return MessageIndex.absoluteLowerBound()
             case .SearchEntry:
                 return MessageIndex.absoluteLowerBound()
@@ -181,12 +176,6 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 }
             case let .ChatInfoEntry(lhsText, lhsPresentationData):
                 if case let .ChatInfoEntry(rhsText, rhsPresentationData) = rhs, lhsText == rhsText, lhsPresentationData === rhsPresentationData {
-                    return true
-                } else {
-                    return false
-                }
-            case let .EmptyChatInfoEntry(lhsPresentationData, lhsTagMask):
-                if case let .EmptyChatInfoEntry(rhsPresentationData, rhsTagMask) = rhs, lhsPresentationData === rhsPresentationData, lhsTagMask == rhsTagMask {
                     return true
                 } else {
                     return false

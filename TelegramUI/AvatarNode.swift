@@ -235,6 +235,8 @@ public final class AvatarNode: ASDisplayNode {
                         self.editOverlayNode = editOverlayNode
                     }
                     self.editOverlayNode?.isHidden = false
+                } else {
+                    self.editOverlayNode?.isHidden = true
                 }
                 
                 parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true)

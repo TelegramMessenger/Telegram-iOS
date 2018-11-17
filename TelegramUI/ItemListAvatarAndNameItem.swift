@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-private let updatingAvatarOverlayImage = generateFilledCircleImage(diameter: 66.0, color: UIColor(white: 1.0, alpha: 0.5), backgroundColor: nil)
+private let updatingAvatarOverlayImage = generateFilledCircleImage(diameter: 66.0, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
 
 enum ItemListAvatarAndNameInfoItemTitleType {
     case group
@@ -254,6 +254,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
     
     private let avatarNode: AvatarNode
     private let updatingAvatarOverlay: ASImageNode
+    private let activityIndicator: ActivityIndicator
     
     private let callButton: HighlightableButtonNode
     
@@ -304,6 +305,9 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         self.updatingAvatarOverlay.displayWithoutProcessing = true
         self.updatingAvatarOverlay.displaysAsynchronously = false
         
+        self.activityIndicator = ActivityIndicator(type: .custom(.white, 24.0, 1.0, false))
+        self.activityIndicator.isHidden = true
+        
         self.nameNode = TextNode()
         self.nameNode.isUserInteractionEnabled = false
         self.nameNode.contentMode = .left
@@ -324,6 +328,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.avatarNode)
+        self.addSubnode(self.activityIndicator)
+        
         self.addSubnode(self.nameNode)
         self.addSubnode(self.statusNode)
         
@@ -531,6 +537,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         if strongSelf.updatingAvatarOverlay.supernode == nil {
                             strongSelf.insertSubnode(strongSelf.updatingAvatarOverlay, aboveSubnode: strongSelf.avatarNode)
                         }
+                        strongSelf.activityIndicator.isHidden = false
                     } else if strongSelf.updatingAvatarOverlay.supernode != nil {
                         if animated {
                             strongSelf.updatingAvatarOverlay.alpha = 0.0
@@ -542,6 +549,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         } else {
                             strongSelf.updatingAvatarOverlay.removeFromSupernode()
                         }
+                        strongSelf.activityIndicator.isHidden = true
                     }
                     
                     if item.call != nil {
@@ -620,6 +628,9 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: avatarOriginY), size: CGSize(width: 66.0, height: 66.0))
                     strongSelf.avatarNode.frame = avatarFrame
                     strongSelf.updatingAvatarOverlay.frame = avatarFrame
+                    
+                    let indicatorSize = strongSelf.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
+                    strongSelf.activityIndicator.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(avatarFrame.midX - indicatorSize.width / 2.0), y: floorToScreenPixels(avatarFrame.midY - indicatorSize.height / 2.0)), size: indicatorSize)
                     
                     let nameY: CGFloat
                     if statusText.isEmpty {

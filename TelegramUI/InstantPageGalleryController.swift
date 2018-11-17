@@ -36,6 +36,8 @@ struct InstantPageGalleryEntry: Equatable {
         styleStack.push(.fontSize(16.0))
         styleStack.push(.textColor(.white))
         styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
+        styleStack.push(.linkColor(UIColor(rgb: 0x5ac8fa)))
+        styleStack.push(.linkMarkerColor(UIColor(rgb: 0x5ac8fa, alpha: 0.2)))
         styleStack.push(.fontSerif(false))
         
         if let url = self.media.url {
@@ -59,6 +61,8 @@ struct InstantPageGalleryEntry: Equatable {
                 styleStack.push(.fontSize(14.0))
                 styleStack.push(.textColor(.white))
                 styleStack.push(.markerColor(UIColor(rgb: 0x313131)))
+                styleStack.push(.linkColor(UIColor(rgb: 0x5ac8fa)))
+                styleStack.push(.linkMarkerColor(UIColor(rgb: 0x5ac8fa, alpha: 0.2)))
                 styleStack.push(.fontSerif(false))
                 //styleStack.push(.lineSpacingFactor(1.0))
                 credit = attributedStringForRichText(mediaCredit, styleStack: styleStack)

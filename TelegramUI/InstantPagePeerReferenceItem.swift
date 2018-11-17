@@ -11,17 +11,19 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
     
     let initialPeer: Peer
     let safeInset: CGFloat
+    let transparent: Bool
     let rtl: Bool
     
-    init(frame: CGRect, initialPeer: Peer, safeInset: CGFloat, rtl: Bool) {
+    init(frame: CGRect, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool) {
         self.frame = frame
         self.initialPeer = initialPeer
         self.safeInset = safeInset
+        self.transparent = transparent
         self.rtl = rtl
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPagePeerReferenceNode(account: account, strings: strings, theme: theme, initialPeer: self.initialPeer, safeInset: self.safeInset, rtl: self.rtl, openPeer: openPeer)
+        return InstantPagePeerReferenceNode(account: account, strings: strings, theme: theme, initialPeer: self.initialPeer, safeInset: self.safeInset, transparent: self.transparent, rtl: self.rtl, openPeer: openPeer)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

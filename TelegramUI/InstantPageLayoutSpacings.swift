@@ -10,7 +10,7 @@ func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) ->
                 return 25.0
             case (_, .blockQuote), (.blockQuote, _), (_, .pullQuote), (.pullQuote, _):
                 return 27.0
-            case (.kicker, .title):
+            case (.kicker, .title), (.cover, .title):
                 return 16.0
             case (_, .title):
                 return 20.0
@@ -49,16 +49,16 @@ func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) ->
         }
     } else if let lower = lower {
         switch lower {
-            case .cover, .channelBanner, .details, .anchor:
+            case .cover, .channelBanner, .details:
                 return 0.0
             default:
-                return 24.0
+                return 25.0
         }
     } else {
         if let upper = upper, case .relatedArticles = upper {
             return 0.0
         } else {
-            return 24.0
+            return 25.0
         }
     }
 }

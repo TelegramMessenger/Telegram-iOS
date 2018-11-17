@@ -12,19 +12,16 @@ private let titleFont = Font.medium(15.0)
 private let messageFont = Font.regular(14.0)
 
 private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNodeContent {
-    private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
     
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
     
     override init() {
-        self.iconNode = ASImageNode()
         self.textNode = ImmediateTextNode()
         
         super.init()
         
-        self.addSubnode(self.iconNode)
         self.addSubnode(self.textNode)
     }
     
@@ -33,24 +30,18 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
             
-            self.iconNode.image = PresentationResourcesChat.chatEmptyItemIconImage(interfaceState.theme)
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
         }
         
-        let insets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
+        let insets = UIEdgeInsets(top: 6.0, left: 10.0, bottom: 6.0, right: 10.0)
         
-        let iconVerticalInset: CGFloat = 14.0
-        let iconSize = self.iconNode.image?.size ?? CGSize()
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
-        let spacing: CGFloat = 26.0
         
-        let contentWidth = max(iconSize.width, textSize.width)
-        let contentHeight = iconVerticalInset + iconSize.height + spacing + textSize.height
+        let contentWidth = textSize.width
+        let contentHeight = textSize.height
         let contentRect = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: contentWidth, height: contentHeight))
         
-        let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - iconSize.width) / 2.0), y: contentRect.minY + iconVerticalInset), size: iconSize)
-        transition.updateFrame(node: self.iconNode, frame: iconFrame)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - textSize.width) / 2.0), y: iconFrame.maxY + spacing), size: textSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - textSize.width) / 2.0), y: insets.top), size: textSize))
         
         return contentRect.insetBy(dx: -insets.left, dy: -insets.top).size
     }
