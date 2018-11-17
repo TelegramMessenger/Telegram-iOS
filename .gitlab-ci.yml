@@ -5,14 +5,12 @@ variables:
   LANG: "en_US.UTF-8"
   LC_ALL: "en_US.UTF-8"
 
-before_script:
-  - sudo gem install bundler && bundle update
-
 internal:
   tags:
     - ios
   stage: internal
   script:
-    - bundle exec fastlane internalhockeyapp
+    - sh ~/ios-prepare-build.sh $CI_PROJECT_DIR/..
+    - fastlane internalhockeyapp
   environment:
     name: internal
