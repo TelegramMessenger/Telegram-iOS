@@ -530,7 +530,6 @@ namespace tgvoip{
 		void RunRecvThread();
 		void RunSendThread();
 		void HandleAudioInput(unsigned char* data, size_t len, unsigned char* secondaryData, size_t secondaryLen);
-		void HandleVideoInput(EncodedVideoFrame& frame);
 		void UpdateAudioBitrateLimit();
 		void SetState(int state);
 		void UpdateAudioOutputState();
