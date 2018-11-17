@@ -13,10 +13,6 @@ import CloudKit
 
 private let handleVoipNotifications = false
 
-private final class TestingCoveringView: WindowCoveringView {
-    
-}
-
 private func encodeText(_ string: String, _ key: Int) -> String {
     var result = ""
     for c in string.unicodeScalars {
@@ -1230,10 +1226,10 @@ private enum QueuedWakeup: Int32 {
                     if let handle = contact.personHandle?.value {
                         if let userId = Int32(handle) {
                             if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
-                                let callResult = context.applicationContext.callManager?.requestCall(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
-                                if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
+                                let _ = context.applicationContext.callManager?.requestCall(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
+                                /*if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                                     
-                                }
+                                }*/
                             }
                         }
                     }
