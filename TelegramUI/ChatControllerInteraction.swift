@@ -40,6 +40,7 @@ public enum ChatControllerInteractionLongTapAction {
 public enum ChatControllerInteractionOpenMessageMode {
     case `default`
     case stream
+    case shared
 }
 
 public final class ChatControllerInteraction {

@@ -39,7 +39,7 @@ func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageT
 }
 
 
-func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, fixedFont: UIFont) -> NSAttributedString {
+func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, fixedFont: UIFont, underlineLinks: Bool = true) -> NSAttributedString {
     var nsString: NSString?
     let string = NSMutableAttributedString(string: text, attributes: [NSAttributedStringKey.font: baseFont, NSAttributedStringKey.foregroundColor: baseColor])
     var skipEntity = false
@@ -65,7 +65,9 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
         switch entity.type {
             case .Url:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
-                string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                if underlineLinks {
+                    string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
+                }
                 if nsString == nil {
                     nsString = text as NSString
                 }
@@ -75,7 +77,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                if underlineAllLinks {
+                if underlineLinks && underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
                 string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: "mailto:\(nsString!.substring(with: range))", range: range)
@@ -84,7 +86,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                if underlineAllLinks {
+                if underlineLinks && underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
                 string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: "tel:\(nsString!.substring(with: range))", range: range)
@@ -93,7 +95,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                if underlineAllLinks {
+                if underlineLinks && underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
                 string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: url, range: range)
@@ -103,7 +105,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 string.addAttribute(NSAttributedStringKey.font, value: italicFont, range: range)
             case .Mention:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
-                if linkColor.isEqual(baseColor) {
+                if underlineLinks && underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
                 if linkFont !== baseFont {
@@ -115,7 +117,7 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention), value: nsString!.substring(with: range), range: range)
             case let .TextMention(peerId):
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
-                if linkColor.isEqual(baseColor) {
+                if underlineLinks && underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
                 if linkFont !== baseFont {
@@ -146,14 +148,14 @@ func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], ba
                 }
                 if !skipEntity {
                     string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
-                    if linkColor.isEqual(baseColor) {
+                    if underlineLinks && underlineAllLinks {
                         string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                     }
                     string.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag), value: TelegramHashtag(peerName: nil, hashtag: hashtag), range: range)
                 }
             case .BotCommand:
                 string.addAttribute(NSAttributedStringKey.foregroundColor, value: linkColor, range: range)
-                if linkColor.isEqual(baseColor) {
+                if underlineLinks && underlineAllLinks {
                     string.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: range)
                 }
                 if nsString == nil {

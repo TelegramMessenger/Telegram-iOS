@@ -165,27 +165,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     strongSelf.peersContentNode?.updateFoundPeers()
                 }
                 
-                func updateActionNodesAlpha(_ nodes: [ASDisplayNode], alpha: CGFloat) {
-                    for node in nodes {
-                        if !node.alpha.isEqual(to: alpha) {
-                            let previousAlpha = node.alpha
-                            node.alpha = alpha
-                            node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.18 : 0.32)
-                            
-                            if let inputNode = node as? ShareInputFieldNode, alpha.isZero {
-                                inputNode.deactivateInput()
-                            }
-                        }
-                    }
-                }
-                
-                let actionNodes: [ASDisplayNode]
-                if strongSelf.defaultAction == nil {
-                    actionNodes = [strongSelf.inputFieldNode, strongSelf.actionsBackgroundNode, strongSelf.actionButtonNode, strongSelf.actionSeparatorNode]
-                } else {
-                    actionNodes = [strongSelf.inputFieldNode]
-                }
-                updateActionNodesAlpha(actionNodes, alpha: strongSelf.controllerInteraction!.selectedPeers.isEmpty ? 0.0 : 1.0)
+                strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty, inputField: true, actions: strongSelf.defaultAction == nil)
                 
                 strongSelf.updateButton()
                 
@@ -251,6 +231,31 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
+    func setActionNodesHidden(_ hidden: Bool, inputField: Bool = false, actions: Bool = false) {
+        func updateActionNodesAlpha(_ nodes: [ASDisplayNode], alpha: CGFloat) {
+            for node in nodes {
+                if !node.alpha.isEqual(to: alpha) {
+                    let previousAlpha = node.alpha
+                    node.alpha = alpha
+                    node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: alpha.isZero ? 0.18 : 0.32)
+                    
+                    if let inputNode = node as? ShareInputFieldNode, alpha.isZero {
+                        inputNode.deactivateInput()
+                    }
+                }
+            }
+        }
+        
+        var actionNodes: [ASDisplayNode] = []
+        if inputField {
+            actionNodes.append(self.inputFieldNode)
+        }
+        if actions {
+            actionNodes.append(contentsOf: [self.actionsBackgroundNode, self.actionButtonNode, self.actionSeparatorNode])
+        }
+        updateActionNodesAlpha(actionNodes, alpha: hidden ? 0.0 : 1.0)
+    }
+    
     func transitionToContentNode(_ contentNode: (ASDisplayNode & ShareContentContainerNode)?, fastOut: Bool = false) {
         if self.contentNode !== contentNode {
             let transition: ContainedViewLayoutTransition
@@ -298,6 +303,12 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     
                     contentNode.activate()
                     previous.deactivate()
+                    
+                    if contentNode is ShareSearchContainerNode {
+                        self.setActionNodesHidden(true, inputField: true, actions: true)
+                    } else if !(contentNode is ShareLoadingContainerNode) {
+                        self.setActionNodesHidden(false, inputField: !self.controllerInteraction!.selectedPeers.isEmpty, actions: true)
+                    }
                 } else {
                     if let contentNode = self.contentNode {
                         contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in

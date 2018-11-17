@@ -119,7 +119,7 @@ private let italicFont = Font.italic(16.0)
 private let fixedFont = UIFont(name: "Menlo-Regular", size: 15.0) ?? textFont
 
 func galleryCaptionStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
-    return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: .white, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, fixedFont: fixedFont)
+    return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, fixedFont: fixedFont, underlineLinks: false)
 }
 
 func galleryItemForEntry(account: Account, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, openUrl: @escaping (String) -> Void = { _ in }, openUrlOptions: @escaping (String) -> Void = { _ in }) -> GalleryItem? {

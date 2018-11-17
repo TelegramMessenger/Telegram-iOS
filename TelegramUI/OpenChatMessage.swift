@@ -20,7 +20,7 @@ private enum ChatMessageGalleryControllerData {
     case chatAvatars(AvatarGalleryController, Media)
 }
 
-private func chatMessageGalleryControllerData(account: Account, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool, synchronousLoad: Bool) -> ChatMessageGalleryControllerData? {
+private func chatMessageGalleryControllerData(account: Account, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool, synchronousLoad: Bool, excludeWebPageMedia: Bool = false) -> ChatMessageGalleryControllerData? {
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
@@ -42,7 +42,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
             galleryMedia = file
         } else if let image = media as? TelegramMediaImage {
             galleryMedia = image
-        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, !excludeWebPageMedia {
             if let file = content.file {
                 galleryMedia = file
             } else if let image = content.image {
@@ -151,8 +151,8 @@ func chatMessagePreviewControllerData(account: Account, message: Message, standa
     return nil
 }
 
-func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool = false, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void) -> Bool {
-    if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: stream, synchronousLoad: false) {
+func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool = false, excludeWebPageMedia: Bool = false, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void) -> Bool {
+    if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: stream, synchronousLoad: false, excludeWebPageMedia: excludeWebPageMedia) {
         switch mediaData {
             case let .url(url):
                 openUrl(url)

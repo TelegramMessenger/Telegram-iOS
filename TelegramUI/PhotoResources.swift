@@ -1819,28 +1819,69 @@ func chatSecretMessageVideo(account: Account, videoReference: FileMediaReference
     }
 }
 
+private func orientationFromExif(orientation: Int) -> UIImageOrientation {
+    switch orientation {
+        case 1:
+            return .up;
+        case 3:
+            return .down;
+        case 8:
+            return .left;
+        case 6:
+            return .right;
+        case 2:
+            return .upMirrored;
+        case 4:
+            return .downMirrored;
+        case 5:
+            return .leftMirrored;
+        case 7:
+            return .rightMirrored;
+        default:
+            return .up
+    }
+}
+
 func imageOrientationFromSource(_ source: CGImageSource) -> UIImageOrientation {
     if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) {
         let dict = properties as NSDictionary
-        if let value = dict.object(forKey: "Orientation") as? NSNumber {
-            return UIImageOrientation(rawValue: value.intValue) ?? .up
+        if let value = dict.object(forKey: kCGImagePropertyOrientation) as? NSNumber {
+            return orientationFromExif(orientation: value.intValue)
         }
     }
     
     return .up
 }
 
+private func rotationFor(_ orientation: UIImageOrientation) -> CGFloat {
+    switch orientation {
+        case .left:
+            return CGFloat.pi / 2.0
+        case .right:
+            return -CGFloat.pi / 2.0
+        case .down:
+            return -CGFloat.pi
+        default:
+            return 0.0
+    }
+}
+
 func drawImage(context: CGContext, image: CGImage, orientation: UIImageOrientation, in rect: CGRect) {
     var restore = true
     var drawRect = rect
     switch orientation {
+        case .left:
+            fallthrough
         case .right:
+            fallthrough
+        case .down:
+            let angle = rotationFor(orientation)
             context.saveGState()
             context.translateBy(x: rect.midX, y: rect.midY)
-            context.rotate(by: -CGFloat.pi / 2.0)
+            context.rotate(by: angle)
             context.translateBy(x: -rect.midX, y: -rect.midY)
             var t = CGAffineTransform(translationX: rect.midX, y: rect.midY)
-            t = t.rotated(by: -CGFloat.pi / 2.0)
+            t = t.rotated(by: angle)
             t = t.translatedBy(x: -rect.midX, y: -rect.midY)
             
             drawRect = rect.applying(t)
@@ -1944,6 +1985,51 @@ func chatMessageImageFile(account: Account, fileReference: FileMediaReference, t
                 }
                 
                 if let fullSizeImage = fullSizeImage {
+                    c.setBlendMode(.normal)
+                    c.interpolationQuality = .medium
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
+                }
+            }
+            
+            addCorners(context, arguments: arguments)
+            
+            return context
+        }
+    }
+}
+
+func instantPageImageFile(account: Account, fileReference: FileMediaReference, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return chatMessageFileDatas(account: account, fileReference: fileReference, progressive: false, fetched: fetched)
+    |> map { (thumbnailData, fullSizePath, fullSizeComplete) in
+        return { arguments in
+            assertNotOnMainThread()
+            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            
+            let drawingRect = arguments.drawingRect
+            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
+            
+            var fullSizeImage: CGImage?
+            var imageOrientation: UIImageOrientation = .up
+            if let fullSizePath = fullSizePath {
+                if fullSizeComplete {
+                    let options = NSMutableDictionary()
+                    options.setValue(max(fittedSize.width * context.scale, fittedSize.height * context.scale) as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
+                    options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
+                    if let imageSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: fullSizePath) as CFURL, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options) {
+                        imageOrientation = imageOrientationFromSource(imageSource)
+                        fullSizeImage = image
+                    }
+                }
+            }
+            
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            
+            context.withFlippedContext { c in
+                if var fullSizeImage = fullSizeImage {
+//                    if true || imageIsMonochrome(fullSizeImage), let tintedImage = generateTintedImage(image: UIImage(cgImage: fullSizeImage), color: .white)?.cgImage {
+//                        fullSizeImage = tintedImage
+//                    }
+                    
                     c.setBlendMode(.normal)
                     c.interpolationQuality = .medium
                     drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
@@ -2433,80 +2519,59 @@ private func drawAlbumArtPlaceholder(into c: CGContext, arguments: TransformImag
 }
 
 func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    
-    var fileThumbnailResource: TelegramMediaResource?
-    if let fileReference = fileReference, let smallestRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-        fileThumbnailResource = smallestRepresentation.resource
+    var fileArtworkData: Signal<Data?, NoError> = .single(nil)
+    if let fileReference = fileReference, let size = fileReference.media.resource.size {
+        fileArtworkData = fileArtworkData
+        |> then(postbox.mediaBox.resourceData(fileReference.media.resource, size: size, in: 0 ..< min(size, 1024 * 256))
+        |> mapToSignal { data -> Signal<Data?, NoError> in
+            return .single(albumArtworkData(data))
+        })
     }
     
+    var remoteArtworkData: Signal<(Data?, Data?, Bool), NoError> = .single((nil, nil, false))
     if let albumArt = albumArt {
         if thumbnail {
-            return albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource) |> map { thumbnailData in
-                return { arguments in
-                    let context = DrawingContext(size: arguments.drawingSize, clear: true)
-                    
-                    var sourceImage: UIImage?
-                    if let thumbnailData = thumbnailData, let image = UIImage(data: thumbnailData) {
-                        sourceImage = image
-                    }
-                    
-                    if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
-                        let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
-                        context.withFlippedContext { c in
-                            c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize))
-                        }
-                    } else {
-                        context.withFlippedContext { c in
-                            drawAlbumArtPlaceholder(into: c, arguments: arguments, thumbnail: thumbnail)
-                        }
-                    }
-                    
-                    addCorners(context, arguments: arguments)
-                    
-                    return context
-                }
+            remoteArtworkData = albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource)
+            |> map { thumbnailData in
+                return (thumbnailData, nil, false)
             }
         } else {
-            return albumArtFullSizeDatas(postbox: postbox, thumbnail: albumArt.thumbnailResource, fullSize: albumArt.fullSizeResource) |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
-                return { arguments in
-                    let context = DrawingContext(size: arguments.drawingSize, clear: true)
-                    
-                    var sourceImage: UIImage?
-                    if fullSizeComplete, let fullSizeData = fullSizeData, let image = UIImage(data: fullSizeData) {
-                        sourceImage = image
-                    } else if let thumbnailData = thumbnailData, let image = UIImage(data: thumbnailData) {
-                        sourceImage = image
-                    }
-                    
-                    if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
-                        let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
-                        context.withFlippedContext { c in
-                            c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize))
-                        }
-                    } else {
-                        context.withFlippedContext { c in
-                            drawAlbumArtPlaceholder(into: c, arguments: arguments, thumbnail: thumbnail)
-                        }
-                    }
-                    
-                    addCorners(context, arguments: arguments)
-                    
-                    return context
-                }
-            }
+            remoteArtworkData = albumArtFullSizeDatas(postbox: postbox, thumbnail: albumArt.thumbnailResource, fullSize: albumArt.fullSizeResource)
         }
-    } else {
-        return .single({ arguments in
+    }
+    
+    return combineLatest(fileArtworkData, remoteArtworkData)
+    |> map { fileArtworkData, remoteArtworkData in
+        let remoteThumbnailData = remoteArtworkData.0
+        let remoteFullSizeData = remoteArtworkData.1
+        let remoteFullSizeComplete = remoteArtworkData.2
+        return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
-        
-            context.withFlippedContext { c in
-                drawAlbumArtPlaceholder(into: c, arguments: arguments, thumbnail: thumbnail)
+            
+            var sourceImage: UIImage?
+            if let fileArtworkData = fileArtworkData, let image = UIImage(data: fileArtworkData) {
+                sourceImage = image
+            } else if remoteFullSizeComplete, let fullSizeData = remoteFullSizeData, let image = UIImage(data: fullSizeData) {
+                sourceImage = image
+            } else if let thumbnailData = remoteThumbnailData, let image = UIImage(data: thumbnailData) {
+                sourceImage = image
+            }
+            
+            if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
+                let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
+                context.withFlippedContext { c in
+                    c.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize))
+                }
+            } else {
+                context.withFlippedContext { c in
+                    drawAlbumArtPlaceholder(into: c, arguments: arguments, thumbnail: thumbnail)
+                }
             }
             
             addCorners(context, arguments: arguments)
             
             return context
-        })
+        }
     }
 }
 

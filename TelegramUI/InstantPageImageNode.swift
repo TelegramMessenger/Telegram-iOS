@@ -58,7 +58,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             if file.mimeType.hasPrefix("image/") {
                 _ = freeMediaFileInteractiveFetched(account: account, fileReference: fileReference).start()
-                self.imageNode.setSignal(chatMessageImageFile(account: account, fileReference: fileReference, thumbnail: false, fetched: true))
+                self.imageNode.setSignal(instantPageImageFile(account: account, fileReference: fileReference, fetched: true))
             } else {
                 self.imageNode.setSignal(chatMessageVideo(postbox: account.postbox, videoReference: fileReference))
             }
@@ -76,6 +76,10 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             }
             let resource = MapSnapshotMediaResource(latitude: map.latitude, longitude: map.longitude, width: Int32(dimensions.width), height: Int32(dimensions.height))
             self.imageNode.setSignal(chatMapSnapshotImage(account: account, resource: resource))
+        } else if let webPage = media.media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image {
+            let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
+            self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
+            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
         }
     }
     

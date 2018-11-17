@@ -169,6 +169,20 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
     }
 }
 
+func isTelegramMeLink(_ url: String) -> Bool {
+    let schemes = ["http://", "https://", ""]
+    let baseTelegramMePaths = ["telegram.me", "t.me"]
+    for basePath in baseTelegramMePaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
 func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: String?, password: String?, secret: Data?)? {
     let schemes = ["http://", "https://", ""]
     let baseTelegramMePaths = ["telegram.me", "t.me"]

@@ -214,7 +214,7 @@ final class InstantPageTextItem: InstantPageItem {
         if let (index, dict) = self.attributesAtPoint(point) {
             if let _ = dict[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
                 if let rects = self.attributeRects(name: NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), at: index) {
-                    return rects
+                    return rects.map { $0.insetBy(dx: 2.0, dy: -3.0) }
                 }
             }
         }
@@ -360,7 +360,7 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
             styleStack.pop()
             return result
         case let .url(text, url, webpageId):
-            styleStack.push(.underline)
+            styleStack.push(.link(webpageId != nil))
             let result = attributedStringForRichText(text, styleStack: styleStack, url: InstantPageUrlItem(url: url, webpageId: webpageId))
             styleStack.pop()
             return result
@@ -503,7 +503,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             let lineRange = NSMakeRange(lastIndex, lineCharacterCount)
             
             var stop = false
-            if maxNumberOfLines > 0 && lines.count == maxNumberOfLines - 1 {
+            if maxNumberOfLines > 0 && lines.count == maxNumberOfLines - 1 && lastIndex + lineCharacterCount < string.length {
                 let attributes = string.attributes(at: lastIndex + lineCharacterCount - 1, effectiveRange: nil)
                 if let truncateString = CFAttributedStringCreate(nil, "\u{2026}" as CFString, attributes as CFDictionary) {
                     let truncateToken = CTLineCreateWithAttributedString(truncateString)
@@ -525,11 +525,20 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                     let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
                     strikethroughItems.append(InstantPageTextStrikethroughItem(frame: CGRect(x: currentLineOrigin.x + lowerX, y: currentLineOrigin.y, width: upperX - lowerX, height: fontLineHeight)))
-                } else if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageMarkerColorAttribute)] as? UIColor {
+                }
+                if let color = attributes[NSAttributedStringKey.init(rawValue: InstantPageMarkerColorAttribute)] as? UIColor {
+                    var lineHeight = fontLineHeight
+                    var delta: CGFloat = 0.0
+                    
+                    if let offset = attributes[NSAttributedStringKey.baselineOffset] as? CGFloat {
+                        lineHeight = floorToScreenPixels(lineHeight * 0.85)
+                        delta = offset * 0.6
+                    }
                     let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                     let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
-                    markedItems.append(InstantPageTextMarkedItem(frame: CGRect(x: currentLineOrigin.x + lowerX, y: currentLineOrigin.y, width: upperX - lowerX, height: fontLineHeight), color: item))
-                } else if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageAnchorAttribute)] as? String {
+                    markedItems.append(InstantPageTextMarkedItem(frame: CGRect(x: currentLineOrigin.x + lowerX, y: currentLineOrigin.y + delta, width: upperX - lowerX, height: lineHeight), color: color))
+                }
+                if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageAnchorAttribute)] as? String {
                     anchorItems.append(InstantPageTextAnchorItem(name: item))
                 }
             }

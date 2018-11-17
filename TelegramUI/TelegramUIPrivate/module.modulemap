@@ -30,4 +30,5 @@ module TelegramUIPrivateModule {
     header "../EDSunriseSet.h"
     header "../TGBridgeAudioDecoder.h"
     header "../TGBridgeAudioEncoder.h"
+    header "../ID3Artwork.h"
 }

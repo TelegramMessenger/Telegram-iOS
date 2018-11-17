@@ -277,7 +277,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     let actionsDisposable = DisposableSet()
     
     let updateAvatarDisposable = MetaDisposable()
-    actionsDisposable.add(updateAvatarDisposable)
+    //actionsDisposable.add(updateAvatarDisposable)
     
     let updatePeerNameDisposable = MetaDisposable()
     actionsDisposable.add(updatePeerNameDisposable)

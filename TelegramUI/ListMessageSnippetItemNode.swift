@@ -476,13 +476,19 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     
     func activateMedia() {
         if let item = self.item, let currentPrimaryUrl = self.currentPrimaryUrl {
-            if let webpage = self.currentMedia as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
-                if websiteType(of: content) == .instagram {
-                    if !item.controllerInteraction.openMessage(item.message, .default) {
+            if let webpage = self.currentMedia as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                if content.instantPage != nil {
+                    if websiteType(of: content) == .instagram {
+                        if !item.controllerInteraction.openMessage(item.message, .default) {
+                            item.controllerInteraction.openInstantPage(item.message)
+                        }
+                    } else {
                         item.controllerInteraction.openInstantPage(item.message)
                     }
                 } else {
-                    item.controllerInteraction.openInstantPage(item.message)
+                    if isTelegramMeLink(content.url) || !item.controllerInteraction.openMessage(item.message, .default) {
+                        item.controllerInteraction.openUrl(currentPrimaryUrl, false, false)
+                    }
                 }
             } else {
                 if !item.controllerInteraction.openMessage(item.message, .default) {

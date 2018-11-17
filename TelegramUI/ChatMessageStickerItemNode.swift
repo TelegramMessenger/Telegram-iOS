@@ -213,7 +213,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let edited = false
             let sentViaBot = false
-            let viewCount: Int? = nil
+            var viewCount: Int? = nil
+            for attribute in item.message.attributes {
+                if let _ = attribute as? EditedMessageAttribute {
+                    // edited = true
+                } else if let attribute = attribute as? ViewCountMessageAttribute {
+                    viewCount = attribute.count
+                }// else if let _ = attribute as? InlineBotMessageAttribute {
+                //    sentViaBot = true
+                //  }
+            }
             
             let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings, format: .minimal)
             

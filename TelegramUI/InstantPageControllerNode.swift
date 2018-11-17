@@ -204,7 +204,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         }
                     }
-                    break
+                    if !(item is InstantPageImageItem || item is InstantPagePlayableVideoItem) {
+                        break
+                    }
                 }
             }
         }
@@ -654,8 +656,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.statusBar.verticalOffset = 0.0
         }
         
+        var title: String?
+        if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
+            title = content.websiteName
+        }
+        
         transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
-        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, pageProgress: pageProgress, transition: transition)
+        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, title: title, pageProgress: pageProgress, transition: transition)
         
         transition.animateView {
             self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationBarFrame.size.height, left: 0.0, bottom: containerLayout.intrinsicInsets.bottom, right: 0.0)
@@ -690,7 +697,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
             } else {
-                linkHighlightingNode = LinkHighlightingNode(color: UIColor(rgb: 0x007be8).withAlphaComponent(0.4))
+                let highlightColor = self.theme?.linkHighlightColor ?? UIColor(rgb: 0x007ee5).withAlphaComponent(0.4)
+                linkHighlightingNode = LinkHighlightingNode(color: highlightColor)
                 linkHighlightingNode.isUserInteractionEnabled = false
                 self.linkHighlightingNode = linkHighlightingNode
                 self.scrollNode.addSubnode(linkHighlightingNode)
@@ -716,13 +724,21 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return contentOffset
     }
     
-    private func effectiveSizeForDetails(_ item: InstantPageDetailsItem) -> CGSize {
+    private func nodeForDetailsItem(_ item: InstantPageDetailsItem) -> InstantPageDetailsNode? {
         for (_, itemNode) in self.visibleItemsWithNodes {
             if let detailsNode = itemNode as? InstantPageDetailsNode, detailsNode.item === item {
-                return CGSize(width: item.frame.width, height: detailsNode.effectiveContentSize.height + item.titleHeight)
+                return detailsNode
             }
         }
-        return item.frame.size
+        return nil
+    }
+    
+    private func effectiveSizeForDetails(_ item: InstantPageDetailsItem) -> CGSize {
+        if let node = nodeForDetailsItem(item) {
+            return CGSize(width: item.frame.width, height: node.effectiveContentSize.height + item.titleHeight)
+        } else {
+            return item.frame.size
+        }
     }
     
     private func effectiveFrameForTile(_ tile: InstantPageTile) -> CGRect {
@@ -925,11 +941,14 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         if let webPage = self.webPage, case let .Loaded(content) = webPage.content, let page = content.instantPage, page.url == baseUrl, let anchor = anchor {
             if !anchor.isEmpty {
-                if let (anchorItem, offset) = findAnchorItem(String(anchor), items: items) {
-                    self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: anchorItem.frame.minY + offset - self.scrollNode.view.contentInset.top), animated: true)
-                    return
+                if let (item, offset) = findAnchorItem(String(anchor), items: items) {
+                    let frame = effectiveFrameForItem(item)
+                    self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: frame.minY + offset - self.scrollNode.view.contentInset.top), animated: true)
                 }
+            } else {
+                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top), animated: true)
             }
+            return
         }
         
         var cancelImpl: (() -> Void)?
