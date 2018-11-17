@@ -9,6 +9,8 @@ before_script:
   - sudo gem install bundler && bundle update
 
 internal:
+  tags:
+    - ios
   stage: internal
   script:
     - bundle exec fastlane internalhockeyapp
