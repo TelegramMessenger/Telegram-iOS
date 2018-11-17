@@ -137,7 +137,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         _inputFieldOnelineLabel.userInteractionEnabled = false;
         [_wrapperView addSubview:_inputFieldOnelineLabel];
         
-        _counterLabel = [[UILabel alloc] initWithFrame:CGRectMake(_fieldBackground.frame.size.width - 33, 5, 24, 16)];
+        _counterLabel = [[UILabel alloc] initWithFrame:CGRectMake(_fieldBackground.frame.size.width - 33, 5, 36, 16)];
         _counterLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
         _counterLabel.backgroundColor = [UIColor clearColor];
         _counterLabel.font = TGSystemFontOfSize(12);
@@ -165,7 +165,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     
     UIEdgeInsets inputFieldInternalEdgeInsets = [self _inputFieldInternalEdgeInsets];
     _inputField = [[HPGrowingTextView alloc] initWithKeyCommandController:_keyCommandController];
-    _inputField.frame = CGRectMake(inputFieldInternalEdgeInsets.left, inputFieldInternalEdgeInsets.top + TGRetinaPixel, _inputFieldClippingContainer.frame.size.width - inputFieldInternalEdgeInsets.left - 24, _inputFieldClippingContainer.frame.size.height);
+    _inputField.frame = CGRectMake(inputFieldInternalEdgeInsets.left, inputFieldInternalEdgeInsets.top + TGRetinaPixel, _inputFieldClippingContainer.frame.size.width - inputFieldInternalEdgeInsets.left - 36, _inputFieldClippingContainer.frame.size.height);
     _inputField.textColor = [UIColor whiteColor];
     _inputField.disableFormatting = !_allowEntities;
     _inputField.placeholderView = _placeholderLabel;
@@ -1045,7 +1045,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     CGRect inputFieldClippingFrame = _fieldBackground.frame;
     setViewFrame(_inputFieldClippingContainer, inputFieldClippingFrame);
 
-    CGFloat inputFieldWidth = _inputFieldClippingContainer.frame.size.width - inputFieldInternalEdgeInsets.left - 24;
+    CGFloat inputFieldWidth = _inputFieldClippingContainer.frame.size.width - inputFieldInternalEdgeInsets.left - 36;
     if (fabs(inputFieldWidth - _inputField.frame.size.width) > FLT_EPSILON)
     {
         CGRect inputFieldFrame = CGRectMake(inputFieldInternalEdgeInsets.left, inputFieldInternalEdgeInsets.top + TGRetinaPixel, inputFieldWidth, _inputFieldClippingContainer.frame.size.height);
