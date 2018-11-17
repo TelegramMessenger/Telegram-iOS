@@ -237,7 +237,7 @@ final class GridMessageItemNode: GridItemNode {
                 self.imageNode.setSignal(mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(item.message), media: file)))
                 
                 if let duration = file.duration {
-                    videoAccessoryNode.setup(String(format: "%d:%02d", duration / 60, duration % 60))
+                    videoAccessoryNode.setup(stringForDuration(duration))
                     videoAccessoryNode.isHidden = false
                 } else {
                     videoAccessoryNode.isHidden = true

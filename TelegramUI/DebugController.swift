@@ -21,7 +21,7 @@ private final class DebugControllerArguments {
 
 private enum DebugControllerSection: Int32 {
     case logs
-    case payments
+    case removal
     case logging
     case experiments
     case info
@@ -31,6 +31,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
     case sendOneLog(PresentationTheme)
     case accounts(PresentationTheme)
+    case resetServerContacts(PresentationTheme)
     case clearPaymentData(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
@@ -47,8 +48,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logs.rawValue
             case .accounts:
                 return DebugControllerSection.logs.rawValue
-            case .clearPaymentData:
-                return DebugControllerSection.payments.rawValue
+            case .resetServerContacts, .clearPaymentData:
+                return DebugControllerSection.removal.rawValue
             case .logToFile, .logToConsole, .redactSensitiveData:
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack:
@@ -68,24 +69,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 1
             case .accounts:
                 return 2
-            case .clearPaymentData:
+            case .resetServerContacts:
                 return 3
-            case .logToFile:
+            case .clearPaymentData:
                 return 4
-            case .logToConsole:
+            case .logToFile:
                 return 5
-            case .redactSensitiveData:
+            case .logToConsole:
                 return 6
-            case .enableRaiseToSpeak:
+            case .redactSensitiveData:
                 return 7
-            case .keepChatNavigationStack:
+            case .enableRaiseToSpeak:
                 return 8
-            case .clearTips:
+            case .keepChatNavigationStack:
                 return 9
-            case .reimport:
+            case .clearTips:
                 return 10
-            case .versionInfo:
+            case .reimport:
                 return 11
+            case .versionInfo:
+                return 12
         }
     }
     
@@ -141,8 +144,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.pushController(debugAccountsController(account: arguments.account, accountManager: arguments.accountManager))
                 })
+            case let .resetServerContacts(theme):
+                return ItemListActionItem(theme: theme, title: "Reset Server Contacts", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    let _ = resetSavedContacts(network: arguments.account.network).start()
+                })
             case let .clearPaymentData(theme):
-                return ItemListDisclosureItem(theme: theme, title: "Clear Payment Password", label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(theme: theme, title: "Clear Payment Password", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     let _ = cacheTwoStepPasswordToken(postbox: arguments.account.postbox, token: nil).start()
                 })
             case let .logToFile(theme, value):
@@ -214,6 +221,8 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.sendLogs(presentationData.theme))
     entries.append(.sendOneLog(presentationData.theme))
     entries.append(.accounts(presentationData.theme))
+    
+    entries.append(.resetServerContacts(presentationData.theme))
     entries.append(.clearPaymentData(presentationData.theme))
     
     entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))

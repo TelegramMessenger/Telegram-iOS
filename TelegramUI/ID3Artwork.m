@@ -54,7 +54,6 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
     }
     
     const uint8_t *bytes = data.bytes;
-    
     if (!(memcmp(bytes, ID3v2, 5) == 0 || memcmp(bytes, ID3v3, 5) == 0)) {
         return nil;
     }
@@ -67,7 +66,7 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
     uint32_t b4 =  size & 0x0000007F;
     size = b1 + b2 + b3 + b4;
     
-    const uint8_t *ptr = data.bytes + ID3TagOffset;
+    const uint8_t *ptr = bytes + ID3TagOffset;
     
     uint32_t pos = 0;
     while (pos < size) {
@@ -97,8 +96,12 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
                     uint8_t previousByte = 0xff;
                     uint32_t skippedBytes = 0;
                     
-                    for (NSUInteger i = 0; i < frameSize - imageOffset + skippedBytes; i++) {
-                        uint8_t byte = (uint8_t)ptr[imageOffset + i];
+                    for (uint32_t i = 0; i < frameSize - imageOffset + skippedBytes; i++) {
+                        uint32_t offset = imageOffset + i;
+                        if (ID3TagOffset + pos + offset > data.length) {
+                            return nil;
+                        }
+                        uint8_t byte = (uint8_t)ptr[offset];
                         if (byte == 0x00 && previousByte == 0xff) {
                             skippedBytes++;
                         } else {

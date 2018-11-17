@@ -2522,7 +2522,7 @@ func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumA
     var fileArtworkData: Signal<Data?, NoError> = .single(nil)
     if let fileReference = fileReference, let size = fileReference.media.resource.size {
         fileArtworkData = fileArtworkData
-        |> then(postbox.mediaBox.resourceData(fileReference.media.resource, size: size, in: 0 ..< min(size, 1024 * 256))
+        |> then(postbox.mediaBox.resourceData(fileReference.media.resource, size: size, in: 0 ..< min(size, 1024 * 384))
         |> mapToSignal { data -> Signal<Data?, NoError> in
             return .single(albumArtworkData(data))
         })

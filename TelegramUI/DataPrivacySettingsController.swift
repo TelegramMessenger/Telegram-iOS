@@ -400,16 +400,16 @@ public func dataPrivacyController(account: Account) -> ViewController {
                     return settings
                 })
                 
-                actionsDisposable.add((deleteAllContacts(postbox: account.postbox, network: account.network)
-                    |> deliverOnMainQueue).start(completed: {
-                        updateState { state in
-                            var state = state
-                            state.deletingContacts = false
-                            return state
-                        }
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success))
-                    }))
+                actionsDisposable.add(((deleteAllContacts(postbox: account.postbox, network: account.network) |> then(resetSavedContacts(network: account.network)))
+                |> deliverOnMainQueue).start(completed: {
+                    updateState { state in
+                        var state = state
+                        state.deletingContacts = false
+                        return state
+                    }
+                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success))
+                }))
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
     }, updateSyncContacts: { value in

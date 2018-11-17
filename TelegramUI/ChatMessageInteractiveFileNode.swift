@@ -272,7 +272,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         audioDuration = Int32(duration)
                         if voice {
                             isVoice = true
-                            candidateDescriptionString = NSAttributedString(string: String(format: "%d:%02d", duration / 60, duration % 60), font: durationFont, textColor:incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+                            let durationString = stringForDuration(audioDuration)
+                            candidateDescriptionString = NSAttributedString(string: durationString, font: durationFont, textColor:incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
                             if let waveform = waveform {
                                 waveform.withDataNoCopy { data in
                                     audioWaveform = AudioWaveform(bitstream: data, bitsPerSample: 5)

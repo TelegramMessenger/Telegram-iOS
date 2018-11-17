@@ -595,7 +595,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             if let size = file.size {
                                 if let duration = file.duration, !message.flags.contains(.Unsent) {
                                     if isMediaStreamable(message: message, media: file) {
-                                        let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
+                                        let durationString = stringForDuration(duration)
                                         let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
                                         badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: sizeString)
                                         mediaDownloadState = .fetching(progress: progress)
@@ -618,7 +618,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                             } else {
                                 if let duration = file.duration, !file.isAnimated {
-                                    let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
+                                    let durationString = stringForDuration(duration)
                                     badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                                 }
                             }
@@ -649,7 +649,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     }
                     if case .constrained = sizeCalculation {
                         if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
-                            let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
+                            let durationString = stringForDuration(duration)
                             badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                         }
                     }
@@ -660,16 +660,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             if isMediaStreamable(message: message, media: file) {
                                 state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                             
-                                let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
-                                
+                                let durationString = stringForDuration(duration)
                                 badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: dataSizeString(file.size ?? 0))
                                 mediaDownloadState = .remote
                             } else {
-                                let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
+                                let durationString = stringForDuration(duration)
                                 badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                             }
                         } else {
-                             let durationString = String(format: "%d:%02d", duration / 60, duration % 60)
+                            let durationString = stringForDuration(duration)
                             if isMediaStreamable(message: message, media: file) {
                                 state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                 badgeContent = .text(inset: 16.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))

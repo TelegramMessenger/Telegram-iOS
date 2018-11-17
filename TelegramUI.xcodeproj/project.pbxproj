@@ -59,6 +59,7 @@
 		09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */; };
 		09C9EA33219F79F600E90146 /* ID3Artwork.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA31219F79F500E90146 /* ID3Artwork.m */; };
 		09C9EA34219F79F600E90146 /* ID3Artwork.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C9EA32219F79F600E90146 /* ID3Artwork.h */; };
+		09C9EA3821A044B500E90146 /* StringForDuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA3721A044B500E90146 /* StringForDuration.swift */; };
 		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
 		09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304172173C15700C00567 /* WatchSettingsController.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
@@ -1118,6 +1119,7 @@
 		09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
 		09C9EA31219F79F500E90146 /* ID3Artwork.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ID3Artwork.m; sourceTree = "<group>"; };
 		09C9EA32219F79F600E90146 /* ID3Artwork.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ID3Artwork.h; sourceTree = "<group>"; };
+		09C9EA3721A044B500E90146 /* StringForDuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringForDuration.swift; sourceTree = "<group>"; };
 		09D304142173C0E900C00567 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
 		09D304172173C15700C00567 /* WatchSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSettingsController.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
@@ -4491,6 +4493,7 @@
 				0902838C2194AEB90067EFBD /* ImageTransparency.swift */,
 				09C9EA32219F79F600E90146 /* ID3Artwork.h */,
 				09C9EA31219F79F500E90146 /* ID3Artwork.m */,
+				09C9EA3721A044B500E90146 /* StringForDuration.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5085,6 +5088,7 @@
 				D0EC6D221EB9F58800EBF1C3 /* PhotoResources.swift in Sources */,
 				D048EA871F4F296400188713 /* InstantPageSettingsFontSizeItemNode.swift in Sources */,
 				D0EC6D231EB9F58800EBF1C3 /* StickerResources.swift in Sources */,
+				09C9EA3821A044B500E90146 /* StringForDuration.swift in Sources */,
 				D0EC6D241EB9F58800EBF1C3 /* CachedResourceRepresentations.swift in Sources */,
 				D01BAA201ECC9A2500295217 /* CallListNodeLocation.swift in Sources */,
 				D0EC6D251EB9F58800EBF1C3 /* FetchCachedRepresentations.swift in Sources */,
