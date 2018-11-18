@@ -21,6 +21,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
 }
 
 func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)? = nil, present: (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     switch resolvedUrl {
         case let .externalUrl(url):
             openExternalUrl(account: account, context: context, url: url, presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: account.telegramApplicationContext, navigationController: navigationController, dismissInput: dismissInput)
@@ -28,29 +29,36 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             if let peerId = peerId {
                 openPeer(peerId, defaultNavigationForPeerId(peerId, navigation: navigation))
             } else {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                
                 present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
         case let .botStart(peerId, payload):
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload):
-            let controller = PeerSelectionController(account: account, filter: [.onlyWriteable, .onlyGroups])
+            let controller = PeerSelectionController(account: account, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup)
             controller.peerSelected = { [weak controller] peerId in
-                let _ = (requestStartBotInGroup(account: account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
-                |> deliverOnMainQueue).start(next: { result in
-                    if let navigationController = navigationController {
-                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
-                    }
-                    switch result {
-                        case let .channelParticipant(participant):
-                            account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
-                        case .none:
-                            break
-                    }
-                    controller?.dismiss()
-                }, error: { _ in
-                    
-                })
+                if payload.isEmpty {
+                    let _ = (addPeerMember(account: account, peerId: peerId, memberId: botPeerId)
+                    |> deliverOnMainQueue).start(completed: {
+                        controller?.dismiss()
+                    })
+                } else {
+                    let _ = (requestStartBotInGroup(account: account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
+                    |> deliverOnMainQueue).start(next: { result in
+                        if let navigationController = navigationController {
+                            navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+                        }
+                        switch result {
+                            case let .channelParticipant(participant):
+                                account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
+                            case .none:
+                                break
+                        }
+                        controller?.dismiss()
+                    }, error: { _ in
+                        
+                    })
+                }
             }
             dismissInput()
             present(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))

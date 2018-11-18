@@ -1945,6 +1945,9 @@ func chatMessageImageFile(account: Account, fileReference: FileMediaReference, t
             
             var thumbnailImage: CGImage?
             if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                if fullSizeImage == nil {
+                    imageOrientation = imageOrientationFromSource(imageSource)
+                }
                 thumbnailImage = image
                 if thumbnail {
                     fittedSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height)).aspectFilled(arguments.boundingSize)
