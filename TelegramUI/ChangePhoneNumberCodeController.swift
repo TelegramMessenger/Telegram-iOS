@@ -132,7 +132,7 @@ private func changePhoneNumberCodeControllerEntries(presentationData: Presentati
     entries.append(.codeEntry(presentationData.theme, state.codeText))
     var text = authorizationCurrentOptionText(codeData.type, strings: presentationData.strings, primaryColor: presentationData.theme.list.itemPrimaryTextColor, accentColor: presentationData.theme.list.itemAccentColor).string
     if let nextType = codeData.nextType {
-        text += "\n\n" + authorizationNextOptionText(nextType, timeout: timeout, strings: presentationData.strings, primaryColor: .black, accentColor: .black).0.string
+        text += "\n\n" + authorizationNextOptionText(currentType: codeData.type, nextType: nextType, timeout: timeout, strings: presentationData.strings, primaryColor: .black, accentColor: .black).0.string
     }
     entries.append(.codeInfo(presentationData.theme, text))
     

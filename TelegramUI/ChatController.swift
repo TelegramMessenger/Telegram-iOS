@@ -131,7 +131,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     private var searchQuerySuggestionState: (ChatPresentationInputQuery?, Disposable)?
     private var urlPreviewQueryState: (String?, Disposable)?
     private var editingUrlPreviewQueryState: (String?, Disposable)?
-    private var searchState: (String, SearchMessagesLocation)?
+    private var searchState: ChatSearchState?
     
     private var recordingModeFeedback: HapticFeedback?
     private var recorderFeedback: HapticFeedback?
@@ -4136,98 +4136,152 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     }
     
     private func updateSearch(_ interfaceState: ChatPresentationInterfaceState) -> ChatPresentationInterfaceState? {
-        var queryAndLocation: (String, SearchMessagesLocation)?
+        let limit: Int32 = 100
+        
+        var derivedSearchState: ChatSearchState?
         if let search = interfaceState.search {
+            func loadMoreIndexFromResultsState(_ resultsState: ChatSearchResultsState?) -> MessageIndex? {
+                guard let resultsState = resultsState, let currentId = resultsState.currentId else {
+                    return nil
+                }
+                if let index = resultsState.messageIndices.index(where: { $0.id == currentId }) {
+                    if index <= limit / 2 {
+                        return resultsState.messageIndices.first
+                    }
+                }
+                return nil
+            }
             switch search.domain {
                 case .everything:
                     switch self.chatLocation {
                         case let .peer(peerId):
-                            queryAndLocation = (search.query, .peer(peerId: peerId, fromId: nil, tags: nil))
+                            derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil), loadMoreIndex: loadMoreIndexFromResultsState(search.resultsState))
                         case let .group(groupId):
-                            queryAndLocation = (search.query, .group(groupId))
+                            derivedSearchState = ChatSearchState(query: search.query, location: .group(groupId), loadMoreIndex: loadMoreIndexFromResultsState(search.resultsState))
                     }
                 case .members:
-                    queryAndLocation = nil
+                    derivedSearchState = nil
                 case let .member(peer):
                     switch self.chatLocation {
                         case let .peer(peerId):
-                            queryAndLocation = (search.query, .peer(peerId: peerId, fromId: peer.id, tags: nil))
+                            derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil), loadMoreIndex: loadMoreIndexFromResultsState(search.resultsState))
                         case .group:
-                            queryAndLocation = nil
+                            derivedSearchState = nil
                     }
             }
         }
         
-        if queryAndLocation?.0 != self.searchState?.0 || queryAndLocation?.1 != self.searchState?.1 {
-            self.searchState = queryAndLocation
-            if let (query, location) = queryAndLocation {
-                var queryIsEmpty = false
-                if query.isEmpty {
-                    if case let .peer(_, fromId, _) = location {
-                        if fromId == nil {
+        if derivedSearchState != self.searchState {
+            let previousSearchState = self.searchState
+            self.searchState = derivedSearchState
+            if let searchState = derivedSearchState {
+                if previousSearchState?.query != searchState.query || previousSearchState?.location != searchState.location {
+                    var queryIsEmpty = false
+                    if searchState.query.isEmpty {
+                        if case let .peer(_, fromId, _) = searchState.location {
+                            if fromId == nil {
+                                queryIsEmpty = true
+                            }
+                        } else {
                             queryIsEmpty = true
                         }
-                    } else {
-                        queryIsEmpty = true
                     }
-                }
-                
-                if queryIsEmpty {
-                    self.searching.set(false)
-                    self.searchDisposable?.set(nil)
-                    if let data = interfaceState.search {
-                        return interfaceState.updatedSearch(data.withUpdatedResultsState(nil))
-                    }
-                } else {
-                    self.searching.set(true)
-                    let searchDisposable: MetaDisposable
-                    if let current = self.searchDisposable {
-                        searchDisposable = current
-                    } else {
-                        searchDisposable = MetaDisposable()
-                        self.searchDisposable = searchDisposable
-                    }
-                    let limit: Int32 = 100
-                    searchDisposable.set((searchMessages(account: self.account, location: location, query: query, limit: limit)
-                    |> map { ($0.0, $0.2) }
-                    |> delay(0.2, queue: Queue.mainQueue())
-                    |> deliverOnMainQueue).start(next: { [weak self] results, totalCount in
-                        guard let strongSelf = self else {
-                            return
+                    
+                    if queryIsEmpty {
+                        self.searching.set(false)
+                        self.searchDisposable?.set(nil)
+                        if let data = interfaceState.search {
+                            return interfaceState.updatedSearch(data.withUpdatedResultsState(nil))
                         }
-                        let complete = results.count >= Int(totalCount)
-                        var navigateIndex: MessageIndex?
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
-                            if let data = current.search {
-                                let messageIndices = results.map({ MessageIndex($0) }).sorted()
-                                var currentIndex = messageIndices.last
-                                if let previousResultId = data.resultsState?.currentId {
-                                    for index in messageIndices {
-                                        if index.id >= previousResultId {
-                                            currentIndex = index
-                                            break
+                    } else {
+                        self.searching.set(true)
+                        let searchDisposable: MetaDisposable
+                        if let current = self.searchDisposable {
+                            searchDisposable = current
+                        } else {
+                            searchDisposable = MetaDisposable()
+                            self.searchDisposable = searchDisposable
+                        }
+                        searchDisposable.set((searchMessages(account: self.account, location: searchState.location, query: searchState.query, limit: limit)
+                        |> map { ($0.0, $0.2) }
+                        |> delay(0.2, queue: Queue.mainQueue())
+                        |> deliverOnMainQueue).start(next: { [weak self] results, totalCount in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let complete = results.count >= Int(totalCount)
+                            var navigateIndex: MessageIndex?
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
+                                if let data = current.search {
+                                    let messageIndices = results.map({ MessageIndex($0) }).sorted()
+                                    var currentIndex = messageIndices.last
+                                    if let previousResultId = data.resultsState?.currentId {
+                                        for index in messageIndices {
+                                            if index.id >= previousResultId {
+                                                currentIndex = index
+                                                break
+                                            }
                                         }
                                     }
+                                    navigateIndex = currentIndex
+                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, totalCount: totalCount, complete: complete)))
+                                } else {
+                                    return current
                                 }
-                                navigateIndex = currentIndex
-                                return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, totalCount: totalCount, complete: complete)))
-                            } else {
-                                return current
+                            })
+                            if let navigateIndex = navigateIndex {
+                                switch strongSelf.chatLocation {
+                                    case .peer:
+                                        strongSelf.navigateToMessage(from: nil, to: .id(navigateIndex.id))
+                                    case .group:
+                                        strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))
+                                }
                             }
-                        })
-                        if let navigateIndex = navigateIndex {
-                            switch strongSelf.chatLocation {
-                                case .peer:
-                                    strongSelf.navigateToMessage(from: nil, to: .id(navigateIndex.id))
-                                case .group:
-                                    strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))
+                        }, completed: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.searching.set(false)
                             }
+                        }))
+                    }
+                } else if previousSearchState?.loadMoreIndex != searchState.loadMoreIndex {
+                    if let loadMoreIndex = searchState.loadMoreIndex {
+                        self.searching.set(true)
+                        let searchDisposable: MetaDisposable
+                        if let current = self.searchDisposable {
+                            searchDisposable = current
+                        } else {
+                            searchDisposable = MetaDisposable()
+                            self.searchDisposable = searchDisposable
                         }
-                    }, completed: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.searching.set(false)
-                        }
-                    }))
+                        searchDisposable.set((searchMessages(account: self.account, location: searchState.location, query: searchState.query, lowerBound: loadMoreIndex, limit: limit)
+                        |> map { ($0.0, $0.2) }
+                        |> delay(0.2, queue: Queue.mainQueue())
+                        |> deliverOnMainQueue).start(next: { [weak self] results, totalCount in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let complete = results.count != 0
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
+                                if let data = current.search, let previousResultsState = data.resultsState {
+                                    let previousSet = Set(previousResultsState.messageIndices)
+                                    let messageIndices = results.map({ MessageIndex($0) }).sorted()
+                                    var mergedIndices = messageIndices.filter({ !previousSet.contains($0) })
+                                    mergedIndices.append(contentsOf: previousResultsState.messageIndices)
+                                    
+                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: mergedIndices, currentId: previousResultsState.currentId, totalCount: totalCount, complete: complete)))
+                                } else {
+                                    return current
+                                }
+                            })
+                        }, completed: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.searching.set(false)
+                            }
+                        }))
+                    } else {
+                        self.searching.set(false)
+                        self.searchDisposable?.set(nil)
+                    }
                 }
             } else {
                 self.searching.set(false)
@@ -4237,8 +4291,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     return interfaceState.updatedSearch(data.withUpdatedResultsState(nil))
                 }
             }
-        } else if let (query, location) = self.searchState, let search = interfaceState.search, let resultsState = search.resultsState, !resultsState.complete {
-            
         }
         return nil
     }

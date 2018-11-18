@@ -17,11 +17,11 @@ func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: 
     }
 }
 
-func authorizationNextOptionText(_ type: AuthorizationCodeNextType?, timeout: Int32?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> (NSAttributedString, Bool) {
-    if let type = type, let timeout = timeout {
+func authorizationNextOptionText(currentType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> (NSAttributedString, Bool) {
+    if let nextType = nextType, let timeout = timeout {
         let minutes = timeout / 60
         let seconds = timeout % 60
-        switch type {
+        switch nextType {
             case .sms:
                 if timeout <= 0 {
                     return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
@@ -37,7 +37,12 @@ func authorizationNextOptionText(_ type: AuthorizationCodeNextType?, timeout: In
                 }
         }
     } else {
-        return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+        switch currentType {
+            case .otherSession:
+                return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            default:
+                return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+        }
     }
 }
 
@@ -47,7 +52,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private let strings: PresentationStrings
     private let theme: AuthorizationTheme
     
-    private let titleNode: ASTextNode
+    private let titleNode: ImmediateTextNode
     private let titleIconNode: ASImageNode
     private let currentOptionNode: ASTextNode
     private let nextOptionNode: HighlightableButtonNode
@@ -64,7 +69,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     var phoneNumber: String = "" {
         didSet {
-            self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(30.0), textColor: self.theme.primaryColor)
+            if self.phoneNumber != oldValue {
+                if let (layout, navigationHeight) = self.layoutArguments {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                }
+            }
         }
     }
     
@@ -86,7 +95,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.strings = strings
         self.theme = theme
         
-        self.titleNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.maximumNumberOfLines = 0
+        self.titleNode.textAlignment = .center
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
@@ -125,7 +136,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.nextOptionNode = HighlightableButtonNode()
         self.nextOptionNode.displaysAsynchronously = false
-        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(AuthorizationCodeNextType.call, timeout: 60, strings: self.strings, primaryColor: self.theme.primaryColor, accentColor: self.theme.accentColor)
+        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: .sms(length: 5), nextType: .call, timeout: 60, strings: self.strings, primaryColor: self.theme.primaryColor, accentColor: self.theme.accentColor)
         self.nextOptionNode.setAttributedTitle(nextOptionText, for: [])
         self.nextOptionNode.isUserInteractionEnabled = nextOptionActive
         
@@ -206,7 +217,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 if let strongSelf = self {
                     if let currentTimeoutTime = strongSelf.currentTimeoutTime, currentTimeoutTime > 0 {
                         strongSelf.currentTimeoutTime = currentTimeoutTime - 1
-                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(nextType, timeout:strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.primaryColor, accentColor: strongSelf.theme.accentColor)
+                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, timeout:strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.primaryColor, accentColor: strongSelf.theme.accentColor)
                         strongSelf.nextOptionNode.setAttributedTitle(nextOptionText, for: [])
                         strongSelf.nextOptionNode.isUserInteractionEnabled = nextOptionActive
                         
@@ -224,7 +235,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.currentTimeoutTime = nil
             self.countdownDisposable.set(nil)
         }
-        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(nextType, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.primaryColor, accentColor: self.theme.accentColor)
+        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.primaryColor, accentColor: self.theme.accentColor)
         self.nextOptionNode.setAttributedTitle(nextOptionText, for: [])
         self.nextOptionNode.isUserInteractionEnabled = nextOptionActive
     }
@@ -236,12 +247,26 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         insets.top = navigationBarHeight
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
-            self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(40.0), textColor: self.theme.primaryColor)
+            if let codeType = self.codeType, case .otherSession = codeType {
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_CheckOtherSessionMessages, font: Font.medium(32.0), textColor: self.theme.primaryColor)
+            } else {
+                self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(40.0), textColor: self.theme.primaryColor)
+            }
         } else {
-            self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(30.0), textColor: self.theme.primaryColor)
+            if let codeType = self.codeType, case .otherSession = codeType {
+                let fontSize: CGFloat
+                if layout.size.width > 330.0 {
+                    fontSize = 22.0
+                } else {
+                    fontSize = 18.0
+                }
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_CheckOtherSessionMessages, font: Font.semibold(fontSize), textColor: self.theme.primaryColor)
+            } else {
+                self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(30.0), textColor: self.theme.primaryColor)
+            }
         }
         
-        let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
         let currentOptionSize = self.currentOptionNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
         let nextOptionSize = self.nextOptionNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
@@ -250,7 +275,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         if let codeType = self.codeType, case .otherSession = codeType {
             self.titleIconNode.isHidden = false
             items.append(AuthorizationLayoutItem(node: self.titleIconNode, size: self.titleIconNode.image!.size, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-            items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+            items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
             items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
             items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
             items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 88.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))

@@ -26,6 +26,11 @@ private let sharedAudioSession: ManagedAudioSession = {
     return audioSession
 }()
 
+enum SharedMediaPlayerItemPlaybackStateOrLoading: Equatable {
+    case state(SharedMediaPlayerItemPlaybackState)
+    case loading
+}
+
 private struct GlobalControlOptions: OptionSet {
     var rawValue: Int32
     
@@ -70,11 +75,15 @@ public final class MediaManager: NSObject {
         didSet {
             if self.voiceMediaPlayer !== oldValue {
                 if let voiceMediaPlayer = self.voiceMediaPlayer {
-                    self.voiceMediaPlayerStateValue.set(voiceMediaPlayer.playbackState |> map { state in
-                        if let state = state, case let .item(item) = state {
-                            return item
-                        } else {
+                    self.voiceMediaPlayerStateValue.set(voiceMediaPlayer.playbackState
+                    |> map { state -> SharedMediaPlayerItemPlaybackStateOrLoading? in
+                        guard let state = state else {
                             return nil
+                        }
+                        if case let .item(item) = state {
+                            return .state(item)
+                        } else {
+                            return .loading
                         }
                     } |> deliverOnMainQueue)
                 } else {
@@ -83,8 +92,8 @@ public final class MediaManager: NSObject {
             }
         }
     }
-    private let voiceMediaPlayerStateValue = Promise<SharedMediaPlayerItemPlaybackState?>(nil)
-    var voiceMediaPlayerState: Signal<SharedMediaPlayerItemPlaybackState?, NoError> {
+    private let voiceMediaPlayerStateValue = Promise<SharedMediaPlayerItemPlaybackStateOrLoading?>(nil)
+    var voiceMediaPlayerState: Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError> {
         return self.voiceMediaPlayerStateValue.get()
     }
     
@@ -92,11 +101,15 @@ public final class MediaManager: NSObject {
         didSet {
             if self.musicMediaPlayer !== oldValue {
                 if let musicMediaPlayer = self.musicMediaPlayer {
-                    self.musicMediaPlayerStateValue.set(musicMediaPlayer.playbackState |> map { state in
-                        if let state = state, case let .item(item) = state {
-                            return item
-                        } else {
+                    self.musicMediaPlayerStateValue.set(musicMediaPlayer.playbackState
+                    |> map { state -> SharedMediaPlayerItemPlaybackStateOrLoading? in
+                        guard let state = state else {
                             return nil
+                        }
+                        if case let .item(item) = state {
+                            return .state(item)
+                        } else {
+                            return .loading
                         }
                     } |> deliverOnMainQueue)
                 } else {
@@ -105,13 +118,13 @@ public final class MediaManager: NSObject {
             }
         }
     }
-    private let musicMediaPlayerStateValue = Promise<SharedMediaPlayerItemPlaybackState?>(nil)
-    var musicMediaPlayerState: Signal<SharedMediaPlayerItemPlaybackState?, NoError> {
+    private let musicMediaPlayerStateValue = Promise<SharedMediaPlayerItemPlaybackStateOrLoading?>(nil)
+    var musicMediaPlayerState: Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError> {
         return self.musicMediaPlayerStateValue.get()
     }
     
-    private let globalMediaPlayerStateValue = Promise<(SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?>()
-    var globalMediaPlayerState: Signal<(SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> {
+    private let globalMediaPlayerStateValue = Promise<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?>()
+    var globalMediaPlayerState: Signal<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> {
         return self.globalMediaPlayerStateValue.get()
     }
     
@@ -144,8 +157,8 @@ public final class MediaManager: NSObject {
         
         super.init()
        
-        let combinedPlayersSignal: Signal<(SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> = combineLatest(queue: Queue.mainQueue(), self.voiceMediaPlayerState, self.musicMediaPlayerState)
-        |> map { voice, music -> (SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)? in
+        let combinedPlayersSignal: Signal<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> = combineLatest(queue: Queue.mainQueue(), self.voiceMediaPlayerState, self.musicMediaPlayerState)
+        |> map { voice, music -> (SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)? in
             if let voice = voice {
                 return (voice, .voice)
             } else if let music = music {
@@ -154,7 +167,8 @@ public final class MediaManager: NSObject {
                 return nil
             }
         }
-        self.globalMediaPlayerStateValue.set(combinedPlayersSignal |> distinctUntilChanged(isEqual: { lhs, rhs in
+        self.globalMediaPlayerStateValue.set(combinedPlayersSignal
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs?.0 == rhs?.0 && lhs?.1 == rhs?.1
         }))
         
@@ -200,7 +214,7 @@ public final class MediaManager: NSObject {
         self.globalControlsDisposable.set((self.globalMediaPlayerState
         |> deliverOnMainQueue).start(next: { stateAndType in
             var updatedGlobalControlOptions = GlobalControlOptions()
-            if let (state, type) = stateAndType {
+            if let (stateOrLoading, type) = stateAndType, case let .state(state) = stateOrLoading {
                 if type == .music {
                     updatedGlobalControlOptions.insert(.previous)
                     updatedGlobalControlOptions.insert(.next)
@@ -214,7 +228,7 @@ public final class MediaManager: NSObject {
                 }
             }
             
-            if let (state, type) = stateAndType, type == .music, let displayData = state.item.displayData {
+            if let (stateOrLoading, type) = stateAndType, type == .music, case let .state(state) = stateOrLoading, let displayData = state.item.displayData {
                 if previousDisplayData != displayData {
                     previousDisplayData = displayData
                     
@@ -356,7 +370,7 @@ public final class MediaManager: NSObject {
         let shouldKeepAudioSession: Signal<Bool, NoError> = combineLatest(queue: Queue.mainQueue(), self.globalMediaPlayerState, inForeground)
         |> map { stateAndType, inForeground -> Bool in
             var isPlaying = false
-            if let (state, _) = stateAndType {
+            if let (stateOrLoading, _) = stateAndType, case let .state(state) = stateOrLoading {
                 switch state.status.status {
                     case .playing:
                         isPlaying = true
@@ -484,15 +498,16 @@ public final class MediaManager: NSObject {
     }
     
     func filteredPlaylistState(playlistId: SharedMediaPlaylistId, itemId: SharedMediaPlaylistItemId, type: MediaManagerPlayerType) -> Signal<SharedMediaPlayerItemPlaybackState?, NoError> {
-        let signal: Signal<SharedMediaPlayerItemPlaybackState?, NoError>
+        let signal: Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError>
         switch type {
             case .voice:
                 signal = self.voiceMediaPlayerState
             case .music:
                 signal = self.musicMediaPlayerState
         }
-        return signal |> map { state in
-            if let state = state {
+        return signal
+        |> map { stateOrLoading in
+            if let stateOrLoading = stateOrLoading, case let .state(state) = stateOrLoading {
                 if state.playlistId.isEqual(to: playlistId) && state.item.id.isEqual(to: itemId) {
                     return state
                 }

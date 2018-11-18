@@ -100,7 +100,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
-    init(postbox: Postbox, theme: PresentationTheme, status: Signal<SharedMediaPlayerItemPlaybackState?, NoError>) {
+    init(postbox: Postbox, theme: PresentationTheme, status: Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError>) {
         self.postbox = postbox
         self.theme = theme
         
@@ -179,7 +179,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.addSubnode(self.separatorNode)
         
         let mappedStatus = combineLatest(status, self.scrubberNode.scrubbingTimestamp) |> map { value, scrubbingTimestamp -> MediaPlayerStatus in
-            if let value = value {
+            if let valueOrLoading = value, case let .state(value) = valueOrLoading {
                 return MediaPlayerStatus(generationTimestamp: value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status)
             } else {
                 return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
@@ -189,15 +189,20 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.leftDurationLabel.status = mappedStatus
         self.rightDurationLabel.status = mappedStatus
         
-        self.statusDisposable = (status |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.statusDisposable = (status
+        |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
-                if !areSharedMediaPlaylistItemIdsEqual(value?.item.id, strongSelf.currentItemId) {
-                    strongSelf.currentItemId = value?.item.id
+                var valueItemId: SharedMediaPlaylistItemId?
+                if let value = value, case let .state(state) = value {
+                    valueItemId = state.item.id
+                }
+                if !areSharedMediaPlaylistItemIdsEqual(valueItemId, strongSelf.currentItemId) {
+                    strongSelf.currentItemId = valueItemId
                     strongSelf.scrubberNode.ignoreSeekId = nil
                 }
                 strongSelf.shareNode.isHidden = false
                 var displayData: SharedMediaPlaybackDisplayData?
-                if let value = value {
+                if let valueOrLoading = value, case let .state(value) = valueOrLoading {
                     let isPaused: Bool
                     switch value.status.status {
                         case .playing:
@@ -259,7 +264,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.displayData = displayData
                     strongSelf.updateLabels(transition: .immediate)
                     
-                    if let source = value?.item.playbackData?.source {
+                    if let valueOrLoading = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
                         switch source {
                             case let .telegramFile(fileReference):
                                 strongSelf.currentFileReference = fileReference

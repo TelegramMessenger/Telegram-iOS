@@ -393,7 +393,7 @@ final class SharedMediaPlayer {
     
     private var playbackStateValueDisposable: Disposable?
     private var _playbackStateValue: SharedMediaPlayerState?
-    private let playbackStateValue = Promise<SharedMediaPlayerState?>(nil)
+    private let playbackStateValue = Promise<SharedMediaPlayerState?>()
     var playbackState: Signal<SharedMediaPlayerState?, NoError> {
         return self.playbackStateValue.get()
     }
@@ -561,7 +561,7 @@ final class SharedMediaPlayer {
                             }
                         }))
                     } else {
-                        if let _ = state.item {
+                        if state.item != nil || state.loading {
                             strongSelf.playbackStateValue.set(.single(.loading))
                         } else {
                             strongSelf.playbackStateValue.set(.single(nil))

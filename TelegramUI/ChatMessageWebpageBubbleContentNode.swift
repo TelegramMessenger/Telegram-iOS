@@ -351,18 +351,27 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateHiddenMedia(_ media: [Media]?) -> Bool {
         if let media = media {
             var updatedMedia = media
-            for item in media {
-                if let webpage = item as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(to: current) {
-                    var mediaList: [Media] = [webpage]
-                    if case let .Loaded(content) = webpage.content {
+            if let current = self.webPage, case let .Loaded(content) = current.content {
+                for item in media {
+                    if let webpage = item as? TelegramMediaWebpage, webpage.id == current.id {
+                        var mediaList: [Media] = [webpage]
                         if let image = content.image {
                             mediaList.append(image)
                         }
                         if let file = content.file {
                             mediaList.append(file)
                         }
+                        updatedMedia = mediaList
+                    } else if let id = item.id, content.file?.id == id || content.image?.id == id {
+                        var mediaList: [Media] = [current]
+                        if let image = content.image {
+                            mediaList.append(image)
+                        }
+                        if let file = content.file {
+                            mediaList.append(file)
+                        }
+                        updatedMedia = mediaList
                     }
-                    updatedMedia = mediaList
                 }
             }
             return self.contentNode.updateHiddenMedia(updatedMedia)
@@ -379,8 +388,15 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         if let result = self.contentNode.transitionNode(media: media) {
             return result
         }
-        if let webpage = media as? TelegramMediaWebpage, let current = self.webPage, webpage.isEqual(to: current) {
-            if case let .Loaded(content) = webpage.content {
+        if let current = self.webPage, case let .Loaded(content) = current.content {
+            if let webpage = media as? TelegramMediaWebpage, webpage.id == current.id {
+                if let image = content.image, let result = self.contentNode.transitionNode(media: image) {
+                    return result
+                }
+                if let file = content.file, let result = self.contentNode.transitionNode(media: file) {
+                    return result
+                }
+            } else if let id = media.id, id == content.file?.id || id == content.image?.id {
                 if let image = content.image, let result = self.contentNode.transitionNode(media: image) {
                     return result
                 }

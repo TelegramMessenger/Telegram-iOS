@@ -94,6 +94,7 @@
 		D01776BC1F1E21AF0044446D /* RadialStatusBackgroundNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776BB1F1E21AF0044446D /* RadialStatusBackgroundNode.swift */; };
 		D01776BE1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776BD1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift */; };
 		D01847801FFBD12E00075256 /* ChatListPresentationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018477F1FFBD12E00075256 /* ChatListPresentationData.swift */; };
+		D01848E821A03BDA00B6DEBD /* ChatSearchState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */; };
 		D0185E882089ED5F005E1A6C /* ProxyListSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */; };
 		D0185E8A208A01AF005E1A6C /* ProxySettingsActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */; };
 		D0185E8C208A025A005E1A6C /* ProxySettingsServerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E8B208A025A005E1A6C /* ProxySettingsServerItem.swift */; };
@@ -1194,6 +1195,7 @@
 		D0177B7F1DFAE18500A5083A /* MediaPlayerTimeTextNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaPlayerTimeTextNode.swift; sourceTree = "<group>"; };
 		D0177B831DFB095000A5083A /* FileMediaResourceStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileMediaResourceStatus.swift; sourceTree = "<group>"; };
 		D018477F1FFBD12E00075256 /* ChatListPresentationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListPresentationData.swift; sourceTree = "<group>"; };
+		D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSearchState.swift; sourceTree = "<group>"; };
 		D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyListSettingsController.swift; sourceTree = "<group>"; };
 		D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingsActionItem.swift; sourceTree = "<group>"; };
 		D0185E8B208A025A005E1A6C /* ProxySettingsServerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingsServerItem.swift; sourceTree = "<group>"; };
@@ -4213,6 +4215,7 @@
 				D0D2686A1D788F6600C422DA /* Title Accessory Panels */,
 				D0F69E441D6B8B850046BCD6 /* History Navigation */,
 				D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */,
+				D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */,
 			);
 			name = Chat;
 			sourceTree = "<group>";
@@ -4874,6 +4877,7 @@
 				D0EC6CB81EB9F58800EBF1C3 /* RMIntroViewController.m in Sources */,
 				D0EC6CB91EB9F58800EBF1C3 /* RMLoginViewController.m in Sources */,
 				D0E9BA631F055AD200F079A4 /* BotPaymentCardInputItemNode.swift in Sources */,
+				D01848E821A03BDA00B6DEBD /* ChatSearchState.swift in Sources */,
 				D0EC6CBA1EB9F58800EBF1C3 /* RMRootViewController.m in Sources */,
 				D0E412CA206A5B0B00BEE4A2 /* FormControllerTextInputItem.swift in Sources */,
 				D0208ADC1FA346A4001F0D5F /* RaiseToListen.swift in Sources */,

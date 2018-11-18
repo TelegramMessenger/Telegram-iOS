@@ -1520,7 +1520,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                                     c.interpolationQuality = .medium
                                     c.draw(blurredImage.cgImage!, in: CGRect(origin: CGPoint(x: arguments.drawingRect.minX + (arguments.drawingRect.width - filledSize.width) / 2.0, y: arguments.drawingRect.minY + (arguments.drawingRect.height - filledSize.height) / 2.0), size: filledSize))
                                     c.setBlendMode(.normal)
-                                    c.setFillColor((arguments.emptyColor ?? UIColor.white).withAlphaComponent(0.5).cgColor)
+                                    c.setFillColor((arguments.emptyColor ?? UIColor.white).withAlphaComponent(0.05).cgColor)
                                     c.fill(arguments.drawingRect)
                                     c.setBlendMode(.copy)
                                 }
