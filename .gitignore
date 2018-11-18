@@ -1,6 +1,7 @@
 fastlane/README.md
 fastlane/report.xml
 fastlane/test_output/*
+build/*
 *.pbxuser
 !default.pbxuser
 *.mode1v3

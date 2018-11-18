@@ -1,5 +1,5 @@
 stages:
-  - internal
+  - build
 
 variables:
   LANG: "en_US.UTF-8"
@@ -9,9 +9,23 @@ variables:
 internal:
   tags:
     - ios
-  stage: internal
+  stage: build
   script:
     - sh ~/ios-prepare-build.sh $CI_PROJECT_DIR/..
     - fastlane internalhockeyapp
   environment:
     name: internal
+
+beta_testflight:
+  tags:
+    - ios
+  stage: build
+  only:
+    - beta
+  except:
+    - branches
+  script:
+    - sh ~/ios-prepare-build.sh $CI_PROJECT_DIR/..
+    - fastlane testflight_llc
+  environment:
+    name: testflight_llc

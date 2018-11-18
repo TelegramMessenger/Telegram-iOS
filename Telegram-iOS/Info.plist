@@ -56,8 +56,8 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>631</string>
-	<key>ITSAppUsesNonExemptEncryption </key>
+	<string>632</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
