@@ -3501,3 +3501,5 @@ Unused sets are archived when you add more.";
 "InstantPage.RelatedArticleAuthorAndDateTitle" = "%1$@ • %2$@";
 
 "AuthCode.Alert" = "Your login code is %@. Enter it in the Telegram app where you are trying to log in.\n\nDo not give this code to anyone.";
+"Login.CheckOtherSessionMessages" = "Check your Telegram messages";
+"Login.SendCodeViaSms" = "Sent the code as an SMS";
