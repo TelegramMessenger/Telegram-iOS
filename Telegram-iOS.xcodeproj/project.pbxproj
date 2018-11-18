@@ -4694,7 +4694,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-Hockeyapp.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -4735,7 +4735,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-AppStore.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP (6N38VWS5BX)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP (6N38VWS5BX)";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = 6N38VWS5BX;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -4871,7 +4871,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-Fork.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -4936,7 +4936,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Share/Share-Fork.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				INFOPLIST_FILE = Share/Info.plist;
@@ -4965,7 +4965,7 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-Fork.entitlements";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				INFOPLIST_FILE = SiriIntents/Info.plist;
@@ -5855,7 +5855,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Share/Share-HockeyApp.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				INFOPLIST_FILE = Share/Info.plist;
@@ -5887,7 +5887,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Share/Share-AppStore.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = 6N38VWS5BX;
 				INFOPLIST_FILE = Share/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
@@ -5917,7 +5917,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Share/Share-HockeyApp.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				INFOPLIST_FILE = Share/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
@@ -5996,7 +5996,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-AppStore.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer: Peter Iakovlev (88P695A564)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Peter Iakovlev (88P695A564)";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = 6N38VWS5BX;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -6062,7 +6062,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Share/Share-AppStore.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer: Peter Iakovlev (88P695A564)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Peter Iakovlev (88P695A564)";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 6N38VWS5BX;
 				INFOPLIST_FILE = Share/Info.plist;
@@ -6092,7 +6092,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-AppStore.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer: Peter Iakovlev (88P695A564)";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 6N38VWS5BX;
 				INFOPLIST_FILE = SiriIntents/Info.plist;
@@ -6163,7 +6163,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-Hockeyapp.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -6226,7 +6226,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Share/Share-HockeyApp.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				INFOPLIST_FILE = Share/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
@@ -6255,7 +6255,7 @@
 				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-Hockeyapp.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				INFOPLIST_FILE = SiriIntents/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
@@ -6333,7 +6333,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-AppStoreLLC.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = C67CF9S4VU;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -6399,7 +6399,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Share/Share-AppStoreLLC.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = C67CF9S4VU;
 				INFOPLIST_FILE = Share/Info.plist;
@@ -6430,7 +6430,7 @@
 				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-AppStoreLLC.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = C67CF9S4VU;
 				INFOPLIST_FILE = SiriIntents/Info.plist;
@@ -6977,7 +6977,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-AppStoreLLC.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = C67CF9S4VU;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -7041,7 +7041,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Share/Share-AppStoreLLC.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = C67CF9S4VU;
 				GCC_OPTIMIZATION_LEVEL = s;
 				INFOPLIST_FILE = Share/Info.plist;
@@ -7071,7 +7071,7 @@
 				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-AppStoreLLC.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = C67CF9S4VU;
 				INFOPLIST_FILE = SiriIntents/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
@@ -7223,7 +7223,7 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-Hockeyapp.entitlements";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				INFOPLIST_FILE = SiriIntents/Info.plist;
@@ -7252,7 +7252,7 @@
 				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-AppStore.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = 6N38VWS5BX;
 				INFOPLIST_FILE = SiriIntents/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
@@ -7280,7 +7280,7 @@
 				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-Hockeyapp.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				INFOPLIST_FILE = SiriIntents/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
@@ -7350,7 +7350,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-Hockeyapp.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CURRENT_PROJECT_VERSION = 629;
+				CURRENT_PROJECT_VERSION = 630;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
