@@ -1033,6 +1033,7 @@ final class ChatMediaInputNode: ChatInputNode {
     private func updateAppearanceTransition(transition: ContainedViewLayoutTransition) {
         var value: CGFloat = 1.0 - abs(self.currentCollectionListPanelOffset() / 41.0)
         value = min(1.0, max(0.0, value))
+        
         self.inputNodeInteraction.appearanceTransition = max(0.1, value)
         transition.updateAlpha(node: self.listView, alpha: value)
         self.listView.forEachItemNode { itemNode in
@@ -1045,6 +1046,8 @@ final class ChatMediaInputNode: ChatInputNode {
             } else if let itemNode = itemNode as? ChatMediaInputTrendingItemNode {
                 itemNode.updateAppearanceTransition(transition: transition)
             } else if let itemNode = itemNode as? ChatMediaInputPeerSpecificItemNode {
+                itemNode.updateAppearanceTransition(transition: transition)
+            } else if let itemNode = itemNode as? ChatMediaInputSettingsItemNode {
                 itemNode.updateAppearanceTransition(transition: transition)
             }
         }
@@ -1071,6 +1074,10 @@ final class ChatMediaInputNode: ChatInputNode {
                     panelHeight = maximumHeight
                     displaySearch = true
             }
+            self.stickerPane.collectionListPanelOffset = 0.0
+            self.gifPane.collectionListPanelOffset = 0.0
+            self.trendingPane.collectionListPanelOffset = 0.0
+            self.updateAppearanceTransition(transition: transition)
         } else {
             panelHeight = standardInputHeight
         }
@@ -1378,20 +1385,32 @@ final class ChatMediaInputNode: ChatInputNode {
         }
     }
     
-    private func updatePaneDidScroll(pane: ChatMediaInputPane, state: ChatMediaInputPaneScrollState, transition: ContainedViewLayoutTransition) {
-        var computedAbsoluteOffset: CGFloat
-        if let absoluteOffset = state.absoluteOffset, absoluteOffset >= 0.0 {
-            computedAbsoluteOffset = 0.0
-        } else {
-            computedAbsoluteOffset = pane.collectionListPanelOffset + state.relativeChange
+    private var isExpanded: Bool {
+        var isExpanded: Bool = false
+        if let validLayout = self.validLayout, case let .media(_, maybeExpanded) = validLayout.8.inputMode, maybeExpanded != nil {
+            isExpanded = true
         }
-        computedAbsoluteOffset = max(-41.0, min(computedAbsoluteOffset, 0.0))
-        pane.collectionListPanelOffset = computedAbsoluteOffset
-        if transition.isAnimated {
-            if pane.collectionListPanelOffset < -41.0 / 2.0 {
-                pane.collectionListPanelOffset = -41.0
+        return isExpanded
+    }
+    
+    private func updatePaneDidScroll(pane: ChatMediaInputPane, state: ChatMediaInputPaneScrollState, transition: ContainedViewLayoutTransition) {
+        if self.isExpanded {
+            pane.collectionListPanelOffset = 0.0
+        } else {
+            var computedAbsoluteOffset: CGFloat
+            if let absoluteOffset = state.absoluteOffset, absoluteOffset >= 0.0 {
+                computedAbsoluteOffset = 0.0
             } else {
-                pane.collectionListPanelOffset = 0.0
+                computedAbsoluteOffset = pane.collectionListPanelOffset + state.relativeChange
+            }
+            computedAbsoluteOffset = max(-41.0, min(computedAbsoluteOffset, 0.0))
+            pane.collectionListPanelOffset = computedAbsoluteOffset
+            if transition.isAnimated {
+                if pane.collectionListPanelOffset < -41.0 / 2.0 {
+                    pane.collectionListPanelOffset = -41.0
+                } else {
+                    pane.collectionListPanelOffset = 0.0
+                }
             }
         }
         

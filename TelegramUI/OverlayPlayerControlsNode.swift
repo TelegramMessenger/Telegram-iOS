@@ -262,7 +262,6 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 
                 if strongSelf.displayData != displayData {
                     strongSelf.displayData = displayData
-                    strongSelf.updateLabels(transition: .immediate)
                     
                     if let valueOrLoading = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
                         switch source {
@@ -280,6 +279,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     } else {
                         strongSelf.scrubberNode.bufferingStatus = nil
                     }
+                    strongSelf.updateLabels(transition: .immediate)
                 }
             }
         })

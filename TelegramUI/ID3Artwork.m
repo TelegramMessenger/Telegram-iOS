@@ -54,7 +54,6 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
     }
     
     const uint8_t *bytes = data.bytes;
-    
     if (!(memcmp(bytes, ID3v2, 5) == 0 || memcmp(bytes, ID3v3, 5) == 0)) {
         return nil;
     }
@@ -67,7 +66,7 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
     uint32_t b4 =  size & 0x0000007F;
     size = b1 + b2 + b3 + b4;
     
-    const uint8_t *ptr = data.bytes + ID3TagOffset;
+    const uint8_t *ptr = bytes + ID3TagOffset;
     
     uint32_t pos = 0;
     while (pos < size) {
@@ -92,18 +91,23 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
             }
             
             if (imageOffset != UINT32_MAX) {
+                uint32_t start = ID3TagOffset + pos + frameOffset;
                 if (isJpg) {
                     NSMutableData *jpgData = [[NSMutableData alloc] initWithCapacity:frameSize + 1024];
                     uint8_t previousByte = 0xff;
                     uint32_t skippedBytes = 0;
                     
-                    for (NSUInteger i = 0; i < frameSize - imageOffset + skippedBytes; i++) {
-                        uint8_t byte = (uint8_t)ptr[imageOffset + i];
-                        if (byte == 0x00 && previousByte == 0xff) {
-                            skippedBytes++;
-                        } else {
-                            [jpgData appendBytes:&byte length:1];
+                    for (uint32_t i = 0; i < frameSize - imageOffset + skippedBytes; i++) {
+                        uint32_t offset = imageOffset + i;
+                        if (start + offset >= data.length) {
+                            return nil;
                         }
+                        uint8_t byte = (uint8_t)ptr[offset];
+//                        if (byte == 0x00 && previousByte == 0xff) {
+//                            skippedBytes++;
+//                        } else {
+                            [jpgData appendBytes:&byte length:1];
+//                        }
                         if (byte == 0xd9 && previousByte == 0xff) {
                             break;
                         }
@@ -112,6 +116,9 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
                     return jpgData;
                 }
                 else {
+                    if (start + frameSize > data.length) {
+                        return nil;
+                    }
                     return [[NSData alloc] initWithBytes:ptr + imageOffset length:frameSize - imageOffset];
                 }
             }

@@ -752,7 +752,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
     
     var displayCopyContextMenuImpl: ((DeviceContactInfoEntryTag, String) -> Void)?
     
-    let requestCallImpl: (String) -> Void = { number in
+    let callImpl: (String) -> Void = { number in
         let _ = (account.postbox.transaction { transaction -> TelegramUser? in
             if let peer = subject.peer {
                 return transaction.getPeer(peer.id) as? TelegramUser
@@ -761,23 +761,43 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
         }
         |> deliverOnMainQueue).start(next: { user in
             if let user = user, let phone = user.phone, formatPhoneNumber(phone) == formatPhoneNumber(number) {
-                let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: user.id, endCurrentIfAny: false)
-                if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
-                    if currentPeerId == user.id {
-                        account.telegramApplicationContext.navigateToCurrentCall?()
-                    } else {
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        let _ = (account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                            return (transaction.getPeer(user.id), transaction.getPeer(currentPeerId))
-                            } |> deliverOnMainQueue).start(next: { peer, current in
-                                if let peer = peer, let current = current {
-                                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
-                                    })]), nil)
-                                }
-                            })
-                    }
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
                 }
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
+                            dismissAction()
+                            let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: user.id, endCurrentIfAny: false)
+                            if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
+                                if currentPeerId == user.id {
+                                    account.telegramApplicationContext.navigateToCurrentCall?()
+                                } else {
+                                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                    let _ = (account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                                        return (transaction.getPeer(user.id), transaction.getPeer(currentPeerId))
+                                        } |> deliverOnMainQueue).start(next: { peer, current in
+                                            if let peer = peer, let current = current {
+                                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                                    let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
+                                                })]), nil)
+                                            }
+                                        })
+                                }
+                            }
+                        }),
+                        ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
+                            dismissAction()
+                            account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
+                        }),
+                    ]),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            } else {
+                account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
             }
         })
     }
@@ -885,7 +905,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
             return state
         }
     }, callPhone: { phoneNumber in
-        requestCallImpl(phoneNumber)
+        callImpl(phoneNumber)
     }, openUrl: { url in
         openUrlImpl?(url)
     }, openAddress: { address in

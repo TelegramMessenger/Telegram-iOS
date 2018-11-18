@@ -220,9 +220,8 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 self.visibleThumbnailLayers[item.fileReference.media.fileId] = thumbnailLayer
             }
             
-            let progressFrame =  CGRect(origin: CGPoint(x: item.frame.midX - 37 / 2, y: item.frame.midY - 37 / 2), size: CGSize(width: 37, height: 37))
-            
-         
+            let progessSize = CGSize(width: 24.0, height: 24.0)
+            let progressFrame =  CGRect(origin: CGPoint(x: item.frame.midX - progessSize.width / 2.0, y: item.frame.midY - progessSize.height / 2.0), size: progessSize)
             
             let updatedStatusSignal = account.postbox.mediaBox.resourceStatus(item.fileReference.media.resource)
             
@@ -239,10 +238,6 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                     guard let `self` = self else {return}
                     
                     let state: RadialStatusNodeState
-                    
-
-                    
-
                     
                     switch status {
                     case let .Fetching(_, progress):
@@ -277,7 +272,6 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                     }
                 }
             }))
-            
             
             if item.frame.maxY < minVisibleY {
                 continue;

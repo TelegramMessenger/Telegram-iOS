@@ -15,7 +15,8 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let onlyWriteable = ChatListNodePeersFilter(rawValue: 1 << 0)
     public static let onlyUsers = ChatListNodePeersFilter(rawValue: 1 << 1)
     public static let onlyGroups = ChatListNodePeersFilter(rawValue: 1 << 2)
-    public static let withoutSecretChats = ChatListNodePeersFilter(rawValue: 1 << 3)
+    public static let onlyManageable = ChatListNodePeersFilter(rawValue: 1 << 3)
+    public static let withoutSecretChats = ChatListNodePeersFilter(rawValue: 1 << 4)
 
 
 }
@@ -166,6 +167,17 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                             if let peer = peer.peers[peer.peerId] {
                                 if let _ = peer as? TelegramGroup {
                                 } else if let peer = peer as? TelegramChannel, case .group = peer.info {
+                                } else {
+                                    enabled = false
+                                }
+                            } else {
+                                enabled = false
+                            }
+                        }
+                        if filter.contains(.onlyManageable) {
+                            if let peer = peer.peers[peer.peerId] {
+                                if let peer = peer as? TelegramGroup, peer.role == .creator || peer.role == .admin {
+                                } else if let peer = peer as? TelegramChannel, case .group = peer.info, peer.hasAdminRights(.canInviteUsers) {
                                 } else {
                                     enabled = false
                                 }
