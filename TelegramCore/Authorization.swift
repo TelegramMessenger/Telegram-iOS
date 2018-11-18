@@ -151,6 +151,7 @@ public enum AuthorizationCodeVerificationError {
     case invalidCode
     case limitExceeded
     case generic
+    case codeExpired
 }
 
 private enum AuthorizationCodeResult {
@@ -202,6 +203,8 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String, termsO
                                     return .fail(.limitExceeded)
                                 } else if errorDescription == "PHONE_CODE_INVALID" {
                                     return .fail(.invalidCode)
+                                } else if errorDescription == "CODE_HASH_EXPIRED" {
+                                    return .fail(.codeExpired)
                                 } else if errorDescription == "PHONE_NUMBER_UNOCCUPIED" {
                                     return .single(.signUp)
                                 } else {
