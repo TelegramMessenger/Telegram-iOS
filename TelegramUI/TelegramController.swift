@@ -405,7 +405,20 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                
                 if let mediaManager = self.account.telegramApplicationContext.mediaManager {
-                    mediaAccessoryPanel.containerNode.headerNode.playbackStatus = mediaManager.globalMediaPlayerState
+                    let delayedStatus = mediaManager.globalMediaPlayerState
+                    |> mapToSignal { value -> Signal<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
+                        guard let value = value else {
+                            return .single(nil)
+                        }
+                        switch value.0 {
+                            case .state:
+                                return .single(value)
+                            case .loading:
+                                return .single(value) |> delay(0.1, queue: .mainQueue())
+                        }
+                    }
+                    
+                    mediaAccessoryPanel.containerNode.headerNode.playbackStatus = delayedStatus
                     |> map { state -> MediaPlayerStatus in
                         if let stateOrLoading = state?.0, case let .state(state) = stateOrLoading {
                             return state.status

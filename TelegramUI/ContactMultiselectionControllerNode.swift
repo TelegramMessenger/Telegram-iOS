@@ -95,7 +95,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             selectionState = state
                             return state
                         }
-                        let searchResultsNode = ContactListNode(account: account, presentation: .search(signal: searchText.get(), searchDeviceContacts: false), filters: filters, selectionState: selectionState)
+                        var searchChatList = false
+                        if case let .peerSelection(value) = mode {
+                            searchChatList = value
+                        }
+                        let searchResultsNode = ContactListNode(account: account, presentation: .search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false), filters: filters, selectionState: selectionState)
                         searchResultsNode.openPeer = { peer in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)
@@ -170,7 +174,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     }
     
     func animateOut(completion: (() -> Void)?) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.dismiss?()
                 completion?()

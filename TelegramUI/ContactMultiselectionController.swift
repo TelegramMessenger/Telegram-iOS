@@ -7,7 +7,7 @@ import TelegramCore
 
 enum ContactMultiselectionControllerMode {
     case groupCreation
-    case peerSelection
+    case peerSelection(searchChatList: Bool)
     case channelCreation
 }
 
@@ -23,7 +23,6 @@ class ContactMultiselectionController: ViewController {
     
     var dismissed: (() -> Void)?
 
-    
     private let index: PeerNameIndex = .lastNameFirst
     
     private var _ready = Promise<Bool>()
@@ -62,6 +61,7 @@ class ContactMultiselectionController: ViewController {
     private var limitsConfigurationDisposable: Disposable?
     private let options: [ContactListAdditionalOption]
     private let filters: [ContactListFilter]
+    
     init(account: Account, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf]) {
         self.account = account
         self.mode = mode
@@ -303,12 +303,14 @@ class ContactMultiselectionController: ViewController {
     override open func dismiss(completion: (() -> Void)? = nil) {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
             switch presentationArguments.presentationAnimation {
-            case .modalSheet:
-                self.dismissed?()
-                self.contactsNode.animateOut(completion: completion)
-            case .none:
-                self.dismissed?()
-                completion?()
+                case .modalSheet:
+                    self.contactsNode.animateOut(completion: { [weak self] in
+                        self?.dismissed?()
+                        completion?()
+                    })
+                case .none:
+                    self.dismissed?()
+                    completion?()
             }
         }
     }

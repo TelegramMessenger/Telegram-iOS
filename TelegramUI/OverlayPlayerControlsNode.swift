@@ -178,7 +178,20 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         self.addSubnode(self.separatorNode)
         
-        let mappedStatus = combineLatest(status, self.scrubberNode.scrubbingTimestamp) |> map { value, scrubbingTimestamp -> MediaPlayerStatus in
+        let delayedStatus = status
+        |> mapToSignal { value -> Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError> in
+            guard let value = value else {
+                return .single(nil)
+            }
+            switch value {
+                case .state:
+                    return .single(value)
+                case .loading:
+                    return .single(value) |> delay(0.1, queue: .mainQueue())
+            }
+        }
+        
+        let mappedStatus = combineLatest(delayedStatus, self.scrubberNode.scrubbingTimestamp) |> map { value, scrubbingTimestamp -> MediaPlayerStatus in
             if let valueOrLoading = value, case let .state(value) = valueOrLoading {
                 return MediaPlayerStatus(generationTimestamp: value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status)
             } else {
@@ -189,7 +202,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.leftDurationLabel.status = mappedStatus
         self.rightDurationLabel.status = mappedStatus
         
-        self.statusDisposable = (status
+        self.statusDisposable = (delayedStatus
         |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 var valueItemId: SharedMediaPlaylistItemId?

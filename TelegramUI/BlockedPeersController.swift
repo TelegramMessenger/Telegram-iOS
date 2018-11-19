@@ -112,7 +112,7 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
     func item(_ arguments: BlockedPeersControllerArguments) -> ListViewItem {
         switch self {
             case let .add(theme, text):
-                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.addPeer()
                 })
             case let .peerItem(_, theme, strings, dateTimeFormat, peer, editing, enabled):
@@ -175,7 +175,7 @@ private func blockedPeersControllerEntries(presentationData: PresentationData, s
     var entries: [BlockedPeersEntry] = []
     
     if let peers = peers {
-        entries.append(.add(presentationData.theme, presentationData.strings.Conversation_BlockUser))
+        entries.append(.add(presentationData.theme, presentationData.strings.BlockedUsers_BlockUser))
         
         var index: Int32 = 0
         for peer in peers {
@@ -213,7 +213,8 @@ public func blockedPeersController(account: Account) -> ViewController {
             }
         }
     }, addPeer: {
-        let controller = PeerSelectionController(account: account, filter: [.onlyUsers])
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = PeerSelectionController(account: account, filter: [.onlyUsers], title: presentationData.strings.BlockedUsers_SelectUserTitle)
         controller.peerSelected = { [weak controller] peerId in
             if let strongController = controller {
                 strongController.inProgress = true

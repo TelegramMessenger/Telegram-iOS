@@ -20,6 +20,8 @@ public class TransformImageNode: ASDisplayNode {
     public var contentAnimations: TransformImageNodeContentAnimations = []
     private var disposable = MetaDisposable()
     
+    private var currentTransform: ((TransformImageArguments) -> DrawingContext?)?
+    private var currentArguments: TransformImageArguments?
     private var argumentsPromise = ValuePromise<TransformImageArguments>(ignoreRepeated: true)
     
     private var overlayColor: UIColor?
@@ -42,12 +44,12 @@ public class TransformImageNode: ASDisplayNode {
         
         let result = combineLatest(signal, argumentsPromise.get())
         |> deliverOn(Queue.concurrentDefaultQueue())
-        |> mapToThrottled { transform, arguments -> Signal<UIImage?, NoError> in
+        |> mapToThrottled { transform, arguments -> Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments, UIImage?)?, NoError> in
             return deferred {
                 if let context = transform(arguments) {
-                    return Signal<UIImage?, NoError>.single(context.generateImage())
+                    return .single((transform, arguments, context.generateImage()))
                 } else {
-                    return Signal<UIImage?, NoError>.single(nil)
+                    return .single(nil)
                 }
             }
         }
@@ -69,7 +71,11 @@ public class TransformImageNode: ASDisplayNode {
                         })
                     }
                     
-                    strongSelf.contents = next?.cgImage
+                    if let (transform, arguments, image) = next {
+                        strongSelf.currentTransform = transform
+                        strongSelf.currentArguments = arguments
+                        strongSelf.contents = image?.cgImage
+                    }
                     if let _ = strongSelf.overlayColor {
                         strongSelf.applyOverlayColor(animated: false)
                     }
@@ -89,11 +95,27 @@ public class TransformImageNode: ASDisplayNode {
     }
     
     public func asyncLayout() -> (TransformImageArguments) -> (() -> Void) {
-        return { arguments in
-            self.argumentsPromise.set(arguments)
-            
+        let currentTransform = self.currentTransform
+        let currentArguments = self.currentArguments
+        return { [weak self] arguments in
+            let updatedImage: UIImage?
+            if currentArguments != arguments {
+                updatedImage = currentTransform?(arguments)?.generateImage()
+            } else {
+                updatedImage = nil
+            }
             return {
-                
+                guard let strongSelf = self else {
+                    return
+                }
+                if let image = updatedImage {
+                    strongSelf.contents = image.cgImage
+                    strongSelf.currentArguments = arguments
+                    if let _ = strongSelf.overlayColor {
+                        strongSelf.applyOverlayColor(animated: false)
+                    }
+                }
+                strongSelf.argumentsPromise.set(arguments)
             }
         }
     }

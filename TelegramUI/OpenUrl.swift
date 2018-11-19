@@ -191,10 +191,11 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                                 break
                         }
                     }, present: { c, a in
-                        if let navigationController = navigationController {
-                            navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                            (navigationController.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
-                        }
+                        account.telegramApplicationContext.applicationBindings.dismissNativeController()
+                        
+                        c.presentationArguments = a
+                            
+                            account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(c, on: .root, blockInteraction: false)
                     }, dismissInput: {
                         dismissInput()
                     })
@@ -217,6 +218,7 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                         }
                     }
                     if let peerId = peerId, let navigationController = navigationController {
+                        account.telegramApplicationContext.applicationBindings.dismissNativeController()
                         navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
                     }
                 }
@@ -315,6 +317,7 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                             }
                         }
                         if let navigationController = navigationController {
+                            account.telegramApplicationContext.applicationBindings.dismissNativeController()
                             (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                         }
                     }

@@ -479,7 +479,7 @@ public struct ContactListAdditionalOption: Equatable {
 enum ContactListPresentation {
     case orderedByPresence(options: [ContactListAdditionalOption])
     case natural(displaySearch: Bool, options: [ContactListAdditionalOption])
-    case search(signal: Signal<String, NoError>, searchDeviceContacts: Bool)
+    case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool)
 }
 
 struct ContactListNodeGroupSelectionState: Equatable {
@@ -602,10 +602,36 @@ final class ContactListNode: ASDisplayNode {
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<ContactsListNodeTransition, NoError>
         let themeAndStringsPromise = self.themeAndStringsPromise
-        if case let .search(query, searchDeviceContacts) = presentation {
+        if case let .search(query, searchChatList, searchDeviceContacts) = presentation {
             transition = query
             |> mapToSignal { query in
-                let foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
+                let foundLocalContacts: Signal<([Peer], [PeerId : PeerPresence]), NoError>
+                if searchChatList {
+                    let foundChatListPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
+                    foundLocalContacts = foundChatListPeers
+                    |> mapToSignal { peers -> Signal<([Peer], [PeerId : PeerPresence]), NoError> in
+                        var resultPeers: [Peer] = []
+                        for peer in peers {
+                            if peer.peerId.namespace != Namespaces.Peer.CloudUser {
+                                continue
+                            }
+                            if let mainPeer = peer.chatMainPeer {
+                                resultPeers.append(mainPeer)
+                            }
+                        }
+                        return account.postbox.transaction { transaction -> ([Peer], [PeerId : PeerPresence]) in
+                            var resultPresences: [PeerId: PeerPresence] = [:]
+                            for peer in resultPeers {
+                                if let presence = transaction.getPeerPresence(peerId: peer.id) {
+                                    resultPresences[peer.id] = presence
+                                }
+                            }
+                            return (resultPeers, resultPresences)
+                        }
+                    }
+                } else {
+                    foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
+                }
                 let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
                 |> then(
                     searchPeers(account: account, query: query)
