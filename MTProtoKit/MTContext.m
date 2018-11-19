@@ -316,6 +316,8 @@
             NSDictionary *cleanupSessionIdsByAuthKeyId = [keychain objectForKey:@"cleanupSessionIdsByAuthKeyId" group:@"cleanup"];
             if (cleanupSessionIdsByAuthKeyId != nil)
                 _cleanupSessionIdsByAuthKeyId = [[NSMutableDictionary alloc] initWithDictionary:cleanupSessionIdsByAuthKeyId];
+            
+            MTLog(@"[MTContext#%x: received keychain globalTimeDifference:%f datacenterAuthInfoById:%@]", (int)self, _globalTimeDifference, _datacenterAuthInfoById);
         }
     }];
 }

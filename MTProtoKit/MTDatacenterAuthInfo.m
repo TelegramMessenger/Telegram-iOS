@@ -148,4 +148,8 @@
     return [[MTDatacenterAuthKey alloc] initWithAuthKey:_authKey authKeyId:_authKeyId notBound:false];
 }
 
+- (NSString *)description {
+    return [NSString stringWithFormat:@"MTDatacenterAuthInfo authKeyId:%" PRId64 " authKey:%lu", _authKeyId, (unsigned long)_authKey.length];
+}
+
 @end
