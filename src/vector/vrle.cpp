@@ -134,8 +134,14 @@ void VRle::VRleData::operator*=(int alpha)
 void VRle::VRleData::opIntersect(const VRect &r, VRle::VRleSpanCb cb,
                                  void *userData) const
 {
-    VRect clip = r;
+    if (empty()) return;
 
+    if (r.contains(bbox())) {
+        cb(mSpans.size(), mSpans.data(), userData);
+        return;
+    }
+
+    VRect clip = r;
     VRleHelper                  tresult, tmp_obj;
     std::array<VRle::Span, 256> array;
 
