@@ -249,8 +249,33 @@ struct RleTask {
     JoinStyle          join;
     float              width;
     float              meterLimit;
+    VRect              clip;
     VRle               operator()(FTOutline &outRef, SW_FT_Stroker &stroker);
+    void               render(FTOutline &outRef);
 };
+
+void RleTask::render(FTOutline &outRef)
+{
+    SW_FT_Raster_Params params;
+
+    params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA;
+    params.gray_spans = &rleGenerationCb;
+    params.user = &rle;
+    params.source = &outRef.ft;
+
+    if (!clip.empty()) {
+        params.flags |= SW_FT_RASTER_FLAG_CLIP;
+
+        params.clip_box.xMin =  clip.left();
+        params.clip_box.yMin =  clip.top();
+        params.clip_box.xMax =  clip.right();
+        params.clip_box.yMax =  clip.bottom();
+    }
+    // compute rle
+    sw_ft_grays_raster.raster_render(nullptr, &params);
+    // update bounding box.
+    rle.boundingRect();
+}
 
 VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
 {
@@ -270,15 +295,6 @@ VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
 
         SW_FT_Stroker_Export(stroker, &outRef.ft);
 
-        SW_FT_Raster_Params params;
-
-        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA;
-        params.gray_spans = &rleGenerationCb;
-        params.user = &rle;
-        params.source = &outRef;
-
-        sw_ft_grays_raster.raster_render(nullptr, &params);
-
     } else {  // Fill Task
         outRef.convert(path);
         int fillRuleFlag = SW_FT_OUTLINE_NONE;
@@ -291,15 +307,10 @@ VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
             break;
         }
         outRef.ft.flags = fillRuleFlag;
-        SW_FT_Raster_Params params;
-
-        params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA;
-        params.gray_spans = &rleGenerationCb;
-        params.user = &rle;
-        params.source = &outRef.ft;
-
-        sw_ft_grays_raster.raster_render(nullptr, &params);
     }
+
+    render(outRef);
+
     return std::move(rle);
 }
 
@@ -365,7 +376,7 @@ public:
     }
 
     std::future<VRle> strokeRle(VPath &&path, VRle &&rle, CapStyle cap, JoinStyle join,
-                                float width, float meterLimit)
+                                float width, float meterLimit, const VRect &clip)
     {
         RleTask *task = new RleTask();
         task->stroke = true;
@@ -375,15 +386,17 @@ public:
         task->join = join;
         task->width = width;
         task->meterLimit = meterLimit;
+        task->clip = clip;
         return async(task);
     }
 
-    std::future<VRle> fillRle(VPath &&path, VRle &&rle, FillRule fillRule)
+    std::future<VRle> fillRle(VPath &&path, VRle &&rle, FillRule fillRule, const VRect &clip)
     {
         RleTask *task = new RleTask();
         task->path = std::move(path);
         task->rle = std::move(rle);
         task->fillRule = fillRule;
+        task->clip = clip;
         task->stroke = false;
         return async(task);
     }
@@ -392,26 +405,26 @@ public:
 static RleTaskScheduler raster_scheduler;
 
 std::future<VRle> VRaster::generateFillInfo(VPath &&path, VRle &&rle,
-                                            FillRule     fillRule)
+                                            FillRule     fillRule, const VRect &clip)
 {
     if (path.empty()) {
         std::promise<VRle> promise;
         promise.set_value(VRle());
         return promise.get_future();
     }
-    return raster_scheduler.fillRle(std::move(path), std::move(rle), fillRule);
+    return raster_scheduler.fillRle(std::move(path), std::move(rle), fillRule, clip);
 }
 
 std::future<VRle> VRaster::generateStrokeInfo(VPath &&path, VRle &&rle, CapStyle cap,
                                               JoinStyle join, float width,
-                                              float meterLimit)
+                                              float meterLimit, const VRect &clip)
 {
     if (path.empty()) {
         std::promise<VRle> promise;
         promise.set_value(VRle());
         return promise.get_future();
     }
-    return raster_scheduler.strokeRle(std::move(path), std::move(rle), cap, join, width, meterLimit);
+    return raster_scheduler.strokeRle(std::move(path), std::move(rle), cap, join, width, meterLimit, clip);
 }
 
 V_END_NAMESPACE

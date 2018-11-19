@@ -2,6 +2,7 @@
 #define VRASTER_H
 #include <future>
 #include "vglobal.h"
+#include "vrect.h"
 
 V_BEGIN_NAMESPACE
 
@@ -12,12 +13,12 @@ struct VRaster {
 
     static std::future<VRle>
     generateFillInfo(VPath &&path, VRle &&rle,
-                     FillRule fillRule = FillRule::Winding);
+                     FillRule fillRule = FillRule::Winding, const VRect &clip = VRect());
 
     static std::future<VRle>
     generateStrokeInfo(VPath &&path, VRle &&rle,
                        CapStyle cap, JoinStyle join,
-                       float width, float meterLimit);
+                       float width, float meterLimit, const VRect &clip = VRect());
 };
 
 V_END_NAMESPACE
