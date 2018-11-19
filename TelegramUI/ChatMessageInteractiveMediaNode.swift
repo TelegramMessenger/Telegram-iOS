@@ -518,8 +518,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     progressRequired = true
                 } else if isSecretMedia {
                     progressRequired = true
-                } else if let webpage = webpage, case let .Loaded(content) = webpage.content, content.embedUrl != nil {
-                    progressRequired = true
+                } else if let webpage = webpage, case let .Loaded(content) = webpage.content {
+                    if content.embedUrl != nil {
+                        progressRequired = true
+                    } else if let file = content.file, file.isVideo, !file.isAnimated {
+                        progressRequired = true
+                    }
                 }
             } else {
                 progressRequired = true
@@ -644,8 +648,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         } else {
                             state = .none
                         }
-                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content, content.embedUrl != nil {
-                        state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content {
+                        if content.embedUrl != nil {
+                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                        } else if let file = content.file, file.isVideo, !file.isAnimated {
+                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                        }
                     }
                     if case .constrained = sizeCalculation {
                         if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {

@@ -122,6 +122,15 @@ func galleryCaptionStringWithAppliedEntities(_ text: String, entities: [MessageT
     return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, fixedFont: fixedFont, underlineLinks: false)
 }
 
+private func galleryMessageCaptionText(_ message: Message) -> String {
+    for media in message.media {
+        if let _ = media as? TelegramMediaWebpage {
+            return ""
+        }
+    }
+    return message.text
+}
+
 func galleryItemForEntry(account: Account, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, openUrl: @escaping (String) -> Void = { _ in }, openUrlOptions: @escaping (String) -> Void = { _ in }) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _):
@@ -148,7 +157,7 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                                 break
                             }
                         }
-                        let caption = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
+                        let caption = galleryCaptionStringWithAppliedEntities(galleryMessageCaptionText(message), entities: entities)
                         return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, playbackCompleted: playbackCompleted, openUrl: openUrl, openUrlOptions: openUrlOptions)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {

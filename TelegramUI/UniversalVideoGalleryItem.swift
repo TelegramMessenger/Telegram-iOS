@@ -324,6 +324,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let m = m as? TelegramMediaFile, m.isVideo {
                         file = m
                         break
+                    } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
+                        file = f
+                        break
                     }
                 }
                 if let file = file {
