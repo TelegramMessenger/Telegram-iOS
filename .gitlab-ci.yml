@@ -10,6 +10,10 @@ internal:
   tags:
     - ios
   stage: build
+  only:
+    - master
+  except:
+    - tags
   script:
     - sh ~/ios-prepare-build.sh $CI_PROJECT_DIR/..
     - fastlane internalhockeyapp
@@ -23,7 +27,7 @@ beta_testflight:
   only:
     - beta
   except:
-    - branches
+    - tags
   script:
     - sh ~/ios-prepare-build.sh $CI_PROJECT_DIR/..
     - fastlane testflight_llc
