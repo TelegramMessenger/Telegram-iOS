@@ -572,7 +572,7 @@
 // Blocked Users
 "BlockedUsers.Title" = "Blocked";
 "BlockedUsers.SelectUserTitle" = "Block User";
-"BlockedUsers.BlockUser" = "Block User";
+"BlockedUsers.BlockUser" = "Block User...";
 "BlockedUsers.BlockTitle" = "Block";
 "BlockedUsers.LeavePrefix" = "Leave ";
 "BlockedUsers.Info" = "Blocked users can't send you messages or add you to groups. They will not see your profile pictures, online and last seen status.";
