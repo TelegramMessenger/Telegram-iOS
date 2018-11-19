@@ -2,7 +2,7 @@
 #include "vdasher.h"
 #include "vraster.h"
 
-void VDrawable::preprocess()
+void VDrawable::preprocess(const VRect &clip)
 {
     if (mFlag & (DirtyState::Path)) {
         if (mStroke.enable) {
@@ -12,10 +12,10 @@ void VDrawable::preprocess()
             }
             mRleTask = VRaster::generateStrokeInfo(
                 std::move(mPath), std::move(mRle), mStroke.cap, mStroke.join,
-                mStroke.width, mStroke.meterLimit);
+                mStroke.width, mStroke.meterLimit, clip);
         } else {
             mRleTask = VRaster::generateFillInfo(
-                std::move(mPath), std::move(mRle), mFillRule);
+                std::move(mPath), std::move(mRle), mFillRule, clip);
         }
         mRle = VRle();
         mFlag &= ~DirtyFlag(DirtyState::Path);

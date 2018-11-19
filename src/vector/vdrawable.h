@@ -26,7 +26,7 @@ public:
     void setStrokeInfo(CapStyle cap, JoinStyle join, float meterLimit,
                        float strokeWidth);
     void setDashInfo(float *array, uint size);
-    void preprocess();
+    void preprocess(const VRect &clip);
     VRle rle();
 
 public:

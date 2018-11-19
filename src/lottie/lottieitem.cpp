@@ -116,8 +116,9 @@ bool LOTCompItem::render(const lottie::Surface &surface)
      */
     mDrawableList.clear();
     mRootLayer->renderList(mDrawableList);
+    VRect clip(0, 0, surface.width(), surface.height());
     for (auto &e : mDrawableList) {
-        e->preprocess();
+        e->preprocess(clip);
     }
 
     VPainter painter(&bitmap);
