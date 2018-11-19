@@ -257,14 +257,16 @@
             }];
             [bestTcp4Signals addObject:signal];
             
-            NSArray *alternatePorts = @[@80, @5222];
+            NSArray *alternatePorts = @[@80, /*@5222*/];
             for (NSNumber *nPort in alternatePorts) {
                 NSSet *ipsWithPort = tcpIpsByPort[nPort];
                 if (![ipsWithPort containsObject:address.ip]) {
                     MTDatacenterAddress *portAddress = [[MTDatacenterAddress alloc] initWithIp:address.ip port:[nPort intValue] preferForMedia:address.preferForMedia restrictToTcp:address.restrictToTcp cdn:address.cdn preferForProxy:address.preferForProxy secret:address.secret];
                     MTTransportScheme *tcpPortTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:portAddress media:media];
                     MTSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithContext:context datacenterId:datacenterId address:portAddress] then:[MTSignal single:tcpPortTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]];
-                    tcpConnectionWithTimeout = [tcpConnectionWithTimeout delay:5.0 onQueue:[MTQueue concurrentDefaultQueue]];
+                    tcpConnectionWithTimeout = [tcpConnectionWithTimeout mapToSignal:^(id next) {
+                        return [[MTSignal single:next] delay:5.0 onQueue:[MTQueue concurrentDefaultQueue]];
+                    }];
                     MTSignal *signal = [tcpConnectionWithTimeout catch:^MTSignal *(__unused id error) {
                         return [MTSignal complete];
                     }];
