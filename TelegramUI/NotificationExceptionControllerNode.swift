@@ -304,8 +304,8 @@ private final class NotificationExceptionArguments {
     let openPeer: (Peer) -> Void
     let selectPeer: ()->Void
     let updateRevealedPeerId:(PeerId?)->Void
-    let deletePeer:(PeerId) -> Void
-    init(account: Account, activateSearch:@escaping() -> Void, openPeer: @escaping(Peer) -> Void, selectPeer: @escaping()->Void, updateRevealedPeerId:@escaping(PeerId?)->Void, deletePeer: @escaping(PeerId) -> Void) {
+    let deletePeer:(Peer) -> Void
+    init(account: Account, activateSearch:@escaping() -> Void, openPeer: @escaping(Peer) -> Void, selectPeer: @escaping()->Void, updateRevealedPeerId:@escaping(PeerId?)->Void, deletePeer: @escaping(Peer) -> Void) {
         self.account = account
         self.activateSearch = activateSearch
         self.openPeer = openPeer
@@ -395,7 +395,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
             }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                 arguments.updateRevealedPeerId(peerId)
             }, removePeer: { peerId in
-                arguments.deletePeer(peerId)
+                arguments.deletePeer(peer)
             }, hasTopStripe: false, hasTopGroupInset: false)
         }
     }
@@ -653,9 +653,16 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             updateState { current in
                 return current.withUpdatedRevealedPeerId(peerId)
             }
-        }, deletePeer: { peerId in
-            updatePeerSound(peerId, .default)
-            updatePeerNotificationInterval(peerId, nil)
+        }, deletePeer: { peer in
+            _ = (account.postbox.transaction { transaction in
+                if transaction.getPeer(peer.id) == nil {
+                    updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated})
+                }
+            } |> deliverOnMainQueue).start(completed: {
+                updatePeerSound(peer.id, .default)
+                updatePeerNotificationInterval(peer.id, nil)
+            })
+           
         })
         
         self.arguments = arguments
