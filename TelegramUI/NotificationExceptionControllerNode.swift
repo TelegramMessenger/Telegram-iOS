@@ -290,10 +290,6 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
                 let soundName = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: value.settings.messageSound)
                 title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).0 : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).0)")
             }
-            if value.peer.displayTitle == "Vyezd Family" {
-                var bp:Int = 0
-                bp += 1
-            }
             entries.append(.peer(index: index, peer: value.peer, theme: presentationData.theme, strings: presentationData.strings, dateFormat: presentationData.dateTimeFormat, description: title, notificationSettings: value.settings, revealed: state.revealedPeerId == value.peer.id, editing: state.editing))
             index += 1
         }

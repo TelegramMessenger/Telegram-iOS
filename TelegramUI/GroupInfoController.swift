@@ -1288,7 +1288,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 viewSettings = GlobalNotificationSettingsSet.defaultSettings
             }
             
-            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.privateChats, updateSettings: { value in
+            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.groupChats, updateSettings: { value in
                 changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

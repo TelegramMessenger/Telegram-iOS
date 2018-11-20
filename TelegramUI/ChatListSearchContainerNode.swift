@@ -948,6 +948,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     strongSelf.listNode.isHidden = !displayingResults
                     strongSelf.recentListNode.isHidden = displayingResults || strongSelf.filter.contains(.excludeRecent)
                     strongSelf.dimNode.isHidden = displayingResults
+                    strongSelf.backgroundColor = !displayingResults && strongSelf.filter.contains(.excludeRecent) ? nil : strongSelf.presentationData.theme.chatList.backgroundColor
+
                 }
             })
         }
