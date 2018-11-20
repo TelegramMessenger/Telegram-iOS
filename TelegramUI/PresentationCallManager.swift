@@ -228,7 +228,7 @@ public final class PresentationCallManager {
     private func ringingStatesUpdated(_ ringingStates: [(Peer, CallSessionRingingState, Bool)], currentNetworkType: NetworkType, enableCallKit: Bool) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil {
-                let call = PresentationCall(account: self.account, audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: enableCallKit ? self.callKitIntegration : nil, serializedData: self.callSettings?.1.serializedData, dataSaving: self.callSettings?.0.dataSaving ?? .never, getDeviceAccessData: self.getDeviceAccessData, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, proxyServer: self.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: self.networkType)
+                let call = PresentationCall(account: self.account, audioSession: self.audioSession, callSessionManager: self.callSessionManager, callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings?.0) : nil, serializedData: self.callSettings?.1.serializedData, dataSaving: self.callSettings?.0.dataSaving ?? .never, getDeviceAccessData: self.getDeviceAccessData, internalId: firstState.1.id, peerId: firstState.1.peerId, isOutgoing: false, peer: firstState.0, proxyServer: self.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: self.networkType)
                 self.currentCall = call
                 self.currentCallPromise.set(.single(call))
                 self.hasActiveCallsPromise.set(true)

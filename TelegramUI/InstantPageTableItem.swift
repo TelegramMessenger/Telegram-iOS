@@ -94,7 +94,7 @@ private let tableCellInsets = UIEdgeInsetsMake(14.0, 12.0, 14.0, 12.0)
 private let tableBorderWidth: CGFloat = 1.0
 private let tableCornerRadius: CGFloat = 5.0
 
-final class InstantPageTableItem: InstantPageItem {
+final class InstantPageTableItem: InstantPageScrollableItem {
     var frame: CGRect
     let totalWidth: CGFloat
     let horizontalInset: CGFloat
@@ -104,7 +104,7 @@ final class InstantPageTableItem: InstantPageItem {
     
     let theme: InstantPageTheme
     
-    let rtl: Bool
+    let isRTL: Bool
     fileprivate let cells: [InstantPageTableCellItem]
     private let borderWidth: CGFloat
     
@@ -115,7 +115,11 @@ final class InstantPageTableItem: InstantPageItem {
         self.borderWidth = borderWidth
         self.theme = theme
         self.cells = cells
-        self.rtl = rtl
+        self.isRTL = rtl
+    }
+    
+    var contentSize: CGSize {
+        return CGSize(width: self.totalWidth, height: self.frame.height)
     }
     
     func drawInTile(context: CGContext) {
@@ -175,11 +179,22 @@ final class InstantPageTableItem: InstantPageItem {
     }
     
     func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPageTableNode(item: self, account: account, strings: strings, theme: theme)
+        var additionalNodes: [InstantPageNode] = []
+        for cell in self.cells {
+            for item in cell.additionalItems {
+                if item.wantsNode {
+                    if let node = item.node(account: account, strings: strings, theme: theme, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }, currentExpandedDetails: nil) {
+                        node.frame = item.frame.offsetBy(dx: cell.frame.minX, dy: cell.frame.minY)
+                        additionalNodes.append(node)
+                    }
+                }
+            }
+        }
+        return InstantPageScrollableNode(item: self, additionalNodes: additionalNodes)
     }
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
-        if let node = node as? InstantPageTableNode {
+        if let node = node as? InstantPageScrollableNode {
             return node.item === self
         }
         return false
@@ -210,107 +225,6 @@ final class InstantPageTableItem: InstantPageItem {
             }
         }
         return nil
-    }
-}
-
-private final class InstantPageTableNodeParameters: NSObject {
-    let item: InstantPageTableItem
-    
-    init(item: InstantPageTableItem) {
-        self.item = item
-        super.init()
-    }
-}
-
-final class InstantPageTableContentNode: ASDisplayNode {
-    private let item: InstantPageTableItem
-    
-    init(item: InstantPageTableItem, account: Account, strings: PresentationStrings, theme: InstantPageTheme) {
-        self.item = item
-        super.init()
-        
-        self.isOpaque = false
-        self.isUserInteractionEnabled = false
-        
-        for cell in self.item.cells {
-            for item in cell.additionalItems {
-                if item.wantsNode {
-                    if let node = item.node(account: account, strings: strings, theme: theme, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }, currentExpandedDetails: nil) {
-                        node.frame = item.frame.offsetBy(dx: cell.frame.minX, dy: cell.frame.minY)
-                        self.addSubnode(node)
-                    }
-                }
-            }
-        }
-    }
-    
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return InstantPageTableNodeParameters(item: self.item)
-    }
-    
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        let context = UIGraphicsGetCurrentContext()!
-        
-        if let parameters = parameters as? InstantPageTableNodeParameters {
-            parameters.item.drawInTile(context: context)
-        }
-    }
-}
-
-final class InstantPageTableNode: ASScrollNode, InstantPageNode {
-    let item: InstantPageTableItem
-    let contentNode: InstantPageTableContentNode
-    
-    var contentOffset: CGPoint {
-        return self.view.contentOffset
-    }
-    
-    init(item: InstantPageTableItem, account: Account, strings: PresentationStrings, theme: InstantPageTheme) {
-        self.item = item
-        self.contentNode = InstantPageTableContentNode(item: item, account: account, strings: strings, theme: theme)
-        super.init()
-        
-        self.isOpaque = false
-        self.contentNode.frame = CGRect(x: item.horizontalInset, y: 0.0, width: item.totalWidth, height: item.frame.height)
-        self.view.contentSize = CGSize(width: item.totalWidth + item.horizontalInset * 2.0, height: item.frame.height)
-        if item.rtl {
-            self.view.contentOffset = CGPoint(x: self.view.contentSize.width - item.frame.width, y: 0.0)
-        }
-        self.view.alwaysBounceVertical = false
-        self.view.showsHorizontalScrollIndicator = false
-        self.view.showsVerticalScrollIndicator = false
-        if #available(iOSApplicationExtension 11.0, *) {
-            self.view.contentInsetAdjustmentBehavior = .never
-        }
-        self.addSubnode(self.contentNode)
-        
-        self.view.interactiveTransitionGestureRecognizerTest = { [weak self] point -> Bool in
-            if let strongSelf = self {
-                if strongSelf.view.contentOffset.x < 1.0 {
-                    return false
-                } else {
-                    return point.x - strongSelf.view.contentOffset.x > 30.0
-                }
-            } else {
-                return false
-            }
-        }
-    }
-    
-    func updateIsVisible(_ isVisible: Bool) {
-    }
-    
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-    }
-    
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
-        return nil
-    }
-    
-    func updateHiddenMedia(media: InstantPageMedia?) {
-    }
-    
-    func update(strings: PresentationStrings, theme: InstantPageTheme) {
     }
 }
 

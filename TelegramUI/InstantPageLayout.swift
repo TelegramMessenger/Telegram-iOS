@@ -164,7 +164,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
         case let .paragraph(text):
             let styleStack = InstantPageTextStyleStack()
             setupStyleStack(styleStack, theme: theme, category: .paragraph, link: false)
-            let (_, items, contentSize) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint(x: horizontalInset, y: 0.0), media: media, webpage: webpage)
+            let (_, items, contentSize) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, horizontalInset: horizontalInset, offset: CGPoint(x: horizontalInset, y: 0.0), media: media, webpage: webpage)
             return InstantPageLayout(origin: CGPoint(), contentSize: contentSize, items: items)
         case let .preformatted(text):
             let styleStack = InstantPageTextStyleStack()
@@ -215,12 +215,12 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                     } else {
                         value = "\(i + 1)."
                     }
-                    let (textItem, textItems, _) = layoutTextItemWithString(attributedStringForRichText(.plain(value), styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint())
+                    let (textItem, _, _) = layoutTextItemWithString(attributedStringForRichText(.plain(value), styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint())
                     if let textItem = textItem, let line = textItem.lines.first {
                         textItem.selectable = false
                         maxIndexWidth = max(maxIndexWidth, line.frame.width)
+                        indexItems.append(textItem)
                     }
-                    indexItems.append(textItems.first!)
                 } else {
                     let shapeItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 6.0, height: 12.0)), shapeFrame: CGRect(origin: CGPoint(x: 0.0, y: 3.0), size: CGSize(width: 6.0, height: 6.0)), shape: .ellipse, color: theme.textCategories.paragraph.color)
                     indexItems.append(shapeItem)
@@ -614,11 +614,11 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             var contentSize: CGSize
             let frame = CGRect(origin: CGPoint(x: floor((boundingWidth - size.width) / 2.0), y: 0.0), size: size)
             let item: InstantPageItem
-            if let url = url, let coverId = coverId, let image = media[coverId] as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+            if let url = url, let coverId = coverId, let image = media[coverId] as? TelegramMediaImage {
                 let loadedContent = TelegramMediaWebpageLoadedContent(url: url, displayUrl: url, hash: 0, type: "video", websiteName: nil, title: nil, text: nil, embedUrl: url, embedType: "video", embedSize: size, duration: nil, author: nil, image: image, file: nil, instantPage: nil)
                 let content = TelegramMediaWebpageContent.Loaded(loadedContent)
                 
-                item = InstantPageImageItem(frame: frame, webPage: webpage, media: InstantPageMedia(index: embedIndex, media: TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: content), url: nil, caption: nil, credit: nil), attributes: [], interactive: true, roundCorners: false, fit: false)
+                item = InstantPageImageItem(frame: frame, webPage: webpage, media: InstantPageMedia(index: embedIndex, media: TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: -1), content: content), url: nil, caption: nil, credit: nil), attributes: [], interactive: true, roundCorners: false, fit: false)
 
             } else {
                 item = InstantPageWebEmbedItem(frame: frame, url: url, html: html, enableScrolling: allowScrolling)

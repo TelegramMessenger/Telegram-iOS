@@ -54,6 +54,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let resolveUrlDisposable = MetaDisposable()
     private let loadWebpageDisposable = MetaDisposable()
     
+    private let loadProgress = ValuePromise<CGFloat>(1.0, ignoreRepeated: true)
+    private let loadProgressDisposable = MetaDisposable()
+    
     private let updateLayoutDisposable = MetaDisposable()
     
     private var themeReferenceDate: Date?
@@ -118,12 +121,18 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: -strongSelf.scrollNode.view.contentInset.top), animated: true)
             }
         }
+        
+        self.loadProgressDisposable.set((self.loadProgress.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            self?.navigationBar.setLoadProgress(value)
+        }))
     }
     
     deinit {
         self.hiddenMediaDisposable.dispose()
         self.resolveUrlDisposable.dispose()
         self.loadWebpageDisposable.dispose()
+        self.loadProgressDisposable.dispose()
     }
     
     func update(settings: InstantPagePresentationSettings, strings: PresentationStrings) {
@@ -404,6 +413,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var embedIndex = -1
         var detailsIndex = -1
         
+        var previousDetailsNode: InstantPageDetailsNode?
+        
         for item in self.currentLayoutItemsWithNodes {
             itemIndex += 1
             if item is InstantPageWebEmbedItem {
@@ -462,9 +473,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }, currentExpandedDetails: self.currentExpandedDetails) {
                         newNode.frame = itemFrame
                         newNode.updateLayout(size: itemFrame.size, transition: transition)
-//                        if case let .animated(duration, _) = transition {
-//                            newNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-//                        }
                         if let topNode = topNode {
                             self.scrollNode.insertSubnode(newNode, aboveSubnode: topNode)
                         } else {
@@ -480,6 +488,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     strongSelf.updateVisibleItems(visibleBounds: strongSelf.scrollNode.view.bounds, animated: true)
                                 }
                             }
+                            
+                            if let previousDetailsNode = previousDetailsNode {
+                                if itemNode.frame.minY - previousDetailsNode.frame.maxY < 1.0 {
+                                    itemNode.previousNode = previousDetailsNode
+                                }
+                            }
+                            previousDetailsNode = itemNode
                         }
                     }
                 } else {
@@ -676,8 +691,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let itemFrame = effectiveFrameForItem(item)
                 if itemFrame.contains(location) {
                     var contentOffset = CGPoint()
-                    if let item = item as? InstantPageTableItem {
-                        contentOffset = tableContentOffset(item: item)
+                    if let item = item as? InstantPageScrollableItem {
+                        contentOffset = scrollableContentOffset(item: item)
                     }
                     var itemRects = item.linkSelectionRects(at: location.offsetBy(dx: -itemFrame.minX + contentOffset.x, dy: -itemFrame.minY))
                     
@@ -713,10 +728,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func tableContentOffset(item: InstantPageTableItem) -> CGPoint {
+    private func scrollableContentOffset(item: InstantPageScrollableItem) -> CGPoint {
         var contentOffset = CGPoint()
         for (_, itemNode) in self.visibleItemsWithNodes {
-            if let itemNode = itemNode as? InstantPageTableNode, itemNode.item === item {
+            if let itemNode = itemNode as? InstantPageScrollableNode, itemNode.item === item {
                 contentOffset = itemNode.contentOffset
                 break
             }
@@ -778,12 +793,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
         if let currentLayout = self.currentLayout {
             for item in currentLayout.items {
-                let itemFrame = self.effectiveFrameForItem(item)
+                let itemFrame = self.effectiveFrameForItem(item).insetBy(dx: -2.0, dy: -2.0)
                 if itemFrame.contains(location) {
                     if let item = item as? InstantPageTextItem, item.selectable {
                         return (item, CGPoint(x: itemFrame.minX - item.frame.minX, y: itemFrame.minY - item.frame.minY))
-                    } else if let item = item as? InstantPageTableItem {
-                        let contentOffset = tableContentOffset(item: item)
+                    } else if let item = item as? InstantPageScrollableItem {
+                        let contentOffset = scrollableContentOffset(item: item)
                         if let (textItem, parentOffset) = item.textItemAtLocation(location.offsetBy(dx: -itemFrame.minX + contentOffset.x, dy: -itemFrame.minY)) {
                             return (textItem, itemFrame.origin.offsetBy(dx: parentOffset.x - contentOffset.x, dy: parentOffset.y))
                         }
@@ -951,35 +966,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        var cancelImpl: (() -> Void)?
-        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-            guard let strongSelf = self else {
-                return EmptyDisposable
-            }
-            
-            let controller = OverlayStatusController(theme: strongSelf.presentationTheme, strings: strongSelf.strings, type: .loading(cancelled: {
-                cancelImpl?()
-            }))
-            strongSelf.present(controller, nil)
-            return ActionDisposable { [weak controller] in
-                Queue.mainQueue().async() {
-                    controller?.dismiss()
-                }
-            }
-            }
-            |> runOn(Queue.mainQueue())
-            |> delay(0.15, queue: Queue.mainQueue())
-        let progressDisposable = progressSignal.start()
-        
+        self.loadProgress.set(0.02)
         let resolveSignal = resolveUrl(account: self.account, url: url.url)
-        |> afterDisposed {
-            Queue.mainQueue().async {
-                progressDisposable.dispose()
-            }
+        |> afterCompleted { [weak self] in
+            self?.loadProgress.set(0.07)
         }
-        cancelImpl = { [weak self] in
-            self?.resolveUrlDisposable.set(nil)
-        }
+
         self.resolveUrlDisposable.set((resolveSignal |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
@@ -989,9 +981,19 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             if let anchorRange = externalUrl.range(of: "#") {
                                 anchor = String(externalUrl[anchorRange.upperBound...])
                             }
-                            strongSelf.loadWebpageDisposable.set((webpagePreview(account: strongSelf.account, url: externalUrl, webpageId: webpageId) |> deliverOnMainQueue).start(next: { webpage in
-                                if let strongSelf = self, let webpage = webpage {
-                                    strongSelf.pushController(InstantPageController(account: strongSelf.account, webPage: webpage, anchor: anchor))
+                            strongSelf.loadWebpageDisposable.set((webpagePreviewWithProgress(account: strongSelf.account, url: externalUrl, webpageId: webpageId)
+                            |> deliverOnMainQueue).start(next: { result in
+                                if let strongSelf = self {
+                                    switch result {
+                                        case let .result(webpage):
+                                            if let webpage = webpage {
+                                                strongSelf.loadProgress.set(1.0)
+                                                strongSelf.pushController(InstantPageController(account: strongSelf.account, webPage: webpage, anchor: anchor))
+                                            }
+                                            break
+                                        case let .progress(progress):
+                                            strongSelf.loadProgress.set(CGFloat(0.07 + progress * (1.0 - 0.07)))
+                                    }
                                 }
                             }))
                         } else {
@@ -1072,14 +1074,18 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        var medias: [InstantPageMedia] = mediasFromItems(items)
-        medias = medias.filter {
-            $0.media is TelegramMediaImage
-        }
-        
         var entries: [InstantPageGalleryEntry] = []
-        for media in medias {
-            entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: InstantPageGalleryEntryLocation(position: Int32(entries.count), totalCount: Int32(medias.count))))
+        if media.media is TelegramMediaWebpage {
+            entries.append(InstantPageGalleryEntry(index: 0, pageId: webPage.webpageId, media: media, caption: nil, credit: nil, location: InstantPageGalleryEntryLocation(position: 0, totalCount: 1)))
+        } else {
+            var medias: [InstantPageMedia] = mediasFromItems(items)
+            medias = medias.filter {
+                $0.media is TelegramMediaImage
+            }
+            
+            for media in medias {
+                entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: InstantPageGalleryEntryLocation(position: Int32(entries.count), totalCount: Int32(medias.count))))
+            }
         }
         
         var centralIndex: Int?
