@@ -47,6 +47,17 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.statusBar.statusBarStyle = theme.statusBarStyle
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        
+        self.attemptNavigation = { [weak self] f in
+            guard let strongSelf = self else {
+                return true
+            }
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Login_CancelPhoneVerification, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
+            }), TextAlertAction(type: .defaultAction, title: strings.Login_CancelPhoneVerificationStop, action: {
+                f()
+            })]), in: .window(.root))
+            return false
+        }
     }
     
     required init(coder aDecoder: NSCoder) {

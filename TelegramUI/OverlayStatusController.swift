@@ -6,14 +6,14 @@ import LegacyComponents
 enum OverlayStatusControllerType {
     case loading(cancelled: (() -> Void)?)
     case success
-    case proxySettingSuccess
+    case shieldSuccess(String)
     case genericSuccess(String)
 }
 
 private enum OverlayStatusContentController {
     case loading(TGProgressWindowController)
     case progress(TGProgressWindowController)
-    case proxy(TGProxyWindowController)
+    case shieldSuccess(TGProxyWindowController)
     case genericSuccess(TGProxyWindowController)
     
     var view: UIView {
@@ -22,7 +22,7 @@ private enum OverlayStatusContentController {
                 return controller.view
             case let .progress(controller):
                 return controller.view
-            case let .proxy(controller):
+            case let .shieldSuccess(controller):
                 return controller.view
             case let .genericSuccess(controller):
                 return controller.view
@@ -35,7 +35,7 @@ private enum OverlayStatusContentController {
                 controller.updateLayout()
             case let .progress(controller):
                 controller.updateLayout()
-            case let .proxy(controller):
+            case let .shieldSuccess(controller):
                 controller.updateLayout()
             case let .genericSuccess(controller):
                 controller.updateLayout()
@@ -48,7 +48,7 @@ private enum OverlayStatusContentController {
                 controller.show(true)
             case let .progress(controller):
                 controller.dismiss(success: success)
-            case let .proxy(controller):
+            case let .shieldSuccess(controller):
                 controller.dismiss(success: success)
             case let .genericSuccess(controller):
                 controller.dismiss(success: success)
@@ -82,8 +82,8 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
                 self.contentController = .loading(controller)
             case .success:
                 self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
-            case .proxySettingSuccess:
-                self.contentController = .proxy(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: strings.SocksProxySetup_ProxyEnabled, shield: true))
+            case let .shieldSuccess(text):
+                self.contentController = .shieldSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: true))
             case let .genericSuccess(text):
                 self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false))
         }

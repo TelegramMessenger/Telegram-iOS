@@ -457,6 +457,22 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                         return
                     }
                 }
+            } else if parsedUrl.host == "login" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var code: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "code" {
+                                    code = value
+                                }
+                            }
+                        }
+                    }
+                    if let code = code {
+                        convertedUrl = "https://t.me/login/\(code)"
+                    }
+                }
             }
             
             if parsedUrl.host == "resolve" {

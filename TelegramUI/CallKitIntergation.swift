@@ -197,11 +197,11 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         let disposable = MetaDisposable()
         self.disposableSet.add(disposable)
         disposable.set((self.startCall(action.callUUID, action.handle.value)
-            |> deliverOnMainQueue
-            |> afterDisposed { [weak self, weak disposable] in
-                if let strongSelf = self, let disposable = disposable {
-                    strongSelf.disposableSet.remove(disposable)
-                }
+        |> deliverOnMainQueue
+        |> afterDisposed { [weak self, weak disposable] in
+            if let strongSelf = self, let disposable = disposable {
+                strongSelf.disposableSet.remove(disposable)
+            }
         }).start(next: { result in
             if result {
                 action.fulfill()
