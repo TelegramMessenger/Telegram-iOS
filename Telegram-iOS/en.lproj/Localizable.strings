@@ -3509,4 +3509,4 @@ Unused sets are archived when you add more.";
 "Login.CodeExpired" = "Code expired, please login again.";
 "Login.CancelSignUpConfirmation" = "Are you sure you want to cancel registration?";
 
-"Passcode.AppLockedAlert" = "Telegram Locked";
+"Passcode.AppLockedAlert" = "Telegram\nLocked";

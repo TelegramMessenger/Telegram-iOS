@@ -330,34 +330,19 @@ func sentShareItems(account: Account, to peerIds: [PeerId], items: [PreparedShar
     return enqueueMessagesToMultiplePeers(account: account, peerIds: peerIds, messages: messages)
     |> introduceError(Void.self)
     |> mapToSignal { messageIds -> Signal<Float, Void> in
-        var signals: [Signal<Bool, NoError>] = []
-        for messageId in messageIds {
-            signals.append(account.postbox.messageView(messageId)
-            |> map { view -> Bool in
-                if let message = view.message {
+        let key: PostboxViewKey = .messages(Set(messageIds))
+        return account.postbox.combinedView(keys: [key])
+        |> introduceError(Void.self)
+        |> mapToSignal { view -> Signal<Float, Void> in
+            if let messagesView = view.views[key] as? MessagesView {
+                for (_, message) in messagesView.messages {
                     if message.flags.contains(.Unsent) {
-                        return false
+                        return .complete()
                     }
                 }
-                return true
             }
-            |> filter { $0 }
-            |> take(1))
-        }
-        return combineLatest(signals)
-        |> introduceError(Void.self)
-        |> map { flags -> Bool in
-            for flag in flags {
-                if !flag {
-                    return false
-                }
-            }
-            return true
-        }
-        |> filter { $0 }
-        |> take(1)
-        |> mapToSignal { _ -> Signal<Float, Void> in
             return .single(1.0)
         }
+        |> take(1)
     }
 }
