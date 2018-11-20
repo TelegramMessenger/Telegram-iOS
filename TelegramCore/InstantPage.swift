@@ -1018,8 +1018,12 @@ extension InstantPageBlock {
                 self = .blockQuote(text: RichText(apiText: text), caption: RichText(apiText: caption))
             case let .pageBlockPullquote(text, caption):
                 self = .pullQuote(text: RichText(apiText: text), caption: RichText(apiText: caption))
-            case let .pageBlockPhoto(_, photoId, caption, url, webpageId):
-                self = .image(id: MediaId(namespace: Namespaces.Media.CloudImage, id: photoId), caption: InstantPageCaption(apiCaption: caption), url: url, webpageId: webpageId != nil ? MediaId(namespace: Namespaces.Media.CloudWebpage, id: webpageId!) : nil)
+            case let .pageBlockPhoto(flags, photoId, caption, url, webpageId):
+                var webpageMediaId: MediaId?
+                if (flags & (1 << 0)) != 0, let webpageId = webpageId, webpageId != 0 {
+                    webpageMediaId = MediaId(namespace: Namespaces.Media.CloudWebpage, id: webpageId)
+                }
+                self = .image(id: MediaId(namespace: Namespaces.Media.CloudImage, id: photoId), caption: InstantPageCaption(apiCaption: caption), url: url, webpageId: webpageMediaId)
             case let .pageBlockVideo(flags, videoId, caption):
                 self = .video(id: MediaId(namespace: Namespaces.Media.CloudFile, id: videoId), caption: InstantPageCaption(apiCaption: caption), autoplay: (flags & (1 << 0)) != 0, loop: (flags & (1 << 1)) != 0)
             case let .pageBlockCover(cover):
