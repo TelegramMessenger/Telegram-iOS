@@ -125,6 +125,7 @@ public struct OperationLogTags {
     static let SynchronizeSavedStickers = PeerOperationLogTag(value: 14)
     static let SynchronizeGroupedPeers = PeerOperationLogTag(value: 15)
     static let SynchronizeMarkAllUnseenPersonalMessages = PeerOperationLogTag(value: 16)
+    static let SynchronizeRecentlyUsedStickers = PeerOperationLogTag(value: 17)
 }
 
 public extension PeerSummaryCounterTags {

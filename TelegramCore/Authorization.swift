@@ -203,7 +203,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String, termsO
                                     return .fail(.limitExceeded)
                                 } else if errorDescription == "PHONE_CODE_INVALID" {
                                     return .fail(.invalidCode)
-                                } else if errorDescription == "CODE_HASH_EXPIRED" {
+                                } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" {
                                     return .fail(.codeExpired)
                                 } else if errorDescription == "PHONE_NUMBER_UNOCCUPIED" {
                                     return .single(.signUp)

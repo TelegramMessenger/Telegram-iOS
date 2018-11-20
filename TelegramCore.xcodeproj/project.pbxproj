@@ -329,6 +329,10 @@
 		D0528E661E65C82400E2FEF5 /* UpdateContactName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E641E65C82400E2FEF5 /* UpdateContactName.swift */; };
 		D0528E6A1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E691E65DD2100E2FEF5 /* WebpagePreview.swift */; };
 		D0528E6B1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E691E65DD2100E2FEF5 /* WebpagePreview.swift */; };
+		D0529D2421A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0529D2321A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift */; };
+		D0529D2521A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0529D2321A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift */; };
+		D0529D2721A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0529D2621A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift */; };
+		D0529D2821A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0529D2621A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift */; };
 		D053B3FB1F1651FA00E2D58A /* MonotonicTime.h in Headers */ = {isa = PBXBuildFile; fileRef = D053B3F91F1651FA00E2D58A /* MonotonicTime.h */; };
 		D053B3FC1F1651FA00E2D58A /* MonotonicTime.m in Sources */ = {isa = PBXBuildFile; fileRef = D053B3FA1F1651FA00E2D58A /* MonotonicTime.m */; };
 		D053B3FE1F16534400E2D58A /* MonotonicTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = D053B3FD1F16534400E2D58A /* MonotonicTime.swift */; };
@@ -939,6 +943,8 @@
 		D0528E5F1E65B94E00E2FEF5 /* SingleMessageView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SingleMessageView.swift; sourceTree = "<group>"; };
 		D0528E641E65C82400E2FEF5 /* UpdateContactName.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdateContactName.swift; sourceTree = "<group>"; };
 		D0528E691E65DD2100E2FEF5 /* WebpagePreview.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebpagePreview.swift; sourceTree = "<group>"; };
+		D0529D2321A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizeRecentlyUsedMediaOperations.swift; sourceTree = "<group>"; };
+		D0529D2621A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeRecentlyUsedMediaOperations.swift; sourceTree = "<group>"; };
 		D053B3F91F1651FA00E2D58A /* MonotonicTime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MonotonicTime.h; sourceTree = "<group>"; };
 		D053B3FA1F1651FA00E2D58A /* MonotonicTime.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MonotonicTime.m; sourceTree = "<group>"; };
 		D053B3FD1F16534400E2D58A /* MonotonicTime.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonotonicTime.swift; sourceTree = "<group>"; };
@@ -1487,6 +1493,8 @@
 				D00422D221677F4500719B67 /* ManagedAccountPresence.swift */,
 				D0A8998E217A37A000759EE6 /* NotificationAutolockReportManager.swift */,
 				09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */,
+				D0529D2321A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift */,
+				D0529D2621A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -2392,6 +2400,7 @@
 				D058E0D11E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */,
 				D0BC38751E40A7F70044D6FE /* RemovePeerChat.swift in Sources */,
 				D09F9DC820767D2C00DB4DE1 /* Api3.swift in Sources */,
+				D0529D2721A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift in Sources */,
 				D0AB0B961D662F0B002C78E7 /* ManagedChatListHoles.swift in Sources */,
 				D05A32E41E6F0B2E002760B4 /* RecentAccountSessions.swift in Sources */,
 				D01A21A61F38CDC700DDA104 /* SynchronizeSavedStickersOperation.swift in Sources */,
@@ -2426,6 +2435,7 @@
 				D0B85AC51F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift in Sources */,
 				D0B843C31DA7FF30005F29E1 /* NBPhoneMetaDataGenerator.m in Sources */,
 				C2366C861E4F403C0097CCFF /* AddressNames.swift in Sources */,
+				D0529D2421A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift in Sources */,
 				D0FA08BB2046B37900DD23FC /* ContentPrivacySettings.swift in Sources */,
 				D0F8C39D20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */,
 				D0B843C11DA7FF30005F29E1 /* NBPhoneMetaData.m in Sources */,
@@ -2668,6 +2678,7 @@
 				D001F3E91E128A1C007A8C60 /* SecretChatState.swift in Sources */,
 				D08F4A6A1E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */,
 				D0B8444B1DAB91FD005F29E1 /* ManagedSynchronizePeerReadStates.swift in Sources */,
+				D0529D2521A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift in Sources */,
 				D06ECFC920B810D300C576C2 /* TermsOfService.swift in Sources */,
 				D0F8C39E20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */,
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
@@ -2775,6 +2786,7 @@
 				D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
 				D001F3F11E128A1C007A8C60 /* SynchronizePeerReadState.swift in Sources */,
 				D054648F20738626002ECC1E /* SecureIdDriversLicenseValue.swift in Sources */,
+				D0529D2821A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift in Sources */,
 				D050F2641E4A5AEB00988324 /* ManagedSynchronizePinnedChatsOperations.swift in Sources */,
 				D0575AF21E9FFA5D006F2541 /* SynchronizeSavedGifsOperation.swift in Sources */,
 				D0528E661E65C82400E2FEF5 /* UpdateContactName.swift in Sources */,
