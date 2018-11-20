@@ -157,6 +157,7 @@ class ContactMultiselectionController: ViewController {
         self._listReady.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.dismiss = { [weak self] in
+            self?.view.endEditing(true)
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
         
