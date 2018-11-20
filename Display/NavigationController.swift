@@ -622,7 +622,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     
                     if let topController = topController as? ViewController {
                         if !topController.attemptNavigation({ [weak self] in
-                            self?.popViewController(animated: true)
+                            let _ = self?.popViewController(animated: true)
                         }) {
                             return
                         }
