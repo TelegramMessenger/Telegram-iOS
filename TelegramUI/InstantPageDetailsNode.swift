@@ -28,7 +28,7 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
     var currentExpandedDetails: [Int : Bool]?
     var currentDetailsItems: [InstantPageDetailsItem] = []
     
-    var requestLayoutUpdate: (() -> Void)?
+    var requestLayoutUpdate: ((Bool) -> Void)?
     
     var currentLayout: InstantPageLayout
     let contentSize: CGSize
@@ -201,8 +201,8 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
                         itemNode = newNode
                         
                         if let itemNode = itemNode as? InstantPageDetailsNode {
-                            itemNode.requestLayoutUpdate = { [weak self] in
-                                self?.requestLayoutUpdate?()
+                            itemNode.requestLayoutUpdate = { [weak self] animated in
+                                self?.requestLayoutUpdate?(animated)
                             }
                         }
                     }
@@ -297,12 +297,12 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
 //        }
     }
     
-    private func updateDetailsExpanded(_ index: Int, _ expanded: Bool) {
+    func updateDetailsExpanded(_ index: Int, _ expanded: Bool, animated: Bool = true, requestLayout: Bool = true) {
         if var currentExpandedDetails = self.currentExpandedDetails {
             currentExpandedDetails[index] = expanded
             self.currentExpandedDetails = currentExpandedDetails
         }
-        self.requestLayoutUpdate?()
+        self.requestLayoutUpdate?(animated)
     }
     
     func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
@@ -331,7 +331,7 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
         return contentOffset
     }
     
-    private func nodeForDetailsItem(_ item: InstantPageDetailsItem) -> InstantPageDetailsNode? {
+    func nodeForDetailsItem(_ item: InstantPageDetailsItem) -> InstantPageDetailsNode? {
         for (_, itemNode) in self.visibleItemsWithNodes {
             if let detailsNode = itemNode as? InstantPageDetailsNode, detailsNode.item === item {
                 return detailsNode
@@ -361,7 +361,7 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
         return CGRect(origin: origin, size: tile.frame.size)
     }
     
-    private func effectiveFrameForItem(_ item: InstantPageItem) -> CGRect {
+    func effectiveFrameForItem(_ item: InstantPageItem) -> CGRect {
         let layoutOrigin = item.frame.origin
         var origin = layoutOrigin
         
@@ -454,7 +454,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     var previousNode: InstantPageDetailsNode?
     
-    var requestLayoutUpdate: (() -> Void)?
+    var requestLayoutUpdate: ((Bool) -> Void)?
     
     init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.account = account
@@ -522,8 +522,8 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
             }
         }
         
-        self.contentNode.requestLayoutUpdate = { [weak self] in
-            self?.requestLayoutUpdate?()
+        self.contentNode.requestLayoutUpdate = { [weak self] animated in
+            self?.requestLayoutUpdate?(animated)
         }
         
         self.update(strings: strings, theme: theme)
@@ -531,12 +531,12 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     @objc func buttonPressed() {
         self.setExpanded(!self.expanded, animated: true)
+        self.updateExpanded(expanded)
     }
     
     func setExpanded(_ expanded: Bool, animated: Bool) {
         self.expanded = expanded
         self.arrowNode.setOpen(expanded, animated: animated)
-        self.updateExpanded(expanded)
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {

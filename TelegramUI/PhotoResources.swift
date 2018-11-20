@@ -2559,19 +2559,40 @@ func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumA
         })
     }
     
-    var remoteArtworkData: Signal<(Data?, Data?, Bool), NoError> = .single((nil, nil, false))
-    if let albumArt = albumArt {
+    var immediateArtworkData: Signal<(Data?, Data?, Bool), NoError> = .single((nil, nil, false))
+    
+    if let fileReference = fileReference, let smallestRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+        let thumbnailResource = smallestRepresentation.resource
+        
+        let fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(thumbnailResource))
+        
+        let thumbnail = Signal<Data?, NoError> { subscriber in
+            let fetchedDisposable = fetchedThumbnail.start()
+            let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailResource).start(next: { next in
+                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+            }, error: subscriber.putError, completed: subscriber.putCompletion)
+            
+            return ActionDisposable {
+                fetchedDisposable.dispose()
+                thumbnailDisposable.dispose()
+            }
+        }
+        immediateArtworkData = thumbnail
+        |> map { thumbnailData in
+            return (thumbnailData, nil, false)
+        }
+    } else if let albumArt = albumArt {
         if thumbnail {
-            remoteArtworkData = albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource)
+            immediateArtworkData = albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource)
             |> map { thumbnailData in
                 return (thumbnailData, nil, false)
             }
         } else {
-            remoteArtworkData = albumArtFullSizeDatas(postbox: postbox, thumbnail: albumArt.thumbnailResource, fullSize: albumArt.fullSizeResource)
+            immediateArtworkData = albumArtFullSizeDatas(postbox: postbox, thumbnail: albumArt.thumbnailResource, fullSize: albumArt.fullSizeResource)
         }
     }
     
-    return combineLatest(fileArtworkData, remoteArtworkData)
+    return combineLatest(fileArtworkData, immediateArtworkData)
     |> map { fileArtworkData, remoteArtworkData in
         let remoteThumbnailData = remoteArtworkData.0
         let remoteFullSizeData = remoteArtworkData.1

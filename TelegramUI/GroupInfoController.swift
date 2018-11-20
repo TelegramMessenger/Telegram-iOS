@@ -1971,7 +1971,7 @@ func handlePeerInfoAboutTextAction(account: Account, peerId: PeerId, navigateDis
                     ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                     })
-                    ])])
+                ])])
             controller.present(actionSheet, in: .window(.root))
         case let .mention(mention):
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
