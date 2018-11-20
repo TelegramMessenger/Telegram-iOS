@@ -919,7 +919,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         if let previousFrame = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
                             self.removeItemNodeWithIndex(index, removeNode: false)
                             let position = CGPoint(x: previousFrame.midX, y: previousFrame.midY)
-                            itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y), to: CGPoint(x: position.x, y: position.y + contentOffset.y - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, force: true, completion: { [weak itemNode] _ in
+                            itemNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + contentOffset.y + boundsOffset), to: CGPoint(x: position.x, y: position.y + contentOffset.y + boundsOffset - offset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, force: true, completion: { [weak itemNode] _ in
                                 itemNode?.removeFromSupernode()
                             })
                         } else {
