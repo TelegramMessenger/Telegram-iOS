@@ -2057,9 +2057,9 @@ func instantPageImageFile(account: Account, fileReference: FileMediaReference, f
             
             context.withFlippedContext { c in
                 if var fullSizeImage = fullSizeImage {
-//                    if true || imageIsMonochrome(fullSizeImage), let tintedImage = generateTintedImage(image: UIImage(cgImage: fullSizeImage), color: .white)?.cgImage {
-//                        fullSizeImage = tintedImage
-//                    }
+                    if let color = arguments.emptyColor, imageRequiresInversion(fullSizeImage), let tintedImage = generateTintedImage(image: UIImage(cgImage: fullSizeImage), color: color)?.cgImage {
+                        fullSizeImage = tintedImage
+                    }
                     
                     c.setBlendMode(.normal)
                     c.interpolationQuality = .medium

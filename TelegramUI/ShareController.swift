@@ -257,7 +257,7 @@ public final class ShareController: ViewController {
                             showInChat(message)
                         })
                     }
-                    if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
+                    else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
                         if message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
                             self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
                                 UIPasteboard.general.string = "https://t.me/\(addressName)/\(message.id.id)"

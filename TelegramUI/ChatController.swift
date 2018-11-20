@@ -4915,7 +4915,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
             let actionSheet = OpenInActionSheetController(postbox: self.account.postbox, applicationContext: applicationContext, theme: self.presentationData.theme, strings: self.presentationData.strings, item: .url(url: url), openUrl: { [weak self] url in
                 if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext, let navigationController = strongSelf.navigationController as? NavigationController {
-                    openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {
+                    openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {
                         self?.chatDisplayNode.dismissInput()
                     })
                 }

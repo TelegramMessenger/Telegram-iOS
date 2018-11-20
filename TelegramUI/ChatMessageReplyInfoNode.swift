@@ -138,10 +138,12 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let contrainedTextSize = CGSize(width: maximumTextWidth, height: constrainedSize.height)
             
-            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: textString, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let textInsets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
             
-            let size = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + leftInset, height: titleLayout.size.height + textLayout.size.height + 2 * spacing)
+            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
+            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: textString, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
+            
+            let size = CGSize(width: max(titleLayout.size.width - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right) + leftInset, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
             
             return (size, {
                 let node: ChatMessageReplyInfoNode
@@ -185,8 +187,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     node.imageNode = nil
                 }
                 
-                titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: spacing), size: titleLayout.size)
-                textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: titleNode.frame.maxY + spacing), size: textLayout.size)
+                titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: spacing - textInsets.top), size: titleLayout.size)
+                textNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top), size: textLayout.size)
                 
                 node.lineNode.image = lineImage
                 node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 5.0)))

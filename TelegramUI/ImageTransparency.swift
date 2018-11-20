@@ -1,5 +1,7 @@
 import UIKit
 import Accelerate
+import Display
+import TelegramCore
 
 private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)? {
     var sourceBuffer = vImage_Buffer()
@@ -58,22 +60,57 @@ func imageHasTransparency(_ cgImage: CGImage) -> Bool {
     return false
 }
 
-func imageIsMonochrome(_ cgImage: CGImage) -> Bool {
+private func scaledContext(_ cgImage: CGImage, maxSize: CGSize) -> DrawingContext {
+    var size = CGSize(width: cgImage.width, height: cgImage.height)
+    if (size.width > maxSize.width && size.height > maxSize.height) {
+        size = size.aspectFilled(maxSize)
+    }
+    let context = DrawingContext(size: size, scale: 1.0, clear: true)
+    context.withFlippedContext { context in
+        context.draw(cgImage, in: CGRect(origin: CGPoint(), size: size))
+    }
+    return context
+}
+
+func imageRequiresInversion(_ cgImage: CGImage) -> Bool {
     guard cgImage.bitsPerComponent == 8, cgImage.bitsPerPixel == 32 else {
         return false
     }
-    if let (histogramBins, alphaBinIndex) = generateHistogram(cgImage: cgImage) {
-        
+    guard [.first, .last, .premultipliedFirst, .premultipliedLast].contains(cgImage.alphaInfo) else {
+        return false
     }
     
-//    SSE, bias = 0, [0,0,0]
-//    if adjust_color_bias:
-//    bias = ImageStat.Stat(thumb).mean[:3]
-//    bias = [b - sum(bias)/3 for b in bias ]
-//    for pixel in thumb.getdata():
-//    mu = sum(pixel)/3
-//    SSE += sum((pixel[i] - mu - bias[i])*(pixel[i] - mu - bias[i]) for i in [0,1,2])
-    
-    
+    let context = scaledContext(cgImage, maxSize: CGSize(width: 128.0, height: 128.0))
+    if let cgImage = context.generateImage()?.cgImage, let (histogramBins, alphaBinIndex) = generateHistogram(cgImage: cgImage) {
+        var hasAlpha = false
+        for i in 0 ..< 255 {
+            if histogramBins[alphaBinIndex][i] > 0 {
+                hasAlpha = true
+            }
+        }
+        guard hasAlpha else {
+            return false
+        }
+        
+        var matching: Int = 0
+        var total: Int = 0
+        for y in 0 ..< Int(context.size.height) {
+            for x in 0 ..< Int(context.size.width) {
+                var hue: CGFloat = 0.0
+                var saturation: CGFloat = 0.0
+                var brightness: CGFloat = 0.0
+                var alpha: CGFloat = 0.0
+                context.colorAt(CGPoint(x: x, y: y)).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+                
+                if alpha > 0.0 {
+                    total += 1
+                    if saturation < 0.1 && brightness < 0.25 {
+                        matching += 1
+                    }
+                }
+            }
+        }
+        return CGFloat(matching) / CGFloat(total) > 0.85
+    }
     return false
 }

@@ -35,6 +35,7 @@
 		0958FBB9218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */; };
 		0958FBBB218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */; };
 		0958FBBD218B03CA00E0CBD8 /* InstantPageDetailsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBBC218B03CA00E0CBD8 /* InstantPageDetailsNode.swift */; };
+		09619B8E21A34C0100493558 /* InstantPageScrollableNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */; };
 		096C98BA21787A5C00C211FF /* LegacyBridgeAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */; };
 		096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */; };
 		096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */; };
@@ -1094,6 +1095,7 @@
 		0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageFeedbackItem.swift; sourceTree = "<group>"; };
 		0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageFeedbackNode.swift; sourceTree = "<group>"; };
 		0958FBBC218B03CA00E0CBD8 /* InstantPageDetailsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageDetailsNode.swift; sourceTree = "<group>"; };
+		09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageScrollableNode.swift; sourceTree = "<group>"; };
 		096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBridgeAudio.swift; sourceTree = "<group>"; };
 		096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeAudioEncoder.m; sourceTree = "<group>"; };
 		096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
@@ -3117,6 +3119,7 @@
 				0958FBBC218B03CA00E0CBD8 /* InstantPageDetailsNode.swift */,
 				0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */,
 				0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */,
+				09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */,
 			);
 			name = "Instant Page";
 			sourceTree = "<group>";
@@ -5108,6 +5111,7 @@
 				D0EC6D231EB9F58800EBF1C3 /* StickerResources.swift in Sources */,
 				09C9EA3821A044B500E90146 /* StringForDuration.swift in Sources */,
 				D0EC6D241EB9F58800EBF1C3 /* CachedResourceRepresentations.swift in Sources */,
+				09619B8E21A34C0100493558 /* InstantPageScrollableNode.swift in Sources */,
 				D01BAA201ECC9A2500295217 /* CallListNodeLocation.swift in Sources */,
 				D0EC6D251EB9F58800EBF1C3 /* FetchCachedRepresentations.swift in Sources */,
 				D0EC6D261EB9F58800EBF1C3 /* TransformOutgoingMessageMedia.swift in Sources */,

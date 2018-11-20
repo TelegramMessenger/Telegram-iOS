@@ -172,7 +172,6 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.gridNode = GridNode()
         
         self.notFoundNode = ASImageNode()
-        self.notFoundNode.isLayerBacked = true
         self.notFoundNode.displayWithoutProcessing = true
         self.notFoundNode.displaysAsynchronously = false
         self.notFoundNode.clipsToBounds = false

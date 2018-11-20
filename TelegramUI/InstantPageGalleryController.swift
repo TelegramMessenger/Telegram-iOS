@@ -64,7 +64,6 @@ struct InstantPageGalleryEntry: Equatable {
                 styleStack.push(.linkColor(UIColor(rgb: 0x5ac8fa)))
                 styleStack.push(.linkMarkerColor(UIColor(rgb: 0x5ac8fa, alpha: 0.2)))
                 styleStack.push(.fontSerif(false))
-                //styleStack.push(.lineSpacingFactor(1.0))
                 credit = attributedStringForRichText(mediaCredit, styleStack: styleStack)
             } else {
                 credit = NSAttributedString(string: "")
@@ -75,6 +74,12 @@ struct InstantPageGalleryEntry: Equatable {
             return InstantImageGalleryItem(account: account, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
         } else if let file = self.media.media as? TelegramMediaFile, file.isVideo {
             return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: GalleryItemIndexData(position: self.location.position, totalCount: self.location.totalCount), contentInfo: .webPage(webPage, file), caption: caption, credit: credit, openUrl: { _ in }, openUrlOptions: { _ in })
+        } else if let embedWebpage = self.media.media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = embedWebpage.content {
+            if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent) {
+                return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: nil, caption: NSAttributedString(string: ""), openUrl: { _ in }, openUrlOptions: { _ in })
+            } else {
+                preconditionFailure()
+            }
         } else {
             preconditionFailure()
         }

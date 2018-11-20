@@ -25,6 +25,7 @@ enum InstantPageTextStyle {
 let InstantPageLineSpacingFactorAttribute = "LineSpacingFactorAttribute"
 let InstantPageMarkerColorAttribute = "MarkerColorAttribute"
 let InstantPageMediaIdAttribute = "MediaIdAttribute"
+let InstantPageMediaDimensionsAttribute = "MediaDimensionsAttribute"
 let InstantPageAnchorAttribute = "AnchorAttribute"
 
 final class InstantPageTextStyleStack {

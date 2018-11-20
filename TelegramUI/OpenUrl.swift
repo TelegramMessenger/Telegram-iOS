@@ -91,6 +91,16 @@ public func parseConfirmationCodeUrl(_ url: URL) -> Int? {
             return code
         }
     }
+    if url.scheme == "tg" {
+        if let host = url.host, let query = url.query, let parsedUrl = parseInternalUrl(query: host + "?" + query) {
+            switch parsedUrl {
+                case let .confirmationCode(code):
+                    return code
+                default:
+                    break
+            }
+        }
+    }
     return nil
 }
 

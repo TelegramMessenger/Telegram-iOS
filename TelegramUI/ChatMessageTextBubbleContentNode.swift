@@ -171,25 +171,27 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     cutout = TextNodeCutout(bottomRight: statusSize)
                 }
                 
-                let textInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 5.0, right: 0.0)
+                let textInsets = UIEdgeInsets(top: 2.0, left: 0.0, bottom: 5.0, right: 0.0)
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets))
                 
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
+                var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
                 
                 var statusFrame: CGRect?
                 if let statusSize = statusSize {
-                    statusFrame = CGRect(origin: CGPoint(x: textFrame.maxX - textInsets.right - statusSize.width, y: textFrame.maxY - textInsets.bottom - statusSize.height), size: statusSize)
+                    statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY - statusSize.height), size: statusSize)
                 }
                 
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
+                textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 statusFrame = statusFrame?.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
 
                 var boundingSize: CGSize
                 if let statusFrame = statusFrame {
-                    boundingSize = textFrame.union(statusFrame).size
+                    boundingSize = textFrameWithoutInsets.union(statusFrame).size
                 } else {
-                    boundingSize = textFrame.size
+                    boundingSize = textFrameWithoutInsets.size
                 }
                 boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom

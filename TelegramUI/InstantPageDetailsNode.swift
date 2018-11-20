@@ -320,10 +320,10 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
         }
     }
     
-    private func tableContentOffset(item: InstantPageTableItem) -> CGPoint {
+    private func scrollableContentOffset(item: InstantPageScrollableItem) -> CGPoint {
         var contentOffset = CGPoint()
         for (_, itemNode) in self.visibleItemsWithNodes {
-            if let itemNode = itemNode as? InstantPageTableNode, itemNode.item === item {
+            if let itemNode = itemNode as? InstantPageScrollableNode, itemNode.item === item {
                 contentOffset = itemNode.contentOffset
                 break
             }
@@ -388,8 +388,8 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
             if itemFrame.contains(location) {
                 if let item = item as? InstantPageTextItem, item.selectable {
                     return (item, CGPoint(x: itemFrame.minX - item.frame.minX, y: itemFrame.minY - item.frame.minY))
-                } else if let item = item as? InstantPageTableItem {
-                    let contentOffset = tableContentOffset(item: item)
+                } else if let item = item as? InstantPageScrollableItem {
+                    let contentOffset = scrollableContentOffset(item: item)
                     if let (textItem, parentOffset) = item.textItemAtLocation(location.offsetBy(dx: -itemFrame.minX + contentOffset.x, dy: -itemFrame.minY)) {
                         return (textItem, itemFrame.origin.offsetBy(dx: parentOffset.x - contentOffset.x, dy: parentOffset.y))
                     }
@@ -446,11 +446,13 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let buttonNode: HighlightableButtonNode
     private let arrowNode: InstantPageDetailsArrowNode
-    private let separatorNode: ASDisplayNode
+    let separatorNode: ASDisplayNode
     let contentNode: InstantPageDetailsContentNode
     
     private let updateExpanded: (Bool) -> Void
     var expanded: Bool
+    
+    var previousNode: InstantPageDetailsNode?
     
     var requestLayoutUpdate: (() -> Void)?
     
@@ -503,15 +505,18 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
                 if highlighted {
                     strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.highlightedBackgroundNode.alpha = 1.0
-                    if strongSelf.separatorNode.frame.minY < strongSelf.highlightedBackgroundNode.frame.maxY {
-                        strongSelf.separatorNode.alpha = 0.0
+                    strongSelf.separatorNode.alpha = 0.0
+                    if let previousSeparator = strongSelf.previousNode?.separatorNode {
+                        previousSeparator.alpha = 0.0
                     }
                 } else {
                     strongSelf.highlightedBackgroundNode.alpha = 0.0
                     strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                    if strongSelf.separatorNode.alpha < 1.0 {
-                        strongSelf.separatorNode.alpha = 1.0
-                        strongSelf.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    strongSelf.separatorNode.alpha = 1.0
+                    strongSelf.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    if let previousSeparator = strongSelf.previousNode?.separatorNode {
+                        previousSeparator.alpha = 1.0
+                        previousSeparator.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                 }
             }

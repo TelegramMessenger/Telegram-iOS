@@ -513,20 +513,25 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if secretBeginTimeAndTimeout?.0 != nil {
             progressRequired = true
         } else if let fetchStatus = self.fetchStatus {
-            if case .Local = fetchStatus {
-                if let file = media as? TelegramMediaFile, file.isVideo {
-                    progressRequired = true
-                } else if isSecretMedia {
-                    progressRequired = true
-                } else if let webpage = webpage, case let .Loaded(content) = webpage.content {
-                    if content.embedUrl != nil {
+            switch fetchStatus {
+                case .Local:
+                    if let file = media as? TelegramMediaFile, file.isVideo {
                         progressRequired = true
-                    } else if let file = content.file, file.isVideo, !file.isAnimated {
+                    } else if isSecretMedia {
+                        progressRequired = true
+                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content {
+                        if content.embedUrl != nil {
+                            progressRequired = true
+                        } else if let file = content.file, file.isVideo, !file.isAnimated {
+                            progressRequired = true
+                        }
+                    }
+                case .Remote, .Fetching:
+                    if let _ = webpage, let automaticDownload = self.automaticDownload, automaticDownload {
+                        progressRequired = false
+                    } else {
                         progressRequired = true
                     }
-                }
-            } else {
-                progressRequired = true
             }
         }
         
