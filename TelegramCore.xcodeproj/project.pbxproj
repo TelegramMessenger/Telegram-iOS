@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		09028386218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */; };
+		9F06831021A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */; };
+		9F06831121A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */; };
 		9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
 		9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
 		9FAA268820D457A300D26CF3 /* RemoteStorageConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EA188120D3D2B1001AEE19 /* RemoteStorageConfiguration.swift */; };
@@ -768,6 +770,7 @@
 
 /* Begin PBXFileReference section */
 		09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedVoipConfigurationUpdates.swift; sourceTree = "<group>"; };
+		9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationExceptionsList.swift; sourceTree = "<group>"; };
 		9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentWebSessions.swift; sourceTree = "<group>"; };
 		C205FEA71EB3B75900455808 /* ExportMessageLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExportMessageLink.swift; sourceTree = "<group>"; };
 		C210DD611FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceReferenceMessageAttribute.swift; sourceTree = "<group>"; };
@@ -1892,6 +1895,7 @@
 				D0C44B601FC616E200227BE0 /* SearchGroupMembers.swift */,
 				D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */,
 				D018EE042045E95000CBB130 /* CheckPeerChatServiceActions.swift */,
+				9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -2334,6 +2338,7 @@
 				D0B843851DA6EDC4005F29E1 /* CachedChannelData.swift in Sources */,
 				C29340F31F5080FA0074991E /* UpdateGroupSpecificStickerset.swift in Sources */,
 				D01C7ED31EF5DF83008305F1 /* LimitsConfiguration.swift in Sources */,
+				9F06831021A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */,
 				D0F02CE51E9926C40065DEE2 /* ManagedConfigurationUpdates.swift in Sources */,
 				D0528E6A1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */,
 				D0BE304B20627D9800FBE6D8 /* AccessSecureId.swift in Sources */,
@@ -2669,6 +2674,7 @@
 				D08F4A6A1E79CECB00A2AA15 /* ManagedSynchronizeInstalledStickerPacksOperations.swift in Sources */,
 				D0B8444B1DAB91FD005F29E1 /* ManagedSynchronizePeerReadStates.swift in Sources */,
 				D06ECFC920B810D300C576C2 /* TermsOfService.swift in Sources */,
+				9F06831121A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */,
 				D0F8C39E20178B9B00236FC5 /* GroupFeedPeers.swift in Sources */,
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
 				D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */,
