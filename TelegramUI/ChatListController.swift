@@ -195,7 +195,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .shieldSuccess(strongSelf.presentationData.strings.Passcode_AppLockedAlert)), in: .window(.root))
+                    strongSelf.presentInGlobalOverlay(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .shieldSuccess(strongSelf.presentationData.strings.Passcode_AppLockedAlert)))
                 })
             }
         }

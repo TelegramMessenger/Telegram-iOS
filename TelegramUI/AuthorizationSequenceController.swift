@@ -277,11 +277,11 @@ public final class AuthorizationSequenceController: NavigationController {
                                     case .generic:
                                         text = strongSelf.strings.Login_UnknownError
                                     case .codeExpired:
+                                        text = strongSelf.strings.Login_CodeExpired
                                         let account = strongSelf.account
                                         let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                                             transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
                                         }).start()
-                                        return
                                 }
                                 
                                 controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))

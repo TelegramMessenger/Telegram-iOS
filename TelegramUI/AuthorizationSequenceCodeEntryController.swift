@@ -80,6 +80,10 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.requestNextOption?()
         }
         
+        self.controllerNode.updateNextEnabled = { [weak self] value in
+            self?.navigationItem.rightBarButtonItem?.isEnabled = value
+        }
+        
         if let (number, codeType, nextType, timeout) = self.data {
             self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout)
         }

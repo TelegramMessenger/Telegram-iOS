@@ -84,6 +84,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     var loginWithCode: ((String) -> Void)?
     var requestNextOption: (() -> Void)?
     var requestAnotherOption: (() -> Void)?
+    var updateNextEnabled: ((Bool) -> Void)?
     
     var inProgress: Bool = false {
         didSet {
@@ -188,6 +189,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     func updateCode(_ code: String) {
         self.codeField.textField.text = code
+        self.codeFieldTextChanged(self.codeField.textField)
         if let codeType = self.codeType {
             var codeLength: Int32?
             switch codeType {
@@ -303,6 +305,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     }
     
     @objc func codeFieldTextChanged(_ textField: UITextField) {
+        self.updateNextEnabled?(!(textField.text ?? "").isEmpty)
         if let codeType = self.codeType {
             var codeLength: Int32?
             switch codeType {
