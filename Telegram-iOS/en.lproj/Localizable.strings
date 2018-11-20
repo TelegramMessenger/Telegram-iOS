@@ -3434,7 +3434,7 @@ Unused sets are archived when you add more.";
 "Share.AuthDescription" = "Open Telegram and log in to share.";
 
 "Notifications.DisplayNamesOnLockScreen" = "Names on lock-screen";
-"Notifications.DisplayNamesOnLockScreenInfo" = "Display names in notifications on the lock screen.";
+"Notifications.DisplayNamesOnLockScreenInfoWithLink" = "Display names in notifications when the device is locked. To disable, make sure that \"Show Previews\" is also set to \"When Unlocked\" or \"Never\" in [iOS Settings]";
 
 "Notifications.Badge" = "BADGE COUNTER";
 "Notifications.Badge.IncludeMutedChats" = "Include Muted Chats";
@@ -3523,6 +3523,6 @@ Unused sets are archived when you add more.";
 "Login.CancelPhoneVerificationStop" = "Stop";
 "Login.CancelPhoneVerificationContinue" = "Continue";
 "Login.CodeExpired" = "Code expired, please login again.";
-"Login.CancelSignUpConfirmation" = "Are you sure you want to cancel registration?";
+"Login.CancelSignUpConfirmation" = "Do you want to stop the registration process?";
 
 "Passcode.AppLockedAlert" = "Telegram\nLocked";
