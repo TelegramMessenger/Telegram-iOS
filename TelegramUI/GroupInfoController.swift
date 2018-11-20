@@ -769,13 +769,11 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     
     let peerNotificationSettings: TelegramPeerNotificationSettings = (view.notificationSettings as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
     let notificationsText: String
-    switch peerNotificationSettings.muteState {
-        case .default:
-            notificationsText = presentationData.strings.UserInfo_NotificationsDefault
-        case .muted:
-            notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
-        case .unmuted:
-            notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
+    
+    if case .muted = peerNotificationSettings.muteState {
+        notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
+    } else {
+        notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
     }
     
     if let editingState = state.editingState {
@@ -1281,10 +1279,20 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         presentControllerImpl?(controller, presentationArguments)
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = notificationMuteSettingsController(presentationData: presentationData, updateSettings: { value in
-            changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
-        })
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        actionsDisposable.add((account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications]) |> take(1) |> deliverOnMainQueue).start(next: { view in
+            
+            let viewSettings: GlobalNotificationSettingsSet
+            if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                viewSettings = settings.effective
+            } else {
+                viewSettings = GlobalNotificationSettingsSet.defaultSettings
+            }
+            
+            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.privateChats, updateSettings: { value in
+                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
+            })
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }))
     }, changeNotificationSoundSettings: {
         let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings

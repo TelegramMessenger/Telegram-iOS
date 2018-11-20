@@ -720,10 +720,20 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .generic), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = notificationMuteSettingsController(presentationData: presentationData, updateSettings: { value in
-            changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
-        })
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        actionsDisposable.add((account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications]) |> take(1) |> deliverOnMainQueue).start(next: { view in
+            
+            let viewSettings: GlobalNotificationSettingsSet
+            if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                viewSettings = settings.effective
+            } else {
+                viewSettings = GlobalNotificationSettingsSet.defaultSettings
+            }
+            
+            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.privateChats, updateSettings: { value in
+                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
+            })
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }))
     }, changeNotificationSoundSettings: {
         let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings

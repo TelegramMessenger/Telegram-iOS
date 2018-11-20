@@ -1,5 +1,7 @@
 import Foundation
 import Display
+import TelegramCore
+import Postbox
 
 private enum NotificationMuteOption {
     case `default`
@@ -8,7 +10,9 @@ private enum NotificationMuteOption {
     case disable
 }
 
-func notificationMuteSettingsController(presentationData: PresentationData, updateSettings: @escaping (Int32?) -> Void) -> ViewController {
+func notificationMuteSettingsController(presentationData: PresentationData, notificationSettings: MessageNotificationSettings, updateSettings: @escaping (Int32?) -> Void) -> ViewController {
+    
+    
     let controller = ActionSheetController(presentationTheme: presentationData.theme)
     let dismissAction: () -> Void = { [weak controller] in
         controller?.dismissAnimated()
@@ -31,7 +35,7 @@ func notificationMuteSettingsController(presentationData: PresentationData, upda
     }
     
     let options: [NotificationMuteOption] = [
-        .default,
+       // .default,
         .enable,
         .interval(1 * 60 * 60),
         .interval(8 * 60 * 60),
@@ -51,7 +55,11 @@ func notificationMuteSettingsController(presentationData: PresentationData, upda
             case .enable:
                 item = ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, action: {
                     dismissAction()
-                    notificationAction(0)
+                    if notificationSettings.enabled {
+                        notificationAction(nil)
+                    } else {
+                        notificationAction(0)
+                    }
                 })
             case let .interval(value):
                 item = ActionSheetButtonItem(title: muteForIntervalString(strings: presentationData.strings, value: value), action: {
@@ -61,7 +69,11 @@ func notificationMuteSettingsController(presentationData: PresentationData, upda
             case .disable:
                 item = ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDisable, action: {
                     dismissAction()
-                    notificationAction(Int32.max)
+                    if !notificationSettings.enabled {
+                        notificationAction(nil)
+                    } else {
+                         notificationAction(Int32.max)
+                    }
                 })
         }
         items.append(item)
