@@ -84,7 +84,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
                     __strong RaiseToListenActivator *strongSelf = weakSelf;
                     if (strongSelf != nil) {
                         if (arg0 == 0) {
-                            [strongSelf startCheckingProximity];
+                            [strongSelf startCheckingProximity:0.0];
                         }
                     }
                 }];
@@ -118,7 +118,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
     return true;
 }
 
-- (void)startCheckingProximity {
+- (void)startCheckingProximity:(double)__unused delay {
     if (_enabled && [self shouldActivate]) {
         NSInteger previousIndex = _proximityStateIndex;
         __weak RaiseToListenActivator *weakSelf = self;
@@ -183,9 +183,9 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
     });
 }
 
-- (void)activateBasedOnProximity {
+- (void)activateBasedOnProximityWithDelay:(double)delay {
     if ([[DeviceProximityManager shared] currentValue]) {
-        [self startCheckingProximity];
+        [self startCheckingProximity:delay];
     }
 }
 

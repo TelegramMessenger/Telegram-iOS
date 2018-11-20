@@ -7,7 +7,7 @@
 
 - (instancetype)initWithShouldActivate:(bool (^)(void))shouldActivate activate:(void (^)(void))activate deactivate:(void (^)(void))deactivate;
 
-- (void)activateBasedOnProximity;
+- (void)activateBasedOnProximityWithDelay:(double)delay;
 - (void)applicationResignedActive;
 
 @end

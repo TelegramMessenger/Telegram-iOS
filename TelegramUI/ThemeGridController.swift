@@ -69,7 +69,7 @@ final class ThemeGridController: ViewController {
     
     override func loadDisplayNode() {
         self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, present: { [weak self] controller, arguments in
-            self?.present(controller, in: .window(.root), with: arguments)
+            self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
         }, selectCustomWallpaper: { [weak self] in
             if let strongSelf = self {
                 strongSelf.present(legacyImagePicker(theme: strongSelf.presentationData.theme, completion: { image in

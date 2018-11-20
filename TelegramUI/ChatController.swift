@@ -181,6 +181,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     private var checkedPeerChatServiceActions = false
     
     private var raiseToListen: RaiseToListenManager?
+    private var voicePlaylistDidEndTimestamp: Double = 0.0
     
     private weak var silentPostTooltipController: TooltipController?
     private weak var mediaRecordingModeTooltipController: TooltipController?
@@ -2934,7 +2935,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             self.raiseToListen?.enabled = self.canReadHistoryValue
             self.tempVoicePlaylistEnded = { [weak self] in
                 if let strongSelf = self, let raiseToListen = strongSelf.raiseToListen {
-                    raiseToListen.activateBasedOnProximity()
+                    strongSelf.voicePlaylistDidEndTimestamp = CACurrentMediaTime()
+                    raiseToListen.activateBasedOnProximity(delay: 0.0)
                 }
             }
             self.tempVoicePlaylistItemChanged = { [weak self] previousItem, currentItem in
@@ -3925,7 +3927,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil) }
                     })
                 }
@@ -3950,15 +3952,25 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         return messageToListen
     }
     
+    private var raiseToListenActivateRecordingTimer: SwiftSignalKit.Timer?
+    
     private func activateRaiseGesture() {
+        self.raiseToListenActivateRecordingTimer?.invalidate()
+        self.raiseToListenActivateRecordingTimer = nil
         if let messageToListen = self.firstLoadedMessageToListen() {
             let _ = self.controllerInteraction?.openMessage(messageToListen, .default)
         } else {
-            self.requestAudioRecorder(beginWithTone: true)
+            let timeout = (self.voicePlaylistDidEndTimestamp + 1.0) - CACurrentMediaTime()
+            self.raiseToListenActivateRecordingTimer = SwiftSignalKit.Timer(timeout: max(0.0, timeout), repeat: false, completion: { [weak self] in
+                self?.requestAudioRecorder(beginWithTone: true)
+            }, queue: .mainQueue())
+            self.raiseToListenActivateRecordingTimer?.start()
         }
     }
     
     private func deactivateRaiseGesture() {
+        self.raiseToListenActivateRecordingTimer?.invalidate()
+        self.raiseToListenActivateRecordingTimer = nil
         self.dismissMediaRecorder(.preview)
     }
     

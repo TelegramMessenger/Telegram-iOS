@@ -21,8 +21,8 @@ final class RaiseToListenManager {
         })
     }
     
-    func activateBasedOnProximity() {
-        self.activator.activateBasedOnProximity()
+    func activateBasedOnProximity(delay: Double) {
+        self.activator.activateBasedOnProximity(withDelay: delay)
     }
     
     func applicationResignedActive() {

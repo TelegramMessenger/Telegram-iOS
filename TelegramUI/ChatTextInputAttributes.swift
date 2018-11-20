@@ -159,6 +159,19 @@ func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: Prese
             }
         }
         
+        let minLower = (i == 0) ? fullRange.lowerBound : textMentionRanges[i - 1].0.upperBound
+        inner3: for i in (minLower ..< validLower).reversed() {
+            if let c = UnicodeScalar(text.character(at: i)) {
+                if alphanumericCharacters.contains(c) {
+                    validLower = i
+                } else {
+                    break inner3
+                }
+            } else {
+                break inner3
+            }
+        }
+        
         let maxUpper = (i == textMentionRanges.count - 1) ? fullRange.upperBound : textMentionRanges[i + 1].0.lowerBound
         inner3: for i in validUpper ..< maxUpper {
             if let c = UnicodeScalar(text.character(at: i)) {

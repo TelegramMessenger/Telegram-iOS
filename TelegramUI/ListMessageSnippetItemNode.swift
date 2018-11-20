@@ -124,6 +124,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
     }
     
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
     override func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)

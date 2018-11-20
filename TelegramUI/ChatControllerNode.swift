@@ -1172,6 +1172,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             let panelFrame = dismissedInputContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
             if !dismissedInputContextPanelNode.frame.equalTo(panelFrame) {
+                dismissedInputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
                 transition.updateFrame(node: dismissedInputContextPanelNode, frame: panelFrame, completion: { _ in
                     frameCompleted = true
                     completed()
