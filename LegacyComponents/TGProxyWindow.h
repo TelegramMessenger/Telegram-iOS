@@ -6,7 +6,7 @@
 
 - (instancetype)initWithLight:(bool)light text:(NSString *)text shield:(bool)shield;
 
-- (void)dismissWithSuccess:(void (^)(void))completion;
+- (void)dismissWithSuccess:(void (^)(void))completion increasedDelay:(bool)increasedDelay;
 - (void)updateLayout;
 
 @end

@@ -159,14 +159,14 @@ static bool TGProxyWindowIsLight = true;
     }
 }
 
-- (void)dismissWithSuccess:(void (^)(void))completion
+- (void)dismissWithSuccess:(void (^)(void))completion increasedDelay:(bool)increasedDelay
 {
     TGProxyWindow *window = (TGProxyWindow *)_weakWindow;
     
     window.userInteractionEnabled = false;
     
     void (^dismissBlock)(void) = ^{
-        [UIView animateWithDuration:0.3 delay:0.55 options:0 animations:^{
+        [UIView animateWithDuration:0.3 delay:increasedDelay ? 1.0 : 0.55 options:0 animations:^{
             _containerView.alpha = 0.0f;
         } completion:^(BOOL finished) {
             if (finished) {
@@ -247,7 +247,7 @@ static bool TGProxyWindowIsLight = true;
 {
     if (!_dismissed) {
         _dismissed = true;
-        [((TGProxyWindowController *)self.rootViewController) dismissWithSuccess:nil];
+        [((TGProxyWindowController *)self.rootViewController) dismissWithSuccess:nil increasedDelay:false];
     }
 }
 
