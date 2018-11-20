@@ -71,7 +71,7 @@ private final class ContactSyncManagerImpl {
             let timestamp = CFAbsoluteTimeGetCurrent()
             let shouldUpdate: Bool
             if let lastContactPresencesRequestTimestamp = strongSelf.lastContactPresencesRequestTimestamp {
-                if timestamp > lastContactPresencesRequestTimestamp + 30.0 * 60.0 {
+                if timestamp > lastContactPresencesRequestTimestamp + 2.0 * 60.0 {
                     shouldUpdate = true
                 } else {
                     shouldUpdate = false

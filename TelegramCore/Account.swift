@@ -1064,7 +1064,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .stickers).start())
         self.managedOperationsDisposable.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager, namespace: .masks).start())
         self.managedOperationsDisposable.add(managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedRecentStickers(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSynchronizeRecentlyUsedMediaOperations(postbox: self.postbox, network: self.network, category: .stickers, revalidationContext: self.mediaReferenceRevalidationContext).start())
         self.managedOperationsDisposable.add(managedSynchronizeSavedGifsOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
         self.managedOperationsDisposable.add(managedSynchronizeSavedStickersOperations(postbox: self.postbox, network: self.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
         self.managedOperationsDisposable.add(managedRecentlyUsedInlineBots(postbox: self.postbox, network: self.network, accountPeerId: peerId).start())

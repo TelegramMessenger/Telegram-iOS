@@ -1195,7 +1195,7 @@ private func sendMessage(postbox: Postbox, network: Network, messageId: MessageI
                             }
                             
                             for file in sentStickers {
-                                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+                                addRecentlyUsedSticker(transaction: transaction, fileReference: .standalone(media: file))
                             }
                         }
                     }
