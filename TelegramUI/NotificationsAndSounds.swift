@@ -422,7 +422,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .userExceptions(theme, strings, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
+                    let controller = NotificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
             case let .messageNotice(theme, text):
@@ -446,7 +446,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .groupExceptions(theme, strings, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
+                    let controller = NotificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
             case let .groupNotice(theme, text):
@@ -470,7 +470,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .channelExceptions(theme, strings, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
+                    let controller = NotificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
             case let .channelNotice(theme, text):
@@ -533,33 +533,33 @@ private func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound 
     }
 }
 
-private func notificationsAndSoundsEntries(globalSettings: GlobalNotificationSettingsSet, inAppSettings: InAppNotificationSettings, exceptions: (NotificationExceptionMode, NotificationExceptionMode), presentationData: PresentationData) -> [NotificationsAndSoundsEntry] {
+private func notificationsAndSoundsEntries(globalSettings: GlobalNotificationSettingsSet, inAppSettings: InAppNotificationSettings, exceptions: (users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode), presentationData: PresentationData) -> [NotificationsAndSoundsEntry] {
     var entries: [NotificationsAndSoundsEntry] = []
     
     entries.append(.messageHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications))
     entries.append(.messageAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.privateChats.enabled))
     entries.append(.messagePreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.privateChats.displayPreviews))
     entries.append(.messageSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.privateChats.sound)), filteredGlobalSound(globalSettings.privateChats.sound)))
-    if !exceptions.0.isEmpty {
-      //  entries.append(.userExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.0))
-    }
+    //if !exceptions.users.isEmpty {
+        entries.append(.userExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.users))
+   // }
     entries.append(.messageNotice(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsHelp))
     
     entries.append(.groupHeader(presentationData.theme, presentationData.strings.Notifications_GroupNotifications))
     entries.append(.groupAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.groupChats.enabled))
     entries.append(.groupPreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.groupChats.displayPreviews))
     entries.append(.groupSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.groupChats.sound)), filteredGlobalSound(globalSettings.groupChats.sound)))
-    if !exceptions.1.isEmpty {
-      //  entries.append(.groupExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.1))
-    }
+   // if !exceptions.groups.isEmpty {
+        entries.append(.groupExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.groups))
+   // }
     
     entries.append(.channelHeader(presentationData.theme, presentationData.strings.Notifications_ChannelNotifications))
     entries.append(.channelAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.channels.enabled))
     entries.append(.channelPreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.channels.displayPreviews))
     entries.append(.channelSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.channels.sound)), filteredGlobalSound(globalSettings.channels.sound)))
-    if !exceptions.1.isEmpty {
-        //  entries.append(.groupExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.1))
-    }
+  //  if !exceptions.channels.isEmpty {
+          entries.append(.channelExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.channels))
+   // }
     
     entries.append(.channelNotice(presentationData.theme, presentationData.strings.Notifications_ChannelNotificationsHelp))
     
@@ -590,9 +590,9 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
     
     
     
-    let notificationExceptions: Promise<(NotificationExceptionMode, NotificationExceptionMode)> = Promise()
+    let notificationExceptions: Promise<(users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode)> = Promise()
     
-    let updateNotificationExceptions:((NotificationExceptionMode, NotificationExceptionMode)) -> Void = { value in
+    let updateNotificationExceptions:((users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode)) -> Void = { value in
         notificationExceptions.set(.single(value))
     }
     
@@ -724,12 +724,14 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
         ])])
         presentControllerImpl?(actionSheet, nil)
     }, updatedExceptionMode: { mode in
-        _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups) in
+        _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups, channels) in
             switch mode {
             case .users:
-                updateNotificationExceptions((mode, groups))
+                updateNotificationExceptions((mode, groups, channels))
             case .groups:
-                updateNotificationExceptions((users, mode))
+                updateNotificationExceptions((users, mode, channels))
+            case .channels:
+                updateNotificationExceptions((users, groups, mode))
             }
         })
     })
@@ -738,11 +740,11 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
     
     
     
-    notificationExceptions.set(account.postbox.transaction{ transaction -> (NotificationExceptionMode, NotificationExceptionMode) in
+    notificationExceptions.set(account.postbox.transaction { transaction -> (NotificationExceptionMode, NotificationExceptionMode, NotificationExceptionMode) in
         let allSettings = transaction.getAllPeerNotificationSettings() ?? [:]
         var users:[PeerId : NotificationExceptionWrapper] = [:]
         var groups: [PeerId : NotificationExceptionWrapper] = [:]
-        
+        var channels:[PeerId : NotificationExceptionWrapper] = [:]
         for (key, value) in allSettings {
             let peer = transaction.getPeer(key)
             if let value = value as? TelegramPeerNotificationSettings, let peer = peer, !peer.displayTitle.isEmpty, peer.id != account.peerId {
@@ -756,7 +758,11 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
                         case Namespaces.Peer.CloudUser:
                             users[key] = NotificationExceptionWrapper(settings: value)
                         default:
-                            groups[key] = NotificationExceptionWrapper(settings: value)
+                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                channels[key] = NotificationExceptionWrapper(settings: value)
+                            } else {
+                                groups[key] = NotificationExceptionWrapper(settings: value)
+                            }
                         }
                     }
                 default:
@@ -764,13 +770,16 @@ public func notificationsAndSoundsController(account: Account) -> ViewController
                     case Namespaces.Peer.CloudUser:
                         users[key] = NotificationExceptionWrapper(settings: value)
                     default:
-                        groups[key] = NotificationExceptionWrapper(settings: value)
-                    }
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            channels[key] = NotificationExceptionWrapper(settings: value)
+                        } else {
+                            groups[key] = NotificationExceptionWrapper(settings: value)
+                        }                    }
                 }
             }
            
         }
-        return (.users(users), .groups(groups))
+        return (.users(users), .groups(groups), .channels(channels))
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, preferences, notificationExceptions.get())

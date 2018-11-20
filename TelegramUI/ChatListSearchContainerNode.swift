@@ -121,7 +121,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         enabled = canSendMessagesToPeer(primaryPeer)
                     }
                 }
-                if filter.contains(.onlyUsers) {
+                if filter.contains(.onlyPrivateChats) {
                     if let peer = chatPeer {
                         if !(peer is TelegramUser || peer is TelegramSecretChat) {
                             enabled = false
@@ -362,7 +362,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                         enabled = false
                     }
                 }
-                if filter.contains(.onlyUsers) {
+                if filter.contains(.onlyPrivateChats) {
                     if let peer = chatPeer {
                         if !(peer is TelegramUser || peer is TelegramSecretChat) {
                             enabled = false
@@ -396,7 +396,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 if filter.contains(.onlyWriteable) {
                     enabled = canSendMessagesToPeer(peer.peer)
                 }
-                if filter.contains(.onlyUsers) {
+                if filter.contains(.onlyPrivateChats) {
                     if !(peer.peer is TelegramUser || peer.peer is TelegramSecretChat) {
                         enabled = false
                     }
@@ -495,7 +495,7 @@ private func doesPeerMatchFilter(peer: Peer, filter: ChatListNodePeersFilter) ->
     if filter.contains(.onlyWriteable), !canSendMessagesToPeer(peer) {
         enabled = false
     }
-    if filter.contains(.onlyUsers), !(peer is TelegramUser || peer is TelegramSecretChat) {
+    if filter.contains(.onlyPrivateChats), !(peer is TelegramUser || peer is TelegramSecretChat) {
         enabled = false
     }
     if filter.contains(.onlyGroups) {
@@ -614,6 +614,35 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             let isSearching = foundRemotePeers.2 || foundRemoteMessages.1
                             var index = 0
                             
+                            
+                            let filteredPeer:(Peer) -> Bool = { peer in
+                                guard !filter.contains(.excludeSavedMessages) || peer.id != accountPeer.id else { return false }
+                                guard !filter.contains(.excludeSecretChats) || peer.id.namespace != Namespaces.Peer.SecretChat else { return false }
+                                guard !filter.contains(.onlyPrivateChats) || peer.id.namespace == Namespaces.Peer.CloudUser else { return false }
+                                
+                                if filter.contains(.onlyGroups) {
+                                    var isGroup: Bool = false
+                                    if let peer = peer as? TelegramChannel, case .group = peer.info {
+                                        isGroup = true
+                                    } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
+                                        isGroup = true
+                                    }
+                                    if !isGroup {
+                                        return false
+                                    }
+                                }
+                                
+                                if filter.contains(.onlyChannels) {
+                                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                }
+                                
+                                return true
+                            }
+                            
                             var existingPeerIds = Set<PeerId>()
                             
                             if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
@@ -625,7 +654,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             }
                             
                             for renderedPeer in foundLocalPeers.peers {
-                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != account.peerId {
+                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != account.peerId, filteredPeer(peer) {
                                     if !existingPeerIds.contains(peer.id) {
                                         existingPeerIds.insert(peer.id)
                                         var associatedPeer: Peer?
@@ -639,7 +668,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             }
                             
                             for peer in foundRemotePeers.0 {
-                                if !existingPeerIds.contains(peer.peer.id) {
+                                if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer) {
                                     existingPeerIds.insert(peer.peer.id)
                                     entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
                                     index += 1
@@ -648,7 +677,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
 
                             index = 0
                             for peer in foundRemotePeers.1 {
-                                if !existingPeerIds.contains(peer.peer.id) {
+                                if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer) {
                                     existingPeerIds.insert(peer.peer.id)
                                     entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
                                     index += 1
@@ -718,7 +747,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             }
         }
         |> distinctUntilChanged
-        let recentItemsTransition = combineLatest(hasRecentPeers, recentlySearchedPeers(postbox: account.postbox), presentationDataPromise.get(), self.statePromise.get())
+        var recentItemsTransition = combineLatest(hasRecentPeers, recentlySearchedPeers(postbox: account.postbox), presentationDataPromise.get(), self.statePromise.get())
             |> mapToSignal { [weak self] hasRecentPeers, peers, presentationData, state -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
                 var entries: [ChatListRecentEntry] = []
                 if !filter.contains(.onlyGroups) {
@@ -760,6 +789,10 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     }
                 })
                 return .single((transition, previousEntries == nil))
+        }
+        
+        if filter.contains(.excludeRecent) {
+            recentItemsTransition = .single((ChatListSearchContainerRecentTransition(deletions: [], insertions: [], updates: []), true))
         }
         
         self.updatedRecentPeersDisposable.set(managedUpdatedRecentPeers(accountPeerId: account.peerId, postbox: account.postbox, network: account.network).start())

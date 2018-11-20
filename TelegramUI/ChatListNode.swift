@@ -13,11 +13,15 @@ public struct ChatListNodePeersFilter: OptionSet {
     }
     
     public static let onlyWriteable = ChatListNodePeersFilter(rawValue: 1 << 0)
-    public static let onlyUsers = ChatListNodePeersFilter(rawValue: 1 << 1)
+    public static let onlyPrivateChats = ChatListNodePeersFilter(rawValue: 1 << 1)
     public static let onlyGroups = ChatListNodePeersFilter(rawValue: 1 << 2)
-    public static let onlyManageable = ChatListNodePeersFilter(rawValue: 1 << 3)
-    public static let withoutSecretChats = ChatListNodePeersFilter(rawValue: 1 << 4)
-
+    public static let onlyChannels = ChatListNodePeersFilter(rawValue: 1 << 3)
+    public static let onlyManageable = ChatListNodePeersFilter(rawValue: 1 << 4)
+    
+    public static let excludeSecretChats = ChatListNodePeersFilter(rawValue: 1 << 5)
+    public static let excludeRecent  = ChatListNodePeersFilter(rawValue: 1 << 6)
+    public static let excludeSavedMessages  = ChatListNodePeersFilter(rawValue: 1 << 7)
+    
 
 }
 
@@ -154,7 +158,7 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                                 enabled = false
                             }
                         }
-                        if filter.contains(.onlyUsers) {
+                        if filter.contains(.onlyPrivateChats) {
                             if let peer = peer.peers[peer.peerId] {
                                 if !(peer is TelegramUser || peer is TelegramSecretChat) {
                                     enabled = false
@@ -185,6 +189,7 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                                 enabled = false
                             }
                         }
+
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(theme: presentationData.theme, strings: presentationData.strings, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, account: account, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                             if let chatPeer = chatPeer {
                                 nodeInteraction.peerSelected(chatPeer)
@@ -220,26 +225,6 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                         if filter.contains(.onlyWriteable) {
                             if let peer = peer.peers[peer.peerId] {
                                 if !canSendMessagesToPeer(peer) {
-                                    enabled = false
-                                }
-                            } else {
-                                enabled = false
-                            }
-                        }
-                        if filter.contains(.onlyUsers) {
-                            if let peer = peer.peers[peer.peerId] {
-                                if !(peer is TelegramUser || peer is TelegramSecretChat) {
-                                    enabled = false
-                                }
-                            } else {
-                                enabled = false
-                            }
-                        }
-                        if filter.contains(.onlyGroups) {
-                            if let peer = peer.peers[peer.peerId] {
-                                if let _ = peer as? TelegramGroup {
-                                } else if let peer = peer as? TelegramChannel, case .group = peer.info {
-                                } else {
                                     enabled = false
                                 }
                             } else {
@@ -450,8 +435,51 @@ final class ChatListNode: ListView {
             savedMessagesPeer = .single(nil)
         }
         
+        let currentPeerId: PeerId = account.peerId
+        
         let chatListNodeViewTransition = combineLatest(savedMessagesPeer, chatListViewUpdate, self.statePromise.get()) |> mapToQueue { (savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
-            let processedView = ChatListNodeView(originalView: update.view, filteredEntries: chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, mode: mode))
+            
+            let entries = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, mode: mode).filter { entry in
+                switch entry {
+                case let .PeerEntry(index, _, _, _, _, _,  peer, _, _, _, _, _):
+                    //ChatListNodePeersFilter
+                    switch mode {
+                    case .chatList:
+                        return true
+                    case let .peers(filter):
+                        
+                        guard !filter.contains(.excludeSavedMessages) || peer.peerId != currentPeerId else { return false }
+                        guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
+                        guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
+
+                        if filter.contains(.onlyGroups) {
+                            var isGroup: Bool = false
+                            if let peer = peer.chatMainPeer as? TelegramChannel, case .group = peer.info {
+                                isGroup = true
+                            } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup {
+                                isGroup = true
+                            }
+                            if !isGroup {
+                                return false
+                            }
+                        }
+                        
+                        if filter.contains(.onlyChannels) {
+                            if let peer = peer.chatMainPeer as? TelegramChannel, case .broadcast = peer.info {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        
+                        return true
+                    }
+                default:
+                    return true
+                }
+            }
+            
+            let processedView = ChatListNodeView(originalView: update.view, filteredEntries: entries)
             let previousView = previousView.swap(processedView)
             let previousState = previousState.swap(state)
             
@@ -587,7 +615,15 @@ final class ChatListNode: ListView {
         
         self.chatListDisposable.set(appliedTransition.start())
         
-        let initialLocation: ChatListNodeLocation = .initial(count: 50)
+        let initialLocation: ChatListNodeLocation
+
+        switch mode {
+        case .chatList:
+            initialLocation = .initial(count: 50)
+        case .peers:
+            initialLocation = .initial(count: 200)
+        }
+        
         self.currentLocation = initialLocation
         self.chatListLocation.set(initialLocation)
         

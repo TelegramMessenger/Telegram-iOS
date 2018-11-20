@@ -209,7 +209,7 @@ public func fileNameForNotificationSound(_ sound: PeerMessageSound, defaultSound
     }
 }
 
-private func playSound(account: Account, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
+func playSound(account: Account, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
     if case .none = sound {
         return .complete()
     } else {

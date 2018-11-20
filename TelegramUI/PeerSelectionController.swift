@@ -40,10 +40,12 @@ public final class PeerSelectionController: ViewController {
         return self._ready
     }
     
-    public init(account: Account, filter: ChatListNodePeersFilter = [.onlyWriteable], title: String? = nil) {
+    private let hasContactSelector: Bool
+    
+    public init(account: Account, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil) {
         self.account = account
         self.filter = filter
-        
+        self.hasContactSelector = hasContactSelector
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
@@ -69,7 +71,7 @@ public final class PeerSelectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(account: self.account, filter: self.filter, dismiss: { [weak self] in
+        self.displayNode = PeerSelectionControllerNode(account: self.account, filter: self.filter, hasContactSelector: hasContactSelector, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         
@@ -152,7 +154,7 @@ public final class PeerSelectionController: ViewController {
         }
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         self.peerSelectionNode.view.endEditing(true)
         self.peerSelectionNode.animateOut(completion: completion)
     }

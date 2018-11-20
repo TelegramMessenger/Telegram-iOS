@@ -26,6 +26,18 @@ public enum PresentationPersonNameOrder {
     case lastFirst
 }
 
+extension PresentationStrings : Equatable {
+    public static func ==(lhs: PresentationStrings, rhs: PresentationStrings) -> Bool {
+        return lhs === rhs
+    }
+}
+//
+//extension PresentationTheme : Equatable {
+//    public static func ==(lhs: PresentationTheme, rhs: PresentationTheme) -> Bool {
+//        return lhs === rhs
+//    }
+//}
+
 public final class PresentationData: Equatable {
     public let strings: PresentationStrings
     public let theme: PresentationTheme
