@@ -28,6 +28,8 @@
 #import "MTDiscoverConnectionSignals.h"
 #import "MTHttpTransport.h"
 
+#import "MTTransportSchemeStats.h"
+
 #if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTDisposable.h>
 #   import <MTProtoKitDynamic/MTSignal.h>
@@ -79,6 +81,8 @@
     NSMutableDictionary *_datacenterMediaTransportSchemeById;
     NSMutableDictionary *_datacenterProxyGenericTransportSchemeById;
     NSMutableDictionary *_datacenterProxyMediaTransportSchemeById;
+    
+    NSMutableDictionary<NSNumber *, NSMutableDictionary<MTDatacenterAddress *, MTTransportSchemeStats *> *> *_transportSchemeStats;
     
     NSMutableDictionary *_datacenterAuthInfoById;
     
@@ -150,6 +154,8 @@
         _datacenterMediaTransportSchemeById = [[NSMutableDictionary alloc] init];
         _datacenterProxyGenericTransportSchemeById = [[NSMutableDictionary alloc] init];
         _datacenterProxyMediaTransportSchemeById = [[NSMutableDictionary alloc] init];
+        
+        _transportSchemeStats = [[NSMutableDictionary alloc] init];
         
         _datacenterAuthInfoById = [[NSMutableDictionary alloc] init];
         _datacenterPublicKeysById = [[NSMutableDictionary alloc] init];
@@ -1025,6 +1031,44 @@
                 
             }];
         }
+    }];
+}
+
+- (void)_withTransportSchemeStatsForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme process:(MTTransportSchemeStats * (^)(MTTransportSchemeStats *))process {
+    NSAssert([[MTContext contextQueue] isCurrentQueue], @"[[MTContext contextQueue] isCurrentQueue]");
+    if (_transportSchemeStats[@(datacenterId)] == nil) {
+        _transportSchemeStats[@(datacenterId)] = [[NSMutableDictionary alloc] init];
+    }
+    MTTransportSchemeStats *current = _transportSchemeStats[@(datacenterId)][transportScheme.address];
+    if (current == nil) {
+        current = [[MTTransportSchemeStats alloc] initWithLastFailureTimestamp:0 lastResponseTimestamp: 0];
+    }
+    MTTransportSchemeStats *updated = process(current);
+    if (updated == nil || ![updated isEqual:current]) {
+        if (updated == nil) {
+            [_transportSchemeStats[@(datacenterId)] removeObjectForKey:transportScheme.address];
+        } else {
+            if (MTLogEnabled()) {
+                //MTLog(@"Updated stats for %@: %@", transportScheme.address, updated);
+            }
+            _transportSchemeStats[@(datacenterId)][transportScheme.address] = updated;
+        }
+    }
+}
+
+- (void)reportTransportSchemeFailureForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        [self _withTransportSchemeStatsForDatacenterId:datacenterId transportScheme:transportScheme process:^(MTTransportSchemeStats *current) {
+            return [current withUpdatedLastFailureTimestamp:(int32_t)CFAbsoluteTimeGetCurrent()];
+        }];
+    }];
+}
+
+- (void)reportTransportSchemeSuccessForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        [self _withTransportSchemeStatsForDatacenterId:datacenterId transportScheme:transportScheme process:^(MTTransportSchemeStats *current) {
+            return [current withUpdatedLastResponseTimestamp:(int32_t)CFAbsoluteTimeGetCurrent()];
+        }];
     }];
 }
 

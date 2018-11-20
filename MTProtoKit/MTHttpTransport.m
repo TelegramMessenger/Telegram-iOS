@@ -6,6 +6,7 @@
 #import "MTQueue.h"
 #import "MTTimer.h"
 
+#import "MTTransportScheme.h"
 #import "MTDatacenterAddressSet.h"
 #import "MTDatacenterAddress.h"
 
@@ -57,12 +58,12 @@
     return queue;
 }
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
-    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address proxySettings:proxySettings usageCalculationInfo:usageCalculationInfo];
+    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId scheme:scheme proxySettings:proxySettings usageCalculationInfo:usageCalculationInfo];
     if (self != nil)
     {
-        _address = address;
+        _address = scheme.address;
         
         _workerBehaviour = [[MTHttpWorkerBehaviour alloc] initWithQueue:[MTHttpTransport httpTransportQueue]];
         _workerBehaviour.delegate = self;

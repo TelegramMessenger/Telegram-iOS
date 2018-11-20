@@ -84,7 +84,7 @@
 
 - (MTTransport *)createTransportWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId delegate:(id<MTTransportDelegate>)delegate usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
-    return [(MTTransport *)[_transportClass alloc] initWithDelegate:delegate context:context datacenterId:datacenterId address:_address proxySettings:context.apiEnvironment.socksProxySettings usageCalculationInfo:usageCalculationInfo];
+    return [(MTTransport *)[_transportClass alloc] initWithDelegate:delegate context:context datacenterId:datacenterId scheme:self proxySettings:context.apiEnvironment.socksProxySettings usageCalculationInfo:usageCalculationInfo];
 }
 
 - (NSString *)description

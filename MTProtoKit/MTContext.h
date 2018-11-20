@@ -82,6 +82,8 @@
 - (void)enumerateAddressSetsForDatacenters:(void (^)(NSInteger datacenterId, MTDatacenterAddressSet *addressSet, BOOL *stop))block;
 
 - (MTDatacenterAddressSet *)addressSetForDatacenterWithId:(NSInteger)datacenterId;
+- (void)reportTransportSchemeFailureForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme;
+- (void)reportTransportSchemeSuccessForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme;
 - (void)invalidateTransportSchemesForDatacenterIds:(NSArray<NSNumber *> * _Nonnull)datacenterIds;
 - (void)invalidateTransportSchemesForKnownDatacenterIds;
 - (MTTransportScheme *)transportSchemeForDatacenterWithId:(NSInteger)datacenterId media:(bool)media isProxy:(bool)isProxy;

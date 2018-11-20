@@ -19,7 +19,7 @@
 @optional
 
 - (void)tcpConnectionOpened:(MTTcpConnection *)connection;
-- (void)tcpConnectionClosed:(MTTcpConnection *)connection;
+- (void)tcpConnectionClosed:(MTTcpConnection *)connection error:(bool)error;
 - (void)tcpConnectionReceivedData:(MTTcpConnection *)connection data:(NSData *)data;
 - (void)tcpConnectionReceivedQuickAck:(MTTcpConnection *)connection quickAck:(int32_t)quickAck;
 - (void)tcpConnectionDecodePacketProgressToken:(MTTcpConnection *)connection data:(NSData *)data token:(int64_t)token completion:(void (^)(int64_t token, id packetProgressToken))completion;

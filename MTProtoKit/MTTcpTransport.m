@@ -7,6 +7,7 @@
 #import "MTTimer.h"
 #import "MTTime.h"
 
+#import "MTTransportScheme.h"
 #import "MTDatacenterAddressSet.h"
 
 #import "MTTransportTransaction.h"
@@ -85,15 +86,15 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     return queue;
 }
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
     NSAssert(datacenterId != 0, @"datacenterId should not be nil");
-    NSAssert(address != nil, @"address should not be nil");
+    NSAssert(scheme != nil, @"scheme should not be nil");
 #endif
     
-    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address proxySettings:proxySettings usageCalculationInfo:usageCalculationInfo];
+    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId scheme:scheme proxySettings:proxySettings usageCalculationInfo:usageCalculationInfo];
     if (self != nil)
     {
         _context = context;
@@ -104,7 +105,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         _transportContext = transportContext;
         
         [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
-            transportContext.address = address;
+            transportContext.address = scheme.address;
             
             transportContext.connectionBehaviour = [[MTTcpConnectionBehaviour alloc] initWithQueue:[MTTcpTransport tcpTransportQueue]];
             transportContext.connectionBehaviour.delegate = self;
@@ -411,7 +412,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
-- (void)tcpConnectionClosed:(MTTcpConnection *)connection
+- (void)tcpConnectionClosed:(MTTcpConnection *)connection error:(bool)error
 {
     MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
@@ -543,8 +544,12 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         if (transportContext.connectionBehaviour != behaviour)
             return;
         
-        if (!transportContext.stopped)
-            [self startIfNeeded];
+        if (!transportContext.stopped) {
+            id<MTTransportDelegate> delegate = self.delegate;
+            if ([delegate respondsToSelector:@selector(transportConnectionFailed:)]) {
+                [delegate transportConnectionFailed:self];
+            }
+        }
     }];
 }
 

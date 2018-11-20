@@ -14,7 +14,7 @@
 
 @implementation MTTransport
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)__unused usageCalculationInfo
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)__unused usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -26,7 +26,7 @@
         _delegate = delegate;
         _context = context;
         _datacenterId = datacenterId;
-        _address = address;
+        _scheme = scheme;
         _proxySettings = proxySettings;
         
         _networkAvailability = [[MTNetworkAvailability alloc] initWithDelegate:self];
