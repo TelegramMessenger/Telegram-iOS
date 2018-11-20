@@ -317,7 +317,13 @@
             if (cleanupSessionIdsByAuthKeyId != nil)
                 _cleanupSessionIdsByAuthKeyId = [[NSMutableDictionary alloc] initWithDictionary:cleanupSessionIdsByAuthKeyId];
             
-            MTLog(@"[MTContext#%x: received keychain globalTimeDifference:%f datacenterAuthInfoById:%@]", (int)self, _globalTimeDifference, _datacenterAuthInfoById);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: received keychain globalTimeDifference:%f datacenterAuthInfoById:%@]", (int)self, _globalTimeDifference, _datacenterAuthInfoById);
+            }
+        } else {
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: received keychain nil]", (int)self);
+            }
         }
     }];
 }
