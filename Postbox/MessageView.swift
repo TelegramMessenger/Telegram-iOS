@@ -2,11 +2,13 @@ import Foundation
 
 final class MutableMessageView {
     let messageId: MessageId
+    var stableId: UInt32?
     var message: Message?
     
     init(messageId: MessageId, message: Message?) {
         self.messageId = messageId
         self.message = message
+        self.stableId = message?.stableId
     }
     
     func replay(_ operations: [MessageHistoryOperation], updatedMedia: [MediaId: Media?], renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
@@ -25,8 +27,9 @@ final class MutableMessageView {
                         }
                     }
                 case let .InsertMessage(message):
-                    if message.id == self.messageId {
+                    if message.id == self.messageId || message.stableId == self.stableId {
                         self.message = renderIntermediateMessage(message)
+                        self.stableId = message.stableId
                         updated = true
                     }
                 case let .UpdateEmbeddedMedia(index, embeddedMedia):
