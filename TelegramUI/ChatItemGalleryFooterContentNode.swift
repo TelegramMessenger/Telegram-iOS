@@ -344,11 +344,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             } else {
                 self.dateNode.attributedText = nil
             }
-            
-            //self.deleteButton.isHidden = !canDelete
-            
+
             self.requestLayout?(.immediate)
         }
+        
+        self.deleteButton.isHidden = origin == nil
     }
     
     func setMessage(_ message: Message) {
@@ -695,7 +695,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                                             if let strongSelf = self {
                                                 let openInController = OpenInActionSheetController(postbox: strongSelf.account.postbox, applicationContext: strongSelf.account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: item, additionalAction: nil, openUrl: { [weak self] url in
                                                     if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
-                                                        openExternalUrl(account: strongSelf.account, url: url, presentationData: presentationData, applicationContext: applicationContext, navigationController: nil, dismissInput: {})
+                                                        openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: presentationData, applicationContext: applicationContext, navigationController: nil, dismissInput: {})
                                                     }
                                                 })
                                                 strongSelf.controllerInteraction?.presentController(openInController, nil)

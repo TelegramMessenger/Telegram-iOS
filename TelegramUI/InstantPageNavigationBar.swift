@@ -6,6 +6,49 @@ private let backArrowImage = NavigationBarTheme.generateBackArrowImage(color: .w
 private let moreImage = generateTintedImage(image: UIImage(bundleImageName: "Instant View/MoreIcon"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Instant View/ActionIcon"), color: .white)
 
+final private class InstantPageProgressNode: ASDisplayNode {
+    private let foregroundNode: ASDisplayNode
+    private var progress: CGFloat = 0.0
+    
+    override init() {
+        self.foregroundNode = ASDisplayNode()
+        self.foregroundNode.backgroundColor = .white
+        
+        super.init()
+        
+        self.addSubnode(self.foregroundNode)
+    }
+    
+    func setProgress(_ progress: CGFloat, animated: Bool = false) {
+        if self.progress == progress && animated {
+            return
+        }
+        
+        let size = self.bounds.size
+        
+        self.progress = progress
+        
+        let transition: ContainedViewLayoutTransition
+        if animated {
+            transition = .animated(duration: 0.5, curve: .spring)
+        } else {
+            transition = .immediate
+        }
+        
+        let alpaTransition: ContainedViewLayoutTransition
+        if animated {
+            alpaTransition = .animated(duration: 0.3, curve: .easeInOut)
+        } else {
+            alpaTransition = .immediate
+        }
+        
+        transition.updateFrame(node: self.foregroundNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width * progress, height: size.height))
+        
+        let alpha: CGFloat = progress < 0.001 || progress > 0.999 ? 0.0 : 1.0
+        alpaTransition.updateAlpha(node: self.foregroundNode, alpha: alpha)
+    }
+}
+
 final class InstantPageNavigationBar: ASDisplayNode {
     private var strings: PresentationStrings
     
@@ -17,7 +60,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
     private let arrowNode: ASImageNode
     private let titleNode: ASTextNode
     
-    private let progressNode: ASDisplayNode
+    private let progressNode: InstantPageProgressNode
     
     private let intrinsicMoreSize: CGSize
     private let intrinsicSmallMoreSize: CGSize
@@ -65,8 +108,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 1
         
-        self.progressNode = ASDisplayNode()
-        self.progressNode.backgroundColor = .white
+        self.progressNode = InstantPageProgressNode()
         
         super.init()
         
@@ -114,6 +156,10 @@ final class InstantPageNavigationBar: ASDisplayNode {
             }
             transition.updateAlpha(node: self.actionButton, alpha: buttonsAlpha)
         }
+    }
+    
+    func setLoadProgress(_ progress: CGFloat) {
+        self.progressNode.setProgress(progress, animated: true)
     }
     
     func updateLayout(size: CGSize, minHeight: CGFloat, maxHeight: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, title: String?, pageProgress: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -183,6 +229,9 @@ final class InstantPageNavigationBar: ASDisplayNode {
         transition.updateAlpha(node: self.actionButton, alpha: alphaFactor)
         
         transition.updateFrame(node: self.scrollToTopButton, frame: CGRect(origin: CGPoint(x: leftInset + 64.0, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset - 64.0, height: size.height)))
+        
+        let loadProgressHeight: CGFloat = 2.0
+        transition.updateFrame(node: self.progressNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - loadProgressHeight - UIScreenPixel), size: CGSize(width: size.width, height: loadProgressHeight)))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

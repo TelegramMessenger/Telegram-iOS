@@ -17,6 +17,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private let openMedia: (InstantPageMedia) -> Void
     
     private let imageNode: TransformImageNode
+    private let statusNode: RadialStatusNode
     private let linkIconNode: ASImageNode
     private let pinNode: ChatMessageLiveLocationPositionNode
     
@@ -38,6 +39,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         self.openMedia = openMedia
         
         self.imageNode = TransformImageNode()
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.linkIconNode = ASImageNode()
         self.pinNode = ChatMessageLiveLocationPositionNode()
         
@@ -80,6 +82,8 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
+            self.addSubnode(statusNode)
         }
     }
     
@@ -92,6 +96,8 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         
         if self.interactive {
             self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        } else {
+            self.view.isUserInteractionEnabled = false
         }
     }
     
@@ -102,7 +108,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     }
     
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
-        if self.theme.imageEmptyColor != theme.imageEmptyColor {
+        if self.theme.imageTintColor != theme.imageTintColor {
             self.theme = theme
             self.themeUpdated = true
             self.setNeedsLayout()
@@ -130,7 +136,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 
                 self.linkIconNode.frame = CGRect(x: size.width - 38.0, y: 14.0, width: 24.0, height: 24.0)
             } else if let file = self.media.media as? TelegramMediaFile, let dimensions = file.dimensions {
-                let emptyColor = file.mimeType.hasPrefix("image/") ? self.theme.imageEmptyColor : nil
+                let emptyColor = file.mimeType.hasPrefix("image/") ? self.theme.imageTintColor : nil
 
                 let imageSize = dimensions.aspectFilled(size)
                 let boundingSize = size
@@ -155,6 +161,16 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 let (pinSize, pinApply) = makePinLayout(self.account, theme, nil, false)
                 self.pinNode.frame = CGRect(origin: CGPoint(x: floor((size.width - pinSize.width) / 2.0), y: floor(size.height * 0.5 - 10.0 - pinSize.height / 2.0)), size: pinSize)
                 pinApply()
+            } else if let webPage = media.media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image, let largest = largestImageRepresentation(image.representations) {
+                let imageSize = largest.dimensions.aspectFilled(size)
+                let boundingSize = size
+                let radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
+                let makeLayout = self.imageNode.asyncLayout()
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.theme.pageBackgroundColor))
+                apply()
+                
+                let radialStatusSize: CGFloat = 50.0
+                self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - radialStatusSize) / 2.0), y: floorToScreenPixels((size.height - radialStatusSize) / 2.0), width: radialStatusSize, height: radialStatusSize)
             }
         }
     }
@@ -172,6 +188,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     func updateHiddenMedia(media: InstantPageMedia?) {
         self.imageNode.isHidden = self.media == media
+        self.statusNode.isHidden = self.imageNode.isHidden
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {

@@ -705,7 +705,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
         
-        self.loadingNode.updateLayout(size: contentBounds.size, insets: insets, transition: transition)
         transition.updateFrame(node: self.loadingNode, frame: contentBounds)
         
         if let restrictedNode = self.restrictedNode {
@@ -854,6 +853,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 containerInsets = dismissAsOverlayLayout.insets(options: [.input])
             }
         }
+        
+        self.loadingNode.updateLayout(size: contentBounds.size, insets: UIEdgeInsetsMake(containerInsets.top, 0.0, containerInsets.bottom + contentBottomInset, 0.0), transition: transition)
         
         if let containerNode = self.containerNode {
             contentBottomInset += 8.0
