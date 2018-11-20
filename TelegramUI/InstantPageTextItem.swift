@@ -119,7 +119,6 @@ final class InstantPageTextItem: InstantPageItem {
         
         for i in 0 ..< self.lines.count {
             let line = self.lines[i]
-            
             let lineFrame = frameForLine(line, boundingWidth: boundsWidth, alignment: self.alignment)
             if lineFrame.maxY < upperOriginBound || lineFrame.minY > lowerOriginBound {
                 continue
@@ -131,10 +130,11 @@ final class InstantPageTextItem: InstantPageItem {
             if !line.markedItems.isEmpty {
                 context.saveGState()
                 for item in line.markedItems {
+                    let itemFrame = item.frame.offsetBy(dx: lineFrame.minX, dy: 0.0)
                     context.setFillColor(item.color.cgColor)
                     
                     let height = floor(item.frame.size.height * 2.2)
-                    let rect = CGRect(x: item.frame.minX - 2.0, y: floor(item.frame.minY + (item.frame.height - height) / 2.0), width: item.frame.width + 4.0, height: height)
+                    let rect = CGRect(x: itemFrame.minX - 2.0, y: floor(itemFrame.minY + (itemFrame.height - height) / 2.0), width: itemFrame.width + 4.0, height: height)
                     let path = UIBezierPath.init(roundedRect: rect, cornerRadius: 3.0)
                     context.addPath(path.cgPath)
                     context.fillPath()
@@ -146,7 +146,8 @@ final class InstantPageTextItem: InstantPageItem {
             
             if !line.strikethroughItems.isEmpty {
                 for item in line.strikethroughItems {
-                    context.fill(CGRect(x: item.frame.minX, y: item.frame.minY + floor((lineFrame.size.height / 2.0) + 1.0), width: item.frame.size.width, height: 1.0))
+                    let itemFrame = item.frame.offsetBy(dx: lineFrame.minX, dy: 0.0)
+                    context.fill(CGRect(x: itemFrame.minX, y: itemFrame.minY + floor((lineFrame.size.height / 2.0) + 1.0), width: itemFrame.size.width, height: 1.0))
                 }
             }
         }
@@ -401,7 +402,7 @@ final class InstantPageScrollableTextItem: InstantPageScrollableItem {
     }
 }
 
-func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextStyleStack, url: InstantPageUrlItem? = nil) -> NSAttributedString {
+func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextStyleStack, url: InstantPageUrlItem? = nil, boundingWidth: CGFloat? = nil) -> NSAttributedString {
     switch text {
         case .empty:
             return NSAttributedString(string: "", attributes: styleStack.textAttributes())
@@ -451,7 +452,7 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
         case let .concat(texts):
             let string = NSMutableAttributedString()
             for text in texts {
-                let substring = attributedStringForRichText(text, styleStack: styleStack, url: url)
+                let substring = attributedStringForRichText(text, styleStack: styleStack, url: url, boundingWidth: boundingWidth)
                 string.append(substring)
             }
             return string
@@ -482,6 +483,11 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
                 let ascent: CGFloat
                 let descent: CGFloat
                 let width: CGFloat
+            }
+            
+            var dimensions = dimensions
+            if let boundingWidth = boundingWidth {
+                dimensions = dimensions.fittedToWidthOrSmaller(boundingWidth)
             }
             let extentBuffer = UnsafeMutablePointer<RunStruct>.allocate(capacity: 1)
             extentBuffer.initialize(to: RunStruct(ascent: 0.0, descent: 0.0, width: dimensions.width))
@@ -581,6 +587,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             var line = CTTypesetterCreateLineWithOffset(typesetter, CFRangeMake(lastIndex, lineCharacterCount), 100.0)
             var lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
             let lineRange = NSMakeRange(lastIndex, lineCharacterCount)
+            let substring = string.attributedSubstring(from: lineRange).string
             
             var stop = false
             if maxNumberOfLines > 0 && lines.count == maxNumberOfLines - 1 && lastIndex + lineCharacterCount < string.length {
@@ -634,7 +641,11 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                 }
             }
             
-            if !minimizeWidth && !hadIndexOffset && lineCharacterCount > 1 && lineWidth > currentMaxWidth + 1.0, let imageItem = lineImageItems.last {
+            if substring.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && lineImageItems.count > 0 {
+                extraDescent += max(6.0, fontLineSpacing / 2.0)
+            }
+            
+            if !minimizeWidth && !hadIndexOffset && lineCharacterCount > 1 && lineWidth > currentMaxWidth + 5.0, let imageItem = lineImageItems.last {
                 indexOffset = -(lastIndex + lineCharacterCount - imageItem.range.lowerBound)
                 continue
             }

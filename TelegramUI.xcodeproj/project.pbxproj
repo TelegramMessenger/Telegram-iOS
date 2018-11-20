@@ -36,6 +36,8 @@
 		0958FBBB218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */; };
 		0958FBBD218B03CA00E0CBD8 /* InstantPageDetailsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBBC218B03CA00E0CBD8 /* InstantPageDetailsNode.swift */; };
 		09619B8E21A34C0100493558 /* InstantPageScrollableNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */; };
+		09619B9521A4ABF600493558 /* InstantPageReferenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09619B9321A4ABF500493558 /* InstantPageReferenceController.swift */; };
+		09619B9621A4ABF600493558 /* InstantPageReferenceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09619B9421A4ABF600493558 /* InstantPageReferenceControllerNode.swift */; };
 		096C98BA21787A5C00C211FF /* LegacyBridgeAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */; };
 		096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */; };
 		096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */; };
@@ -1096,6 +1098,8 @@
 		0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageFeedbackNode.swift; sourceTree = "<group>"; };
 		0958FBBC218B03CA00E0CBD8 /* InstantPageDetailsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageDetailsNode.swift; sourceTree = "<group>"; };
 		09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageScrollableNode.swift; sourceTree = "<group>"; };
+		09619B9321A4ABF500493558 /* InstantPageReferenceController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageReferenceController.swift; sourceTree = "<group>"; };
+		09619B9421A4ABF600493558 /* InstantPageReferenceControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageReferenceControllerNode.swift; sourceTree = "<group>"; };
 		096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBridgeAudio.swift; sourceTree = "<group>"; };
 		096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeAudioEncoder.m; sourceTree = "<group>"; };
 		096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
@@ -3075,6 +3079,8 @@
 		D07827CC1E03F32C00071108 /* Instant Page */ = {
 			isa = PBXGroup;
 			children = (
+				09619B9321A4ABF500493558 /* InstantPageReferenceController.swift */,
+				09619B9421A4ABF600493558 /* InstantPageReferenceControllerNode.swift */,
 				D0215D371E040F53001A0B1E /* InstantPageNode.swift */,
 				D0215D391E041003001A0B1E /* InstantPageLayout.swift */,
 				D0215D3B1E041014001A0B1E /* InstantPageItem.swift */,
@@ -5012,6 +5018,7 @@
 				D0EC6CF01EB9F58800EBF1C3 /* AutomaticMediaDownloadSettings.swift in Sources */,
 				D0EC6CF11EB9F58800EBF1C3 /* GeneratedMediaStoreSettings.swift in Sources */,
 				D0EC6CF21EB9F58800EBF1C3 /* VoiceCallSettings.swift in Sources */,
+				09619B9621A4ABF600493558 /* InstantPageReferenceControllerNode.swift in Sources */,
 				D0F8C397201774A200236FC5 /* FeedGroupingController.swift in Sources */,
 				D0EC6CF31EB9F58800EBF1C3 /* PresentationThemeSettings.swift in Sources */,
 				D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */,
@@ -5527,6 +5534,7 @@
 				D0EC6DFE1EB9F58900EBF1C3 /* GalleryControllerPresentationState.swift in Sources */,
 				D0E8B8BB2044780600605593 /* ItemListSecretChatKeyItem.swift in Sources */,
 				D0EC6DFF1EB9F58900EBF1C3 /* GalleryItem.swift in Sources */,
+				09619B9521A4ABF600493558 /* InstantPageReferenceController.swift in Sources */,
 				D0EC6E001EB9F58900EBF1C3 /* GalleryItemNode.swift in Sources */,
 				D048EA8B1F4F298A00188713 /* InstantPageSettingsThemeItemNode.swift in Sources */,
 				D0EC6E011EB9F58900EBF1C3 /* GalleryPagerNode.swift in Sources */,

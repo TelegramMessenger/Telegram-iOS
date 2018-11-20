@@ -151,16 +151,16 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         let previousItems = Atomic<[SharePeerEntry]?>(value: [])
         self.disposable.set((items
-            |> deliverOnMainQueue).start(next: { [weak self] entries in
-                if let strongSelf = self {
-                    let previousEntries = previousItems.swap(entries)
-                    strongSelf.entries = entries
-                    
-                    let firstTime = previousEntries == nil
-                    let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
-                    strongSelf.enqueueTransition(transition, firstTime: firstTime)
-                }
-            }))
+        |> deliverOnMainQueue).start(next: { [weak self] entries in
+            if let strongSelf = self {
+                let previousEntries = previousItems.swap(entries)
+                strongSelf.entries = entries
+                
+                let firstTime = previousEntries == nil
+                let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
+                strongSelf.enqueueTransition(transition, firstTime: firstTime)
+            }
+        }))
 
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)

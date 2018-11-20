@@ -30,7 +30,7 @@ final private class InstantPageProgressNode: ASDisplayNode {
         
         let transition: ContainedViewLayoutTransition
         if animated {
-            transition = .animated(duration: 0.5, curve: .spring)
+            transition = .animated(duration: 0.7, curve: .spring)
         } else {
             transition = .immediate
         }

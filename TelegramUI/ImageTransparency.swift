@@ -60,7 +60,7 @@ func imageHasTransparency(_ cgImage: CGImage) -> Bool {
     return false
 }
 
-private func scaledContext(_ cgImage: CGImage, maxSize: CGSize) -> DrawingContext {
+private func scaledDrawingContext(_ cgImage: CGImage, maxSize: CGSize) -> DrawingContext {
     var size = CGSize(width: cgImage.width, height: cgImage.height)
     if (size.width > maxSize.width && size.height > maxSize.height) {
         size = size.aspectFilled(maxSize)
@@ -80,37 +80,40 @@ func imageRequiresInversion(_ cgImage: CGImage) -> Bool {
         return false
     }
     
-    let context = scaledContext(cgImage, maxSize: CGSize(width: 128.0, height: 128.0))
+    let context = scaledDrawingContext(cgImage, maxSize: CGSize(width: 128.0, height: 128.0))
     if let cgImage = context.generateImage()?.cgImage, let (histogramBins, alphaBinIndex) = generateHistogram(cgImage: cgImage) {
         var hasAlpha = false
         for i in 0 ..< 255 {
             if histogramBins[alphaBinIndex][i] > 0 {
                 hasAlpha = true
+                break
             }
         }
-        guard hasAlpha else {
-            return false
-        }
         
-        var matching: Int = 0
-        var total: Int = 0
-        for y in 0 ..< Int(context.size.height) {
-            for x in 0 ..< Int(context.size.width) {
-                var hue: CGFloat = 0.0
-                var saturation: CGFloat = 0.0
-                var brightness: CGFloat = 0.0
-                var alpha: CGFloat = 0.0
-                context.colorAt(CGPoint(x: x, y: y)).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-                
-                if alpha > 0.0 {
-                    total += 1
-                    if saturation < 0.1 && brightness < 0.25 {
-                        matching += 1
+        if hasAlpha {
+            var matching: Int = 0
+            var total: Int = 0
+            for y in 0 ..< Int(context.size.height) {
+                for x in 0 ..< Int(context.size.width) {
+                    var saturation: CGFloat = 0.0
+                    var brightness: CGFloat = 0.0
+                    var alpha: CGFloat = 0.0
+                    if context.colorAt(CGPoint(x: x, y: y)).getHue(nil, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
+                        if alpha < 1.0 {
+                            hasAlpha = true
+                        }
+                        
+                        if alpha > 0.0 {
+                            total += 1
+                            if saturation < 0.1 && brightness < 0.25 {
+                                matching += 1
+                            }
+                        }
                     }
                 }
             }
+            return CGFloat(matching) / CGFloat(total) > 0.85
         }
-        return CGFloat(matching) / CGFloat(total) > 0.85
     }
     return false
 }
