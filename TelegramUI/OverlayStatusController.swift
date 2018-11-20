@@ -6,14 +6,14 @@ import LegacyComponents
 enum OverlayStatusControllerType {
     case loading(cancelled: (() -> Void)?)
     case success
-    case shieldSuccess(String)
+    case shieldSuccess(String, Bool)
     case genericSuccess(String)
 }
 
 private enum OverlayStatusContentController {
     case loading(TGProgressWindowController)
     case progress(TGProgressWindowController)
-    case shieldSuccess(TGProxyWindowController)
+    case shieldSuccess(TGProxyWindowController, Bool)
     case genericSuccess(TGProxyWindowController)
     
     var view: UIView {
@@ -22,7 +22,7 @@ private enum OverlayStatusContentController {
                 return controller.view
             case let .progress(controller):
                 return controller.view
-            case let .shieldSuccess(controller):
+            case let .shieldSuccess(controller, _):
                 return controller.view
             case let .genericSuccess(controller):
                 return controller.view
@@ -35,7 +35,7 @@ private enum OverlayStatusContentController {
                 controller.updateLayout()
             case let .progress(controller):
                 controller.updateLayout()
-            case let .shieldSuccess(controller):
+            case let .shieldSuccess(controller, _):
                 controller.updateLayout()
             case let .genericSuccess(controller):
                 controller.updateLayout()
@@ -48,10 +48,10 @@ private enum OverlayStatusContentController {
                 controller.show(true)
             case let .progress(controller):
                 controller.dismiss(success: success)
-            case let .shieldSuccess(controller):
-                controller.dismiss(success: success)
+            case let .shieldSuccess(controller, increasedDelay):
+                controller.dismiss(success: success, increasedDelay: increasedDelay)
             case let .genericSuccess(controller):
-                controller.dismiss(success: success)
+                controller.dismiss(success: success, increasedDelay: false)
         }
     }
     
@@ -82,8 +82,8 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
                 self.contentController = .loading(controller)
             case .success:
                 self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
-            case let .shieldSuccess(text):
-                self.contentController = .shieldSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: true))
+            case let .shieldSuccess(text, increasedDelay):
+                self.contentController = .shieldSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: true), increasedDelay)
             case let .genericSuccess(text):
                 self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false))
         }
@@ -107,7 +107,7 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
         })
     }
     
-    func dismiss() {
+    func dismiss(increasedDelay: Bool = false) {
         self.contentController.dismiss(completion: { [weak self] in
             self?.dismissed()
         })
