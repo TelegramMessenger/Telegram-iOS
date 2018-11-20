@@ -35,7 +35,9 @@ private final class NotificationsAndSoundsArguments {
     
     let updatedExceptionMode: (NotificationExceptionMode) -> Void
     
-    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void) {
+    let openAppSettings: () -> Void
+    
+    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void) {
         self.account = account
         self.presentController = presentController
         self.pushController = pushController
@@ -58,6 +60,7 @@ private final class NotificationsAndSoundsArguments {
         self.updateTotalUnreadCountCategory = updateTotalUnreadCountCategory
         self.resetNotifications = resetNotifications
         self.updatedExceptionMode = updatedExceptionMode
+        self.openAppSettings = openAppSettings
     }
 }
 
@@ -494,7 +497,9 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     arguments.updateDisplayNameOnLockscreen(updatedValue)
                 })
             case let .displayNamesOnLockscreenInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+                return ItemListTextItem(theme: theme, text: .markdown(text.replacingOccurrences(of: "]", with: "]()")), sectionId: self.section, linkAction: { _ in
+                    arguments.openAppSettings()
+                })
             case let .badgeHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .unreadCountStyle(theme, text, value):
@@ -576,7 +581,7 @@ private func notificationsAndSoundsEntries(globalSettings: GlobalNotificationSet
     entries.append(.inAppPreviews(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsPreview, inAppSettings.displayPreviews))
     
     entries.append(.displayNamesOnLockscreen(presentationData.theme, presentationData.strings.Notifications_DisplayNamesOnLockScreen, inAppSettings.displayNameOnLockscreen))
-    entries.append(.displayNamesOnLockscreenInfo(presentationData.theme, presentationData.strings.Notifications_DisplayNamesOnLockScreenInfo))
+    entries.append(.displayNamesOnLockscreenInfo(presentationData.theme, presentationData.strings.Notifications_DisplayNamesOnLockScreenInfoWithLink))
     
     entries.append(.badgeHeader(presentationData.theme, presentationData.strings.Notifications_Badge))
     entries.append(.unreadCountStyle(presentationData.theme, presentationData.strings.Notifications_Badge_IncludeMutedChats, inAppSettings.totalUnreadCountDisplayStyle == .raw))
@@ -733,14 +738,16 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
     }, updatedExceptionMode: { mode in
         _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups, channels) in
             switch mode {
-            case .users:
-                updateNotificationExceptions((mode, groups, channels))
-            case .groups:
-                updateNotificationExceptions((users, mode, channels))
-            case .channels:
-                updateNotificationExceptions((users, groups, mode))
+                case .users:
+                    updateNotificationExceptions((mode, groups, channels))
+                case .groups:
+                    updateNotificationExceptions((users, mode, channels))
+                case .channels:
+                    updateNotificationExceptions((users, groups, mode))
             }
         })
+    }, openAppSettings: {
+        account.telegramApplicationContext.applicationBindings.openSettings()
     })
     
     let preferences = account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications, ApplicationSpecificPreferencesKeys.inAppNotificationSettings])

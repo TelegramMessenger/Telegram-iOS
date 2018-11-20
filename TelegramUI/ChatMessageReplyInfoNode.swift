@@ -47,7 +47,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         let previousMediaReference = maybeNode?.previousMediaReference
         
         return { theme, strings, account, type, message, constrainedSize in
-            let titleString = message.author?.displayTitle ?? ""
+            let titleString = message.author?.displayTitle(strings: strings) ?? strings.User_DeletedAccount
             let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
             
             let placeholderColor: UIColor =  message.effectivelyIncoming(account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor

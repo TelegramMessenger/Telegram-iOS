@@ -37,7 +37,7 @@ final class ProxyServerActionSheetController: ActionSheetController {
             }
             strongSelf.isDismissed = true
             if success {
-                strongSelf.present(OverlayStatusController(theme: theme, strings: strings, type: .shieldSuccess(strings.SocksProxySetup_ProxyEnabled)), in: .window(.root))
+                strongSelf.present(OverlayStatusController(theme: theme, strings: strings, type: .shieldSuccess(strings.SocksProxySetup_ProxyEnabled, false)), in: .window(.root))
             }
             strongSelf.dismissAnimated()
         }, present: { [weak self] c, a in
