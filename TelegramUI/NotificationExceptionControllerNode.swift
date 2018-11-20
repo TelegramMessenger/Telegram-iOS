@@ -645,7 +645,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 
                 presentControllerImpl?(notificationPeerExceptionController(account: account, peerId: peerId, mode: mode, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peerId, sound).start(next: { _ in
-                       _ = (account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
+                       _ = combineLatest(updatePeerSound(peerId, sound), account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { _, peer in
                             updateState { value in
                                 return value.withUpdatedPeerSound(peer, sound)
                             }
@@ -654,7 +654,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                         
                     })
                 }, updatePeerNotificationInterval: { peerId, muteInterval in
-                   _ = (account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
+                   _ = combineLatest(updatePeerNotificationInterval(peerId, muteInterval), account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { _, peer in
                         updateState { value in
                             return value.withUpdatedPeerMuteInterval(peer, muteInterval)
                         }

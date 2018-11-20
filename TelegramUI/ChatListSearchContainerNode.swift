@@ -556,7 +556,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         self.dimNode.backgroundColor = filter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : self.presentationData.theme.chatList.backgroundColor
 
         
-        //self.backgroundColor =
+        self.backgroundColor = filter.contains(.excludeRecent) ? nil : self.presentationData.theme.chatList.backgroundColor
+
         
         self.addSubnode(self.dimNode)
         self.addSubnode(self.recentListNode)
