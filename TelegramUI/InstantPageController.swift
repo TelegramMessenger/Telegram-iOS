@@ -83,7 +83,15 @@ final class InstantPageController: ViewController {
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)))
             }
         }, navigateBack: { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
+            if let strongSelf = self, let controllers = strongSelf.navigationController?.viewControllers.reversed() {
+                for controller in controllers {
+                    if !(controller is InstantPageController) {
+                        strongSelf.navigationController?.popToViewController(controller, animated: true)
+                        return
+                    }
+                }
+                strongSelf.navigationController?.popViewController(animated: true)
+            }
         })
         
         self.displayNodeDidLoad()

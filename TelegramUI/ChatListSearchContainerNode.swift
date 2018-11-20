@@ -513,7 +513,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     
     private let recentListNode: ListView
     private let listNode: ListView
-    
+    private let dimNode: ASDisplayNode
     private var enqueuedRecentTransitions: [(ChatListSearchContainerRecentTransition, Bool)] = []
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var validLayout: ContainerViewLayout?
@@ -536,8 +536,12 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         return self._isSearching.get()
     }
     
+    private let filter: ChatListNodePeersFilter
+    
     init(account: Account, filter: ChatListNodePeersFilter, groupId: PeerGroupId?, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?) {
         self.account = account
+        self.filter = filter
+        self.dimNode = ASDisplayNode()
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
@@ -549,12 +553,18 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         
         super.init()
         
-        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        self.dimNode.backgroundColor = filter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : self.presentationData.theme.chatList.backgroundColor
+
         
+        self.backgroundColor = filter.contains(.excludeRecent) ? nil : self.presentationData.theme.chatList.backgroundColor
+
+        
+        self.addSubnode(self.dimNode)
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
         
         self.listNode.isHidden = true
+        self.recentListNode.isHidden = filter.contains(.excludeRecent)
     
         let presentationDataPromise = self.presentationDataPromise
         let foundItems = searchQuery.get()
@@ -847,6 +857,17 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
+    override func didLoad() {
+        super.didLoad()
+        self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+    }
+    
+    @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.cancel?()
+        }
+    }
+    
     deinit {
         self.updatedRecentPeersDisposable.dispose()
         self.recentDisposable.dispose()
@@ -924,10 +945,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             let displayingResults = transition.displayingResults
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self {
-                    if displayingResults != !strongSelf.listNode.isHidden {
-                        strongSelf.listNode.isHidden = !displayingResults
-                        strongSelf.recentListNode.isHidden = displayingResults
-                    }
+                    strongSelf.listNode.isHidden = !displayingResults
+                    strongSelf.recentListNode.isHidden = displayingResults || strongSelf.filter.contains(.excludeRecent)
+                    strongSelf.dimNode.isHidden = displayingResults
                 }
             })
         }
@@ -938,6 +958,10 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         
         let hadValidLayout = self.validLayout != nil
         self.validLayout = layout
+        
+        
+        let topInset = navigationBarHeight
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
         
         var duration: Double = 0.0
         var curve: UInt = 0

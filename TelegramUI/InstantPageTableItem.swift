@@ -288,12 +288,12 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
             var minCellWidth: CGFloat = 1.0
             var maxCellWidth: CGFloat = 1.0
             if let text = cell.text {
-                if let shortestTextItem = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidthLimit, offset: CGPoint(), media: media, webpage: webpage, minimizeWidth: true).0 {
+                if let shortestTextItem = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack, boundingWidth: cellWidthLimit - totalCellPadding), boundingWidth: cellWidthLimit, offset: CGPoint(), media: media, webpage: webpage, minimizeWidth: true).0 {
                     minCellWidth = shortestTextItem.effectiveWidth() + totalCellPadding
                 }
                 
-                if let longestTextItem = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidthLimit, offset: CGPoint(), media: media, webpage: webpage).0 {
-                    maxCellWidth = longestTextItem.effectiveWidth() + totalCellPadding
+                if let longestTextItem = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack, boundingWidth: cellWidthLimit - totalCellPadding), boundingWidth: cellWidthLimit, offset: CGPoint(), media: media, webpage: webpage).0 {
+                    maxCellWidth = max(minCellWidth, longestTextItem.effectiveWidth() + totalCellPadding)
                 }
             }
             if cell.colspan > 1 {
@@ -369,7 +369,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
             let delta = minSpanWidth - minWidth
             for i in range {
                 if let columnWidth = minColumnWidths[i] {
-                    let growth = round(delta / CGFloat(range.count))
+                    let growth = floor(delta / CGFloat(range.count))
                     minColumnWidths[i] = columnWidth + growth
                     availableWidth -= growth
                 }
@@ -441,7 +441,6 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
                                 origin.x += width
                             }
                         }
-                        
                         k += cell.colspan
                     } else {
                         break
@@ -462,7 +461,7 @@ func layoutTableItem(rtl: Bool, rows: [InstantPageTableRow], styleStack: Instant
             var additionalItems: [InstantPageItem] = []
             var cellHeight: CGFloat?
             if let text = cell.text {
-                let (textItem, items, _) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack), boundingWidth: cellWidth - totalCellPadding, alignment: cell.alignment.textAlignment, offset: CGPoint(), media: media, webpage: webpage)
+                let (textItem, items, _) = layoutTextItemWithString(attributedStringForRichText(text, styleStack: styleStack, boundingWidth: cellWidth - totalCellPadding), boundingWidth: cellWidth - totalCellPadding, alignment: cell.alignment.textAlignment, offset: CGPoint(), media: media, webpage: webpage)
                 if let textItem = textItem {
                     isEmptyRow = false
                     textItem.frame = textItem.frame.offsetBy(dx: tableCellInsets.left, dy: 0.0)

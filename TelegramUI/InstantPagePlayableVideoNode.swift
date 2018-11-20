@@ -19,13 +19,13 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     
     private var localIsVisible = false
     
-    init(account: Account, webPage: TelegramMediaWebpage, media: InstantPageMedia, interactive: Bool, openMedia: @escaping  (InstantPageMedia) -> Void) {
+    init(account: Account, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping  (InstantPageMedia) -> Void) {
         self.account = account
         self.media = media
         self.interactive = interactive
         self.openMedia = openMedia
         
-        self.videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager!.audioSession, manager: account.telegramApplicationContext.mediaManager!.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), loopVideo: true, enableSound: false, fetchAutomatically: true), priority: .embedded, autoplay: true)
+        self.videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: account.telegramApplicationContext.mediaManager!.audioSession, manager: account.telegramApplicationContext.mediaManager!.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor), priority: .embedded, autoplay: true)
         
         super.init()
         
