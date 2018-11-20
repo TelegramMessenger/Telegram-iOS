@@ -513,16 +513,27 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if secretBeginTimeAndTimeout?.0 != nil {
             progressRequired = true
         } else if let fetchStatus = self.fetchStatus {
-            if case .Local = fetchStatus {
-                if let file = media as? TelegramMediaFile, file.isVideo {
+            switch fetchStatus {
+                case .Local:
+                    if let file = media as? TelegramMediaFile, file.isVideo {
+                        progressRequired = true
+                    } else if isSecretMedia {
+                        progressRequired = true
+                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content {
+                        if content.embedUrl != nil {
+                            progressRequired = true
+                        } else if let file = content.file, file.isVideo, !file.isAnimated {
+                            progressRequired = true
+                        }
+                    }
+                case .Remote:
                     progressRequired = true
-                } else if isSecretMedia {
-                    progressRequired = true
-                } else if let webpage = webpage, case let .Loaded(content) = webpage.content, content.embedUrl != nil {
-                    progressRequired = true
-                }
-            } else {
-                progressRequired = true
+                case .Fetching:
+                    if let _ = webpage, let automaticDownload = self.automaticDownload, automaticDownload {
+                        progressRequired = false
+                    } else {
+                        progressRequired = true
+                    }
             }
         }
         
@@ -644,8 +655,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         } else {
                             state = .none
                         }
-                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content, content.embedUrl != nil {
-                        state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                    } else if let webpage = webpage, case let .Loaded(content) = webpage.content {
+                        if content.embedUrl != nil {
+                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                        } else if let file = content.file, file.isVideo, !file.isAnimated {
+                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                        }
                     }
                     if case .constrained = sizeCalculation {
                         if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {

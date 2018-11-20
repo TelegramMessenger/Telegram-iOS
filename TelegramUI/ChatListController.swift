@@ -181,7 +181,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.titleView.toggleIsLocked = { [weak self] in
             if let strongSelf = self {
-                let _ = strongSelf.account.postbox.transaction({ transaction -> Void in
+                let _ = (strongSelf.account.postbox.transaction({ transaction -> Void in
                     var data = transaction.getAccessChallengeData()
                     if data.isLockable {
                         if data.autolockDeadline != 0 {
@@ -191,7 +191,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         }
                         transaction.setAccessChallengeData(data)
                     }
-                }).start()
+                }) |> deliverOnMainQueue).start(completed: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.presentInGlobalOverlay(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .shieldSuccess(strongSelf.presentationData.strings.Passcode_AppLockedAlert)))
+                })
             }
         }
         

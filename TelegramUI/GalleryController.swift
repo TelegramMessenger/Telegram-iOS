@@ -46,22 +46,22 @@ private func galleryMediaForMedia(media: Media) -> Media? {
     return nil
 }
 
-private func mediaForMessage(message: Message) -> Media? {
+private func mediaForMessage(message: Message) -> (Media, TelegramMediaImage?)? {
     for media in message.media {
         if let result = galleryMediaForMedia(media: media) {
-            return result
+            return (result, nil)
         } else if let webpage = media as? TelegramMediaWebpage {
             switch webpage.content {
                 case let .Loaded(content):
                     if let embedUrl = content.embedUrl, !embedUrl.isEmpty {
-                        return webpage
+                        return (webpage, nil)
                     } else if let file = content.file {
                         if let result = galleryMediaForMedia(media: file) {
-                            return result
+                            return (result, content.image)
                         }
                     } else if let image = content.image {
                         if let result = galleryMediaForMedia(media: image) {
-                            return result
+                            return (result, nil)
                         }
                     }
                 case .Pending:
@@ -122,20 +122,29 @@ func galleryCaptionStringWithAppliedEntities(_ text: String, entities: [MessageT
     return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, fixedFont: fixedFont, underlineLinks: false)
 }
 
+private func galleryMessageCaptionText(_ message: Message) -> String {
+    for media in message.media {
+        if let _ = media as? TelegramMediaWebpage {
+            return ""
+        }
+    }
+    return message.text
+}
+
 func galleryItemForEntry(account: Account, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, openUrl: @escaping (String) -> Void = { _ in }, openUrlOptions: @escaping (String) -> Void = { _ in }) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _):
-            if let media = mediaForMessage(message: message) {
+            if let (media, mediaImage) = mediaForMessage(message: message) {
                 if let _ = media as? TelegramMediaImage {
                     return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, openUrl: openUrl, openUrlOptions: openUrlOptions)
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo {
                         let content: UniversalVideoContent
                         if file.isAnimated {
-                            content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: false, loopVideo: true, enableSound: false)
+                            content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: false, loopVideo: true, enableSound: false)
                         } else {
                             if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
-                                content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: true, loopVideo: loopVideos)
+                                content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, loopVideo: loopVideos)
                             } else {
                                 content = PlatformVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
                             }
@@ -148,7 +157,7 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                                 break
                             }
                         }
-                        let caption = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
+                        let caption = galleryCaptionStringWithAppliedEntities(galleryMessageCaptionText(message), entities: entities)
                         return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, playbackCompleted: playbackCompleted, openUrl: openUrl, openUrlOptions: openUrlOptions)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
@@ -565,7 +574,7 @@ class GalleryController: ViewController {
         
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
             if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
-                if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
+                if let (media, _) = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
                     animatedOutNode = false
                     centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
                         animatedOutNode = true
@@ -603,7 +612,7 @@ class GalleryController: ViewController {
             if let strongSelf = self {
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? GalleryControllerPresentationArguments {
                     if case let .MessageEntry(message, _, _, _) = strongSelf.entries[centralItemNode.index] {
-                        if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
+                        if let (media, _) = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                             return (transitionArguments.transitionNode, transitionArguments.addToTransitionSurface)
                         }
                     }
@@ -663,7 +672,7 @@ class GalleryController: ViewController {
             if let strongSelf = self {
                 var hiddenItem: (MessageId, Media)?
                 if let index = index {
-                    if case let .MessageEntry(message, _, _, _) = strongSelf.entries[index], let media = mediaForMessage(message: message) {
+                    if case let .MessageEntry(message, _, _, _) = strongSelf.entries[index], let (media, _) = mediaForMessage(message: message) {
                         hiddenItem = (message.id, media)
                     }
                     
@@ -711,7 +720,7 @@ class GalleryController: ViewController {
                 self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
                 self.centralItemFooterContentNode.set(centralItemNode.footerContent())
                 
-                if let media = mediaForMessage(message: message) {
+                if let (media, _) = mediaForMessage(message: message) {
                     if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments, let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                         nodeAnimatesItself = true
                         centralItemNode.activateAsInitial()

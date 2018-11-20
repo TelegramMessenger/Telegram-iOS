@@ -248,32 +248,32 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
         
         removePeerDisposable.set(applyPeers.start())
     }, addPeer: {
-        let controller = ContactMultiselectionController(account: account, mode: .peerSelection, options: [])
+        let controller = ContactMultiselectionController(account: account, mode: .peerSelection(searchChatList: true), options: [])
         addPeerDisposable.set((controller.result |> take(1) |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
             let applyPeers: Signal<Void, NoError> = peersPromise.get()
-                |> take(1)
-                |> mapToSignal { peers -> Signal<[Peer], NoError> in
-                    return account.postbox.transaction { transaction -> [Peer] in
-                        var updatedPeers = peers
-                        var existingIds = Set(updatedPeers.map { $0.id })
-                        for peerId in peerIds {
-                            guard case let .peer(peerId) = peerId else {
-                                continue
-                            }
-                            if let peer = transaction.getPeer(peerId), !existingIds.contains(peerId) {
-                                existingIds.insert(peerId)
-                                updatedPeers.append(peer)
-                            }
+            |> take(1)
+            |> mapToSignal { peers -> Signal<[Peer], NoError> in
+                return account.postbox.transaction { transaction -> [Peer] in
+                    var updatedPeers = peers
+                    var existingIds = Set(updatedPeers.map { $0.id })
+                    for peerId in peerIds {
+                        guard case let .peer(peerId) = peerId else {
+                            continue
                         }
-                        return updatedPeers
+                        if let peer = transaction.getPeer(peerId), !existingIds.contains(peerId) {
+                            existingIds.insert(peerId)
+                            updatedPeers.append(peer)
+                        }
                     }
+                    return updatedPeers
                 }
-                |> deliverOnMainQueue
-                |> mapToSignal { updatedPeers -> Signal<Void, NoError> in
-                    peersPromise.set(.single(updatedPeers))
-                    updated(updatedPeers.map { $0.id })
-                    return .complete()
-                }
+            }
+            |> deliverOnMainQueue
+            |> mapToSignal { updatedPeers -> Signal<Void, NoError> in
+                peersPromise.set(.single(updatedPeers))
+                updated(updatedPeers.map { $0.id })
+                return .complete()
+            }
             
             removePeerDisposable.set(applyPeers.start())
             controller?.dismiss()

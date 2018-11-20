@@ -326,7 +326,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     let arguments = ChannelMembersControllerArguments(account: account, addMember: {
         actionsDisposable.add((peersPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { members in
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
-            let contactsController = ContactMultiselectionController(account: account, mode: .peerSelection, options: [], filters: [.excludeSelf, .disable(disabledIds)])
+            let contactsController = ContactMultiselectionController(account: account, mode: .peerSelection(searchChatList: false), options: [], filters: [.excludeSelf, .disable(disabledIds)])
             
             let addMembers: ([ContactListPeerId]) -> Signal<Void, AddChannelMemberError> = { members -> Signal<Void, AddChannelMemberError> in
                 let peerIds = members.compactMap { contact -> PeerId? in

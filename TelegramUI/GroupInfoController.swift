@@ -1360,7 +1360,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     }
                 })
             } else {
-                contactsController = ContactMultiselectionController(account: account, mode: .peerSelection, options: options, filters: [.excludeSelf, .disable(recentIds)])
+                contactsController = ContactMultiselectionController(account: account, mode: .peerSelection(searchChatList: false), options: options, filters: [.excludeSelf, .disable(recentIds)])
             }
             
             confirmationImpl = { [weak contactsController] peerId in

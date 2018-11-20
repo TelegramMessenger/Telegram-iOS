@@ -98,6 +98,18 @@ public class TelegramController: ViewController {
         if case .none = mediaAccessoryPanelVisibility {
         } else if let mediaManager = account.telegramApplicationContext.mediaManager {
             self.mediaStatusDisposable = (mediaManager.globalMediaPlayerState
+            |> mapToSignal { playlistStateAndType -> Signal<(SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> in
+                if let (state, type) = playlistStateAndType {
+                    switch state {
+                        case let .state(state):
+                            return .single((state, type))
+                        case .loading:
+                            return .single(nil) |> delay(0.2, queue: .mainQueue())
+                    }
+                } else {
+                    return .single(nil)
+                }
+            }
             |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
                 guard let strongSelf = self else {
                     return
@@ -393,9 +405,26 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                
                 if let mediaManager = self.account.telegramApplicationContext.mediaManager {
-                    mediaAccessoryPanel.containerNode.headerNode.playbackStatus = mediaManager.globalMediaPlayerState
-                    |> map { state in
-                        return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                    let delayedStatus = mediaManager.globalMediaPlayerState
+                    |> mapToSignal { value -> Signal<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
+                        guard let value = value else {
+                            return .single(nil)
+                        }
+                        switch value.0 {
+                            case .state:
+                                return .single(value)
+                            case .loading:
+                                return .single(value) |> delay(0.1, queue: .mainQueue())
+                        }
+                    }
+                    
+                    mediaAccessoryPanel.containerNode.headerNode.playbackStatus = delayedStatus
+                    |> map { state -> MediaPlayerStatus in
+                        if let stateOrLoading = state?.0, case let .state(state) = stateOrLoading {
+                            return state.status
+                        } else {
+                            return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                        }
                     }
                 }
             } else {
@@ -474,8 +503,12 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                 if let mediaManager = self.account.telegramApplicationContext.mediaManager {
                     mediaAccessoryPanel.containerNode.headerNode.playbackStatus = mediaManager.globalMediaPlayerState
-                    |> map { state in
-                        return state?.0.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                    |> map { state -> MediaPlayerStatus in
+                        if let stateOrLoading = state?.0, case let .state(state) = stateOrLoading {
+                            return state.status
+                        } else {
+                            return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                        }
                     }
                 }
                 mediaAccessoryPanel.animateIn(transition: transition)

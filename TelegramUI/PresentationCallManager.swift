@@ -256,7 +256,7 @@ public final class PresentationCallManager {
         if let call = self.currentCall, !endCurrentIfAny {
             return .alreadyInProgress(call.peerId)
         }
-        if let _ = self.callKitIntegration {
+        if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings?.0) {
             let (presentationData, present, openSettings) = self.getDeviceAccessData()
             
             let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
@@ -317,7 +317,7 @@ public final class PresentationCallManager {
             if !accessEnabled {
                 return .single(false)
             }
-            return (combineLatest(callSessionManager.request(peerId: peerId, internalId: internalId), networkType |> take(1), postbox.peerView(id: peerId) |> take(1) |> map({ peerView -> Bool in
+            return (combineLatest(queue: .mainQueue(), callSessionManager.request(peerId: peerId, internalId: internalId), networkType |> take(1), postbox.peerView(id: peerId) |> take(1) |> map({ peerView -> Bool in
                 return peerView.peerIsContact
             }) |> take(1))
             |> deliverOnMainQueue

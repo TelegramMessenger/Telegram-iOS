@@ -37,7 +37,7 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
     
-    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, kind: ItemListDisclosureKind = .generic, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow,  action: (() -> Void)?) {
+    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, kind: ItemListDisclosureKind = .generic, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
         self.theme = theme
         self.icon = icon
         self.title = title

@@ -47,6 +47,17 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.statusBar.statusBarStyle = theme.statusBarStyle
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        
+        self.attemptNavigation = { [weak self] f in
+            guard let strongSelf = self else {
+                return true
+            }
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Login_CancelPhoneVerification, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
+            }), TextAlertAction(type: .defaultAction, title: strings.Login_CancelPhoneVerificationStop, action: {
+                f()
+            })]), in: .window(.root))
+            return false
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -69,6 +80,10 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.requestNextOption?()
         }
         
+        self.controllerNode.updateNextEnabled = { [weak self] value in
+            self?.navigationItem.rightBarButtonItem?.isEnabled = value
+        }
+        
         if let (number, codeType, nextType, timeout) = self.data {
             self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout)
         }
@@ -83,6 +98,11 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {
+            if case .otherSession = codeType {
+                self.title = number
+            } else {
+                self.title = nil
+            }
             self.data = (number, codeType, nextType, timeout)
             if self.isNodeLoaded {
                 self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout)

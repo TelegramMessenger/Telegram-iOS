@@ -96,6 +96,7 @@
 		D01776BC1F1E21AF0044446D /* RadialStatusBackgroundNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776BB1F1E21AF0044446D /* RadialStatusBackgroundNode.swift */; };
 		D01776BE1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776BD1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift */; };
 		D01847801FFBD12E00075256 /* ChatListPresentationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018477F1FFBD12E00075256 /* ChatListPresentationData.swift */; };
+		D01848E821A03BDA00B6DEBD /* ChatSearchState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */; };
 		D0185E882089ED5F005E1A6C /* ProxyListSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */; };
 		D0185E8A208A01AF005E1A6C /* ProxySettingsActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */; };
 		D0185E8C208A025A005E1A6C /* ProxySettingsServerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E8B208A025A005E1A6C /* ProxySettingsServerItem.swift */; };
@@ -1198,6 +1199,7 @@
 		D0177B7F1DFAE18500A5083A /* MediaPlayerTimeTextNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaPlayerTimeTextNode.swift; sourceTree = "<group>"; };
 		D0177B831DFB095000A5083A /* FileMediaResourceStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileMediaResourceStatus.swift; sourceTree = "<group>"; };
 		D018477F1FFBD12E00075256 /* ChatListPresentationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListPresentationData.swift; sourceTree = "<group>"; };
+		D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSearchState.swift; sourceTree = "<group>"; };
 		D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyListSettingsController.swift; sourceTree = "<group>"; };
 		D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingsActionItem.swift; sourceTree = "<group>"; };
 		D0185E8B208A025A005E1A6C /* ProxySettingsServerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxySettingsServerItem.swift; sourceTree = "<group>"; };
@@ -2403,6 +2405,18 @@
 				D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */,
 			);
 			name = "Radial Status";
+			sourceTree = "<group>";
+		};
+		D01848F021A2323D00B6DEBD /* Strings */ = {
+			isa = PBXGroup;
+			children = (
+				D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */,
+				D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */,
+				D0BCC3D1203F0A6C008126C2 /* StringForMessageTimestampStatus.swift */,
+				D017494D1E1059570057C89A /* StringWithAppliedEntities.swift */,
+				09C9EA3721A044B500E90146 /* StringForDuration.swift */,
+			);
+			name = Strings;
 			sourceTree = "<group>";
 		};
 		D018D3331E6489D700C5E089 /* Create Channel */ = {
@@ -4218,6 +4232,7 @@
 				D0D2686A1D788F6600C422DA /* Title Accessory Panels */,
 				D0F69E441D6B8B850046BCD6 /* History Navigation */,
 				D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */,
+				D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */,
 			);
 			name = Chat;
 			sourceTree = "<group>";
@@ -4443,8 +4458,8 @@
 				D0383ED5207D19BC00C45548 /* Emoji */,
 				D0B69C3A20EBD8B3003632C7 /* Device Access */,
 				D01C7EFE1EF9D434008305F1 /* Device Contacts */,
+				D01848F021A2323D00B6DEBD /* Strings */,
 				09D304142173C0E900C00567 /* WatchManager.swift */,
-				D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */,
 				D08775081E3E59DE00A97350 /* PeerNotificationSoundStrings.swift */,
 				D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */,
 				D0F69E941D6B8C9B0046BCD6 /* WebP.swift */,
@@ -4454,13 +4469,11 @@
 				D05811931DD5F9380057C769 /* TelegramApplicationContext.swift */,
 				D023836F1DDF0462004018B6 /* UrlHandling.swift */,
 				D0F917B41E0DA396003687E6 /* GenerateTextEntities.swift */,
-				D017494D1E1059570057C89A /* StringWithAppliedEntities.swift */,
 				D01749541E1082770057C89A /* StoredMessageFromSearchPeer.swift */,
 				D087750B1E3E7B7600A97350 /* PreferencesKeys.swift */,
 				D01D6BFB1E42AB3C006151C6 /* EmojiUtils.swift */,
 				D0DA44551E4E7F43005FDCA7 /* ShakeAnimation.swift */,
 				D0E305A41E5B2BFB00D7A3A2 /* ValidateAddressNameInteractive.swift */,
-				D05A32DB1E6EFCC2002760B4 /* NumericFormat.swift */,
 				D01C2AAC1E768404001F6F9A /* Markdown.swift */,
 				D0F3A8AA1E82D83E00B4C64C /* TelegramAccountAuxiliaryMethods.swift */,
 				D01BAA571ED3283D00295217 /* AddFormatToStringWithRanges.swift */,
@@ -4478,7 +4491,6 @@
 				D04ECD711FFBF22B00DE9029 /* OpenUrl.swift */,
 				D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */,
 				D00ACA592022897D0045D427 /* ProcessedPeerRestrictionText.swift */,
-				D0BCC3D1203F0A6C008126C2 /* StringForMessageTimestampStatus.swift */,
 				D0E8B8B8204477B600605593 /* SecretChatKeyVisualization.swift */,
 				D0FA08BD20481EA300DD23FC /* Locale.swift */,
 				D0DE5804205B202500C356A8 /* ScreenCaptureDetection.swift */,
@@ -4496,7 +4508,6 @@
 				0902838C2194AEB90067EFBD /* ImageTransparency.swift */,
 				09C9EA32219F79F600E90146 /* ID3Artwork.h */,
 				09C9EA31219F79F500E90146 /* ID3Artwork.m */,
-				09C9EA3721A044B500E90146 /* StringForDuration.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -4880,6 +4891,7 @@
 				D0EC6CB81EB9F58800EBF1C3 /* RMIntroViewController.m in Sources */,
 				D0EC6CB91EB9F58800EBF1C3 /* RMLoginViewController.m in Sources */,
 				D0E9BA631F055AD200F079A4 /* BotPaymentCardInputItemNode.swift in Sources */,
+				D01848E821A03BDA00B6DEBD /* ChatSearchState.swift in Sources */,
 				D0EC6CBA1EB9F58800EBF1C3 /* RMRootViewController.m in Sources */,
 				D0E412CA206A5B0B00BEE4A2 /* FormControllerTextInputItem.swift in Sources */,
 				D0208ADC1FA346A4001F0D5F /* RaiseToListen.swift in Sources */,

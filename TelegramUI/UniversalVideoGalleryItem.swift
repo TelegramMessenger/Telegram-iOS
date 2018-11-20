@@ -320,15 +320,24 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
                 var file: TelegramMediaFile?
+                var isWebpage = false
                 for m in message.media {
                     if let m = m as? TelegramMediaFile, m.isVideo {
                         file = m
+                        break
+                    } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
+                        file = f
+                        isWebpage = true
                         break
                     }
                 }
                 if let file = file {
                     let status = messageMediaFileStatus(account: item.account, messageId: message.id, file: file)
-                    self.scrubberView.setFetchStatusSignal(status, strings: self.strings, fileSize: file.size)
+                    if isWebpage {
+                        self.scrubberView.setFetchStatusSignal(nil, strings: self.strings, fileSize: file.size)
+                    } else {
+                        self.scrubberView.setFetchStatusSignal(status, strings: self.strings, fileSize: file.size)
+                    }
                     
                     self.requiresDownload = !isMediaStreamable(message: message, media: file)
                     mediaFileStatus = status |> map(Optional.init)

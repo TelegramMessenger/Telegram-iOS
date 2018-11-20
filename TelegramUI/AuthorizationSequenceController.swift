@@ -74,27 +74,7 @@ public final class AuthorizationSequenceController: NavigationController {
                     let masterDatacenterId = strongSelf.account.masterDatacenterId
                     let isTestingEnvironment = strongSelf.account.testingEnvironment
                     
-                    var countryId: String? = nil
-                    let networkInfo = CTTelephonyNetworkInfo()
-                    if let carrier = networkInfo.subscriberCellularProvider {
-                        countryId = carrier.isoCountryCode
-                    }
-                    
-                    if countryId == nil {
-                        countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
-                    }
-                    
-                    var countryCode: Int32 = 1
-                    
-                    if let countryId = countryId {
-                        let normalizedId = countryId.uppercased()
-                        for (code, idAndName) in countryCodeToIdAndName {
-                            if idAndName.0 == normalizedId {
-                                countryCode = Int32(code)
-                                break
-                            }
-                        }
-                    }
+                    let countryCode = defaultCountryCode()
                     
                     let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                         transaction.setState(UnauthorizedAccountState(isTestingEnvironment: isTestingEnvironment, masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
@@ -296,6 +276,12 @@ public final class AuthorizationSequenceController: NavigationController {
                                         text = strongSelf.strings.Login_InvalidCodeError
                                     case .generic:
                                         text = strongSelf.strings.Login_UnknownError
+                                    case .codeExpired:
+                                        text = strongSelf.strings.Login_CodeExpired
+                                        let account = strongSelf.account
+                                        let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                                            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
+                                        }).start()
                                 }
                                 
                                 controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
@@ -631,7 +617,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 case let .phoneEntry(countryCode, number):
                     self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
                 case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
-                    self.setViewControllers([self.splashController(), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
+                    self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: defaultCountryCode(), number: ""), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
                 case let .passwordEntry(hint, _, _):
                     self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint)], animated: !self.viewControllers.isEmpty)
                 case let .passwordRecovery(_, _, _, emailPattern):
@@ -658,4 +644,30 @@ public final class AuthorizationSequenceController: NavigationController {
             controller.applyConfirmationCode(code)
         }
     }
+}
+
+private func defaultCountryCode() -> Int32 {
+    var countryId: String? = nil
+    let networkInfo = CTTelephonyNetworkInfo()
+    if let carrier = networkInfo.subscriberCellularProvider {
+        countryId = carrier.isoCountryCode
+    }
+    
+    if countryId == nil {
+        countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
+    }
+    
+    var countryCode: Int32 = 1
+    
+    if let countryId = countryId {
+        let normalizedId = countryId.uppercased()
+        for (code, idAndName) in countryCodeToIdAndName {
+            if idAndName.0 == normalizedId {
+                countryCode = Int32(code)
+                break
+            }
+        }
+    }
+    
+    return countryCode
 }
