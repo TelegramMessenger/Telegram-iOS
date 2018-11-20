@@ -592,6 +592,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                                         break
                                     }
                                 }
+                                
                                 let unreadCount = values.count(for: .peer(peerView.peerId))
                                 if let unreadCount = unreadCount, unreadCount > 0 {
                                     unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
@@ -633,7 +634,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             var index = 0
                             
                             
-                            let filteredPeer:(Peer) -> Bool = { peer in
+                            let filteredPeer:(Peer, Peer) -> Bool = { peer, accountPeer in
                                 guard !filter.contains(.excludeSavedMessages) || peer.id != accountPeer.id else { return false }
                                 guard !filter.contains(.excludeSecretChats) || peer.id.namespace != Namespaces.Peer.SecretChat else { return false }
                                 guard !filter.contains(.onlyPrivateChats) || peer.id.namespace == Namespaces.Peer.CloudUser else { return false }
@@ -664,7 +665,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             var existingPeerIds = Set<PeerId>()
                             
                             if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
-                                if !existingPeerIds.contains(accountPeer.id) {
+                                if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
                                     existingPeerIds.insert(accountPeer.id)
                                     entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
                                     index += 1
@@ -672,7 +673,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             }
                             
                             for renderedPeer in foundLocalPeers.peers {
-                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != account.peerId, filteredPeer(peer) {
+                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != account.peerId, filteredPeer(peer, accountPeer) {
                                     if !existingPeerIds.contains(peer.id) {
                                         existingPeerIds.insert(peer.id)
                                         var associatedPeer: Peer?
@@ -686,7 +687,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                             }
                             
                             for peer in foundRemotePeers.0 {
-                                if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer) {
+                                if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
                                     existingPeerIds.insert(peer.peer.id)
                                     entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
                                     index += 1
@@ -695,7 +696,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
 
                             index = 0
                             for peer in foundRemotePeers.1 {
-                                if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer) {
+                                if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
                                     existingPeerIds.insert(peer.peer.id)
                                     entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
                                     index += 1
