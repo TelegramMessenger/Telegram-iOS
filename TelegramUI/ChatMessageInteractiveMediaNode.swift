@@ -526,9 +526,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             progressRequired = true
                         }
                     }
-                case .Remote:
-                    progressRequired = true
-                case .Fetching:
+                case .Remote, .Fetching:
                     if let _ = webpage, let automaticDownload = self.automaticDownload, automaticDownload {
                         progressRequired = false
                     } else {

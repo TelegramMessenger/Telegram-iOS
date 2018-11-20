@@ -96,7 +96,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     }
     
     private func addControllerIfNeeded() {
-        if !controller.isViewLoaded {
+        if !controller.isViewLoaded || controller.view.superview == nil {
             self.displayNode.view.addSubview(controller.view)
             controller.view.frame = self.displayNode.bounds;
             controller.viewDidAppear(false)

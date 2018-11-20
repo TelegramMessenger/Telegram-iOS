@@ -4,13 +4,13 @@ import Postbox
 import TelegramCore
 import MtProtoKitDynamic
 
-private enum ParsedInternalPeerUrlParameter {
+enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String)
     case channelMessage(Int32)
 }
 
-private enum ParsedInternalUrl {
+enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case stickerPack(String)
     case join(String)
@@ -39,7 +39,7 @@ enum ResolvedUrl {
     case confirmationCode(Int)
 }
 
-private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
+func parseInternalUrl(query: String) -> ParsedInternalUrl? {
     if let components = URLComponents(string: "/" + query) {
         var pathComponents = components.path.components(separatedBy: "/")
         if !pathComponents.isEmpty {
@@ -90,6 +90,18 @@ private func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         }
                         if let _ = url {
                             return .internalInstantView(url: "https://t.me/\(query)")
+                        }
+                    } else if peerName == "login" {
+                        var code: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "code" {
+                                    code = value
+                                }
+                            }
+                        }
+                        if let code = code, let codeValue = Int(code) {
+                            return .confirmationCode(codeValue)
                         }
                     } else {
                         for queryItem in queryItems {

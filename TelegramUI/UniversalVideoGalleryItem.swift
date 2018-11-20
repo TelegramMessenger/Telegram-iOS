@@ -333,9 +333,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 if let file = file {
                     let status = messageMediaFileStatus(account: item.account, messageId: message.id, file: file)
-                    if isWebpage {
-                        self.scrubberView.setFetchStatusSignal(nil, strings: self.strings, fileSize: file.size)
-                    } else {
+                    if !isWebpage {
                         self.scrubberView.setFetchStatusSignal(status, strings: self.strings, fileSize: file.size)
                     }
                     
