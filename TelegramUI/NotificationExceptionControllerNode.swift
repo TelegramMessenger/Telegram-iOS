@@ -241,7 +241,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
         let rhsName = rhs.value.peer.displayTitle
         
         if let lhsDate = lhs.value.date, let rhsDate = rhs.value.date {
-            return lhsDate < rhsDate
+            return lhsDate > rhsDate
         } else if lhs.value.date != nil && rhs.value.date == nil {
             return true
         } else if lhs.value.date == nil && rhs.value.date != nil {
