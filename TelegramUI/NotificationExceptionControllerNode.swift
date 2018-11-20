@@ -583,22 +583,18 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         
         let presentationData = account.telegramApplicationContext.currentPresentationData.modify {$0}
         
-        let updatePeerSound: (PeerId, PeerMessageSound) -> Void = { peerId, sound in
-            _ = (combineLatest(updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound), account.postbox.loadedPeerWithId(peerId)) |> deliverOnMainQueue).start(next: { _, peer in
-                updateState { value in
-                    return value.withUpdatedPeerSound(peer, sound)
-                }
-                updateNotificationsView()
-            })
+        let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+            return updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound) |> deliverOnMainQueue
+//            _ = (combineLatest(, account.postbox.loadedPeerWithId(peerId)) |> deliverOnMainQueue).start(next: { _, peer in
+//                updateState { value in
+//                    return value.withUpdatedPeerSound(peer, sound)
+//                }
+//                updateNotificationsView()
+//            })
         }
         
-        let updatePeerNotificationInterval:(PeerId, Int32?) -> Void = { peerId, muteInterval in
-            _ = (combineLatest(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval), account.postbox.loadedPeerWithId(peerId)) |> deliverOnMainQueue).start(next: { _, peer in
-                updateState { value in
-                    return value.withUpdatedPeerMuteInterval(peer, muteInterval)
-                }
-                updateNotificationsView()
-            })
+        let updatePeerNotificationInterval:(PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
+            return updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
         }
         
         
@@ -626,6 +622,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 } |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                         if let strongSelf = strongSelf, let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
                             strongSelf.pushController(infoController)
+                            strongSelf.requestDeactivateSearch()
                         }
                 })
             }
@@ -646,7 +643,24 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             controller.peerSelected = { [weak controller] peerId in
                 controller?.dismiss()
                 
-                presentControllerImpl?(notificationPeerExceptionController(account: account, peerId: peerId, mode: mode, updatePeerSound: updatePeerSound, updatePeerNotificationInterval: updatePeerNotificationInterval), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                presentControllerImpl?(notificationPeerExceptionController(account: account, peerId: peerId, mode: mode, updatePeerSound: { peerId, sound in
+                    _ = updatePeerSound(peerId, sound).start(next: { _ in
+                       _ = (account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
+                            updateState { value in
+                                return value.withUpdatedPeerSound(peer, sound)
+                            }
+                            updateNotificationsView()
+                        })
+                        
+                    })
+                }, updatePeerNotificationInterval: { peerId, muteInterval in
+                   _ = (account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
+                        updateState { value in
+                            return value.withUpdatedPeerMuteInterval(peer, muteInterval)
+                        }
+                        updateNotificationsView()
+                    })
+                }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, updateRevealedPeerId: { peerId in
@@ -659,8 +673,15 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated})
                 }
             } |> deliverOnMainQueue).start(completed: {
-                updatePeerSound(peer.id, .default)
-                updatePeerNotificationInterval(peer.id, nil)
+
+                _ = combineLatest(updatePeerSound(peer.id, .default), updatePeerNotificationInterval(peer.id, nil)).start(next: { _, _ in
+                    updateState { value in
+                        return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default)
+                    }
+                    updateNotificationsView()
+                })
+                
+                
             })
            
         })
@@ -777,6 +798,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     options.insert(.Synchronous)
                     options.insert(.LowLatency)
                 } else if transition.animated {
+                    options.insert(.Synchronous)
                     options.insert(.AnimateInsertion)
                 }
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
