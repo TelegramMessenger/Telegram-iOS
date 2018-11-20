@@ -604,9 +604,17 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     } else {
                         location = .general
                     }
-                    let foundRemoteMessages: Signal<(([Message], [PeerId : CombinedPeerReadState], Int32), Bool), NoError> = .single((([], [:], 0), true)) |> then(searchMessages(account: account, location: location, query: query)
-                    |> map { ($0, false) }
-                    |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                    
+                    let foundRemoteMessages: Signal<(([Message], [PeerId : CombinedPeerReadState], Int32), Bool), NoError>
+                    if filter.contains(.doNotSearchMessages) {
+                        foundRemoteMessages = .single((([], [:], 0), false))
+                    } else {
+                        foundRemoteMessages = .single((([], [:], 0), true)) |> then(searchMessages(account: account, location: location, query: query)
+                            |> map { ($0, false) }
+                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                    }
+                    
+                    
                     
                     return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get())
                         |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData -> ([ChatListSearchEntry], Bool)? in

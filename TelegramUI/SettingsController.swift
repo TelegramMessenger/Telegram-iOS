@@ -71,7 +71,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case recentCalls(PresentationTheme, UIImage?, String)
     case stickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
     
-    case notificationsAndSounds(PresentationTheme, UIImage?, String)
+    case notificationsAndSounds(PresentationTheme, UIImage?, String, NotificationExceptionsList?)
     case privacyAndSecurity(PresentationTheme, UIImage?, String)
     case dataAndStorage(PresentationTheme, UIImage?, String)
     case themes(PresentationTheme, UIImage?, String)
@@ -209,8 +209,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .notificationsAndSounds(lhsTheme, lhsImage, lhsText):
-                if case let .notificationsAndSounds(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
+            case let .notificationsAndSounds(lhsTheme, lhsImage, lhsText, lhsExceptionsList):
+                if case let .notificationsAndSounds(rhsTheme, rhsImage, rhsText, rhsExceptionsList) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsExceptionsList == rhsExceptionsList {
                     return true
                 } else {
                     return false
@@ -307,9 +307,9 @@ private enum SettingsEntry: ItemListNodeEntry {
                         arguments.updateArchivedPacks(packs)
                     }))
                 })
-            case let .notificationsAndSounds(theme, image, text):
+            case let .notificationsAndSounds(theme, image, text, exceptionsList):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.pushController(notificationsAndSoundsController(account: arguments.account))
+                    arguments.pushController(notificationsAndSoundsController(account: arguments.account, exceptionsList: exceptionsList))
                 })
             case let .privacyAndSecurity(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -366,7 +366,7 @@ private struct SettingsState: Equatable {
     }
 }
 
-private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool) -> [SettingsEntry] {
+private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -398,7 +398,7 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         entries.append(.recentCalls(presentationData.theme, SettingsItemIcons.recentCalls, presentationData.strings.CallSettings_RecentCalls))
         entries.append(.stickers(presentationData.theme, SettingsItemIcons.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         
-        entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds))
+        entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions))
         entries.append(.privacyAndSecurity(presentationData.theme, SettingsItemIcons.security, presentationData.strings.Settings_PrivacySettings))
         entries.append(.dataAndStorage(presentationData.theme, SettingsItemIcons.dataAndStorage, presentationData.strings.Settings_ChatSettings))
         entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.Settings_Appearance))
@@ -443,6 +443,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let updatePassportDisposable = MetaDisposable()
     actionsDisposable.add(updatePassportDisposable)
+    
     
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
     
@@ -672,19 +673,22 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }
     updatePassport()
     
+    
+    let notifyExceptions = Promise<NotificationExceptionsList?>(nil)
+    let updateNotifyExceptions: () -> Void = {
+        notifyExceptions.set(notificationExceptionsList(network: account.network) |> map(Optional.init))
+    }
+ //   updateNotifyExceptions()
+    
     let hasWatchApp = Promise<Bool>(false)
     if let context = account.applicationContext as? TelegramApplicationContext, let watchManager = context.watchManager {
         hasWatchApp.set(watchManager.watchAppInstalled)
     }
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()))
-        |> map { presentationData, state, view, preferences, featuredAndArchived, hasPassportAndWatch -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
-            let proxySettings: ProxySettings
-            if let value = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
-                proxySettings = value
-            } else {
-                proxySettings = ProxySettings.defaultSettings
-            }
+    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, combineLatest(account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), notifyExceptions.get()), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()))
+        |> map { presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+            let proxySettings: ProxySettings = preferencesAndExceptions.0.values[PreferencesKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
+            
             
             let peer = peerViewMainPeer(view)
             let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
@@ -704,7 +708,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
             
             let (hasPassport, hasWatchApp) = hasPassportAndWatch
             
-            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp), style: .blocks)
+            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp), style: .blocks)
             
             return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -798,6 +802,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     controller.didAppear = { _ in
         updatePassport()
+        updateNotifyExceptions()
     }
     return controller
 }

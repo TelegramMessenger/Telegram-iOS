@@ -35,6 +35,7 @@ public class NotificationExceptionsController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        
         self.editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.editPressed))
         self.doneItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         
@@ -110,7 +111,9 @@ public class NotificationExceptionsController: ViewController {
                 }
             }, present: { [weak self] c, a in
                 self?.present(c, in: .window(.root), with: a)
-        })
+            }, pushController: { [weak self] c in
+                (self?.navigationController as? NavigationController)?.pushViewController(c)
+            })
         self._ready.set(self.controllerNode._ready.get())
         
         self.displayNodeDidLoad()

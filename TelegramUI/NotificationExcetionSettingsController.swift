@@ -127,9 +127,9 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             let title: String
             switch mode {
             case .alwaysOn:
-                title = "Always On"
+                title = strings.Notification_Exceptions_AlwaysOn
             case .alwaysOff:
-                title = "Always Off"
+                title = strings.Notification_Exceptions_AlwaysOff
             }
             return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                  arguments.selectMode(mode)
@@ -162,7 +162,7 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
     
     var index: Int32 = 0
     
-    entries.append(.switcherHeader(index: index, theme: presentationData.theme, title: "NOTIFICATIONS"))
+    entries.append(.switcherHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notification_Exceptions_NewException_NotificationHeader))
     index += 1
 
     
@@ -307,7 +307,7 @@ func notificationPeerExceptionController(account: Account, peerId: PeerId, mode:
                 arguments.complete()
             })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("New Exception"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Notification_Exceptions_NewException), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: notificationPeerExceptionEntries(presentationData: presentationData, state: state), style: .blocks)
             
             return (controllerState, (listState, arguments))

@@ -103,6 +103,12 @@ struct PresentationResourcesItemList {
         })
     }
     
+    static func addExceptionIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListAddExceptionIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/AddExceptionIcon"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     static func addPhoneIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddPhoneIcon.rawValue, { theme in
             generateImage(CGSize(width: 22.0, height: 26.0), contextGenerator: { size, context in

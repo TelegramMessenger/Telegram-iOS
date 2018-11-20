@@ -19,9 +19,10 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let onlyManageable = ChatListNodePeersFilter(rawValue: 1 << 4)
     
     public static let excludeSecretChats = ChatListNodePeersFilter(rawValue: 1 << 5)
-    public static let excludeRecent  = ChatListNodePeersFilter(rawValue: 1 << 6)
-    public static let excludeSavedMessages  = ChatListNodePeersFilter(rawValue: 1 << 7)
+    public static let excludeRecent = ChatListNodePeersFilter(rawValue: 1 << 6)
+    public static let excludeSavedMessages = ChatListNodePeersFilter(rawValue: 1 << 7)
     
+    public static let doNotSearchMessages = ChatListNodePeersFilter(rawValue: 1 << 8)
 
 }
 
@@ -441,7 +442,7 @@ final class ChatListNode: ListView {
             
             let entries = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, mode: mode).filter { entry in
                 switch entry {
-                case let .PeerEntry(index, _, _, _, _, _,  peer, _, _, _, _, _):
+                case let .PeerEntry(_, _, _, _, _, _,  peer, _, _, _, _, _):
                     //ChatListNodePeersFilter
                     switch mode {
                     case .chatList:
