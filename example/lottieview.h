@@ -49,7 +49,7 @@ public:
     void render();
     void initializeBufferObject(Evas *evas);
 private:
-    void createVgNode(LOTNode *node, Efl_VG *parent);
+    void createVgNode(LOTNode *node, Efl_VG *root);
     void update(const std::vector<LOTNode *> &);
     void restart();
 public:

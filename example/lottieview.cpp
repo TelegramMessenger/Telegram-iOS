@@ -18,90 +18,136 @@ animator(void *data , double pos)
     return EINA_TRUE;
 }
 
-void LottieView::createVgNode(LOTNode *node, Efl_VG *parent)
+void LottieView::createVgNode(LOTNode *node, Efl_VG *root)
 {
-    Efl_VG *shape = evas_vg_shape_add(parent);
-    // update the path
+    Efl_VG *shape = evas_vg_shape_add(root);
+
+    //0: Path
     const float *data = node->mPath.ptPtr;
-    for(int i=0; i <node->mPath.elmCount; i++) {
+    if (!data) return;
+
+    for (int i = 0; i < node->mPath.elmCount; i++) {
         switch (node->mPath.elmPtr[i]) {
-        case 0:  //moveTo
-        {
+        case 0:
             evas_vg_shape_append_move_to(shape, data[0], data[1]);
             data += 2;
             break;
-        }
         case 1:
-        {
             evas_vg_shape_append_line_to(shape, data[0], data[1]);
             data += 2;
             break;
-        }
         case 2:
-        {
             evas_vg_shape_append_cubic_to(shape, data[0], data[1], data[2], data[3], data[4], data[5]);
             data += 6;
             break;
-        }
         case 3:
-        {
             evas_vg_shape_append_close(shape);
             break;
-        }
         default:
             break;
         }
     }
 
+    //1: Stroke
     if (node->mStroke.enable) {
+        //Stroke Width
         evas_vg_shape_stroke_width_set(shape, node->mStroke.width);
-        //evas_vg_shape_stroke_cap_set(shape, int(node->mStroke.cap));
-        //evas_vg_shape_stroke_join_set(shape, int(node->mStroke.join));
-        //evas_vg_shape_stroke_meter_limit_set(shape, node->mStroke.meterLimit);
-    }
-    // update paint info
-    if (node->mBrushType == LOTBrushType::BrushSolid) {
-        int r = (node->mColor.r * node->mColor.a)/255;
-        int g = (node->mColor.g * node->mColor.a)/255;
-        int b = (node->mColor.b * node->mColor.a)/255;
-        int a = node->mColor.a;
-        if (node->mStroke.enable) {
-            evas_vg_shape_stroke_color_set(shape, r, g, b, a);
-        } else {
-           evas_vg_node_color_set(shape, r, g, b, a);
-        }
 
-    } else if (node->mBrushType == LOTBrushType::BrushGradient) {
-        Efl_VG *grad = nullptr;
+        //Stroke Cap
+        Efl_Gfx_Cap cap;
+        switch (node->mStroke.cap) {
+        case CapFlat: cap = EFL_GFX_CAP_BUTT; break;
+        case CapSquare: cap = EFL_GFX_CAP_SQUARE; break;
+        case CapRound: cap = EFL_GFX_CAP_ROUND; break;
+        default: cap = EFL_GFX_CAP_BUTT; break;
+        }
+        evas_vg_shape_stroke_cap_set(shape, cap);
+
+        //Stroke Join
+        Efl_Gfx_Join join;
+        switch (node->mStroke.join) {
+        case JoinMiter: join = EFL_GFX_JOIN_MITER; break;
+        case JoinBevel: join = EFL_GFX_JOIN_BEVEL; break;
+        case JoinRound: join = EFL_GFX_JOIN_ROUND; break;
+        default: join = EFL_GFX_JOIN_MITER; break;
+        }
+        evas_vg_shape_stroke_join_set(shape, join);
+
+        //Stroke Dash
+        if (node->mStroke.dashArraySize > 0) {
+            int size = (node->mStroke.dashArraySize / 2);
+            Efl_Gfx_Dash *dash = static_cast<Efl_Gfx_Dash*>(malloc(sizeof(Efl_Gfx_Dash) * size));
+            if (dash) {
+                for (int i = 0; i <= size; i+=2) {
+                    dash[i].length = node->mStroke.dashArray[i];
+                    dash[i].gap = node->mStroke.dashArray[i + 1];
+                }
+                evas_vg_shape_stroke_dash_set(shape, dash, size);
+                free(dash);
+            }
+        }
+    }
+
+    //2: Fill Method
+    switch (node->mBrushType) {
+    case BrushSolid: {
+        float pa = ((float)node->mColor.a) / 255;
+        int r = (int)(((float) node->mColor.r) * pa);
+        int g = (int)(((float) node->mColor.g) * pa);
+        int b = (int)(((float) node->mColor.b) * pa);
+        int a = node->mColor.a;
+        if (node->mStroke.enable)
+          evas_vg_shape_stroke_color_set(shape, r, g, b, a);
+        else
+          evas_vg_node_color_set(shape, r, g, b, a);
+        break;
+    }
+    case BrushGradient: {
+        Efl_VG* grad = NULL;
         if (node->mGradient.type == GradientLinear) {
-            grad = evas_vg_gradient_linear_add(parent);
+            grad = evas_vg_gradient_linear_add(root);
             evas_vg_gradient_linear_start_set(grad, node->mGradient.start.x, node->mGradient.start.y);
             evas_vg_gradient_linear_end_set(grad, node->mGradient.end.x, node->mGradient.end.y);
-        } else {
-            grad = evas_vg_gradient_radial_add(parent);
+
+        }
+        else if (node->mGradient.type == GradientRadial) {
+            grad = evas_vg_gradient_radial_add(root);
             evas_vg_gradient_radial_center_set(grad, node->mGradient.center.x, node->mGradient.center.y);
-            evas_vg_gradient_radial_radius_set(grad, node->mGradient.cradius);
             evas_vg_gradient_radial_focal_set(grad, node->mGradient.focal.x, node->mGradient.focal.y);
+            evas_vg_gradient_radial_radius_set(grad, node->mGradient.cradius);
         }
-        int stop_count = node->mGradient.stopCount;
-        if (stop_count)
-          {
-             Efl_Gfx_Gradient_Stop *stops = (Efl_Gfx_Gradient_Stop *)calloc(stop_count, sizeof(Efl_Gfx_Gradient_Stop));
-             for (int i = 0; i <stop_count; i++) {
-                 stops[i].offset = node->mGradient.stopPtr[i].pos;
-                 stops[i].r = (node->mGradient.stopPtr[i].r * node->mGradient.stopPtr[i].a)/255;
-                 stops[i].g = (node->mGradient.stopPtr[i].g * node->mGradient.stopPtr[i].a)/255;
-                 stops[i].b = (node->mGradient.stopPtr[i].b * node->mGradient.stopPtr[i].a)/255;
-                 stops[i].a = node->mGradient.stopPtr[i].a;
-             }
-             evas_vg_gradient_stop_set(grad, stops, stop_count);
-          }
-        if (node->mStroke.enable) {
-            evas_vg_shape_stroke_fill_set(shape, grad);
-        } else {
-            evas_vg_shape_fill_set(shape, grad);
+
+        if (grad) {
+            //Gradient Stop
+            Efl_Gfx_Gradient_Stop* stops = static_cast<Efl_Gfx_Gradient_Stop*>(malloc(sizeof(Efl_Gfx_Gradient_Stop) * node->mGradient.stopCount));
+            if (stops) {
+                for (unsigned int i = 0; i < node->mGradient.stopCount; i++) {
+                    stops[i].offset = node->mGradient.stopPtr[i].pos;
+                    float pa = ((float)node->mGradient.stopPtr[i].a) / 255;
+                    stops[i].r = (int)(((float)node->mGradient.stopPtr[i].r) * pa);
+                    stops[i].g = (int)(((float)node->mGradient.stopPtr[i].g) * pa);
+                    stops[i].b = (int)(((float)node->mGradient.stopPtr[i].b) * pa);
+                    stops[i].a = node->mGradient.stopPtr[i].a;
+                }
+                evas_vg_gradient_stop_set(grad, stops, node->mGradient.stopCount);
+                free(stops);
+            }
+            if (node->mStroke.enable)
+              evas_vg_shape_stroke_fill_set(shape, grad);
+            else
+              evas_vg_shape_fill_set(shape, grad);
         }
+        break;
     }
+    default:
+      break;
+    }
+
+    //3: Fill Rule
+    if (node->mFillRule == FillEvenOdd)
+      efl_gfx_shape_fill_rule_set(shape, EFL_GFX_FILL_RULE_ODD_EVEN);
+    else if (node->mFillRule == FillWinding)
+      efl_gfx_shape_fill_rule_set(shape, EFL_GFX_FILL_RULE_WINDING);
 }
 
 void LottieView::update(const std::vector<LOTNode *> &renderList)
