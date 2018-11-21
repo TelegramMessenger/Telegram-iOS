@@ -307,7 +307,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
-                    accessoryItem = ChatMessageAvatarAccessoryItem(account: account, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp)
+                    accessoryItem = ChatMessageAvatarAccessoryItem(account: account, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, emptyColor: presentationData.theme.theme.chat.bubble.incoming.withoutWallpaper.fill)
                 }
             }
         }

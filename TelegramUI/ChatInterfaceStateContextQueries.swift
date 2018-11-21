@@ -132,38 +132,41 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
             
             let inlineBots: Signal<[(Peer, Double)], NoError> = types.contains(.contextBots) ? recentlyUsedInlineBots(postbox: account.postbox) : .single([])
             let participants = combineLatest(inlineBots, searchPeerMembers(account: account, peerId: peer.id, query: query))
-                |> map { inlineBots, peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                    let filteredInlineBots = inlineBots.sorted(by: { $0.1 > $1.1 }).filter { peer, rating in
-                        if rating < 0.14 {
-                            return false
-                        }
-                        if peer.indexName.matchesByTokens(normalizedQuery) {
-                            return true
-                        }
-                        if let addressName = peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {
-                            return true
-                        }
+            |> map { inlineBots, peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                let filteredInlineBots = inlineBots.sorted(by: { $0.1 > $1.1 }).filter { peer, rating in
+                    if rating < 0.14 {
                         return false
-                    }.map { $0.0 }
-                    
-                    let inlineBotPeerIds = Set(filteredInlineBots.map { $0.id })
-                    
-                    let filteredPeers = peers.filter { peer in
-                        if inlineBotPeerIds.contains(peer.id) {
-                            return false
-                        }
-                        if !types.contains(.accountPeer) && peer.id == account.peerId {
-                            return false
-                        }
+                    }
+                    if peer.indexName.matchesByTokens(normalizedQuery) {
                         return true
                     }
-                    var sortedPeers = filteredInlineBots
-                    sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
-                        let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
-                        return result == .orderedAscending
-                    }))
-                    return { _ in return .mentions(sortedPeers) }
+                    if let addressName = peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {
+                        return true
+                    }
+                    return false
+                }.map { $0.0 }
+                
+                let inlineBotPeerIds = Set(filteredInlineBots.map { $0.id })
+                
+                let filteredPeers = peers.filter { peer in
+                    if inlineBotPeerIds.contains(peer.id) {
+                        return false
+                    }
+                    if !types.contains(.accountPeer) && peer.id == account.peerId {
+                        return false
+                    }
+                    return true
                 }
+                var sortedPeers = filteredInlineBots
+                sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
+                    let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                    return result == .orderedAscending
+                }))
+                sortedPeers = sortedPeers.filter { peer in
+                    return !peer.displayTitle.isEmpty
+                }
+                return { _ in return .mentions(sortedPeers) }
+            }
             
             return signal |> then(participants)
         case let .command(query):

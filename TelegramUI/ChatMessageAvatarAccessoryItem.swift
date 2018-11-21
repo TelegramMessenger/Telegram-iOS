@@ -11,13 +11,15 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
     private let peer: Peer?
     private let messageReference: MessageReference?
     private let messageTimestamp: Int32
+    private let emptyColor: UIColor
     
-    init(account: Account, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32) {
+    init(account: Account, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32, emptyColor: UIColor) {
         self.account = account
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
         self.messageTimestamp = messageTimestamp
+        self.emptyColor = emptyColor
     }
     
     func isEqualToItem(_ other: ListViewAccessoryItem) -> Bool {
@@ -32,7 +34,7 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
         let node = ChatMessageAvatarAccessoryItemNode()
         node.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         if let peer = self.peer {
-            node.setPeer(account: account, peer: peer, authorOfMessage: self.messageReference)
+            node.setPeer(account: account, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor)
         }
         return node
     }
@@ -52,7 +54,7 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
         self.addSubnode(self.avatarNode)
     }
     
-    func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference?) {
-        self.avatarNode.setPeer(account: account, peer: peer, authorOfMessage: authorOfMessage)
+    func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
+        self.avatarNode.setPeer(account: account, peer: peer, authorOfMessage: authorOfMessage, emptyColor: emptyColor)
     }
 }

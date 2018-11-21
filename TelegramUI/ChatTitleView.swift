@@ -383,26 +383,39 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             }
                         } else if let channel = peer as? TelegramChannel {
                             if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                                if case .group = channel.info, let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
-                                    let string = NSMutableAttributedString()
-                                    
-                                    string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                    string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineMemberCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                if memberCount == 0 {
+                                    let string: NSAttributedString
+                                    if case .group = channel.info {
+                                        string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    } else {
+                                        string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    }
                                     if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                                         self.infoNode.attributedText = string
                                         shouldUpdateLayout = true
                                     }
                                 } else {
-                                    let membersString: String
-                                    if case .group = channel.info {
-                                        membersString = strings.Conversation_StatusMembers(memberCount)
+                                    if case .group = channel.info, let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
+                                        let string = NSMutableAttributedString()
+                                        
+                                        string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                        string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineMemberCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                        if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
+                                            self.infoNode.attributedText = string
+                                            shouldUpdateLayout = true
+                                        }
                                     } else {
-                                        membersString = strings.Conversation_StatusSubscribers(memberCount)
-                                    }
-                                    let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                    if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                        self.infoNode.attributedText = string
-                                        shouldUpdateLayout = true
+                                        let membersString: String
+                                        if case .group = channel.info {
+                                            membersString = strings.Conversation_StatusMembers(memberCount)
+                                        } else {
+                                            membersString = strings.Conversation_StatusSubscribers(memberCount)
+                                        }
+                                        let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                        if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
+                                            self.infoNode.attributedText = string
+                                            shouldUpdateLayout = true
+                                        }
                                     }
                                 }
                             } else {

@@ -165,7 +165,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
                     strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     
-                    strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer)
+                    strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     

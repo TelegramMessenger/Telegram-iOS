@@ -184,6 +184,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 let buttonHighlightedImage: UIImage
                 let titleColor: UIColor
                 let titleHighlightedColor: UIColor
+                let avatarPlaceholderColor: UIColor
                 if item.message.effectivelyIncoming(item.account.peerId) {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(item.presentationData.theme.theme)!
                     buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(item.presentationData.theme.theme)!
@@ -191,6 +192,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let bubbleColors = bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: true, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
                     titleHighlightedColor = bubbleColors.fill
+                    avatarPlaceholderColor = item.presentationData.theme.theme.chat.bubble.incomingMediaPlaceholderColor
                 } else {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(item.presentationData.theme.theme)!
                     buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(item.presentationData.theme.theme)!
@@ -198,6 +200,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let bubbleColors = bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: false, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
                     titleHighlightedColor = bubbleColors.fill
+                    avatarPlaceholderColor = item.presentationData.theme.theme.chat.bubble.outgoingMediaPlaceholderColor
                 }
                 
                 let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, item.presentationData.strings.Conversation_ViewContactDetails, titleColor, titleHighlightedColor)
@@ -286,7 +289,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
-                                strongSelf.avatarNode.setPeer(account: item.account, peer: peer)
+                                strongSelf.avatarNode.setPeer(account: item.account, peer: peer, emptyColor: avatarPlaceholderColor)
                             } else {
                                 strongSelf.avatarNode.setCustomLetters(customLetters)
                             }

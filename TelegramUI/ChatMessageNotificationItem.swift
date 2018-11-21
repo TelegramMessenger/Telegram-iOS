@@ -92,7 +92,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         var title: String?
         if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {
-            self.avatarNode.setPeer(account: item.account, peer: peer)
+            self.avatarNode.setPeer(account: item.account, peer: peer, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
             
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 title = peer.displayTitle

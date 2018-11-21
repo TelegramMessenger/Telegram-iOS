@@ -475,7 +475,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     } else if let image = media as? TelegramMediaWebFile {
                                         strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: account, image: image).start())
                                     } else if let file = media as? TelegramMediaFile {
-                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: false).start())
+                                        if automaticPlayback || !file.isAnimated {
+                                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: false).start())
+                                        }
                                     }
                                 }
                             } else if previousAutomaticDownload != automaticDownload, automaticDownload {

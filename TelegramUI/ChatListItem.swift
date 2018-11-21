@@ -339,7 +339,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if peer.id == item.account.peerId {
                 overrideImage = .savedMessagesIcon
             }
-            self.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
+            self.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor)
         }
     }
     

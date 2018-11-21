@@ -4,7 +4,7 @@ import TelegramCore
 import SwiftSignalKit
 
 func searchPeerMembers(account: Account, peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
-    if peerId.namespace == Namespaces.Peer.CloudChannel && !query.isEmpty {
+    if peerId.namespace == Namespaces.Peer.CloudChannel {
         return account.postbox.transaction { transaction -> CachedChannelData? in
             return transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData
         }
@@ -18,15 +18,18 @@ func searchPeerMembers(account: Account, peerId: PeerId, query: String) -> Signa
                                 if normalizedQuery.isEmpty {
                                     return participant.peer
                                 }
-                                
-                                if participant.peer.indexName.matchesByTokens(normalizedQuery) {
+                                if normalizedQuery.isEmpty {
                                     return participant.peer
+                                } else {
+                                    if participant.peer.indexName.matchesByTokens(normalizedQuery) {
+                                        return participant.peer
+                                    }
+                                    if let addressName = participant.peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {
+                                        return participant.peer
+                                    }
+                                    
+                                    return nil
                                 }
-                                if let addressName = participant.peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {
-                                    return participant.peer
-                                }
-                                
-                                return nil
                             })
                         }
                     })
@@ -38,7 +41,7 @@ func searchPeerMembers(account: Account, peerId: PeerId, query: String) -> Signa
             }
             
             return Signal { subscriber in
-                let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query.isEmpty ? nil : query, updated: { state in
                     if case .ready = state.loadingState {
                         subscriber.putNext(state.list.map { $0.peer })
                     }

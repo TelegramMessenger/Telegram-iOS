@@ -622,7 +622,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         } else if case .editSettings = item.mode {
                             overrideImage = AvatarNodeImageOverride.editAvatarIcon
                         }
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor)
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: avatarOriginY), size: CGSize(width: 66.0, height: 66.0))
