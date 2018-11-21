@@ -214,7 +214,7 @@ public func blockedPeersController(account: Account) -> ViewController {
         }
     }, addPeer: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = PeerSelectionController(account: account, filter: [.onlyPrivateChats, .excludeSavedMessages], title: presentationData.strings.BlockedUsers_SelectUserTitle)
+        let controller = PeerSelectionController(account: account, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent], title: presentationData.strings.BlockedUsers_SelectUserTitle)
         controller.peerSelected = { [weak controller] peerId in
             if let strongController = controller {
                 strongController.inProgress = true

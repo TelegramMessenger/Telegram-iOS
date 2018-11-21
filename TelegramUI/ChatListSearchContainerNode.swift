@@ -388,7 +388,14 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     badge = ContactsPeerItemBadge(count: unreadBadge.count, type: unreadBadge.isMuted ? .inactive : .active)
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                let header:ChatListSearchItemHeader?
+                if filter.contains(.removeSearchHeader) {
+                    header = nil
+                } else {
+                    header = ChatListSearchItemHeader(type: .localPeers, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                }
+                
+                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.peerSelected(peer)
                 })
             case let .globalPeer(peer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder):
@@ -425,7 +432,14 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     badge = ContactsPeerItemBadge(count: unreadBadge.count, type: unreadBadge.isMuted ? .inactive : .active)
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                let header:ChatListSearchItemHeader?
+                if filter.contains(.removeSearchHeader) {
+                    header = nil
+                } else {
+                    header = ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                }
+                
+                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .generalSearch, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.peerSelected(peer.peer)
                 })
             case let .message(message, readState, presentationData):

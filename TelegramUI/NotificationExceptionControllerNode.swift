@@ -637,7 +637,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             }
             
         }, selectPeer: {
-            var filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages]
+            var filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages, .removeSearchHeader]
             switch mode {
             case .groups:
                 filter.insert(.onlyGroups)
