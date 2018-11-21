@@ -34,11 +34,11 @@ class InstantImageGalleryItem: GalleryItem {
     let imageReference: ImageMediaReference
     let caption: NSAttributedString
     let credit: NSAttributedString
-    let location: InstantPageGalleryEntryLocation
+    let location: InstantPageGalleryEntryLocation?
     let openUrl: (InstantPageUrlItem) -> Void
     let openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(account: Account, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+    init(account: Account, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.imageReference = imageReference
@@ -54,7 +54,9 @@ class InstantImageGalleryItem: GalleryItem {
         
         node.setImage(imageReference: self.imageReference)
     
-        node._title.set(.single("\(self.location.position + 1) \(self.presentationData.strings.Common_of) \(self.location.totalCount)"))
+        if let location = self.location {
+            node._title.set(.single("\(location.position + 1) \(self.presentationData.strings.Common_of) \(location.totalCount)"))
+        }
         
         node.setCaption(self.caption, credit: self.credit)
         
@@ -63,7 +65,9 @@ class InstantImageGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? InstantImageGalleryItemNode {
-            node._title.set(.single("\(self.location.position + 1) \(self.presentationData.strings.Common_of) \(self.location.totalCount)"))
+            if let location = self.location {
+                node._title.set(.single("\(location.position + 1) \(self.presentationData.strings.Common_of) \(location.totalCount)"))
+            }
             
             node.setCaption(self.caption, credit: self.credit)
         }

@@ -505,8 +505,12 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
         
         if let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings {
             let notificationsText: String
-            if case .muted = notificationSettings.muteState {
-                notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
+            if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                if until < Int32.max - 1 {
+                    notificationsText = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
+                } else {
+                    notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
+                }
             } else {
                 notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
             }

@@ -367,7 +367,35 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         }
                     }))
                 }
-            })
+            }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
+                if let strongSelf = self {
+                    strongSelf.controllerInteraction?.openUrl(url, concealed, nil)
+                }
+            }, openUrlIn: { [weak self] url in
+                if let strongSelf = self {
+                    strongSelf.openUrlIn(url)
+                }
+            }, openPeerMention: { [weak self] mention in
+                if let strongSelf = self {
+                    strongSelf.controllerInteraction?.openPeerMention(mention)
+                }
+            }, openPeer: { [weak self] peerId in
+                if let strongSelf = self {
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil)
+                }
+            }, openHashtag: { [weak self] peerName, hashtag in
+                if let strongSelf = self {
+                    strongSelf.controllerInteraction?.openHashtag(peerName, hashtag)
+                }
+            }, openBotCommand: { [weak self] command in
+                if let strongSelf = self {
+                    strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+                }
+            }, addContact: { [weak self] phoneNumber in
+                if let strongSelf = self {
+                    strongSelf.controllerInteraction?.addContact(phoneNumber)
+                }
+            }))
         }, openPeer: { [weak self] id, navigation, fromMessage in
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
         }, openPeerMention: { [weak self] name in
@@ -1143,7 +1171,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             }
                             var peerIsMuted = false
                             if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                                if case .muted = notificationSettings.muteState {
+                                if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                                     peerIsMuted = true
                                 }
                             }
@@ -5090,7 +5118,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             }
                         
                             if let notificationSettings = data.notificationSettings as? TelegramPeerNotificationSettings {
-                                if case .muted = notificationSettings.muteState {
+                                if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                                     items.append(UIPreviewAction(title: presentationData.strings.Conversation_Unmute, style: .default, handler: { _, _ in
                                         if let strongSelf = self {
                                             let _ = togglePeerMuted(account: strongSelf.account, peerId: peer.id).start()

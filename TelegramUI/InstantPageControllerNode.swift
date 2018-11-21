@@ -21,6 +21,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var webPage: TelegramMediaWebpage?
     private var initialAnchor: String?
+    private var pendingAnchor: String?
     
     private var containerLayout: ContainerViewLayout?
     private var setupScrollOffsetOnLayout: Bool = false
@@ -47,8 +48,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var currentExpandedDetails: [Int : Bool]?
     var currentDetailsItems: [InstantPageDetailsItem] = []
     
-    var previousContentOffset: CGPoint?
-    var isDeceleratingBecauseOfDragging = false
+    private var previousContentOffset: CGPoint?
+    private var isDeceleratingBecauseOfDragging = false
     
     private let hiddenMediaDisposable = MetaDisposable()
     private let resolveUrlDisposable = MetaDisposable()
@@ -266,6 +267,15 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.scrollNode.frame = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
             if let containerLayout = self.containerLayout {
                 self.containerLayoutUpdated(containerLayout, navigationBarHeight: 0.0, transition: .immediate)
+            }
+            
+            if let webPage = webPage, case let .Loaded(content) = webPage.content, let instantPage = content.instantPage, instantPage.isComplete {
+                self.loadProgress.set(1.0)
+                
+                if let anchor = self.pendingAnchor {
+                    self.pendingAnchor = nil
+                    self.scrollToAnchor(anchor)
+                }
             }
         }
     }
@@ -962,11 +972,57 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.present(controller, nil)
     }
     
-    private func openUrl(_ url: InstantPageUrlItem) {
+    private func scrollToAnchor(_ anchor: String) {
         guard let items = self.currentLayout?.items else {
             return
         }
-
+        
+        if !anchor.isEmpty {
+            if let (item, lineOffset, detailsItems) = findAnchorItem(String(anchor), items: items) {
+                var previousDetailsNode: InstantPageDetailsNode?
+                var containerOffset: CGFloat = 0.0
+                for detailsItem in detailsItems {
+                    if let previousNode = previousDetailsNode {
+                        previousNode.contentNode.updateDetailsExpanded(detailsItem.index, true, animated: false)
+                        let frame = previousNode.effectiveFrameForItem(detailsItem)
+                        containerOffset += frame.minY
+                        
+                        previousDetailsNode = previousNode.contentNode.nodeForDetailsItem(detailsItem)
+                        previousDetailsNode?.setExpanded(true, animated: false)
+                    } else {
+                        self.updateDetailsExpanded(detailsItem.index, true, animated: false)
+                        let frame = self.effectiveFrameForItem(detailsItem)
+                        containerOffset += frame.minY
+                        
+                        previousDetailsNode = self.nodeForDetailsItem(detailsItem)
+                        previousDetailsNode?.setExpanded(true, animated: false)
+                    }
+                }
+                
+                let frame: CGRect
+                if let previousDetailsNode = previousDetailsNode {
+                    frame = previousDetailsNode.effectiveFrameForItem(item)
+                } else {
+                    frame = self.effectiveFrameForItem(item)
+                }
+                
+                var targetY = min(containerOffset + frame.minY + lineOffset, self.scrollNode.view.contentSize.height - self.scrollNode.frame.height)
+                if targetY < self.scrollNode.view.contentOffset.y {
+                    targetY -= self.scrollNode.view.contentInset.top
+                } else {
+                    targetY -= self.containerLayout?.statusBarHeight ?? 20.0
+                }
+                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: targetY), animated: true)
+            } else if let webPage = self.webPage, case let .Loaded(content) = webPage.content, let instantPage = content.instantPage, !instantPage.isComplete {
+                self.loadProgress.set(0.5)
+                self.pendingAnchor = anchor
+            }
+        } else {
+            self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top), animated: true)
+        }
+    }
+    
+    private func openUrl(_ url: InstantPageUrlItem) {
         var baseUrl = url.url
         var anchor: String?
         if let anchorRange = url.url.range(of: "#") {
@@ -975,55 +1031,18 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
 
         if let webPage = self.webPage, case let .Loaded(content) = webPage.content, let page = content.instantPage, page.url == baseUrl, let anchor = anchor {
-            if !anchor.isEmpty {
-                if let (item, lineOffset, detailsItems) = findAnchorItem(String(anchor), items: items) {
-                    var previousDetailsNode: InstantPageDetailsNode?
-                    var containerOffset: CGFloat = 0.0
-                    for detailsItem in detailsItems {
-                        if let previousNode = previousDetailsNode {
-                            previousNode.contentNode.updateDetailsExpanded(detailsItem.index, true, animated: false)
-                            let frame = previousNode.effectiveFrameForItem(detailsItem)
-                            containerOffset += frame.minY
-                            
-                            previousDetailsNode = previousNode.contentNode.nodeForDetailsItem(detailsItem)
-                            previousDetailsNode?.setExpanded(true, animated: false)
-                        } else {
-                            self.updateDetailsExpanded(detailsItem.index, true, animated: false)
-                            let frame = self.effectiveFrameForItem(detailsItem)
-                            containerOffset += frame.minY
-                            
-                            previousDetailsNode = self.nodeForDetailsItem(detailsItem)
-                            previousDetailsNode?.setExpanded(true, animated: false)
-                        }
-                    }
-                    
-                    let frame: CGRect
-                    if let previousDetailsNode = previousDetailsNode {
-                        frame = previousDetailsNode.effectiveFrameForItem(item)
-                    } else {
-                        frame = self.effectiveFrameForItem(item)
-                    }
-                    
-                    var targetY = min(containerOffset + frame.minY + lineOffset, self.scrollNode.view.contentSize.height - self.scrollNode.frame.height)
-                    if targetY < self.scrollNode.view.contentOffset.y {
-                        targetY -= self.scrollNode.view.contentInset.top
-                    } else {
-                        targetY -= self.containerLayout?.statusBarHeight ?? 20.0
-                    }
-                    self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: targetY), animated: true)
-                }
-            } else {
-                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top), animated: true)
-            }
+            self.scrollToAnchor(anchor)
             return
         }
         
+        self.loadProgress.set(0.0)
         self.loadProgress.set(0.02)
         let resolveSignal = resolveUrl(account: self.account, url: url.url)
         |> afterCompleted { [weak self] in
             self?.loadProgress.set(0.07)
         }
 
+        self.loadWebpageDisposable.set(nil)
         self.resolveUrlDisposable.set((resolveSignal |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
@@ -1140,7 +1159,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var entries: [InstantPageGalleryEntry] = []
         if media.media is TelegramMediaWebpage {
-            entries.append(InstantPageGalleryEntry(index: 0, pageId: webPage.webpageId, media: media, caption: nil, credit: nil, location: InstantPageGalleryEntryLocation(position: 0, totalCount: 1)))
+            entries.append(InstantPageGalleryEntry(index: 0, pageId: webPage.webpageId, media: media, caption: nil, credit: nil, location: nil))
+        } else if let file = media.media as? TelegramMediaFile, file.isAnimated {
+            entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: nil))
         } else {
             var medias: [InstantPageMedia] = mediasFromItems(items)
             medias = medias.filter {

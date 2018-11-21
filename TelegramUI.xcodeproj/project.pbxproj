@@ -3079,8 +3079,6 @@
 		D07827CC1E03F32C00071108 /* Instant Page */ = {
 			isa = PBXGroup;
 			children = (
-				09619B9321A4ABF500493558 /* InstantPageReferenceController.swift */,
-				09619B9421A4ABF600493558 /* InstantPageReferenceControllerNode.swift */,
 				D0215D371E040F53001A0B1E /* InstantPageNode.swift */,
 				D0215D391E041003001A0B1E /* InstantPageLayout.swift */,
 				D0215D3B1E041014001A0B1E /* InstantPageItem.swift */,
@@ -3126,6 +3124,8 @@
 				0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */,
 				0958FBBA218AD6BC00E0CBD8 /* InstantPageFeedbackNode.swift */,
 				09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */,
+				09619B9321A4ABF500493558 /* InstantPageReferenceController.swift */,
+				09619B9421A4ABF600493558 /* InstantPageReferenceControllerNode.swift */,
 			);
 			name = "Instant Page";
 			sourceTree = "<group>";

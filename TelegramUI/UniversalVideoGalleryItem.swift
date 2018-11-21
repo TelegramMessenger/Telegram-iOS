@@ -8,7 +8,7 @@ import Postbox
 
 enum UniversalVideoGalleryItemContentInfo {
     case message(Message)
-    case webPage(TelegramMediaWebpage, TelegramMediaFile)
+    case webPage(TelegramMediaWebpage, Media)
 }
 
 class UniversalVideoGalleryItem: GalleryItem {
@@ -22,10 +22,10 @@ class UniversalVideoGalleryItem: GalleryItem {
     let credit: NSAttributedString?
     let hideControls: Bool
     let playbackCompleted: () -> Void
-    let openUrl: (String) -> Void
-    let openUrlOptions: (String) -> Void
+    let performAction: (GalleryControllerInteractionTapAction) -> Void
+    let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, openUrl: @escaping (String) -> Void, openUrlOptions: @escaping (String) -> Void) {
+    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.content = content
@@ -36,12 +36,12 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.credit = credit
         self.hideControls = hideControls
         self.playbackCompleted = playbackCompleted
-        self.openUrl = openUrl
-        self.openUrlOptions = openUrlOptions
+        self.performAction = performAction
+        self.openActionOptions = openActionOptions
     }
     
     func node() -> GalleryItemNode {
-        let node = UniversalVideoGalleryItemNode(account: self.account, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
+        let node = UniversalVideoGalleryItemNode(account: self.account, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
         
         if let indexData = self.indexData {
             node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
@@ -82,7 +82,7 @@ class UniversalVideoGalleryItem: GalleryItem {
                     }
                 }
             }
-        } else if case let .webPage(webPage, file) = contentInfo {
+        } else if case let .webPage(webPage, media) = contentInfo, let file = media as? TelegramMediaFile  {
             if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
                 return (0, item)
             }
@@ -167,15 +167,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
-    init(account: Account, presentationData: PresentationData, openUrl: @escaping (String) -> Void, openUrlOptions: @escaping (String) -> Void) {
+    init(account: Account, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.account = account
         self.strings = presentationData.strings
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
         self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
         self.footerContentNode.scrubberView = self.scrubberView
-        self.footerContentNode.openUrl = openUrl
-        self.footerContentNode.openUrlOptions = openUrlOptions
+        self.footerContentNode.performAction = performAction
+        self.footerContentNode.openActionOptions = openActionOptions
         
         self.statusButtonNode = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
@@ -469,7 +469,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             switch contentInfo {
                 case let .message(message):
                     self.footerContentNode.setMessage(message)
-                case .webPage:
+                case let .webPage(webPage, media):
+                    self.footerContentNode.setWebPage(webPage, media: media)
                     break
             }
         }
