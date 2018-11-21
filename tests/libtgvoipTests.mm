@@ -9,7 +9,7 @@
 #import "MockReflector.h"
 #include "../VoIPController.h"
 #include <openssl/rand.h>
-#include "../webrtc_dsp/webrtc/common_audio/wav_file.h"
+#include "../webrtc_dsp/common_audio/wav_file.h"
 
 @interface libtgvoipTests : XCTestCase
 

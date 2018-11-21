@@ -41,7 +41,7 @@ public:
 private:
 	static size_t Callback(unsigned char* data, size_t len, void* param);
 	void RunThread();
-	void Encode(unsigned char* data, size_t len);
+	void Encode(int16_t* data, size_t len);
 	void InvokeCallback(unsigned char* data, size_t length, unsigned char* secondaryData, size_t secondaryLength);
 	MediaStreamItf* source;
 	::OpusEncoder* enc;

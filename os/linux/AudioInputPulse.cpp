@@ -157,6 +157,10 @@ void AudioInputPulse::StreamReadCallback(pa_stream *stream, size_t requestedByte
 void AudioInputPulse::StreamReadCallback(pa_stream *stream, size_t requestedBytes) {
 	size_t bytesRemaining = requestedBytes;
 	uint8_t *buffer = NULL;
+	pa_usec_t latency;
+	if(pa_stream_get_latency(stream, &latency, NULL)==0){
+		estimatedDelay=(int32_t)(latency/100);
+	}
 	while (bytesRemaining > 0) {
 		size_t bytesToFill = 102400;
 

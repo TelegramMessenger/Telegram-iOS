@@ -43,5 +43,6 @@
 #define pa_proplist_new AudioPulse::_import_pa_proplist_new
 #define pa_proplist_sets AudioPulse::_import_pa_proplist_sets
 #define pa_proplist_free AudioPulse::_import_pa_proplist_free
+#define pa_stream_get_latency AudioPulse::_import_pa_stream_get_latency
 
 #endif //LIBTGVOIP_PULSE_FUNCTIONS_H

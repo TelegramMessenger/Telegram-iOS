@@ -103,5 +103,5 @@ void AudioOutputAndroid::HandleCallback(JNIEnv* env, jbyteArray buffer){
 
 
 bool AudioOutputAndroid::IsPlaying(){
-	return false;
+	return running;
 }

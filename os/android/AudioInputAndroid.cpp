@@ -7,6 +7,7 @@
 #include "AudioInputAndroid.h"
 #include <stdio.h>
 #include "../../logging.h"
+#include "JNIUtilities.h"
 
 extern JavaVM* sharedJVM;
 
@@ -17,84 +18,46 @@ jmethodID AudioInputAndroid::initMethod=NULL;
 jmethodID AudioInputAndroid::releaseMethod=NULL;
 jmethodID AudioInputAndroid::startMethod=NULL;
 jmethodID AudioInputAndroid::stopMethod=NULL;
+jmethodID AudioInputAndroid::getEnabledEffectsMaskMethod=NULL;
 jclass AudioInputAndroid::jniClass=NULL;
 
 AudioInputAndroid::AudioInputAndroid(){
-	JNIEnv* env=NULL;
-	bool didAttach=false;
-	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
-	if(!env){
-		sharedJVM->AttachCurrentThread(&env, NULL);
-		didAttach=true;
-	}
+	jni::DoWithJNI([this](JNIEnv* env){
+		jmethodID ctor=env->GetMethodID(jniClass, "<init>", "(J)V");
+		jobject obj=env->NewObject(jniClass, ctor, (jlong)(intptr_t)this);
+		javaObject=env->NewGlobalRef(obj);
 
-	jmethodID ctor=env->GetMethodID(jniClass, "<init>", "(J)V");
-	jobject obj=env->NewObject(jniClass, ctor, (jlong)(intptr_t)this);
-	javaObject=env->NewGlobalRef(obj);
-
-	env->CallVoidMethod(javaObject, initMethod, 48000, 16, 1, 960*2);
-
-	if(didAttach){
-		sharedJVM->DetachCurrentThread();
-	}
+		env->CallVoidMethod(javaObject, initMethod, 48000, 16, 1, 960*2);
+		enabledEffects=(unsigned int)env->CallIntMethod(javaObject, getEnabledEffectsMaskMethod);
+	});
 	running=false;
 }
 
 AudioInputAndroid::~AudioInputAndroid(){
 	{
 		MutexGuard guard(mutex);
-		JNIEnv *env=NULL;
-		bool didAttach=false;
-		sharedJVM->GetEnv((void **) &env, JNI_VERSION_1_6);
-		if(!env){
-			sharedJVM->AttachCurrentThread(&env, NULL);
-			didAttach=true;
-		}
-
-		env->CallVoidMethod(javaObject, releaseMethod);
-		env->DeleteGlobalRef(javaObject);
-		javaObject=NULL;
-
-		if(didAttach){
-			sharedJVM->DetachCurrentThread();
-		}
+		jni::DoWithJNI([this](JNIEnv* env){
+			env->CallVoidMethod(javaObject, releaseMethod);
+			env->DeleteGlobalRef(javaObject);
+			javaObject=NULL;
+		});
 	}
 }
 
 void AudioInputAndroid::Start(){
 	MutexGuard guard(mutex);
-	JNIEnv* env=NULL;
-	bool didAttach=false;
-	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
-	if(!env){
-		sharedJVM->AttachCurrentThread(&env, NULL);
-		didAttach=true;
-	}
-
-	failed=!env->CallBooleanMethod(javaObject, startMethod);
-
-	if(didAttach){
-		sharedJVM->DetachCurrentThread();
-	}
+	jni::DoWithJNI([this](JNIEnv* env){
+		failed=!env->CallBooleanMethod(javaObject, startMethod);
+	});
 	running=true;
 }
 
 void AudioInputAndroid::Stop(){
 	MutexGuard guard(mutex);
 	running=false;
-	JNIEnv* env=NULL;
-	bool didAttach=false;
-	sharedJVM->GetEnv((void**) &env, JNI_VERSION_1_6);
-	if(!env){
-		sharedJVM->AttachCurrentThread(&env, NULL);
-		didAttach=true;
-	}
-
-	env->CallVoidMethod(javaObject, stopMethod);
-
-	if(didAttach){
-		sharedJVM->DetachCurrentThread();
-	}
+	jni::DoWithJNI([this](JNIEnv* env){
+		env->CallVoidMethod(javaObject, stopMethod);
+	});
 }
 
 void AudioInputAndroid::HandleCallback(JNIEnv* env, jobject buffer){
@@ -103,4 +66,8 @@ void AudioInputAndroid::HandleCallback(JNIEnv* env, jobject buffer){
 	unsigned char* buf=(unsigned char*) env->GetDirectBufferAddress(buffer);
 	size_t len=(size_t) env->GetDirectBufferCapacity(buffer);
 	InvokeCallback(buf, len);
+}
+
+unsigned int AudioInputAndroid::GetEnabledEffects(){
+	return enabledEffects;
 }

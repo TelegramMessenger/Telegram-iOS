@@ -30,8 +30,8 @@ tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source, bool needSecondary):que
 	complexity=10;
 	frameDuration=20;
 	levelMeter=NULL;
-	mediumCorrectionBitrate=ServerConfig::GetSharedInstance()->GetInt("audio_medium_fec_bitrate", 10000);
-	strongCorrectionBitrate=ServerConfig::GetSharedInstance()->GetInt("audio_strong_fec_bitrate", 8000);
+	mediumCorrectionBitrate=static_cast<uint32_t>(ServerConfig::GetSharedInstance()->GetInt("audio_medium_fec_bitrate", 10000));
+	strongCorrectionBitrate=static_cast<uint32_t>(ServerConfig::GetSharedInstance()->GetInt("audio_strong_fec_bitrate", 8000));
 	mediumCorrectionMultiplier=ServerConfig::GetSharedInstance()->GetDouble("audio_medium_fec_multiplier", 1.5);
 	strongCorrectionMultiplier=ServerConfig::GetSharedInstance()->GetDouble("audio_strong_fec_multiplier", 2.0);
 	secondaryEncoderEnabled=false;
@@ -80,15 +80,15 @@ void tgvoip::OpusEncoder::SetBitrate(uint32_t bitrate){
 	requestedBitrate=bitrate;
 }
 
-void tgvoip::OpusEncoder::Encode(unsigned char *data, size_t len){
+void tgvoip::OpusEncoder::Encode(int16_t* data, size_t len){
 	if(requestedBitrate!=currentBitrate){
 		opus_encoder_ctl(enc, OPUS_SET_BITRATE(requestedBitrate));
 		currentBitrate=requestedBitrate;
 		LOGV("opus_encoder: setting bitrate to %u", currentBitrate);
 	}
 	if(levelMeter)
-		levelMeter->Update(reinterpret_cast<int16_t *>(data), len/2);
-	int32_t r=opus_encode(enc, (int16_t*)data, len/2, buffer, 4096);
+		levelMeter->Update(data, len);
+	int32_t r=opus_encode(enc, data, static_cast<int>(len), buffer, 4096);
 	if(r<=0){
 		LOGE("Error encoding: %d", r);
 	}else if(r==1){
@@ -98,7 +98,7 @@ void tgvoip::OpusEncoder::Encode(unsigned char *data, size_t len){
 		int32_t secondaryLen=0;
 		unsigned char secondaryBuffer[128];
 		if(secondaryEncoderEnabled && secondaryEncoder){
-			secondaryLen=opus_encode(secondaryEncoder, (int16_t*)data, len/2, secondaryBuffer, sizeof(secondaryBuffer));
+			secondaryLen=opus_encode(secondaryEncoder, data, static_cast<int>(len), secondaryBuffer, sizeof(secondaryBuffer));
 			//LOGV("secondaryLen %d", secondaryLen);
 		}
 		InvokeCallback(buffer, (size_t)r, secondaryBuffer, (size_t)secondaryLen);
@@ -132,33 +132,30 @@ void tgvoip::OpusEncoder::SetEchoCanceller(EchoCanceller* aec){
 }
 
 void tgvoip::OpusEncoder::RunThread(){
-	unsigned char buf[960*2];
 	uint32_t bufferedCount=0;
 	uint32_t packetsPerFrame=frameDuration/20;
 	LOGV("starting encoder, packets per frame=%d", packetsPerFrame);
-	unsigned char* frame;
+	int16_t* frame;
 	if(packetsPerFrame>1)
-		frame=(unsigned char *) malloc(960*2*packetsPerFrame);
+		frame=(int16_t*) malloc(960*2*packetsPerFrame);
 	else
 		frame=NULL;
 	while(running){
-		unsigned char* packet=(unsigned char*)queue.GetBlocking();
+		int16_t* packet=(int16_t*)queue.GetBlocking();
 		if(packet){
 			if(echoCanceller)
-				echoCanceller->ProcessInput(packet, buf, 960*2);
-			else
-				memcpy(buf, packet, 960*2);
+				echoCanceller->ProcessInput(packet, 960);
 			if(packetsPerFrame==1){
-				Encode(buf, 960*2);
+				Encode(packet, 960);
 			}else{
-				memcpy(frame+(960*2*bufferedCount), buf, 960*2);
+				memcpy(frame+(960*bufferedCount), packet, 960*2);
 				bufferedCount++;
 				if(bufferedCount==packetsPerFrame){
-					Encode(frame, 960*2*packetsPerFrame);
+					Encode(frame, 960*packetsPerFrame);
 					bufferedCount=0;
 				}
 			}
-			bufferPool.Reuse(packet);
+			bufferPool.Reuse(reinterpret_cast<unsigned char *>(packet));
 		}
 	}
 	if(frame)

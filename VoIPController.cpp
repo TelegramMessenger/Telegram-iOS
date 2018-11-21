@@ -54,6 +54,7 @@ bool VoIPController::didInitWin32TimeScale = false;
 
 #ifdef __ANDROID__
 #include "os/android/JNIUtilities.h"
+#include "os/android/AudioInputAndroid.h"
 extern jclass jniUtilitiesClass;
 #endif
 
@@ -1042,6 +1043,20 @@ void VoIPController::InitializeAudio(){
 	audioIO=audio::AudioIO::Create();
 	audioInput=audioIO->GetInput();
 	audioOutput=audioIO->GetOutput();
+#ifdef __ANDROID__
+	audio::AudioInputAndroid* androidInput=dynamic_cast<audio::AudioInputAndroid*>(audioInput);
+	if(androidInput){
+		unsigned int effects=androidInput->GetEnabledEffects();
+		if(!(effects & audio::AudioInputAndroid::EFFECT_AEC)){
+			config.enableAEC=true;
+			LOGI("Forcing software AEC because built-in is not good");
+		}
+		if(!(effects & audio::AudioInputAndroid::EFFECT_NS)){
+			config.enableNS=true;
+			LOGI("Forcing software NS because built-in is not good");
+		}
+	}
+#endif
 	LOGI("AEC: %d NS: %d AGC: %d", config.enableAEC, config.enableNS, config.enableAGC);
 	echoCanceller=new EchoCanceller(config.enableAEC, config.enableNS, config.enableAGC);
 	encoder=new OpusEncoder(audioInput, true);
@@ -1056,7 +1071,7 @@ void VoIPController::InitializeAudio(){
 #endif
 
 	if(!audioOutput->IsInitialized()){
-		LOGE("Erorr initializing audio playback");
+		LOGE("Error initializing audio playback");
 		lastError=ERROR_AUDIO_IO;
 
 		SetState(STATE_FAILED);
@@ -1102,6 +1117,7 @@ void VoIPController::UpdateAudioOutputState(){
 			areAnyAudioStreamsEnabled=true;
 	}
 	if(audioOutput){
+		LOGV("New audio output state: %d", areAnyAudioStreamsEnabled);
 		if(audioOutput->IsPlaying()!=areAnyAudioStreamsEnabled){
 			if(areAnyAudioStreamsEnabled)
 				audioOutput->Start();

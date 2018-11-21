@@ -499,6 +499,7 @@ extern "C" void tgvoipRegisterNatives(JNIEnv* env){
 		AudioInputAndroid::releaseMethod=env->GetMethodID(cls, "release", "()V");
 		AudioInputAndroid::startMethod=env->GetMethodID(cls, "start", "()Z");
 		AudioInputAndroid::stopMethod=env->GetMethodID(cls, "stop", "()V");
+		AudioInputAndroid::getEnabledEffectsMaskMethod=env->GetMethodID(cls, "getEnabledEffectsMask", "()I");
 
 		cls=env->FindClass(TGVOIP_PACKAGE_PATH "/AudioTrackJNI");
 		AudioOutputAndroid::jniClass=(jclass) env->NewGlobalRef(cls);

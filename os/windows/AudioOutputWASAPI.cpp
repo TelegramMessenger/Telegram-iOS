@@ -287,12 +287,12 @@ void AudioOutputWASAPI::ActuallySetCurrentDevice(std::string deviceID){
 	CHECK_RES(res, "audioClient->GetBufferSize");
 
 	LOGV("buffer size: %u", bufSize);
-	REFERENCE_TIME latency;
+	estimatedDelay=0;
+	REFERENCE_TIME latency, devicePeriod;
 	if(SUCCEEDED(audioClient->GetStreamLatency(&latency))){
-		estimatedDelay=latency ? (int32_t)(latency/10000) : 60;
-		LOGD("playback latency: %d", estimatedDelay);
-	}else{
-		estimatedDelay=60;
+		if(SUCCEEDED(audioClient->GetDevicePeriod(&devicePeriod, NULL))){
+			estimatedDelay=(int32_t)(latency/10000+devicePeriod/10000);
+		}
 	}
 
 	res = audioClient->SetEventHandle(audioSamplesReadyEvent);
@@ -336,7 +336,7 @@ void AudioOutputWASAPI::RunThread() {
 	uint32_t bufferSize;
 	res=audioClient->GetBufferSize(&bufferSize);
 	CHECK_RES(res, "audioClient->GetBufferSize");
-	uint32_t framesWritten=0;
+	uint64_t framesWritten=0;
 
 	bool running=true;
 	//double prevCallback=VoIPController::GetCurrentTime();
@@ -354,6 +354,7 @@ void AudioOutputWASAPI::RunThread() {
 		}else if(waitResult==WAIT_OBJECT_0+2){ // audioSamplesReadyEvent
 			if(!audioClient)
 				continue;
+
 			BYTE* data;
 			uint32_t padding;
 			uint32_t framesAvailable;

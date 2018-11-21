@@ -161,6 +161,10 @@ void AudioOutputPulse::StreamWriteCallback(pa_stream *stream, size_t requestedBy
 	if(requestedBytes>sizeof(remainingData)){
 		requestedBytes=960*2; // force buffer size to 20ms. This probably wrecks the jitter buffer, but still better than crashing
 	}
+	pa_usec_t latency;
+	if(pa_stream_get_latency(stream, &latency, NULL)==0){
+		estimatedDelay=(int32_t)(latency/100);
+	}
 	while(requestedBytes>remainingDataSize){
 		if(isPlaying){
 			InvokeCallback(remainingData+remainingDataSize, 960*2);

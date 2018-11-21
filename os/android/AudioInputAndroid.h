@@ -20,16 +20,22 @@ public:
 	virtual void Start();
 	virtual void Stop();
 	void HandleCallback(JNIEnv* env, jobject buffer);
+	unsigned int GetEnabledEffects();
 	static jmethodID initMethod;
 	static jmethodID releaseMethod;
 	static jmethodID startMethod;
 	static jmethodID stopMethod;
+	static jmethodID getEnabledEffectsMaskMethod;
 	static jclass jniClass;
+
+	static constexpr unsigned int EFFECT_AEC=1;
+	static constexpr unsigned int EFFECT_NS=2;
 
 private:
 	jobject javaObject;
 	bool running;
 	Mutex mutex;
+	unsigned int enabledEffects=0;
 
 };
 }}

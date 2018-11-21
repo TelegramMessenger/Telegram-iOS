@@ -61,6 +61,7 @@ DECLARE_DL_FUNCTION(pa_operation_get_state);
 DECLARE_DL_FUNCTION(pa_proplist_new);
 DECLARE_DL_FUNCTION(pa_proplist_sets);
 DECLARE_DL_FUNCTION(pa_proplist_free);
+DECLARE_DL_FUNCTION(pa_stream_get_latency);
 
 #include "PulseFunctions.h"
 
@@ -118,6 +119,7 @@ bool AudioPulse::Load(){
 	LOAD_DL_FUNCTION(pa_proplist_new);
 	LOAD_DL_FUNCTION(pa_proplist_sets);
 	LOAD_DL_FUNCTION(pa_proplist_free);
+	LOAD_DL_FUNCTION(pa_stream_get_latency);
 
 	loaded=true;
 	return true;

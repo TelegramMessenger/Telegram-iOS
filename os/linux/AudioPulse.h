@@ -73,6 +73,8 @@ namespace tgvoip{
 			DECLARE_DL_FUNCTION(pa_proplist_sets);
 			DECLARE_DL_FUNCTION(pa_proplist_free);
 
+			DECLARE_DL_FUNCTION(pa_stream_get_latency);
+
 		private:
 			static void* lib;
 			static bool loaded;
