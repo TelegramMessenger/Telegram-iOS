@@ -108,6 +108,8 @@ final class InstantPageTableItem: InstantPageScrollableItem {
     fileprivate let cells: [InstantPageTableCellItem]
     private let borderWidth: CGFloat
     
+    let anchors: [String: CGFloat]
+    
     fileprivate init(frame: CGRect, totalWidth: CGFloat, horizontalInset: CGFloat, borderWidth: CGFloat, theme: InstantPageTheme, cells: [InstantPageTableCellItem], rtl: Bool) {
         self.frame = frame
         self.totalWidth = totalWidth
@@ -116,6 +118,20 @@ final class InstantPageTableItem: InstantPageScrollableItem {
         self.theme = theme
         self.cells = cells
         self.isRTL = rtl
+        
+        var anchors: [String: CGFloat] = [:]
+        for cell in cells {
+            if let textItem = cell.textItem {
+                for (anchor, lineIndex) in textItem.anchors {
+                    if anchors[anchor] == nil {
+                        let textItemFrame = textItem.frame.offsetBy(dx: cell.frame.minX, dy: cell.frame.minY)
+                        let offset = textItemFrame.minY + textItem.lines[lineIndex].frame.minY
+                        anchors[anchor] = offset
+                    }
+                }
+            }
+        }
+        self.anchors = anchors
     }
     
     var contentSize: CGSize {

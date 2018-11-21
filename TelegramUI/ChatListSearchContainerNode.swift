@@ -766,7 +766,34 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             }
         }
         |> distinctUntilChanged
-        var recentItemsTransition = combineLatest(hasRecentPeers, recentlySearchedPeers(postbox: account.postbox), presentationDataPromise.get(), self.statePromise.get())
+        
+        let previousRecentlySearchedPeerOrder = Atomic<[PeerId]>(value: [])
+        let fixedRecentlySearchedPeers = recentlySearchedPeers(postbox: account.postbox)
+        |> map { peers -> [RecentlySearchedPeer] in
+            var result: [RecentlySearchedPeer] = []
+            let _ = previousRecentlySearchedPeerOrder.modify { current in
+                var updated: [PeerId] = []
+                for id in current {
+                    inner: for peer in peers {
+                        if peer.peer.peerId == id {
+                            updated.append(id)
+                            result.append(peer)
+                            break inner
+                        }
+                    }
+                }
+                for peer in peers.reversed() {
+                    if !updated.contains(peer.peer.peerId) {
+                        updated.insert(peer.peer.peerId, at: 0)
+                        result.insert(peer, at: 0)
+                    }
+                }
+                return updated
+            }
+            return result
+        }
+        
+        var recentItemsTransition = combineLatest(hasRecentPeers, fixedRecentlySearchedPeers, presentationDataPromise.get(), self.statePromise.get())
             |> mapToSignal { [weak self] hasRecentPeers, peers, presentationData, state -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
                 var entries: [ChatListRecentEntry] = []
                 if !filter.contains(.onlyGroups) {

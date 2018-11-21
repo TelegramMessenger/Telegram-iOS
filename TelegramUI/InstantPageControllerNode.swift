@@ -368,7 +368,14 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        if self.currentExpandedDetails == nil {
+        if var currentExpandedDetails = self.currentExpandedDetails {
+            for (index, expanded) in expandedDetails {
+                if currentExpandedDetails[index] == nil {
+                    currentExpandedDetails[index] = expanded
+                }
+            }
+            self.currentExpandedDetails = currentExpandedDetails
+        } else {
             self.currentExpandedDetails = expandedDetails
         }
         
@@ -540,8 +547,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
-        
-        if let currentLayout = self.currentLayout, collapseOffset > 0.0 {
+    
+        if let currentLayout = self.currentLayout {
             let effectiveContentHeight = currentLayout.contentSize.height - collapseOffset
             if effectiveContentHeight != self.scrollNode.view.contentSize.height {
                 transition.animateView {
@@ -928,10 +935,15 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private func findAnchorItem(_ anchor: String, items: [InstantPageItem]) -> (InstantPageItem, CGFloat, [InstantPageDetailsItem])? {
         for item in items {
             if let item = item as? InstantPageAnchorItem, item.anchor == anchor {
-                return (item, 0.0, [])
+                return (item, -10.0, [])
             } else if let item = item as? InstantPageTextItem {
                 if let lineIndex = item.anchors[anchor] {
                     return (item, item.lines[lineIndex].frame.minY - 10.0, [])
+                }
+            }
+            else if let item = item as? InstantPageTableItem {
+                if let offset = item.anchors[anchor] {
+                    return (item, offset - 10.0, [])
                 }
             }
             else if let item = item as? InstantPageDetailsItem {
@@ -965,14 +977,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let webPage = self.webPage, case let .Loaded(content) = webPage.content, let page = content.instantPage, page.url == baseUrl, let anchor = anchor {
             if !anchor.isEmpty {
                 if let (item, lineOffset, detailsItems) = findAnchorItem(String(anchor), items: items) {
-                    var previousDetailsItem: InstantPageDetailsItem?
                     var previousDetailsNode: InstantPageDetailsNode?
                     var containerOffset: CGFloat = 0.0
                     for detailsItem in detailsItems {
-                        if let previousNode = previousDetailsNode, let previousDetailsItem = previousDetailsItem {
+                        if let previousNode = previousDetailsNode {
                             previousNode.contentNode.updateDetailsExpanded(detailsItem.index, true, animated: false)
-                            let frame = previousNode.contentNode.effectiveFrameForItem(detailsItem)
-                            containerOffset += frame.minY + previousDetailsItem.titleHeight
+                            let frame = previousNode.effectiveFrameForItem(detailsItem)
+                            containerOffset += frame.minY
                             
                             previousDetailsNode = previousNode.contentNode.nodeForDetailsItem(detailsItem)
                             previousDetailsNode?.setExpanded(true, animated: false)
@@ -983,18 +994,23 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             
                             previousDetailsNode = self.nodeForDetailsItem(detailsItem)
                             previousDetailsNode?.setExpanded(true, animated: false)
-                            previousDetailsItem = detailsItem
                         }
                     }
                     
                     let frame: CGRect
-                    if let previousDetailsNode = previousDetailsNode, let previousDetailsItem = previousDetailsItem {
-                        containerOffset += previousDetailsItem.titleHeight
-                        frame = previousDetailsNode.contentNode.effectiveFrameForItem(item)
+                    if let previousDetailsNode = previousDetailsNode {
+                        frame = previousDetailsNode.effectiveFrameForItem(item)
                     } else {
                         frame = self.effectiveFrameForItem(item)
                     }
-                    self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: containerOffset + frame.minY + lineOffset - self.scrollNode.view.contentInset.top), animated: true)
+                    
+                    var targetY = min(containerOffset + frame.minY + lineOffset, self.scrollNode.view.contentSize.height - self.scrollNode.frame.height)
+                    if targetY < self.scrollNode.view.contentOffset.y {
+                        targetY -= self.scrollNode.view.contentInset.top
+                    } else {
+                        targetY -= self.containerLayout?.statusBarHeight ?? 20.0
+                    }
+                    self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: targetY), animated: true)
                 }
             } else {
                 self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top), animated: true)
