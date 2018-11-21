@@ -33,19 +33,21 @@ public func searchGroupMembers(postbox: Postbox, network: Network, accountPeerId
         return searchLocalGroupMembers(postbox: postbox, peerId: peerId, query: query)
         |> mapToSignal { local -> Signal<[Peer], NoError> in
             return .single(local)
-                |> then(channelMembers(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, category: .recent(.search(query)))
-            |> map { participants -> [Peer] in
-                var result: [Peer] = local
-                let existingIds = Set(local.map { $0.id })
-                let filtered: [Peer]
-                if let participants = participants {
-                    filtered = participants.map({ $0.peer }).filter({ !existingIds.contains($0.id) })
-                } else {
-                    filtered = []
+            |> then(
+                channelMembers(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, category: .recent(.search(query)))
+                |> map { participants -> [Peer] in
+                    var result: [Peer] = local
+                    let existingIds = Set(local.map { $0.id })
+                    let filtered: [Peer]
+                    if let participants = participants {
+                        filtered = participants.map({ $0.peer }).filter({ !existingIds.contains($0.id) })
+                    } else {
+                        filtered = []
+                    }
+                    result.append(contentsOf: filtered)
+                    return result
                 }
-                result.append(contentsOf: filtered)
-                return result
-            })
+            )
         }
     } else {
         return searchLocalGroupMembers(postbox: postbox, peerId: peerId, query: query)
