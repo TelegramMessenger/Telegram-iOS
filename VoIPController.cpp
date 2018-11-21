@@ -3357,33 +3357,39 @@ void VoIPController::UpdateSignalBars(){
 }
 
 void VoIPController::UpdateQueuedPackets(){
-	MutexGuard m(queuedPacketsMutex);
-	for(std::vector<QueuedPacket>::iterator qp=queuedPackets.begin();qp!=queuedPackets.end();){
-		if(qp->timeout>0 && qp->firstSentTime>0 && GetCurrentTime()-qp->firstSentTime>=qp->timeout){
-			LOGD("Removing queued packet because of timeout");
-			qp=queuedPackets.erase(qp);
-			continue;
+	vector<PendingOutgoingPacket> packetsToSend;
+	{
+		MutexGuard m(queuedPacketsMutex);
+		for(std::vector<QueuedPacket>::iterator qp=queuedPackets.begin(); qp!=queuedPackets.end();){
+			if(qp->timeout>0 && qp->firstSentTime>0 && GetCurrentTime()-qp->firstSentTime>=qp->timeout){
+				LOGD("Removing queued packet because of timeout");
+				qp=queuedPackets.erase(qp);
+				continue;
+			}
+			if(GetCurrentTime()-qp->lastSentTime>=qp->retryInterval){
+				messageThread.Post(std::bind(&VoIPController::UpdateQueuedPackets, this), qp->retryInterval);
+				uint32_t seq=GenerateOutSeq();
+				qp->seqs.Add(seq);
+				qp->lastSentTime=GetCurrentTime();
+				//LOGD("Sending queued packet, seq=%u, type=%u, len=%u", seq, qp.type, qp.data.Length());
+				Buffer buf(qp->data.Length());
+				if(qp->firstSentTime==0)
+					qp->firstSentTime=qp->lastSentTime;
+				if(qp->data.Length())
+					buf.CopyFrom(qp->data, qp->data.Length());
+				packetsToSend.push_back(PendingOutgoingPacket{
+						/*.seq=*/seq,
+						/*.type=*/qp->type,
+						/*.len=*/qp->data.Length(),
+						/*.data=*/move(buf),
+						/*.endpoint=*/0
+				});
+			}
+			++qp;
 		}
-		if(GetCurrentTime()-qp->lastSentTime>=qp->retryInterval){
-			messageThread.Post(std::bind(&VoIPController::UpdateQueuedPackets, this), qp->retryInterval);
-			uint32_t seq=GenerateOutSeq();
-			qp->seqs.Add(seq);
-			qp->lastSentTime=GetCurrentTime();
-			//LOGD("Sending queued packet, seq=%u, type=%u, len=%u", seq, qp.type, qp.data.Length());
-			Buffer buf(qp->data.Length());
-			if(qp->firstSentTime==0)
-				qp->firstSentTime=qp->lastSentTime;
-			if(qp->data.Length())
-				buf.CopyFrom(qp->data, qp->data.Length());
-			SendOrEnqueuePacket(PendingOutgoingPacket{
-					/*.seq=*/seq,
-					/*.type=*/qp->type,
-					/*.len=*/qp->data.Length(),
-					/*.data=*/move(buf),
-					/*.endpoint=*/0
-			});
-		}
-		++qp;
+	}
+	for(PendingOutgoingPacket& pkt:packetsToSend){
+		SendOrEnqueuePacket(move(pkt));
 	}
 }
 
