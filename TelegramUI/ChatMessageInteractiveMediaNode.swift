@@ -22,6 +22,7 @@ enum InteractiveMediaNodeActivateContent {
 
 final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private let imageNode: TransformImageNode
+    private var currentImageArguments: TransformImageArguments?
     private var videoNode: UniversalVideoNode?
     private var statusNode: RadialStatusNode?
     private var badgeNode: ChatMessageInteractiveMediaBadge?
@@ -396,7 +397,19 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             strongSelf.sizeCalculation = sizeCalculation
                             strongSelf.automaticPlayback = automaticPlayback
                             strongSelf.automaticDownload = automaticDownload
-                            transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
+                            
+                            if let previousArguments = strongSelf.currentImageArguments {
+                                if previousArguments.imageSize == arguments.imageSize {
+                                    strongSelf.imageNode.frame = imageFrame
+                                } else {
+                                    transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
+                                }
+                            } else {
+                                strongSelf.imageNode.frame = imageFrame
+                            }
+                            strongSelf.currentImageArguments = arguments
+                            imageApply()
+                            
                             strongSelf.statusNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
                             
                             if let replaceVideoNode = replaceVideoNode {
@@ -468,8 +481,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             } else if previousAutomaticDownload != automaticDownload, automaticDownload {
                                 strongSelf.fetchControls.with({ $0 })?.fetch(false)
                             }
-                            
-                            imageApply()
                             
                             strongSelf.updateFetchStatus()
                         }
