@@ -22,7 +22,7 @@ struct InstantPageGalleryEntry: Equatable {
     let media: InstantPageMedia
     let caption: RichText?
     let credit: RichText?
-    let location: InstantPageGalleryEntryLocation
+    let location: InstantPageGalleryEntryLocation?
     
     static func ==(lhs: InstantPageGalleryEntry, rhs: InstantPageGalleryEntry) -> Bool {
         return lhs.index == rhs.index && lhs.pageId == rhs.pageId && lhs.media == rhs.media && lhs.caption == rhs.caption && lhs.credit == rhs.credit && lhs.location == rhs.location
@@ -73,10 +73,14 @@ struct InstantPageGalleryEntry: Equatable {
         if let image = self.media.media as? TelegramMediaImage {
             return InstantImageGalleryItem(account: account, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
         } else if let file = self.media.media as? TelegramMediaFile, file.isVideo {
-            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: GalleryItemIndexData(position: self.location.position, totalCount: self.location.totalCount), contentInfo: .webPage(webPage, file), caption: caption, credit: credit, openUrl: { _ in }, openUrlOptions: { _ in })
+            var indexData: GalleryItemIndexData?
+            if let location = self.location {
+                indexData = GalleryItemIndexData(position: location.position, totalCount: location.totalCount)
+            }
+            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file), caption: caption, credit: credit, performAction: { _ in }, openActionOptions: { _ in })
         } else if let embedWebpage = self.media.media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = embedWebpage.content {
             if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent) {
-                return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: nil, caption: NSAttributedString(string: ""), openUrl: { _ in }, openUrlOptions: { _ in })
+                return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage), caption: NSAttributedString(string: ""), performAction: { _ in }, openActionOptions: { _ in })
             } else {
                 preconditionFailure()
             }

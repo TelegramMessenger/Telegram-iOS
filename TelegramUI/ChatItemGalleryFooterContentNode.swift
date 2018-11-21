@@ -126,6 +126,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     private var currentMessage: Message?
     
+    private var currentWebPageAndMedia: (TelegramMediaWebpage, Media)?
+    
     private let messageContextDisposable = MetaDisposable()
     
     var playbackControl: (() -> Void)?
@@ -134,8 +136,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     var fetchControl: (() -> Void)?
     
-    var openUrl: ((String) -> Void)?
-    var openUrlOptions: ((String) -> Void)?
+    var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
+    var openActionOptions: ((GalleryControllerInteractionTapAction) -> Void)?
     
     var content: ChatItemGalleryFooterContent = .info {
         didSet {
@@ -245,37 +247,27 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         super.init()
         
         self.textNode.highlightAttributeAction = { attributes in
-            if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
-                return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
-            } else {
-                return nil
+            var highlightedAttributes = [TelegramTextAttributes.URL,
+                                         TelegramTextAttributes.PeerMention,
+                                         TelegramTextAttributes.PeerTextMention,
+                                         TelegramTextAttributes.BotCommand,
+                                         TelegramTextAttributes.Hashtag]
+            
+            for attribute in highlightedAttributes {
+                if let _ = attributes[NSAttributedStringKey(rawValue: attribute)] {
+                    return NSAttributedStringKey(rawValue: attribute)
+                }
             }
+            return nil
         }
         self.textNode.tapAttributeAction = { [weak self] attributes in
-//            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
-//                var concealed = true
-//                if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-//                    concealed = !doesUrlMatchText(url: url, text: attributeText)
-//                }
-//                return .url(url: url, concealed: concealed)
-//            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-//                return .peerMention(peerMention.peerId, peerMention.mention)
-//            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-//                return .textMention(peerName)
-//            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-//                return .botCommand(botCommand)
-//            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-//                return .hashtag(hashtag.peerName, hashtag.hashtag)
-//            } else {
-//                return .none
-//            }
-            if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
-                strongSelf.openUrl?(url)
+            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes) {
+                strongSelf.performAction?(action)
             }
         }
         self.textNode.longTapAttributeAction = { [weak self] attributes in
-            if let strongSelf = self, let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
-                strongSelf.openUrlOptions?(url)
+            if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes) {
+                strongSelf.openActionOptions?(action)
             }
         }
         
@@ -315,6 +307,26 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     deinit {
         self.messageContextDisposable.dispose()
+    }
+    
+    private func actionForAttributes(_ attributes: [NSAttributedStringKey: Any]) -> GalleryControllerInteractionTapAction? {
+        if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+//            var concealed = true
+//            if let attributeText = self.labelNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+//                concealed = !doesUrlMatchText(url: url, text: attributeText)
+//            }
+            return .url(url: url, concealed: false)
+        } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            return .peerMention(peerMention.peerId, peerMention.mention)
+        } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            return .textMention(peerName)
+        } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+            return .botCommand(botCommand)
+        } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+            return .hashtag(hashtag.peerName, hashtag.hashtag)
+        } else {
+            return nil
+        }
     }
     
     func setup(origin: GalleryItemOriginData?, caption: NSAttributedString) {
@@ -427,6 +439,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             
             self.requestLayout?(.immediate)
         }
+    }
+    
+    func setWebPage(_ webPage: TelegramMediaWebpage, media: Media) {
+        self.currentWebPageAndMedia = (webPage, media)
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -780,6 +796,57 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     }
                 }
             })
+        } else if let (webPage, media) = self.currentWebPageAndMedia {
+            let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+            
+            var preferredAction = ShareControllerPreferredAction.default
+            var subject = ShareControllerSubject.media(.webPage(webPage: WebpageReference(webPage), media: media))
+            
+            if let file = media as? TelegramMediaFile {
+                if file.isAnimated {
+                    preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
+                        if let strongSelf = self {
+                            let _ = addSavedGif(postbox: strongSelf.account.postbox, fileReference: .webPage(webPage: WebpageReference(webPage), media: file)).start()
+                        }
+                    }))
+                } else if file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/") {
+                    preferredAction = .saveToCameraRoll
+                }
+            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                if content.embedType == "iframe" || content.embedType == "video" {
+                    subject = .url(content.url)
+                    
+                    let item = OpenInItem.url(url: content.url)
+                    if availableOpenInOptions(applicationContext: self.account.telegramApplicationContext, item: item).count > 1 {
+                        preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Conversation_FileOpenIn, action: { [weak self] in
+                            if let strongSelf = self {
+                                let openInController = OpenInActionSheetController(postbox: strongSelf.account.postbox, applicationContext: strongSelf.account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: item, additionalAction: nil, openUrl: { [weak self] url in
+                                    if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
+                                        openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: presentationData, applicationContext: applicationContext, navigationController: nil, dismissInput: {})
+                                    }
+                                })
+                                strongSelf.controllerInteraction?.presentController(openInController, nil)
+                            }
+                        }))
+                    } else {
+                        preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Web_OpenExternal, action: { [weak self] in
+                            if let strongSelf = self {
+                                openExternalUrl(account: strongSelf.account, url: content.url, presentationData: presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: nil, dismissInput: {})
+                            }
+                        }))
+                    }
+                } else {
+                    if let file = content.file {
+                        subject = .media(.webPage(webPage: WebpageReference(webpage), media: file))
+                        preferredAction = .saveToCameraRoll
+                    } else if let image = content.image {
+                        subject = .media(.webPage(webPage: WebpageReference(webpage), media: image))
+                        preferredAction = .saveToCameraRoll
+                    }
+                }
+            }
+            let shareController = ShareController(account: self.account, subject: subject, preferredAction: preferredAction)
+            self.controllerInteraction?.presentController(shareController, nil)
         }
     }
     
@@ -797,21 +864,5 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc private func statusPressed() {
         self.fetchControl?()
-//        guard let item = self.item, let fetchStatus = self.fetchStatus else {
-//            return
-//        }
-//
-//        switch fetchStatus {
-//        case .Fetching:
-//            if let cancel = self.fetchControls.with({ return $0?.cancel }) {
-//                cancel()
-//            }
-//        case .Remote:
-//            if let fetch = self.fetchControls.with({ return $0?.fetch }) {
-//                fetch()
-//            }
-//        case .Local:
-//            break
-//        }
     }
 }

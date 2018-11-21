@@ -131,12 +131,12 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
     return message.text
 }
 
-func galleryItemForEntry(account: Account, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, openUrl: @escaping (String) -> Void = { _ in }, openUrlOptions: @escaping (String) -> Void = { _ in }) -> GalleryItem? {
+func galleryItemForEntry(account: Account, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _):
             if let (media, mediaImage) = mediaForMessage(message: message) {
                 if let _ = media as? TelegramMediaImage {
-                    return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, openUrl: openUrl, openUrlOptions: openUrlOptions)
+                    return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
                 } else if let file = media as? TelegramMediaFile {
                     if file.isVideo {
                         let content: UniversalVideoContent
@@ -158,11 +158,11 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                             }
                         }
                         let caption = galleryCaptionStringWithAppliedEntities(galleryMessageCaptionText(message), entities: entities)
-                        return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, playbackCompleted: playbackCompleted, openUrl: openUrl, openUrlOptions: openUrlOptions)
+                        return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
                             if file.size == nil || file.size! < 5 * 1024 * 1024 {
-                                return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, openUrl: openUrl, openUrlOptions: openUrlOptions)
+                                return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
                             } else {
                                 return ChatDocumentGalleryItem(account: account, presentationData: presentationData, message: message, location: location)
                             }
@@ -175,13 +175,13 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                 } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = webpage.content {
                     switch websiteType(of: webpageContent) {
                         case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
-                            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: NativeVideoContentId.message(message.id, message.stableId, webpage.webpageId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), openUrl: openUrl, openUrlOptions: openUrlOptions)
+                            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: NativeVideoContentId.message(message.id, message.stableId, webpage.webpageId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
                             //return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: SystemVideoContent(url: webpageContent.embedUrl!, image: webpageContent.image!, dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")
                         /*case .twitter where webpageContent.embedUrl != nil && webpageContent.image != nil:
                             return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: SystemVideoContent(url: webpageContent.embedUrl!, image: webpageContent.image!, dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")*/
                         default:
                             if let content = WebEmbedVideoContent(webPage: webpage, webpageContent: webpageContent) {
-                                return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), openUrl: openUrl, openUrlOptions: openUrlOptions)
+                                return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
                             }
                     }
                 }
@@ -231,6 +231,34 @@ enum GalleryControllerItemSource {
     case standaloneMessage(Message)
 }
 
+enum GalleryControllerInteractionTapAction {
+    case url(url: String, concealed: Bool)
+    case textMention(String)
+    case peerMention(PeerId, String)
+    case botCommand(String)
+    case hashtag(String?, String)
+}
+
+final class GalleryControllerActionInteraction {
+    let openUrl: (String, Bool) -> Void
+    let openUrlIn: (String) -> Void
+    let openPeerMention: (String) -> Void
+    let openPeer: (PeerId) -> Void
+    let openHashtag: (String?, String) -> Void
+    let openBotCommand: (String) -> Void
+    let addContact: (String) -> Void
+
+    init(openUrl: @escaping (String, Bool) -> Void, openUrlIn: @escaping (String) -> Void, openPeerMention: @escaping (String) -> Void, openPeer: @escaping (PeerId) -> Void, openHashtag: @escaping (String?, String) -> Void, openBotCommand: @escaping (String) -> Void, addContact: @escaping (String) -> Void) {
+        self.openUrl = openUrl
+        self.openUrlIn = openUrlIn
+        self.openPeerMention = openPeerMention
+        self.openPeer = openPeer
+        self.openHashtag = openHashtag
+        self.openBotCommand = openBotCommand
+        self.addContact = addContact
+    }
+}
+
 class GalleryController: ViewController {
     static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
@@ -273,27 +301,29 @@ class GalleryController: ViewController {
     
     private var hiddenMediaManagerIndex: Int?
     
-    private var openUrl: (String) -> Void
-    private var openUrlOptions: (String) -> Void
+    private let actionInteraction: GalleryControllerActionInteraction?
+    private var performAction: (GalleryControllerInteractionTapAction) -> Void
+    private var openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    private let resolveUrlDisposable = MetaDisposable()
+    private let resolveDisposable = MetaDisposable()
     
-    init(account: Account, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    init(account: Account, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.account = account
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
+        self.actionInteraction = actionInteraction
         self.streamVideos = streamSingleVideo
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        var openLinkImpl: ((String) -> Void)?
-        self.openUrl = { url in
-            openLinkImpl?(url)
+        var performActionImpl: ((GalleryControllerInteractionTapAction) -> Void)?
+        self.performAction = { action in
+            performActionImpl?(action)
         }
         
-        var openLinkOptionsImpl: ((String) -> Void)?
-        self.openUrlOptions = { url in
-            openLinkOptionsImpl?(url)
+        var openActionOptionsImpl: ((GalleryControllerInteractionTapAction) -> Void)?
+        self.openActionOptions = { action in
+            openActionOptionsImpl?(action)
         }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
@@ -385,7 +415,7 @@ class GalleryController: ViewController {
                             var items: [GalleryItem] = []
                             var centralItemIndex: Int?
                             for entry in strongSelf.entries {
-                                if let item = galleryItemForEntry(account: account, presentationData: strongSelf.presentationData, entry: entry, streamVideos: streamSingleVideo, openUrl: strongSelf.openUrl, openUrlOptions: strongSelf.openUrlOptions) {
+                                if let item = galleryItemForEntry(account: account, presentationData: strongSelf.presentationData, entry: entry, streamVideos: streamSingleVideo, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions) {
                                     if case let .MessageEntry(message, _, _, _) = entry, message.stableId == strongSelf.centralEntryStableId {
                                         centralItemIndex = items.count
                                     }
@@ -481,65 +511,171 @@ class GalleryController: ViewController {
             })
         }
         
-        openLinkImpl = { [weak self] url in
+        performActionImpl = { [weak self] action in
             if let strongSelf = self {
-                strongSelf.resolveUrlDisposable.set((resolveUrl(account: strongSelf.account, url: url) |> deliverOnMainQueue).start(next: { [weak self] result in
-                    if let strongSelf = self {
-                        let navigationController = strongSelf.baseNavigationController //strongSelf.navigationController as? NavigationController
-                        openResolvedUrl(result, account: strongSelf.account, context: .chat, navigationController: navigationController, openPeer: { peerId, navigation in
-                            self?.dismiss(forceAway: true)
-                            switch navigation {
-                                case let .chat(_, messageId):
-                                    if let navigationController = navigationController {
-                                        navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId)
-                                    }
-                                case .info:
-                                    let _ = (strongSelf.account.postbox.loadedPeerWithId(peerId)
-                                    |> deliverOnMainQueue).start(next: { peer in
-                                        if let strongSelf = self, let navigationController = navigationController, let controller = peerInfoController(account: strongSelf.account, peer: peer) {
-                                            navigationController.pushViewController(controller)
-                                        }
-                                    })
-                                default:
-                                    break
-                            }
-                        }, present: { c, _ in
-                            self?.present(c, in: .window(.root))
-                        }, dismissInput: {
-                            self?.view.endEditing(true)
-                        })
-                    }
-                }))
+                strongSelf.dismiss(forceAway: false)
+                switch action {
+                    case let .url(url, concealed):
+                        strongSelf.actionInteraction?.openUrl(url, concealed)
+                    case let .textMention(mention):
+                        strongSelf.actionInteraction?.openPeerMention(mention)
+                    case let .peerMention(peerId, _):
+                        strongSelf.actionInteraction?.openPeer(peerId)
+                    case let .botCommand(command):
+                        strongSelf.actionInteraction?.openBotCommand(command)
+                    case let .hashtag(peerName, hashtag):
+                        strongSelf.actionInteraction?.openHashtag(peerName, hashtag)
+                }
             }
         }
         
-        openLinkOptionsImpl = { [weak self] url in
+        openActionOptionsImpl = { [weak self] action in
             if let strongSelf = self {
-                let canOpenIn = availableOpenInOptions(applicationContext: account.telegramApplicationContext, item: .url(url: url)).count > 1
-                let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
-                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: url),
-                    ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
+                switch action {
+                case let .url(url, _):
+                    var cleanUrl = url
+                    var canAddToReadingList = true
+                    let canOpenIn = availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).count > 1
+                    let mailtoString = "mailto:"
+                    let telString = "tel:"
+                    var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                    var phoneNumber: String?
+                    if cleanUrl.hasPrefix(mailtoString) {
+                        canAddToReadingList = false
+                        cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
+                    } else if cleanUrl.hasPrefix(telString) {
+                        canAddToReadingList = false
+                        phoneNumber = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
+                        cleanUrl = phoneNumber!
+                        openText = strongSelf.presentationData.strings.UserInfo_PhoneCall
+                    } else if canOpenIn {
+                        openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
+                    }
+                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                    
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetTextItem(title: cleanUrl))
+                    items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        openLinkImpl?(url)
-                    }),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        UIPasteboard.general.string = url
-                    }),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        if let link = URL(string: url) {
-                            let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                        if let strongSelf = self {
+                            if canOpenIn {
+                                strongSelf.actionInteraction?.openUrlIn(url)
+                            } else {
+                                strongSelf.dismiss(forceAway: false)
+                                strongSelf.actionInteraction?.openUrl(url, false)
+                            }
                         }
-                    })
-                    ]), ActionSheetItemGroup(items: [
+                    }))
+                    if let phoneNumber = phoneNumber {
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddContact, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.dismiss(forceAway: false)
+                                strongSelf.actionInteraction?.addContact(phoneNumber)
+                            }
+                        }))
+                    }
+                    items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        UIPasteboard.general.string = cleanUrl
+                    }))
+                    if canAddToReadingList {
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let link = URL(string: url) {
+                                let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                            }
+                        }))
+                    }
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])])
-                strongSelf.present(actionSheet, in: .window(.root))
+                    strongSelf.present(actionSheet, in: .window(.root))
+                case let .peerMention(peerId, mention):
+                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                    var items: [ActionSheetItem] = []
+                    if !mention.isEmpty {
+                        items.append(ActionSheetTextItem(title: mention))
+                    }
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        if let strongSelf = self {
+                            strongSelf.dismiss(forceAway: false)
+                            strongSelf.actionInteraction?.openPeer(peerId)
+                        }
+                    }))
+                    if !mention.isEmpty {
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            UIPasteboard.general.string = mention
+                        }))
+                    }
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                        ])])
+                    strongSelf.present(actionSheet, in: .window(.root))
+                case let .textMention(mention):
+                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: mention),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.dismiss(forceAway: false)
+                                strongSelf.actionInteraction?.openPeerMention(mention)
+                            }
+                        }),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            UIPasteboard.general.string = mention
+                        })
+                        ]), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                            ])])
+                    strongSelf.present(actionSheet, in: .window(.root))
+                case let .botCommand(command):
+                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetTextItem(title: command))
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        UIPasteboard.general.string = command
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                        ])])
+                    strongSelf.present(actionSheet, in: .window(.root))
+                case let .hashtag(peerName, hashtag):
+                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: hashtag),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.dismiss(forceAway: false)
+                                strongSelf.actionInteraction?.openHashtag(peerName, hashtag)
+                            }
+                        }),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            UIPasteboard.general.string = hashtag
+                        })
+                        ]), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])
+                    ])
+                    strongSelf.present(actionSheet, in: .window(.root))
+                }
             }
         }
     }
@@ -550,7 +686,7 @@ class GalleryController: ViewController {
     
     deinit {
         self.disposable.dispose()
-        self.resolveUrlDisposable.dispose()
+        self.resolveDisposable.dispose()
         self.centralItemAttributesDisposable.dispose()
         if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex, let mediaManager = self.account.telegramApplicationContext.mediaManager {
             mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
@@ -658,7 +794,7 @@ class GalleryController: ViewController {
         var items: [GalleryItem] = []
         var centralItemIndex: Int?
         for entry in self.entries {
-            if let item = galleryItemForEntry(account: account, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions) {
+            if let item = galleryItemForEntry(account: account, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, performAction: self.performAction, openActionOptions: self.openActionOptions) {
                 if case let .MessageEntry(message, _, _, _) = entry, message.stableId == self.centralEntryStableId {
                     centralItemIndex = items.count
                 }

@@ -73,20 +73,20 @@ class ChatImageGalleryItem: GalleryItem {
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
-    let openUrl: (String) -> Void
-    let openUrlOptions: (String) -> Void
+    let performAction: (GalleryControllerInteractionTapAction) -> Void
+    let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(account: Account, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, openUrl: @escaping (String) -> Void, openUrlOptions: @escaping (String) -> Void) {
+    init(account: Account, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.message = message
         self.location = location
-        self.openUrl = openUrl
-        self.openUrlOptions = openUrlOptions
+        self.performAction = performAction
+        self.openActionOptions = openActionOptions
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatImageGalleryItemNode(account: self.account, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
+        let node = ChatImageGalleryItemNode(account: self.account, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
         
         for media in self.message.media {
             if let image = media as? TelegramMediaImage {
@@ -160,13 +160,13 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(account: Account, presentationData: PresentationData, openUrl: @escaping (String) -> Void, openUrlOptions: @escaping (String) -> Void) {
+    init(account: Account, presentationData: PresentationData,performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.account = account
         
         self.imageNode = TransformImageNode()
         self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
-        self.footerContentNode.openUrl = openUrl
-        self.footerContentNode.openUrlOptions = openUrlOptions
+        self.footerContentNode.performAction = performAction
+        self.footerContentNode.openActionOptions = openActionOptions
         
         self.statusNodeContainer = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
