@@ -967,8 +967,6 @@ void LOTTrimItem::update()
     // when both path and trim are not dirty
     if (!(mDirty || pathDirty())) return;
 
-    if (vCompare(std::fabs(mCache.mStart - mCache.mEnd) , 1)) return;
-
     if (vCompare(mCache.mStart, mCache.mEnd)) {
         for (auto &i : mPathItems) {
             i->updatePath(VPath());
