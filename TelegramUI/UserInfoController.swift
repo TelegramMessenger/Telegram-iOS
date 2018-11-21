@@ -3,6 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import LegacyComponents
 
 private final class UserInfoControllerArguments {
     let account: Account
@@ -40,6 +41,7 @@ private final class UserInfoControllerArguments {
         self.tapAvatarAction = tapAvatarAction
         self.openChat = openChat
         self.addContact = addContact
+        
         self.shareContact = shareContact
         self.shareMyContact = shareMyContact
         self.startSecretChat = startSecretChat
@@ -663,8 +665,12 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         entries.append(UserInfoEntry.sharedMedia(presentationData.theme, presentationData.strings.GroupInfo_SharedMedia))
     }
     let notificationsLabel: String
-    if let settings = view.notificationSettings as? TelegramPeerNotificationSettings, case .muted = settings.muteState {
-        notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
+    if let settings = view.notificationSettings as? TelegramPeerNotificationSettings, case let .muted(until) = settings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+        if until < Int32.max - 1 {
+            notificationsLabel = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
+        } else {
+            notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
+        }
     } else {
         notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
     }

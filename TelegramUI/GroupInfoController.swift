@@ -770,8 +770,12 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     let peerNotificationSettings: TelegramPeerNotificationSettings = (view.notificationSettings as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
     let notificationsText: String
     
-    if case .muted = peerNotificationSettings.muteState {
-        notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
+    if case let .muted(until) = peerNotificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+        if until < Int32.max - 1 {
+            notificationsText = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
+        } else {
+            notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
+        }
     } else {
         notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
     }

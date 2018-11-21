@@ -262,7 +262,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             titleLeftIcon = .lock
                         }
                         if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                            if case .muted = notificationSettings.muteState {
+                            if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                                 titleRightIcon = .mute
                             }
                         }
