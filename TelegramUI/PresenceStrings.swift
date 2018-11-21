@@ -337,3 +337,16 @@ func userPresenceStringRefreshTimeout(_ presence: TelegramUserPresence, relative
             return Double.infinity
     }
 }
+
+
+func stringForRemainingMuteInterval(strings: PresentationStrings, muteInterval value: Int32) -> String {
+    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+    let value = max(1 * 60, value - timestamp)
+    if value <= 1 * 60 * 60 {
+        return strings.MuteExpires_Minutes(Int32(round(Float(value) / 60)))
+    } else if value <= 24 * 60 * 60 {
+        return strings.MuteExpires_Hours(Int32(round(Float(value) / (60 * 60))))
+    } else {
+        return strings.MuteExpires_Days(Int32(round(Float(value) / (24 * 60 * 60))))
+    }
+}

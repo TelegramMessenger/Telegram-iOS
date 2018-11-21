@@ -262,21 +262,25 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
             var title: String
             switch value.settings.muteState {
             case let .muted(until):
-                if until < Int32.max - 1 {
-                    let formatter = DateFormatter()
-                    formatter.locale = Locale(identifier: presentationData.strings.baseLanguageCode)
-                    
-                    if Calendar.current.isDateInToday(Date(timeIntervalSince1970: Double(until))) {
-                        formatter.dateFormat = "HH:mm"
+                if until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                    if until < Int32.max - 1 {
+                        let formatter = DateFormatter()
+                        formatter.locale = Locale(identifier: presentationData.strings.baseLanguageCode)
+                        
+                        if Calendar.current.isDateInToday(Date(timeIntervalSince1970: Double(until))) {
+                            formatter.dateFormat = "HH:mm"
+                        } else {
+                            formatter.dateFormat = "E, d MMM HH:mm"
+                        }
+                        
+                        let dateString = formatter.string(from: Date(timeIntervalSince1970: Double(until)))
+                        
+                        title = presentationData.strings.Notification_Exceptions_MutedUntil(dateString).0
                     } else {
-                        formatter.dateFormat = "E, d MMM HH:mm"
+                        title = presentationData.strings.Notification_Exceptions_AlwaysOff
                     }
-                    
-                    let dateString = formatter.string(from: Date(timeIntervalSince1970: Double(until)))
-                    
-                    title = presentationData.strings.Notification_Exceptions_MutedUntil(dateString).0
                 } else {
-                    title = presentationData.strings.Notification_Exceptions_AlwaysOff
+                    title = presentationData.strings.Notification_Exceptions_AlwaysOn
                 }
             case .unmuted:
                 title = presentationData.strings.Notification_Exceptions_AlwaysOn
@@ -552,27 +556,38 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         }
         
         let updateNotificationsDisposable = self.updateNotificationsDisposable
+        var peerIds: Set<PeerId> = Set(mode.peerIds)
+        
         
         let updateNotificationsView:()->Void = {
-            let key: PostboxViewKey = .peerNotificationSettings(peerIds: Set(mode.peerIds))
-            updateNotificationsDisposable.set((account.postbox.combinedView(keys: [key]) |> deliverOnMainQueue).start(next: { view in
-                if let view = view.views[key] as? PeerNotificationSettingsView {
-                    _ = account.postbox.transaction { transaction in
-                        updateState { current in
-                            var current = current
-                            for (key, value) in view.notificationSettings {
-                                if let value = value as? TelegramPeerNotificationSettings,let local = current.mode.settings[key] {
-                                    if !value.isEqual(to: local.settings), let peer = transaction.getPeer(key), let settings = transaction.getPeerNotificationSettings(key) as? TelegramPeerNotificationSettings, !settings.isEqual(to: local.settings) {
-                                        current = current.withUpdatedPeerSound(peer, settings.messageSound).withUpdatedPeerMuteInterval(peer, settings.muteState.timeInterval)
+            updateState { current in
+                peerIds = peerIds.union(current.mode.peerIds)
+                let key: PostboxViewKey = .peerNotificationSettings(peerIds: peerIds)
+                updateNotificationsDisposable.set((account.postbox.combinedView(keys: [key]) |> deliverOnMainQueue).start(next: { view in
+                    if let view = view.views[key] as? PeerNotificationSettingsView {
+                        _ = account.postbox.transaction { transaction in
+                            updateState { current in
+                                var current = current
+                                for (key, value) in view.notificationSettings {
+                                    if let value = value as? TelegramPeerNotificationSettings {
+                                        if let local = current.mode.settings[key]  {
+                                            if !value.isEqual(to: local.settings), let peer = transaction.getPeer(key), let settings = transaction.getPeerNotificationSettings(key) as? TelegramPeerNotificationSettings, !settings.isEqual(to: local.settings) {
+                                                current = current.withUpdatedPeerSound(peer, settings.messageSound).withUpdatedPeerMuteInterval(peer, settings.muteState.timeInterval)
+                                            }
+                                        } else if let peer = transaction.getPeer(key) {
+                                            current = current.withUpdatedPeerSound(peer, value.messageSound).withUpdatedPeerMuteInterval(peer, value.muteState.timeInterval)
+                                        }
                                     }
                                 }
+                                return current
                             }
-                            return current
-                        }
-                    }.start()
-                    
-                }
-            }))
+                            }.start()
+                        
+                    }
+                }))
+                return current
+            }
+            
         }
         
        updateNotificationsView()
@@ -585,12 +600,6 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         
         let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
             return updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound) |> deliverOnMainQueue
-//            _ = (combineLatest(, account.postbox.loadedPeerWithId(peerId)) |> deliverOnMainQueue).start(next: { _, peer in
-//                updateState { value in
-//                    return value.withUpdatedPeerSound(peer, sound)
-//                }
-//                updateNotificationsView()
-//            })
         }
         
         let updatePeerNotificationInterval:(PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
