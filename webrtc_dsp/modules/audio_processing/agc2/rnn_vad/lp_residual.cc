@@ -66,7 +66,7 @@ void ComputeInitialInverseFilterCoefficients(
     // Avoid division by numbers close to zero.
     constexpr float kMinErrorMagnitude = 1e-6f;
     if (std::fabs(error) < kMinErrorMagnitude) {
-      error = std::copysign(kMinErrorMagnitude, error);
+      error =static_cast<float>(copysign(kMinErrorMagnitude, error));
     }
 
     reflection_coeff /= -error;
