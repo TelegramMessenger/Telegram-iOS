@@ -497,9 +497,13 @@ public final class MediaBox {
                 let dataDisposable = fileContext.data(range: Int32(range.lowerBound) ..< Int32(range.upperBound), waitUntilAfterInitialFetch: false, next: { result in
                     if let data = try? Data(contentsOf: URL(fileURLWithPath: result.path), options: .mappedRead) {
                         if result.complete {
-                            let resultData = data.subdata(in: result.offset ..< (result.offset + result.size))
-                            subscriber.putNext(resultData)
-                            subscriber.putCompletion()
+                            if result.offset + result.size <= data.count {
+                                let resultData = data.subdata(in: result.offset ..< (result.offset + result.size))
+                                subscriber.putNext(resultData)
+                                subscriber.putCompletion()
+                            } else {
+                                assertionFailure()
+                            }
                         } else {
                             switch mode {
                                 case .complete:
