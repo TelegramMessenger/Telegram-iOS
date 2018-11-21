@@ -32,11 +32,11 @@ final class InstantPageFeedbackItem: InstantPageItem {
     }
     
     func distanceThresholdGroup() -> Int? {
-        return nil
+        return 8
     }
     
     func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
-        return 0.0
+        return CGFloat.greatestFiniteMagnitude
     }
     
     func linkSelectionRects(at point: CGPoint) -> [CGRect] {

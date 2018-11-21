@@ -361,7 +361,7 @@ final class InstantPageDetailsContentNode : ASDisplayNode {
         return CGRect(origin: origin, size: tile.frame.size)
     }
     
-    func effectiveFrameForItem(_ item: InstantPageItem) -> CGRect {
+    fileprivate func effectiveFrameForItem(_ item: InstantPageItem) -> CGRect {
         let layoutOrigin = item.frame.origin
         var origin = layoutOrigin
         
@@ -609,6 +609,10 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     var effectiveContentSize: CGSize {
         return self.contentNode.effectiveContentSize
+    }
+    
+    func effectiveFrameForItem(_ item: InstantPageItem) -> CGRect {
+        return self.contentNode.effectiveFrameForItem(item).offsetBy(dx: 0.0, dy: self.item.titleHeight)
     }
 }
 

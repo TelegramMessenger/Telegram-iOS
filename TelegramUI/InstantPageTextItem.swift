@@ -552,7 +552,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     
     var lastIndex: CFIndex = 0
     var currentLineOrigin = CGPoint()
-    
+
+    var hasAnchors = false
     var maxLineWidth: CGFloat = 0.0
     var maxImageHeight: CGFloat = 0.0
     var extraDescent: CGFloat = 0.0
@@ -677,6 +678,10 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                 }
             }
             
+            if !anchorItems.isEmpty {
+                hasAnchors = true
+            }
+            
             if hadExtraDescent && extraDescent > 0 {
                 workingLineOrigin.y += fontLineSpacing
             }
@@ -706,7 +711,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     }
     
     var height: CGFloat = 0.0
-    if !lines.isEmpty {
+    if !lines.isEmpty && !(string.length == 1 && hasAnchors) {
         height = lines.last!.frame.maxY + extraDescent
     }
     
