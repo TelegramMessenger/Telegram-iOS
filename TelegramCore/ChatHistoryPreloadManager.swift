@@ -175,7 +175,7 @@ final class ChatHistoryPreloadManager {
                         }
                         var isMuted = false
                         if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
-                            if case .muted = notificationSettings.muteState {
+                            if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                                 isMuted = true
                             }
                         }
