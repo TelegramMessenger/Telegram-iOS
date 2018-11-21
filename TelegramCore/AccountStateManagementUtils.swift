@@ -18,6 +18,12 @@ private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
                 peerIds.insert(peerId)
             }
         }
+        for user in group.users {
+            peerIds.insert(user.peerId)
+        }
+        for chat in group.chats {
+            peerIds.insert(chat.peerId)
+        }
         switch group {
             case let .updateChannelPts(channelId, _, _):
                 peerIds.insert(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
@@ -114,11 +120,17 @@ private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<
     var peerIds = Set<PeerId>()
     
     switch difference {
-        case let .difference(newMessages, _, otherUpdates, _, _, _):
+        case let .difference(newMessages, _, otherUpdates, chats, users, _):
             for message in newMessages {
                 for peerId in apiMessagePeerIds(message) {
                     peerIds.insert(peerId)
                 }
+            }
+            for user in users {
+                peerIds.insert(user.peerId)
+            }
+            for chat in chats {
+                peerIds.insert(chat.peerId)
             }
             for update in otherUpdates {
                 for peerId in update.peerIds {
@@ -127,13 +139,18 @@ private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<
             }
         case .differenceEmpty:
             break
-        case let .differenceSlice(newMessages, _, otherUpdates, _, _, _):
+        case let .differenceSlice(newMessages, _, otherUpdates, chats, users, _):
             for message in newMessages {
                 for peerId in apiMessagePeerIds(message) {
                     peerIds.insert(peerId)
                 }
             }
-            
+            for user in users {
+                peerIds.insert(user.peerId)
+            }
+            for chat in chats {
+                peerIds.insert(chat.peerId)
+            }
             for update in otherUpdates {
                 for peerId in update.peerIds {
                     peerIds.insert(peerId)
@@ -858,7 +875,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                     }
                     updatedState.addMessages([message], location: .UpperHistoryBlock)
                 }
-            case let .updateServiceNotification(_, date, type, text, media, entities):
+            case let .updateServiceNotification(_, date, _, text, media, entities):
                 if let date = date {
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)
                     
