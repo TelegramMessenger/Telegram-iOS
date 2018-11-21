@@ -157,7 +157,6 @@ class ContactMultiselectionController: ViewController {
         self._listReady.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.dismiss = { [weak self] in
-            self?.view.endEditing(true)
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
         
@@ -305,6 +304,7 @@ class ContactMultiselectionController: ViewController {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
             switch presentationArguments.presentationAnimation {
                 case .modalSheet:
+                    self.view.endEditing(true)
                     self.contactsNode.animateOut(completion: { [weak self] in
                         self?.dismissed?()
                         completion?()

@@ -632,7 +632,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
                 entries.append(UserInfoEntry.addContact(presentationData.theme, presentationData.strings.UserInfo_AddContact))
             }
             
-            if let cachedUserData = cachedPeerData as? CachedUserData, !(cachedUserData.hasAccountPeerPhone ?? false) {
+            if let cachedUserData = cachedPeerData as? CachedUserData, let hasAccountPeerPhone = cachedUserData.hasAccountPeerPhone, !hasAccountPeerPhone {
                 entries.append(UserInfoEntry.shareMyContact(presentationData.theme, presentationData.strings.UserInfo_ShareMyContactInfo))
             }
             

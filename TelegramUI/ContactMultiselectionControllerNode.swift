@@ -174,7 +174,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     }
     
     func animateOut(completion: (() -> Void)?) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.dismiss?()
                 completion?()
