@@ -826,7 +826,7 @@ final class WatchPeerSettingsHandler: WatchRequestHandler {
                     var muted = false
                     var blocked = false
                     
-                    if let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings, case .muted = notificationSettings.muteState {
+                    if let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings, case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                         muted = true
                     }
                     if let cachedData = view.cachedData as? CachedUserData {
