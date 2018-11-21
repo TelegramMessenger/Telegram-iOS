@@ -948,16 +948,12 @@ void LOTTrimItem::update(int frameNo, const VMatrix &/*parentMatrix*/,
 
     if (mCache.mFrameNo == frameNo) return;
 
-    float   start = mData->start(frameNo);
-    float   end = mData->end(frameNo);
-    float   offset = mData->offset(frameNo);
+    LOTTrimData::Segment segment = mData->segment(frameNo);
 
-    if (!(vCompare(mCache.mStart, start) && vCompare(mCache.mEnd, end) &&
-          vCompare(mCache.mOffset, offset))) {
+    if (!(vCompare(mCache.mSegment.start, segment.start) &&
+          vCompare(mCache.mSegment.end, segment.end))) {
         mDirty = true;
-        mCache.mStart = start;
-        mCache.mEnd = end;
-        mCache.mOffset = offset;
+        mCache.mSegment = segment;
     }
     mCache.mFrameNo = frameNo;
 }
@@ -967,7 +963,7 @@ void LOTTrimItem::update()
     // when both path and trim are not dirty
     if (!(mDirty || pathDirty())) return;
 
-    if (vCompare(mCache.mStart, mCache.mEnd)) {
+    if (vCompare(mCache.mSegment.start, mCache.mSegment.end)) {
         for (auto &i : mPathItems) {
             i->updatePath(VPath());
         }
@@ -978,9 +974,8 @@ void LOTTrimItem::update()
     if (mData->type() == LOTTrimData::TrimType::Simultaneously) {
         for (auto &i : mPathItems) {
             VPathMesure pm;
-            pm.setStart(mCache.mStart);
-            pm.setEnd(mCache.mEnd);
-            pm.setOffset(mCache.mOffset);
+            pm.setStart(mCache.mSegment.start);
+            pm.setEnd(mCache.mSegment.end);
             i->updatePath(pm.trim(i->localPath()));
         }
     } else { // LOTTrimData::TrimType::Individually
@@ -988,28 +983,8 @@ void LOTTrimItem::update()
         for (auto &i : mPathItems) {
             totalLength += i->localPath().length();
         }
-        float offset = totalLength * mCache.mOffset;
-        float start = totalLength * mCache.mStart;
-        float end  = totalLength * mCache.mEnd;
-        start += offset;
-        end +=offset;
-        // normalize start, end value to 0 - totalLength
-        if (fabs(start) > totalLength) start = fmod(start, totalLength);
-        if (fabs(end) > totalLength) end = fmod(end, totalLength);
-
-        if (start >= 0 && end >= 0) {
-            if (start > end) std::swap(start, end);
-        } else if ( start < 0 && end < 0) {
-            start += totalLength;
-            end += totalLength;
-            if (start > end) std::swap(start, end);
-        } else {
-            // one is +ve and one is -ve so the
-            // segment will be wrapped from end segment to start segment.
-            // we need to split it in two segment.
-            //@TODO
-            return;
-        }
+        float start = totalLength * mCache.mSegment.start;
+        float end  = totalLength * mCache.mSegment.end;
 
         if (start < end ) {
             float curLen = 0.0;

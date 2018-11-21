@@ -466,9 +466,7 @@ private:
    }
    struct Cache {
         int                     mFrameNo{-1};
-        float                   mStart{0};
-        float                   mEnd{0};
-        float                   mOffset{0};
+        LOTTrimData::Segment    mSegment{};
    };
    Cache                            mCache;
    std::vector<LOTPathDataItem *>   mPathItems;

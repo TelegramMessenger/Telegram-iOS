@@ -677,14 +677,43 @@ public:
 class LOTTrimData : public LOTData
 {
 public:
+    struct Segment {
+        float start{0};
+        float end{0};
+    };
     enum class TrimType {
         Simultaneously,
         Individually
     };
     LOTTrimData():LOTData(LOTData::Type::Trim){}
-    float start(int frameNo) const {return mStart.value(frameNo)/100.0f;}
-    float end(int frameNo) const {return mEnd.value(frameNo)/100.0f;}
-    float offset(int frameNo) const {return fmod(mOffset.value(frameNo), 360.0f)/ 360.0f;}
+    Segment segment(int frameNo) const {
+        float start = mStart.value(frameNo)/100.0f;
+        float end = mEnd.value(frameNo)/100.0f;
+        float offset = fmod(mOffset.value(frameNo), 360.0f)/ 360.0f;
+        start += offset;
+        end += offset;
+        // normalize start, end value to 0 - 1
+        if (fabs(start) > 1) start = fmod(start, 1);
+        if (fabs(end) > 1) end = fmod(end, 1);
+        Segment s;
+        if (start >= 0 && end >= 0) {
+            s.start = std::min(start, end);
+            s.end = std::max(start, end);
+        } else if (start < 0 && end < 0) {
+            start += 1;
+            end +=1;
+            s.start = std::min(start, end);
+            s.end = std::max(start, end);
+        } else {
+            // one of them is -ve so it a loop
+            if (start < 0) start +=1;
+            if (end < 0) end +=1;
+            s.start = std::max(start, end);
+            s.end = std::min(start, end);
+        }
+        return s;
+
+    }
     LOTTrimData::TrimType type() const {return mTrimType;}
 public:
     LOTAnimatable<float>             mStart{0};

@@ -5,16 +5,12 @@
 
 V_BEGIN_NAMESPACE
 
-VPath oneSegment(float start, float end, const VPath & path)
-{
-    if (start > end) {
-        std::swap(start, end);
-    }
-    float   array[5] = {0.0f, start, end - start, std::numeric_limits<float>::max(), 0.0f};
-    VDasher dasher(array, 5);
-    return dasher.dashed(path);
-}
-
+/*
+ * start and end value must be normalized to [0 - 1]
+ * Path mesure trims the path from [start --> end]
+ * if start > end it treates as a loop and trims as two segment
+ *  [0-->end] and [start --> 1]
+ */
 VPath VPathMesure::trim(const VPath &path)
 {
     if (vCompare(mStart, mEnd)) return VPath();
@@ -22,40 +18,20 @@ VPath VPathMesure::trim(const VPath &path)
     if ((vCompare(mStart, 0.0f) && (vCompare(mEnd, 1.0f))) ||
         (vCompare(mStart, 1.0f) && (vCompare(mEnd, 0.0f)))) return path;
 
-    if (vIsZero(mOffset)) {
-        float length = path.length();
-        return oneSegment(length * mStart, length * mEnd, path);
-    } else {
-        float length = path.length();
-        float offset = length * mOffset;
-        float start = length * mStart;
-        float end  = length * mEnd;
-        start += offset;
-        end +=offset;
+    float length = path.length();
 
-        if (start < 0 && end < 0) {
-            return oneSegment(length + start, length + end, path);
-        } else if (start > 0 && end > 0) {
-            if (start > length && end > length)
-                return oneSegment(start - length, end - length, path);
-            else if (start < length && end < length)
-                return oneSegment(start, end, path);
-            else {
-                float len1 = start > end ? start - length : end - length;
-                float start2 = start < end ? start : end;
-                float gap1 = start2 - len1;
-                float   array[5] = {len1, gap1, length - start2, 1000, 0.0f};
-                VDasher dasher(array, 5);
-                return dasher.dashed(path);
-            }
-        } else {
-            float len1 = start > end ? start : end;
-            float start2 = start < end ? length + start : length + end;
-            float gap1 = start2 - len1;
-            float   array[5] = {len1, gap1, length - start2, 1000, 0.0f};
-            VDasher dasher(array, 5);
-            return dasher.dashed(path);
-        }
+    if (mStart < mEnd) {
+        float   array[4] = {0.0f, length * mStart, //1st segment
+                            (mEnd - mStart) * length, std::numeric_limits<float>::max(), //2nd segment
+                           };
+        VDasher dasher(array, 4);
+        return dasher.dashed(path);
+    } else {
+        float   array[4] = {length * mEnd, (mStart - mEnd) * length, //1st segment
+                            (1 - mStart) * length, std::numeric_limits<float>::max(), //2nd segment
+                           };
+        VDasher dasher(array, 4);
+        return dasher.dashed(path);
     }
 }
 
