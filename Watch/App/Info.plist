@@ -19,7 +19,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>5.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>660</string>
+	<string>661</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
