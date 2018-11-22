@@ -540,8 +540,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         }
                     }
                 case .Remote, .Fetching:
-                    if let _ = webpage, let automaticDownload = self.automaticDownload, automaticDownload {
-                        progressRequired = false
+                    if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case let .Loaded(content) = webpage.content {
+                        if content.embedUrl != nil {
+                            progressRequired = true
+                        } else if let file = content.file, file.isVideo, !file.isAnimated {
+                            progressRequired = true
+                        }
                     } else {
                         progressRequired = true
                     }
@@ -645,6 +649,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                             }
                         }
+                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case let .Loaded(content) = webpage.content {
+                        state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                     }
                 case .Local:
                     state = .none
@@ -703,6 +709,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                             }
                         }
+                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case let .Loaded(content) = webpage.content {
+                        state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                     }
             }
         }
