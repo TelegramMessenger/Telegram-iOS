@@ -147,7 +147,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     case .contactLinkNone:
                                                         hasPhone = false
                                                     case .contactLinkUnknown:
-                                                        hasPhone = nil
+                                                        hasPhone = false
                                                 }
                                                 break
                                         }
