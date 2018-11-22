@@ -1175,82 +1175,105 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
 			acks<<=1;
 	}
 
-	if(state==STATE_WAIT_INIT || state==STATE_WAIT_INIT_ACK){
-		s->WriteInt32(TLID_DECRYPTED_AUDIO_BLOCK);
-		int64_t randomID;
-		crypto.rand_bytes((uint8_t *) &randomID, 8);
-		s->WriteInt64(randomID);
-		unsigned char randBytes[7];
-		crypto.rand_bytes(randBytes, 7);
-		s->WriteByte(7);
-		s->WriteBytes(randBytes, 7);
-		uint32_t pflags=PFLAG_HAS_RECENT_RECV | PFLAG_HAS_SEQ;
-		if(length>0)
-			pflags|=PFLAG_HAS_DATA;
-		if(state==STATE_WAIT_INIT || state==STATE_WAIT_INIT_ACK){
-			pflags|=PFLAG_HAS_CALL_ID | PFLAG_HAS_PROTO;
-		}
-		pflags|=((uint32_t) type) << 24;
-		s->WriteInt32(pflags);
-
-		if(pflags & PFLAG_HAS_CALL_ID){
-			s->WriteBytes(callID, 16);
-		}
-		s->WriteInt32(lastRemoteSeq);
-		s->WriteInt32(pseq);
-		s->WriteInt32(acks);
-		if(pflags & PFLAG_HAS_PROTO){
-			s->WriteInt32(PROTOCOL_NAME);
-		}
-		if(length>0){
-			if(length<=253){
-				s->WriteByte((unsigned char) length);
-			}else{
-				s->WriteByte(254);
-				s->WriteByte((unsigned char) (length & 0xFF));
-				s->WriteByte((unsigned char) ((length >> 8) & 0xFF));
-				s->WriteByte((unsigned char) ((length >> 16) & 0xFF));
-			}
-		}
-	}else{
-		s->WriteInt32(TLID_SIMPLE_AUDIO_BLOCK);
-		int64_t randomID;
-		crypto.rand_bytes((uint8_t *) &randomID, 8);
-		s->WriteInt64(randomID);
-		unsigned char randBytes[7];
-		crypto.rand_bytes(randBytes, 7);
-		s->WriteByte(7);
-		s->WriteBytes(randBytes, 7);
-		uint32_t lenWithHeader=length+13;
-		if(lenWithHeader>0){
-			if(lenWithHeader<=253){
-				s->WriteByte((unsigned char) lenWithHeader);
-			}else{
-				s->WriteByte(254);
-				s->WriteByte((unsigned char) (lenWithHeader & 0xFF));
-				s->WriteByte((unsigned char) ((lenWithHeader >> 8) & 0xFF));
-				s->WriteByte((unsigned char) ((lenWithHeader >> 16) & 0xFF));
-			}
-		}
+	if(peerVersion>=8 || (!peerVersion && connectionMaxLayer>=92)){
 		s->WriteByte(type);
 		s->WriteInt32(lastRemoteSeq);
 		s->WriteInt32(pseq);
 		s->WriteInt32(acks);
-		if(peerVersion>=6){
-			MutexGuard m(queuedPacketsMutex);
-			if(currentExtras.empty()){
-				s->WriteByte(0);
-			}else{
-				s->WriteByte(XPFLAG_HAS_EXTRA);
-				s->WriteByte(static_cast<unsigned char>(currentExtras.size()));
-				for(vector<UnacknowledgedExtraData>::iterator x=currentExtras.begin();x!=currentExtras.end();++x){
-					LOGV("Writing extra into header: type %u, length %lu", x->type, x->data.Length());
-					assert(x->data.Length()<=254);
-					s->WriteByte(static_cast<unsigned char>(x->data.Length()+1));
-					s->WriteByte(x->type);
-					s->WriteBytes(*x->data, x->data.Length());
-					if(x->firstContainingSeq==0)
-						x->firstContainingSeq=pseq;
+		MutexGuard m(queuedPacketsMutex);
+		if(currentExtras.empty()){
+			s->WriteByte(0);
+		}else{
+			s->WriteByte(XPFLAG_HAS_EXTRA);
+			s->WriteByte(static_cast<unsigned char>(currentExtras.size()));
+			for(vector<UnacknowledgedExtraData>::iterator x=currentExtras.begin(); x!=currentExtras.end(); ++x){
+				LOGV("Writing extra into header: type %u, length %lu", x->type, x->data.Length());
+				assert(x->data.Length()<=254);
+				s->WriteByte(static_cast<unsigned char>(x->data.Length()+1));
+				s->WriteByte(x->type);
+				s->WriteBytes(*x->data, x->data.Length());
+				if(x->firstContainingSeq==0)
+					x->firstContainingSeq=pseq;
+			}
+		}
+	}else{
+		if(state==STATE_WAIT_INIT || state==STATE_WAIT_INIT_ACK){
+			s->WriteInt32(TLID_DECRYPTED_AUDIO_BLOCK);
+			int64_t randomID;
+			crypto.rand_bytes((uint8_t *) &randomID, 8);
+			s->WriteInt64(randomID);
+			unsigned char randBytes[7];
+			crypto.rand_bytes(randBytes, 7);
+			s->WriteByte(7);
+			s->WriteBytes(randBytes, 7);
+			uint32_t pflags=PFLAG_HAS_RECENT_RECV | PFLAG_HAS_SEQ;
+			if(length>0)
+				pflags|=PFLAG_HAS_DATA;
+			if(state==STATE_WAIT_INIT || state==STATE_WAIT_INIT_ACK){
+				pflags|=PFLAG_HAS_CALL_ID | PFLAG_HAS_PROTO;
+			}
+			pflags|=((uint32_t) type) << 24;
+			s->WriteInt32(pflags);
+
+			if(pflags & PFLAG_HAS_CALL_ID){
+				s->WriteBytes(callID, 16);
+			}
+			s->WriteInt32(lastRemoteSeq);
+			s->WriteInt32(pseq);
+			s->WriteInt32(acks);
+			if(pflags & PFLAG_HAS_PROTO){
+				s->WriteInt32(PROTOCOL_NAME);
+			}
+			if(length>0){
+				if(length<=253){
+					s->WriteByte((unsigned char) length);
+				}else{
+					s->WriteByte(254);
+					s->WriteByte((unsigned char) (length & 0xFF));
+					s->WriteByte((unsigned char) ((length >> 8) & 0xFF));
+					s->WriteByte((unsigned char) ((length >> 16) & 0xFF));
+				}
+			}
+		}else{
+			s->WriteInt32(TLID_SIMPLE_AUDIO_BLOCK);
+			int64_t randomID;
+			crypto.rand_bytes((uint8_t *) &randomID, 8);
+			s->WriteInt64(randomID);
+			unsigned char randBytes[7];
+			crypto.rand_bytes(randBytes, 7);
+			s->WriteByte(7);
+			s->WriteBytes(randBytes, 7);
+			uint32_t lenWithHeader=length+13;
+			if(lenWithHeader>0){
+				if(lenWithHeader<=253){
+					s->WriteByte((unsigned char) lenWithHeader);
+				}else{
+					s->WriteByte(254);
+					s->WriteByte((unsigned char) (lenWithHeader & 0xFF));
+					s->WriteByte((unsigned char) ((lenWithHeader >> 8) & 0xFF));
+					s->WriteByte((unsigned char) ((lenWithHeader >> 16) & 0xFF));
+				}
+			}
+			s->WriteByte(type);
+			s->WriteInt32(lastRemoteSeq);
+			s->WriteInt32(pseq);
+			s->WriteInt32(acks);
+			if(peerVersion>=6){
+				MutexGuard m(queuedPacketsMutex);
+				if(currentExtras.empty()){
+					s->WriteByte(0);
+				}else{
+					s->WriteByte(XPFLAG_HAS_EXTRA);
+					s->WriteByte(static_cast<unsigned char>(currentExtras.size()));
+					for(vector<UnacknowledgedExtraData>::iterator x=currentExtras.begin(); x!=currentExtras.end(); ++x){
+						LOGV("Writing extra into header: type %u, length %lu", x->type, x->data.Length());
+						assert(x->data.Length()<=254);
+						s->WriteByte(static_cast<unsigned char>(x->data.Length()+1));
+						s->WriteByte(x->type);
+						s->WriteBytes(*x->data, x->data.Length());
+						if(x->firstContainingSeq==0)
+							x->firstContainingSeq=pseq;
+					}
 				}
 			}
 		}
@@ -1636,15 +1659,13 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 	}
 
 	bool retryWith2=false;
+	size_t innerLen=0;
+	bool shortFormat=peerVersion>=8 || (!peerVersion && connectionMaxLayer>=92);
 
 	if(!useMTProto2){
 		unsigned char fingerprint[8], msgHash[16];
 		in.ReadBytes(fingerprint, 8);
 		in.ReadBytes(msgHash, 16);
-		if(memcmp(fingerprint, keyFingerprint, 8)!=0){
-			LOGW("Received packet has wrong key fingerprint");
-			return;
-		}
 		unsigned char key[32], iv[32];
 		KDF(msgHash, isOutgoing ? 8 : 0, key, iv);
 		unsigned char aesOut[MSC_STACK_FALLBACK(in.Remaining(), 1500)];
@@ -1673,10 +1694,12 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 		in.Seek(16); // peer tag
 
 		unsigned char fingerprint[8], msgKey[16];
-		in.ReadBytes(fingerprint, 8);
-		if(memcmp(fingerprint, keyFingerprint, 8)!=0){
-			LOGW("Received packet has wrong key fingerprint");
-			return;
+		if(!shortFormat){
+			in.ReadBytes(fingerprint, 8);
+			if(memcmp(fingerprint, keyFingerprint, 8)!=0){
+				LOGW("Received packet has wrong key fingerprint");
+				return;
+			}
 		}
 		in.ReadBytes(msgKey, 16);
 
@@ -1690,24 +1713,17 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 			LOGW("wrong decrypted length");
 			return;
 		}
-		//LOGV("-> MSG KEY: %08x %08x %08x %08x, hashed %u", *reinterpret_cast<int32_t*>(msgKey), *reinterpret_cast<int32_t*>(msgKey+4), *reinterpret_cast<int32_t*>(msgKey+8), *reinterpret_cast<int32_t*>(msgKey+12), decryptedLen-4);
 
-		/*uint8_t *decryptOffset = packet.data + in.GetOffset();
-		if ((((intptr_t)decryptOffset) % sizeof(long)) != 0) {
-			LOGE("alignment2 packet.data+in.GetOffset()");
-		}
-		if (decryptedLen % sizeof(long) != 0) {
-			LOGE("alignment2 decryptedLen");
-		}*/
 		crypto.aes_ige_decrypt(packet.data+in.GetOffset(), decrypted, decryptedLen, aesKey, aesIv);
 
 		in=BufferInputStream(decrypted, decryptedLen);
 		//LOGD("received packet length: %d", in.ReadInt32());
+		size_t sizeSize=shortFormat ? 0 : 4;
 
 		BufferOutputStream buf(decryptedLen+32);
 		size_t x=isOutgoing ? 8 : 0;
 		buf.WriteBytes(encryptionKey+88+x, 32);
-		buf.WriteBytes(decrypted+4, decryptedLen-4);
+		buf.WriteBytes(decrypted+sizeSize, decryptedLen-sizeSize);
 		unsigned char msgKeyLarge[32];
 		crypto.sha256(buf.GetBuffer(), buf.GetLength(), msgKeyLarge);
 
@@ -1716,16 +1732,16 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 			return;
 		}
 
-		uint32_t innerLen=(uint32_t) in.ReadInt32();
-		if(innerLen>decryptedLen-4){
+		innerLen=(uint32_t) (shortFormat ? in.ReadInt16() : in.ReadInt32());
+		if(innerLen>decryptedLen-sizeSize){
 			LOGW("Received packet has wrong inner length (%d with total of %u)", (int)innerLen, (unsigned int)decryptedLen);
 			return;
 		}
-		if(decryptedLen-innerLen<12){
+		if(decryptedLen-innerLen<(shortFormat ? 16 : 12)){
 			LOGW("Received packet has too little padding (%u)", (unsigned int)(decryptedLen-innerLen));
 			return;
 		}
-		memcpy(buffer, decrypted+4, innerLen);
+		memcpy(buffer, decrypted+(shortFormat ? 2 : 4), innerLen);
 		in=BufferInputStream(buffer, (size_t) innerLen);
 		if(retryWith2){
 			LOGD("Successfully decrypted packet in MTProto2.0 fallback, upgrading");
@@ -1746,68 +1762,77 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 */
 	uint32_t ackId, pseq, acks;
 	unsigned char type, pflags;
-	uint32_t tlid=(uint32_t) in.ReadInt32();
-	uint32_t packetInnerLen=0;
-	if(tlid==TLID_DECRYPTED_AUDIO_BLOCK){
-		in.ReadInt64(); // random id
-		uint32_t randLen=(uint32_t) in.ReadTlLength();
-		in.Seek(in.GetOffset()+randLen+pad4(randLen));
-		uint32_t flags=(uint32_t) in.ReadInt32();
-		type=(unsigned char) ((flags >> 24) & 0xFF);
-		if(!(flags & PFLAG_HAS_SEQ && flags & PFLAG_HAS_RECENT_RECV)){
-			LOGW("Received packet doesn't have PFLAG_HAS_SEQ, PFLAG_HAS_RECENT_RECV, or both");
-
-			return;
-		}
-		if(flags & PFLAG_HAS_CALL_ID){
-			unsigned char pktCallID[16];
-			in.ReadBytes(pktCallID, 16);
-			if(memcmp(pktCallID, callID, 16)!=0){
-				LOGW("Received packet has wrong call id");
-
-				lastError=ERROR_UNKNOWN;
-				SetState(STATE_FAILED);
-				return;
-			}
-		}
-		ackId=(uint32_t) in.ReadInt32();
-		pseq=(uint32_t) in.ReadInt32();
-		acks=(uint32_t) in.ReadInt32();
-		if(flags & PFLAG_HAS_PROTO){
-			uint32_t proto=(uint32_t) in.ReadInt32();
-			if(proto!=PROTOCOL_NAME){
-				LOGW("Received packet uses wrong protocol");
-
-				lastError=ERROR_INCOMPATIBLE;
-				SetState(STATE_FAILED);
-				return;
-			}
-		}
-		if(flags & PFLAG_HAS_EXTRA){
-			uint32_t extraLen=(uint32_t) in.ReadTlLength();
-			in.Seek(in.GetOffset()+extraLen+pad4(extraLen));
-		}
-		if(flags & PFLAG_HAS_DATA){
-			packetInnerLen=in.ReadTlLength();
-		}
-		pflags=0;
-	}else if(tlid==TLID_SIMPLE_AUDIO_BLOCK){
-		in.ReadInt64(); // random id
-		uint32_t randLen=(uint32_t) in.ReadTlLength();
-		in.Seek(in.GetOffset()+randLen+pad4(randLen));
-		packetInnerLen=in.ReadTlLength();
+	size_t packetInnerLen=0;
+	if(shortFormat){
 		type=in.ReadByte();
 		ackId=(uint32_t) in.ReadInt32();
 		pseq=(uint32_t) in.ReadInt32();
 		acks=(uint32_t) in.ReadInt32();
-		if(peerVersion>=6)
-			pflags=in.ReadByte();
-		else
-			pflags=0;
+		pflags=in.ReadByte();
+		packetInnerLen=innerLen-14;
 	}else{
-		LOGW("Received a packet of unknown type %08X", tlid);
+		uint32_t tlid=(uint32_t) in.ReadInt32();
+		if(tlid==TLID_DECRYPTED_AUDIO_BLOCK){
+			in.ReadInt64(); // random id
+			uint32_t randLen=(uint32_t) in.ReadTlLength();
+			in.Seek(in.GetOffset()+randLen+pad4(randLen));
+			uint32_t flags=(uint32_t) in.ReadInt32();
+			type=(unsigned char) ((flags >> 24) & 0xFF);
+			if(!(flags & PFLAG_HAS_SEQ && flags & PFLAG_HAS_RECENT_RECV)){
+				LOGW("Received packet doesn't have PFLAG_HAS_SEQ, PFLAG_HAS_RECENT_RECV, or both");
 
-		return;
+				return;
+			}
+			if(flags & PFLAG_HAS_CALL_ID){
+				unsigned char pktCallID[16];
+				in.ReadBytes(pktCallID, 16);
+				if(memcmp(pktCallID, callID, 16)!=0){
+					LOGW("Received packet has wrong call id");
+
+					lastError=ERROR_UNKNOWN;
+					SetState(STATE_FAILED);
+					return;
+				}
+			}
+			ackId=(uint32_t) in.ReadInt32();
+			pseq=(uint32_t) in.ReadInt32();
+			acks=(uint32_t) in.ReadInt32();
+			if(flags & PFLAG_HAS_PROTO){
+				uint32_t proto=(uint32_t) in.ReadInt32();
+				if(proto!=PROTOCOL_NAME){
+					LOGW("Received packet uses wrong protocol");
+
+					lastError=ERROR_INCOMPATIBLE;
+					SetState(STATE_FAILED);
+					return;
+				}
+			}
+			if(flags & PFLAG_HAS_EXTRA){
+				uint32_t extraLen=(uint32_t) in.ReadTlLength();
+				in.Seek(in.GetOffset()+extraLen+pad4(extraLen));
+			}
+			if(flags & PFLAG_HAS_DATA){
+				packetInnerLen=in.ReadTlLength();
+			}
+			pflags=0;
+		}else if(tlid==TLID_SIMPLE_AUDIO_BLOCK){
+			in.ReadInt64(); // random id
+			uint32_t randLen=(uint32_t) in.ReadTlLength();
+			in.Seek(in.GetOffset()+randLen+pad4(randLen));
+			packetInnerLen=in.ReadTlLength();
+			type=in.ReadByte();
+			ackId=(uint32_t) in.ReadInt32();
+			pseq=(uint32_t) in.ReadInt32();
+			acks=(uint32_t) in.ReadInt32();
+			if(peerVersion>=6)
+				pflags=in.ReadByte();
+			else
+				pflags=0;
+		}else{
+			LOGW("Received a packet of unknown type %08X", tlid);
+
+			return;
+		}
 	}
 	packetsReceived++;
 	if(seqgt(pseq, lastRemoteSeq)){
@@ -2505,22 +2530,30 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint& ep, P
 	if(len>0){
 		if(useMTProto2){
 			BufferOutputStream inner(len+128);
-			inner.WriteInt32((uint32_t)len);
+			size_t sizeSize;
+			if(peerVersion>=8 || (!peerVersion && connectionMaxLayer>=92)){
+				inner.WriteInt16((uint16_t) len);
+				sizeSize=0;
+			}else{
+				inner.WriteInt32((uint32_t) len);
+				out.WriteBytes(keyFingerprint, 8);
+				sizeSize=4;
+			}
 			inner.WriteBytes(data, len);
+
 			size_t padLen=16-inner.GetLength()%16;
-			if(padLen<12)
+			if(padLen<16)
 				padLen+=16;
-			unsigned char padding[28];
+			unsigned char padding[32];
 			crypto.rand_bytes((uint8_t *) padding, padLen);
 			inner.WriteBytes(padding, padLen);
 			assert(inner.GetLength()%16==0);
 
 			unsigned char key[32], iv[32], msgKey[16];
-			out.WriteBytes(keyFingerprint, 8);
 			BufferOutputStream buf(len+32);
 			size_t x=isOutgoing ? 0 : 8;
 			buf.WriteBytes(encryptionKey+88+x, 32);
-			buf.WriteBytes(inner.GetBuffer()+4, inner.GetLength()-4);
+			buf.WriteBytes(inner.GetBuffer()+sizeSize, inner.GetLength()-sizeSize);
 			unsigned char msgKeyLarge[32];
 			crypto.sha256(buf.GetBuffer(), buf.GetLength(), msgKeyLarge);
 			memcpy(msgKey, msgKeyLarge+8, 16);
