@@ -326,7 +326,7 @@ static void ResetAdaptiveChannelC(AecmCore* aecm) {
 }
 
 // Initialize function pointers for ARM Neon platform.
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 static void WebRtcAecm_InitNeon(void) {
   WebRtcAecm_StoreAdaptiveChannel = WebRtcAecm_StoreAdaptiveChannelNeon;
   WebRtcAecm_ResetAdaptiveChannel = WebRtcAecm_ResetAdaptiveChannelNeon;
@@ -466,7 +466,7 @@ int WebRtcAecm_InitCore(AecmCore* const aecm, int samplingFreq) {
   WebRtcAecm_StoreAdaptiveChannel = StoreAdaptiveChannelC;
   WebRtcAecm_ResetAdaptiveChannel = ResetAdaptiveChannelC;
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
   WebRtcAecm_InitNeon();
 #endif
 

@@ -28,7 +28,7 @@ CrossCorrelation WebRtcSpl_CrossCorrelation;
 DownsampleFast WebRtcSpl_DownsampleFast;
 ScaleAndAddVectorsWithRound WebRtcSpl_ScaleAndAddVectorsWithRound;
 
-#if (!defined(WEBRTC_HAS_NEON)) && !defined(MIPS32_LE)
+#if (!(defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON))) && !defined(MIPS32_LE)
 /* Initialize function pointers to the generic C version. */
 static void InitPointersToC(void) {
   WebRtcSpl_MaxAbsValueW16 = WebRtcSpl_MaxAbsValueW16C;
@@ -44,7 +44,7 @@ static void InitPointersToC(void) {
 }
 #endif
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 /* Initialize function pointers to the Neon version. */
 static void InitPointersToNeon(void) {
   WebRtcSpl_MaxAbsValueW16 = WebRtcSpl_MaxAbsValueW16Neon;
@@ -83,7 +83,7 @@ static void InitPointersToMIPS(void) {
 #endif
 
 static void InitFunctionPointers(void) {
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
   InitPointersToNeon();
 #elif defined(MIPS32_LE)
   InitPointersToMIPS();

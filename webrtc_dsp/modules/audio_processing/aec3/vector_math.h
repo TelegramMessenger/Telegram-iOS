@@ -14,7 +14,7 @@
 // Defines WEBRTC_ARCH_X86_FAMILY, used below.
 #include "rtc_base/system/arch.h"
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 #include <arm_neon.h>
 #endif
 #if defined(WEBRTC_ARCH_X86_FAMILY)
@@ -58,7 +58,7 @@ class VectorMath {
         }
       } break;
 #endif
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
       case Aec3Optimization::kNeon: {
         const int x_size = static_cast<int>(x.size());
         const int vector_limit = x_size >> 2;
@@ -133,7 +133,7 @@ class VectorMath {
         }
       } break;
 #endif
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
       case Aec3Optimization::kNeon: {
         const int x_size = static_cast<int>(x.size());
         const int vector_limit = x_size >> 2;
@@ -179,7 +179,7 @@ class VectorMath {
         }
       } break;
 #endif
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
       case Aec3Optimization::kNeon: {
         const int x_size = static_cast<int>(x.size());
         const int vector_limit = x_size >> 2;

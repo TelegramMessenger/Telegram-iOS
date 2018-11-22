@@ -1521,7 +1521,7 @@ AecCore* WebRtcAec_CreateAec(int instance_count) {
   WebRtcAec_InitAec_mips();
 #endif
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
   WebRtcAec_InitAec_neon();
 #endif
 

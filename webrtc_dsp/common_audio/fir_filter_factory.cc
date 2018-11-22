@@ -14,7 +14,7 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/system/arch.h"
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 #include "common_audio/fir_filter_neon.h"
 #elif defined(WEBRTC_ARCH_X86_FAMILY)
 #include "common_audio/fir_filter_sse.h"

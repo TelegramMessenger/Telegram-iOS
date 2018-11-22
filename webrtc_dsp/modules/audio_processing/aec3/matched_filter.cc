@@ -12,7 +12,7 @@
 // Defines WEBRTC_ARCH_X86_FAMILY, used below.
 #include "rtc_base/system/arch.h"
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 #include <arm_neon.h>
 #endif
 #if defined(WEBRTC_ARCH_X86_FAMILY)
@@ -32,7 +32,7 @@
 namespace webrtc {
 namespace aec3 {
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 
 void MatchedFilterCore_NEON(size_t x_start_index,
                             float x2_sum_threshold,
@@ -365,7 +365,7 @@ void MatchedFilter::Update(const DownsampledRenderBuffer& render_buffer,
                                      filters_[n], &filters_updated, &error_sum);
         break;
 #endif
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
       case Aec3Optimization::kNeon:
         aec3::MatchedFilterCore_NEON(x_start_index, x2_sum_threshold,
                                      smoothing_, render_buffer.buffer, y,

@@ -13,7 +13,7 @@
 // Defines WEBRTC_ARCH_X86_FAMILY, used below.
 #include "rtc_base/system/arch.h"
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 #include <arm_neon.h>
 #endif
 #if defined(WEBRTC_ARCH_X86_FAMILY)
@@ -42,7 +42,7 @@ void UpdateFrequencyResponse(
   }
 }
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 // Computes and stores the frequency response of the filter.
 void UpdateFrequencyResponse_NEON(
     rtc::ArrayView<const FftData> H,
@@ -95,7 +95,7 @@ void UpdateErlEstimator(
   }
 }
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 // Computes and stores the echo return loss estimate of the filter, which is the
 // sum of the partition frequency responses.
 void UpdateErlEstimator_NEON(
@@ -151,7 +151,7 @@ void AdaptPartitions(const RenderBuffer& render_buffer,
   }
 }
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 // Adapts the filter partitions. (NEON variant)
 void AdaptPartitions_NEON(const RenderBuffer& render_buffer,
                           const FftData& G,
@@ -293,7 +293,7 @@ void ApplyFilter(const RenderBuffer& render_buffer,
   }
 }
 
-#if defined(WEBRTC_HAS_NEON)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_HAS_NEON)
 // Produces the filter output (NEON variant).
 void ApplyFilter_NEON(const RenderBuffer& render_buffer,
                       rtc::ArrayView<const FftData> H,
@@ -353,7 +353,7 @@ void ApplyFilter_NEON(const RenderBuffer& render_buffer,
 }
 #endif
 
-#if defined(WEBRTC_ARCH_X86_FAMILY)
+#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_ARCH_X86_FAMILY)
 // Produces the filter output (SSE2 variant).
 void ApplyFilter_SSE2(const RenderBuffer& render_buffer,
                       rtc::ArrayView<const FftData> H,
