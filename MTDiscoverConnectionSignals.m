@@ -1,24 +1,20 @@
 #import "MTDiscoverConnectionSignals.h"
 
 #import "MTTcpConnection.h"
-#import "MTHttpWorker.h"
 
 #if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTTransportScheme.h>
 #   import <MTProtoKitDynamic/MTTcpTransport.h>
-#   import <MTProtoKitDynamic/MTHttpTransport.h>
 #   import <MTProtoKitDynamic/MTQueue.h>
 #   import <MTProtoKitDynamic/MTProtoKitDynamic.h>
 #elif defined(MtProtoKitMacFramework)
 #   import <MTProtoKitMac/MTTransportScheme.h>
 #   import <MTProtoKitMac/MTTcpTransport.h>
-#   import <MTProtoKitMac/MTHttpTransport.h>
 #   import <MTProtoKitMac/MTQueue.h>
 #   import <MTProtoKitMac/MTProtoKitMac.h>
 #else
 #   import <MTProtoKit/MTTransportScheme.h>
 #   import <MTProtoKit/MTTcpTransport.h>
-#   import <MTProtoKit/MTHttpTransport.h>
 #   import <MTProtoKit/MTQueue.h>
 #   import <MTProtoKit/MTProtoKit.h>
 #endif
@@ -173,40 +169,6 @@
     }] startOn:[MTTcpConnection tcpQueue]];
 }
 
-+ (MTSignal *)httpConnectionWithAddress:(MTDatacenterAddress *)address context:(MTContext *)context
-{
-    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
-    {
-        MTPayloadData payloadData;
-        NSData *data = [self payloadData:&payloadData context:context address:address];
-        
-        MTHttpWorkerBlockDelegate *delegate = [[MTHttpWorkerBlockDelegate alloc] init];
-        
-        delegate.completedWithData = ^(NSData *data)
-        {
-            if ([self isResponseValid:data payloadData:payloadData])
-                [subscriber putCompletion];
-            else
-                [subscriber putError:nil];
-        };
-        delegate.failed = ^
-        {
-            [subscriber putError:nil];
-        };
-        
-        if (MTLogEnabled()) {
-            MTLog(@"trying http://%@:%d", address.ip, (int)address.port);
-        }
-        MTHttpWorker *httpWorker = [[MTHttpWorker alloc] initWithDelegate:delegate address:address payloadData:data performsLongPolling:false];
-        
-        return [[MTBlockDisposable alloc] initWithBlock:^
-        {
-            [delegate description]; // keep reference
-            [httpWorker stop];
-        }];
-    }];
-}
-
 + (MTSignal *)discoverSchemeWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId addressList:(NSArray *)addressList media:(bool)media isProxy:(bool)isProxy
 {
     NSMutableArray *bestAddressList = [[NSMutableArray alloc] init];
@@ -238,7 +200,6 @@
     
     for (MTDatacenterAddress *address in bestAddressList) {
         MTTransportScheme *tcpTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:address media:media];
-        //MTTransportScheme *httpTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTHttpTransport class] address:address media:media];
         
         if ([self isIpv6:address.ip])
         {
@@ -274,24 +235,6 @@
                 }
             }
         }
-        
-        /*if (!address.restrictToTcp && !isProxy) {
-            MTSignal *signal = [[[[self httpConnectionWithAddress:address] then:[MTSignal single:httpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]] catch:^MTSignal *(__unused id error)
-            {
-                return [MTSignal complete];
-            }];
-            [bestHttpSignals addObject:signal];
-            
-            if (address.port != 80) {
-                MTDatacenterAddress *httpAddress = [[MTDatacenterAddress alloc] initWithIp:address.ip port:80 preferForMedia:address.preferForMedia restrictToTcp:false cdn:address.cdn preferForProxy:address.preferForProxy];
-                
-                MTTransportScheme *alternateHttpTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTHttpTransport class] address:httpAddress media:media];
-                
-                [bestHttpSignals addObject:[[[[self httpConnectionWithAddress:httpAddress] then:[MTSignal single:alternateHttpTransportScheme]] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal fail:nil]] catch:^MTSignal *(__unused id error) {
-                    return [MTSignal complete];
-                }]];
-            }
-        }*/
     }
     
     MTSignal *repeatDelaySignal = [[MTSignal complete] delay:1.0 onQueue:[MTQueue concurrentDefaultQueue]];

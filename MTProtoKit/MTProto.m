@@ -34,7 +34,6 @@
 #import "MTTransportTransaction.h"
 
 #import "MTTcpTransport.h"
-#import "MTHttpTransport.h"
 
 #import "MTSerialization.h"
 #import "MTEncryption.h"

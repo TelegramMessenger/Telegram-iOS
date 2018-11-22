@@ -62,7 +62,6 @@ FOUNDATION_EXPORT const unsigned char MtProtoKitMacVersionString[];
 #import <MtProtoKitMac/MTTransport.h>
 #import <MtProtoKitMac/MTTransportTransaction.h>
 #import <MtProtoKitMac/MTTcpTransport.h>
-#import <MtProtoKitMac/MTHttpTransport.h>
 #import <MTProtoKitMac/MTHttpRequestOperation.h>
 #import <MtProtoKitMac/MTAtomic.h>
 #import <MtProtoKitMac/MTBag.h>

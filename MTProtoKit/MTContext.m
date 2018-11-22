@@ -26,7 +26,6 @@
 #import <libkern/OSAtomic.h>
 
 #import "MTDiscoverConnectionSignals.h"
-#import "MTHttpTransport.h"
 
 #if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTDisposable.h>
@@ -793,7 +792,7 @@
                 }
             }
             
-            if (candidate.transportClass == [MTHttpTransport class]) {
+            if (candidate.transportClass != [MTTcpTransport class]) {
                 candidate = nil;
             }
             
