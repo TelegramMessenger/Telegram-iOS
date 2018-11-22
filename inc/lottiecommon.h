@@ -77,8 +77,6 @@ typedef struct LOTGradientStop
     unsigned char r, g, b, a;
 } LOTGradientStop;
 
-struct LOTNode;
-
 typedef enum
 {
     MaskModeAdd = 0,
@@ -87,7 +85,7 @@ typedef enum
     MaskModeDifference
 } LOTMaskMode;
 
-typedef struct _LOTMask {
+typedef struct LOTMask {
     struct {
         const float *ptPtr;
         int          ptCount;
@@ -105,28 +103,6 @@ typedef enum
     MatteLuma,
     MatteLumaInv
 } LOTMatteType;
-
-typedef struct LOTLayerNode {
-
-    struct {
-        LOTMask        *ptr;
-        unsigned int    size;
-    }mMaskList;
-
-    struct {
-        LOTLayerNode   **ptr;
-        unsigned int    size;
-    }mLayerList;
-
-    struct {
-        LOTNode       **ptr;
-        unsigned int   size;
-    }mNodeList;
-
-    LOTMatteType mMatte;
-    int          mVisible;
-
-}LOTLayerNode;
 
 typedef struct LOTNode {
 
@@ -171,6 +147,30 @@ typedef struct LOTNode {
     LOTBrushType mBrushType;
     LOTFillRule  mFillRule;
 } LOTNode;
+
+
+
+typedef struct LOTLayerNode {
+
+    struct {
+        LOTMask        *ptr;
+        unsigned int    size;
+    } mMaskList;
+
+    struct {
+        struct LOTLayerNode   **ptr;
+        unsigned int          size;
+    } mLayerList;
+
+    struct {
+        LOTNode       **ptr;
+        unsigned int   size;
+    } mNodeList;
+
+    LOTMatteType mMatte;
+    int          mVisible;
+
+} LOTLayerNode;
 
 
 #endif  // _LOTTIE_COMMON_H_
