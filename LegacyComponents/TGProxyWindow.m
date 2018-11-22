@@ -168,13 +168,11 @@ static bool TGProxyWindowIsLight = true;
     void (^dismissBlock)(void) = ^{
         [UIView animateWithDuration:0.3 delay:increasedDelay ? 2.1 : 0.55 options:0 animations:^{
             _containerView.alpha = 0.0f;
-        } completion:^(BOOL finished) {
-            if (finished) {
-                if (completion) {
-                    completion();
-                }
-                window.hidden = true;
+        } completion:^(__unused BOOL finished) {
+            if (completion) {
+                completion();
             }
+            window.hidden = true;
         }];
     };
     
