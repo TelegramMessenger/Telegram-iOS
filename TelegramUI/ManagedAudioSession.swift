@@ -519,7 +519,7 @@ public final class ManagedAudioSession {
     private func applyNoneDelayed() {
         self.deactivateTimer?.invalidate()
         
-        if self.currentTypeAndOutputMode?.0 == .voiceCall {
+        if self.currentTypeAndOutputMode?.0 == .voiceCall || self.currentTypeAndOutputMode?.0 == .record {
             self.applyNone()
         } else {
             let deactivateTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in

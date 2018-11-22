@@ -441,9 +441,17 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
             } else if let channel = item.peer as? TelegramChannel {
                 if let cachedChannelData = item.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
                     if case .group = channel.info {
-                        statusText = item.strings.Conversation_StatusMembers(memberCount)
+                        if memberCount == 0 {
+                            statusText = item.strings.Group_Status
+                        } else {
+                            statusText = item.strings.Conversation_StatusMembers(memberCount)
+                        }
                     } else {
-                        statusText = item.strings.Conversation_StatusSubscribers(memberCount)
+                        if memberCount == 0 {
+                            statusText = item.strings.Channel_Status
+                        } else {
+                            statusText = item.strings.Conversation_StatusSubscribers(memberCount)
+                        }
                     }
                     statusColor = item.theme.list.itemSecondaryTextColor
                 } else {
