@@ -1888,7 +1888,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         lowestHeaderNode = self.verticalScrollIndicator
         var lowestHeaderNodeIndex: Int?
         for (_, headerNode) in self.itemHeaderNodes {
-            if let index = self.subnodes?.index(of: headerNode) {
+            if let index = self.view.subviews.index(of: headerNode.view) {
                 if lowestHeaderNodeIndex == nil || index < lowestHeaderNodeIndex! {
                     lowestHeaderNodeIndex = index
                     lowestHeaderNode = headerNode
