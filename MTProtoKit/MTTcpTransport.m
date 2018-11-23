@@ -194,12 +194,12 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     {
         if (transportContext.connection == nil)
         {
-            [self startConnectionWatchdogTimer];
-            [self startSleepWatchdogTimer];
-            
             MTContext *context = _context;
             MTTransportScheme *scheme = [context chooseTransportSchemeForConnectionToDatacenterId:_datacenterId schemes:transportContext.schemes];
             if (scheme != nil) {
+                [self startConnectionWatchdogTimer:scheme];
+                [self startSleepWatchdogTimer];
+                
                 transportContext.connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:_datacenterId scheme:scheme interface:nil usageCalculationInfo:_usageCalculationInfo];
                 transportContext.connection.delegate = self;
                 [transportContext.connection start];
@@ -305,7 +305,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
-- (void)startConnectionWatchdogTimer
+- (void)startConnectionWatchdogTimer:(MTTransportScheme *)scheme
 {
     MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
@@ -316,7 +316,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             transportContext.connectionWatchdogTimer = [[MTTimer alloc] initWithTimeout:20.0 repeat:false completion:^
             {
                 __strong MTTcpTransport *strongSelf = weakSelf;
-                [strongSelf connectionWatchdogTimeout];
+                [strongSelf connectionWatchdogTimeout:scheme];
             } queue:[MTTcpTransport tcpTransportQueue].nativeQueue];
             [transportContext.connectionWatchdogTimer start];
         }
@@ -333,14 +333,13 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
-- (void)connectionWatchdogTimeout
+- (void)connectionWatchdogTimeout:(MTTransportScheme *)scheme
 {
     MTTcpTransportContext *transportContext = _transportContext;
     [transportContext.connectionWatchdogTimer invalidate];
     transportContext.connectionWatchdogTimer = nil;
     
     id<MTTransportDelegate> delegate = self.delegate;
-    MTTransportScheme *scheme = transportContext.connection.scheme;
     if (scheme != nil) {
         if ([delegate respondsToSelector:@selector(transportConnectionProblemsStatusChanged:scheme:hasConnectionProblems:isProbablyHttp:)]) {
             [delegate transportConnectionProblemsStatusChanged:self scheme:scheme hasConnectionProblems:true isProbablyHttp:false];
@@ -442,6 +441,12 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:proxySettings:)])
             [delegate transportConnectionStateChanged:self isConnected:false proxySettings:transportContext.proxySettings];
+        
+        if (error) {
+            if ([delegate respondsToSelector:@selector(transportConnectionFailed:scheme:)]) {
+                [delegate transportConnectionFailed:self scheme:connection.scheme];
+            }
+        }
         
         if ([delegate respondsToSelector:@selector(transportTransactionsMayHaveFailed:transactionIds:)])
             [delegate transportTransactionsMayHaveFailed:self transactionIds:@[connection.internalId]];
@@ -556,13 +561,6 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             return;
         
         if (!transportContext.stopped) {
-            MTTransportScheme *scheme = transportContext.connection.scheme;
-            if (error && scheme != nil) {
-                id<MTTransportDelegate> delegate = self.delegate;
-                if ([delegate respondsToSelector:@selector(transportConnectionFailed:scheme:)]) {
-                    [delegate transportConnectionFailed:self scheme:scheme];
-                }
-            }
             [self startIfNeeded];
         }
     }];

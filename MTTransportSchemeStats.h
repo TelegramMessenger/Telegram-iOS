@@ -1,5 +1,7 @@
 #import <Foundation/Foundation.h>
 
+@class MTDatacenterAddress;
+
 @interface MTTransportSchemeStats : NSObject<NSCoding>
 
 @property (nonatomic, readonly) int32_t lastFailureTimestamp;
@@ -9,5 +11,7 @@
 
 - (instancetype)withUpdatedLastFailureTimestamp:(int32_t)lastFailureTimestamp;
 - (instancetype)withUpdatedLastResponseTimestamp:(int32_t)lastResponseTimestamp;
+
++ (NSString *)formatStats:(NSMutableDictionary<NSNumber *, NSMutableDictionary<MTDatacenterAddress *, MTTransportSchemeStats *> *> *)stats;
 
 @end

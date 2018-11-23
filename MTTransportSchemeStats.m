@@ -1,5 +1,7 @@
 #import "MTTransportSchemeStats.h"
 
+#import "MTDatacenterAddress.h"
+
 @implementation MTTransportSchemeStats
 
 - (instancetype)initWithLastFailureTimestamp:(int32_t)lastFailureTimestamp lastResponseTimestamp:(int32_t)lastResponseTimestamp {
@@ -44,6 +46,17 @@
 
 - (NSString *)description {
     return [NSString stringWithFormat:@"lastFailureTimestamp: %d, lastResponseTimestamp:%d", _lastFailureTimestamp, _lastResponseTimestamp];
+}
+
++ (NSString *)formatStats:(NSMutableDictionary<NSNumber *, NSMutableDictionary<MTDatacenterAddress *, MTTransportSchemeStats *> *> *)stats {
+    NSMutableString *result = [[NSMutableString alloc] init];
+    [stats enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, NSMutableDictionary<MTDatacenterAddress *, MTTransportSchemeStats *> *values, __unused BOOL *stop) {
+        [result appendFormat:@"DC%@:\n", nDatacenterId];
+        [values enumerateKeysAndObjectsUsingBlock:^(MTDatacenterAddress *key, MTTransportSchemeStats *obj, __unused BOOL * stop) {
+            [result appendFormat:@"    %@:%@\n", key, obj];
+        }];
+    }];
+    return result;
 }
 
 @end

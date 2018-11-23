@@ -286,14 +286,14 @@
                 _datacenterPublicKeysById = [[NSMutableDictionary alloc] initWithDictionary:datacenterPublicKeysById];
             }
             
-            NSDictionary *transportSchemeStats = [keychain objectForKey:@"transportSchemeStats" group:@"temp"];
+            NSDictionary *transportSchemeStats = [keychain objectForKey:@"transportSchemeStats_v1" group:@"temp"];
             if (transportSchemeStats != nil) {
                 [_transportSchemeStats removeAllObjects];
                 [transportSchemeStats enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, NSDictionary<MTDatacenterAddress *, MTTransportSchemeStats *> *values, __unused BOOL *stop) {
-                    _transportSchemeStats[nDatacenterId] = [[NSMutableDictionary alloc] initWithDictionary:transportSchemeStats];
+                    _transportSchemeStats[nDatacenterId] = [[NSMutableDictionary alloc] initWithDictionary:values];
                 }];
                 if (MTLogEnabled()) {
-                    MTLog(@"[MTContext loaded transportSchemeStats: %@]", _transportSchemeStats);
+                    MTLog(@"[MTContext] loaded transportSchemeStats:\n%@", [MTTransportSchemeStats formatStats:_transportSchemeStats]);
                 }
             }
             
@@ -562,6 +562,11 @@
     [[MTContext contextQueue] dispatchOnQueue:^ {
         if (transportScheme != nil && datacenterId != 0) {
             [self reportTransportSchemeSuccessForDatacenterId:datacenterId transportScheme:transportScheme];
+            [self _withTransportSchemeStatsForDatacenterId:datacenterId transportScheme:transportScheme process:^MTTransportSchemeStats *(MTTransportSchemeStats *current) {
+                current = [current withUpdatedLastFailureTimestamp:0];
+                current = [current withUpdatedLastResponseTimestamp:(int32_t)CFAbsoluteTimeGetCurrent()];
+                return current;
+            }];
             
             NSArray *currentListeners = [[NSArray alloc] initWithArray:_changeListeners];
             
@@ -729,9 +734,7 @@
         __block MTTransportScheme *schemeWithEarliestFailure = nil;
         __block int32_t earliestFailure = INT32_MAX;
         
-        bool hadSuccessfulIpv6Responses = false;
-        
-        for (MTTransportScheme *scheme in schemes) {
+        for (MTTransportScheme *scheme in schemes.reverseObjectEnumerator) {
             [self _withTransportSchemeStatsForDatacenterId:datacenterId transportScheme:scheme process:^MTTransportSchemeStats *(MTTransportSchemeStats *current) {
                 if (schemeWithEarliestFailure == nil) {
                     schemeWithEarliestFailure = scheme;
@@ -993,7 +996,7 @@
 
 - (void)_syncTransportSchemeStats {
     NSAssert([[MTContext contextQueue] isCurrentQueue], @"[[MTContext contextQueue] isCurrentQueue]");
-    [_keychain setObject:_transportSchemeStats forKey:@"transportSchemeStats" group:@"temp"];
+    [_keychain setObject:_transportSchemeStats forKey:@"transportSchemeStats_v1" group:@"temp"];
 }
 
 - (void)reportTransportSchemeFailureForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme {
