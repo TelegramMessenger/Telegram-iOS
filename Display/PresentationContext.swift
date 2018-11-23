@@ -67,7 +67,7 @@ final class PresentationContext {
         }
     }
     
-    public func present(_ controller: ViewController, on: PresentationSurfaceLevel, blockInteraction: Bool = false) {
+    public func present(_ controller: ViewController, on: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void) {
         let controllerReady = controller.ready.get()
         |> filter({ $0 })
         |> take(1)
@@ -96,6 +96,7 @@ final class PresentationContext {
                     if let blockInteractionToken = blockInteractionToken {
                         self?.removeBlockInteraction(blockInteractionToken)
                     }
+                    completion()
                 }
             }).start(next: { [weak self] _ in
                 if let strongSelf = self {

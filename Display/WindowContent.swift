@@ -208,7 +208,7 @@ public final class WindowHostView {
     let updateDeferScreenEdgeGestures: (UIRectEdge) -> Void
     let updatePreferNavigationUIHidden: (Bool) -> Void
     
-    var present: ((ViewController, PresentationSurfaceLevel, Bool) -> Void)?
+    var present: ((ViewController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var presentInGlobalOverlay: ((_ controller: ViewController) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
     var updateSize: ((CGSize, Double) -> Void)?
@@ -246,7 +246,7 @@ public struct WindowTracingTags {
 
 public protocol WindowHost {
     func forEachController(_ f: (ViewController) -> Void)
-    func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool)
+    func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void)
     func presentInGlobalOverlay(_ controller: ViewController)
     func invalidateDeferScreenEdgeGestures()
     func invalidatePreferNavigationUIHidden()
@@ -356,8 +356,8 @@ public class Window1 {
             self?.isInteractionBlocked = value
         }
         
-        self.hostView.present = { [weak self] controller, level, blockInteraction in
-            self?.present(controller, on: level, blockInteraction: blockInteraction)
+        self.hostView.present = { [weak self] controller, level, blockInteraction, completion in
+            self?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
         }
         
         self.hostView.presentInGlobalOverlay = { [weak self] controller in
@@ -886,8 +886,8 @@ public class Window1 {
         }
     }
     
-    public func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false) {
-        self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction)
+    public func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
+        self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
     }
     
     public func presentInGlobalOverlay(_ controller: ViewController) {

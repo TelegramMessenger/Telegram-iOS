@@ -334,13 +334,14 @@ open class ViewControllerPresentationArguments {
         return nil
     }
     
-    public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false) {
+    public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
         controller.presentationArguments = arguments
         switch context {
             case .current:
-                self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0))
+                self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0), completion: completion)
+                completion()
             case let .window(level):
-                self.window?.present(controller, on: level, blockInteraction: blockInteraction)
+                self.window?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
         }
     }
     

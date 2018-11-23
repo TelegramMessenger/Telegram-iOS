@@ -170,7 +170,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var layoutSubviewsEvent: (() -> Void)?
     var updateIsUpdatingOrientationLayout: ((Bool) -> Void)?
     var updateToInterfaceOrientation: (() -> Void)?
-    var presentController: ((ViewController, PresentationSurfaceLevel, Bool) -> Void)?
+    var presentController: ((ViewController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var presentControllerInGlobalOverlay: ((_ controller: ViewController) -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentNativeImpl: ((UIViewController) -> Void)?
@@ -248,8 +248,8 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.updateToInterfaceOrientation?()
     }*/
     
-    func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool) {
-        self.presentController?(controller, level, blockInteraction)
+    func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void) {
+        self.presentController?(controller, level, blockInteraction, completion)
     }
     
     func presentInGlobalOverlay(_ controller: ViewController) {
@@ -321,8 +321,8 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         hostView?.updateToInterfaceOrientation?()
     }
     
-    window.presentController = { [weak hostView] controller, level, blockInteraction in
-        hostView?.present?(controller, level, blockInteraction)
+    window.presentController = { [weak hostView] controller, level, blockInteraction, completion in
+        hostView?.present?(controller, level, blockInteraction, completion)
     }
     
     window.presentControllerInGlobalOverlay = { [weak hostView] controller in
@@ -355,7 +355,7 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     
     rootViewController.presentController = { [weak hostView] controller, level, animated, completion in
         if let hostView = hostView {
-            hostView.present?(LegacyPresentedController(legacyController: controller, presentation: .custom), level, false)
+            hostView.present?(LegacyPresentedController(legacyController: controller, presentation: .custom), level, false, completion ?? {})
             completion?()
         }
     }

@@ -1027,13 +1027,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             transition.updateAlpha(node: itemHighlightOverlayBackground, alpha: 0.0, completion: { [weak itemHighlightOverlayBackground] _ in
                 itemHighlightOverlayBackground?.removeFromSupernode()
             })
+            for (_, headerNode) in self.itemHeaderNodes {
+                self.view.bringSubview(toFront: headerNode.view)
+            }
         }
-        
-        /*if let ensureInset = self.ensureTopInsetForOverlayHighlightedItems {
-            transition.updateSublayerTransformOffset(layer: self.layer, offset: CGPoint(x: 0.0, y: -ensureInset))
-        } else {
-            transition.updateSublayerTransformOffset(layer: self.layer, offset: CGPoint())
-        }*/
     }
     
     private func updateScroller(transition: ContainedViewLayoutTransition) {
@@ -1982,6 +1979,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
         
         let lowestNodeToInsertBelow = self.lowestNodeToInsertBelow()
+        var hadInserts = false
         
         for operation in operations {
             switch operation {
@@ -2004,6 +2002,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     }
                     
                     self.insertNodeAtIndex(animated: nodeAnimated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp, listInsets: listInsets)
+                    hadInserts = true
                     if let _ = updatedPreviousFrame {
                         if let itemNode = self.reorderNode?.itemNode, itemNode.supernode == self {
                             self.insertSubnode(node, belowSubnode: itemNode)
@@ -2175,6 +2174,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             if self.debugInfo {
                 //print("operation \(self.itemNodes.map({"\($0.index) \(unsafeAddressOf($0))"}))")
             }
+        }
+        
+        if hadInserts, let reorderNode = self.reorderNode, reorderNode.supernode != nil {
+            self.view.bringSubview(toFront: reorderNode.view)
         }
         
         if self.debugInfo {
