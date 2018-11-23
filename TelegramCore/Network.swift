@@ -375,11 +375,13 @@ public struct NetworkInitializationArguments {
     public let apiId: Int32
     public let languagesCategory: String
     public let appVersion: String
+    public let voipMaxLayer: Int32
     
-    public init(apiId: Int32, languagesCategory: String, appVersion: String) {
+    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32) {
         self.apiId = apiId
         self.languagesCategory = languagesCategory
         self.appVersion = appVersion
+        self.voipMaxLayer = voipMaxLayer
     }
 }
 
