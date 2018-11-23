@@ -82,11 +82,6 @@
     return NSOrderedSame;
 }
 
-- (MTTransport *)createTransportWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId delegate:(id<MTTransportDelegate>)delegate usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
-{
-    return [(MTTransport *)[_transportClass alloc] initWithDelegate:delegate context:context datacenterId:datacenterId scheme:self proxySettings:context.apiEnvironment.socksProxySettings usageCalculationInfo:usageCalculationInfo];
-}
-
 - (NSString *)description
 {
     return [[NSString alloc] initWithFormat:@"%@://%@ (media: %@)", [_transportClass isEqual:[MTTcpTransport class]] ? @"tcp" : @"http", _address, _media ? @"yes" : @"no"];

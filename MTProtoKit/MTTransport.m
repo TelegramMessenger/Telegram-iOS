@@ -14,7 +14,7 @@
 
 @implementation MTTransport
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)__unused usageCalculationInfo
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId schemes:(NSArray<MTTransportScheme *> * _Nonnull)schemes proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)__unused usageCalculationInfo
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -26,7 +26,6 @@
         _delegate = delegate;
         _context = context;
         _datacenterId = datacenterId;
-        _scheme = scheme;
         _proxySettings = proxySettings;
         
         _networkAvailability = [[MTNetworkAvailability alloc] initWithDelegate:self];
@@ -60,12 +59,12 @@
 {
 }
 
-- (void)_processIncomingData:(NSData *)data transactionId:(id)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^)(id transactionId, bool success))decodeResult
+- (void)_processIncomingData:(NSData *)data scheme:(MTTransportScheme *)scheme transactionId:(id)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^)(id transactionId, bool success))decodeResult
 {
     id<MTTransportDelegate> delegate = _delegate;
-    if ([delegate respondsToSelector:@selector(transportHasIncomingData:data:transactionId:requestTransactionAfterProcessing:decodeResult:)])
+    if ([delegate respondsToSelector:@selector(transportHasIncomingData:scheme:data:transactionId:requestTransactionAfterProcessing:decodeResult:)])
     {
-        [delegate transportHasIncomingData:self data:data transactionId:transactionId requestTransactionAfterProcessing:requestTransactionAfterProcessing decodeResult:decodeResult];
+        [delegate transportHasIncomingData:self scheme:scheme data:data transactionId:transactionId requestTransactionAfterProcessing:requestTransactionAfterProcessing decodeResult:decodeResult];
     }
 }
 

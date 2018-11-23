@@ -1,7 +1,17 @@
 #import "MTDNS.h"
 
+#import <arpa/inet.h>
+#include <netinet/tcp.h>
+#import <fcntl.h>
+#import <ifaddrs.h>
+#import <netdb.h>
+#import <netinet/in.h>
+#import <net/if.h>
+
 #if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTQueue.h>
 #   import <MTProtoKitDynamic/MTSignal.h>
+#   import <MTProtoKitDynamic/MTBag.h>
 #   import <MTProtoKitDynamic/MTAtomic.h>
 #   import <MTProtoKitDynamic/MTHttpRequestOperation.h>
 #   import <MTProtoKitDynamic/MTEncryption.h>
@@ -15,7 +25,9 @@
 #   import <MTProtoKitDynamic/MTSerialization.h>
 #   import <MTProtoKitDynamic/MTLogging.h>
 #elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTQueue.h>
 #   import <MTProtoKitMac/MTSignal.h>
+#   import <MTProtoKitMac/MTBag.h>
 #   import <MTProtoKitMac/MTAtomic.h>
 #   import <MTProtoKitMac/MTHttpRequestOperation.h>
 #   import <MTProtoKitMac/MTEncryption.h>
@@ -29,7 +41,9 @@
 #   import <MTProtoKitMac/MTSerialization.h>
 #   import <MTProtoKitMac/MTLogging.h>
 #else
+#   import <MTProtoKit/MTQueue.h>
 #   import <MTProtoKit/MTSignal.h>
+#   import <MTProtoKit/MTBag.h>
 #   import <MTProtoKit/MTAtomic.h>
 #   import <MTProtoKit/MTHttpRequestOperation.h>
 #   import <MTProtoKit/MTEncryption.h>
@@ -46,6 +60,189 @@
 
 #import <netinet/in.h>
 #import <arpa/inet.h>
+
+@interface MTDNSHostContext : NSObject {
+    MTBag *_subscribers;
+    id<MTDisposable> _disposable;
+}
+
+@end
+
+@implementation MTDNSHostContext
+
+- (instancetype)initWithHost:(NSString *)host disposable:(id<MTDisposable>)disposable {
+    self = [super init];
+    if (self != nil) {
+        _subscribers = [[MTBag alloc] init];
+    }
+    return self;
+}
+
+- (void)dealloc {
+    [_disposable dispose];
+}
+
+- (NSInteger)addSubscriber:(void (^)(NSString *))completion {
+    return [_subscribers addItem:[completion copy]];
+}
+
+- (void)removeSubscriber:(NSInteger)index {
+    [_subscribers removeItem:index];
+}
+
+- (bool)isEmpty {
+    return [_subscribers isEmpty];
+}
+
+- (void)complete:(NSString *)result {
+    for (void (^completion)(NSString *) in [_subscribers copyItems]) {
+        completion(result);
+    }
+}
+
+@end
+
+@interface MTDNSContext : NSObject {
+    NSMutableDictionary<NSString *, MTDNSHostContext *> *_contexts;
+}
+
+@end
+
+@implementation MTDNSContext
+
++ (MTQueue *)sharedQueue {
+    static MTQueue *queue = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        queue = [[MTQueue alloc] init];
+    });
+    return queue;
+}
+
++ (MTSignal *)shared {
+    return [[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        static MTDNSContext *instance = nil;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            instance = [[MTDNSContext alloc] init];
+        });
+        [subscriber putNext:instance];
+        [subscriber putCompletion];
+        return nil;
+    }] startOn:[self sharedQueue]];
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _contexts = [[NSMutableDictionary alloc] init];
+    }
+    return self;
+}
+
+- (id<MTDisposable>)subscribe:(NSString *)host port:(int32_t)port completion:(void (^)(NSString *))completion {
+    NSString *key = [NSString stringWithFormat:@"%@:%d", host, port];
+    
+    MTMetaDisposable *disposable = nil;
+    if (_contexts[key] == nil) {
+        disposable = [[MTMetaDisposable alloc] init];
+        _contexts[key] = [[MTDNSHostContext alloc] initWithHost:host disposable:disposable];
+    }
+    MTDNSHostContext *context = _contexts[key];
+    
+    NSInteger index = [context addSubscriber:^(NSString *result) {
+        if (completion) {
+            completion(result);
+        }
+    }];
+    
+    if (disposable != nil) {
+        __weak MTDNSContext *weakSelf = self;
+        [disposable setDisposable:[[[self performLookup:host port:port] deliverOn:[MTDNSContext sharedQueue]] startWithNext:^(NSString *result) {
+            __strong MTDNSContext *strongSelf = weakSelf;
+            if (strongSelf == nil) {
+                return;
+            }
+            if (strongSelf->_contexts[key] != nil) {
+                [strongSelf->_contexts[key] complete:result];
+                [strongSelf->_contexts removeObjectForKey:key];
+            }
+        }]];
+    }
+    
+    __weak MTDNSContext *weakSelf = self;
+    __weak MTDNSHostContext *weakContext = context;
+    return [[MTBlockDisposable alloc] initWithBlock:^{
+        [[MTDNSContext sharedQueue] dispatchOnQueue:^{
+            __strong MTDNSContext *strongSelf = weakSelf;
+            __strong MTDNSHostContext *strongContext = weakContext;
+            if (strongSelf == nil || strongContext == nil) {
+                return;
+            }
+            if (strongSelf->_contexts[key] != nil && strongSelf->_contexts[key] == strongContext) {
+                [strongSelf->_contexts[key] removeSubscriber:index];
+                if ([strongSelf->_contexts[key] isEmpty]) {
+                    [strongSelf->_contexts removeObjectForKey:key];
+                }
+            }
+        }];
+    }];
+}
+
+- (MTSignal *)performLookup:(NSString *)host port:(int32_t)port {
+    MTSignal *lookupOnce = [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
+        [[MTQueue concurrentDefaultQueue] dispatchOnQueue:^{
+            struct addrinfo hints, *res, *res0;
+            
+            memset(&hints, 0, sizeof(hints));
+            hints.ai_family   = PF_UNSPEC;
+            hints.ai_socktype = SOCK_STREAM;
+            hints.ai_protocol = IPPROTO_TCP;
+            
+            NSString *portStr = [NSString stringWithFormat:@"%d", port];
+            int gai_error = getaddrinfo([host UTF8String], [portStr UTF8String], &hints, &res0);
+            
+            NSString *address4 = nil;
+            NSString *address6 = nil;
+            
+            if (gai_error == 0) {
+                for(res = res0; res; res = res->ai_next) {
+                    if ((address4 == nil) && (res->ai_family == AF_INET)) {
+                        struct sockaddr_in *addr_in = (struct sockaddr_in *)res->ai_addr;
+                        char *s = malloc(INET_ADDRSTRLEN);
+                        inet_ntop(AF_INET, &(addr_in->sin_addr), s, INET_ADDRSTRLEN);
+                        address4 = [NSString stringWithUTF8String:s];
+                        free(s);
+                    } else if ((address6 == nil) && (res->ai_family == AF_INET6)) {
+                        struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)res->ai_addr;
+                        char *s = malloc(INET6_ADDRSTRLEN);
+                        inet_ntop(AF_INET6, &(addr_in6->sin6_addr), s, INET6_ADDRSTRLEN);
+                        address6 = [NSString stringWithUTF8String:s];
+                        free(s);
+                    }
+                }
+                freeaddrinfo(res0);
+            }
+            
+            if (address4 != nil) {
+                [subscriber putNext:address4];
+                [subscriber putCompletion];
+            } else if (address6 != nil) {
+                [subscriber putNext:address6];
+                [subscriber putCompletion];
+            } else {
+                [subscriber putError:nil];
+            }
+        }];
+        return disposable;
+    }];
+    return [[lookupOnce catch:^MTSignal *(__unused id error) {
+        return [[MTSignal complete] delay:2.0 onQueue:[MTDNSContext sharedQueue]];
+    }] take:1];
+}
+
+@end
 
 @interface MTDNSCachedHostname : NSObject
 
@@ -141,6 +338,17 @@
             [subscriber putNext:hostname];
             [subscriber putCompletion];
         } completed:nil];
+    }];
+}
+
++ (MTSignal *)resolveHostnameNative:(NSString *)hostname port:(int32_t)port {
+    return [[MTDNSContext shared] mapToSignal:^MTSignal *(MTDNSContext *context) {
+        return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+            return [context subscribe:hostname port:port completion:^(NSString *result) {
+                [subscriber putNext:result];
+                [subscriber putCompletion];
+            }];
+        }];
     }];
 }
 

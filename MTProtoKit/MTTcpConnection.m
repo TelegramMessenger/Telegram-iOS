@@ -1,5 +1,3 @@
-
-
 #import "MTTcpConnection.h"
 
 #import "MTLogging.h"
@@ -16,6 +14,7 @@
 #import "MTContext.h"
 #import "MTApiEnvironment.h"
 #import "MTDatacenterAddress.h"
+#import "MTTransportScheme.h"
 
 #import "MTAes.h"
 #import "MTEncryption.h"
@@ -188,10 +187,10 @@ struct ctr_state {
     return queue;
 }
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
 {
 #ifdef DEBUG
-    NSAssert(address != nil, @"address should not be nil");
+    NSAssert(scheme != nil, @"scheme should not be nil");
 #endif
     
     self = [super init];
@@ -199,7 +198,7 @@ struct ctr_state {
     {
         _internalId = [[MTInternalId(MTTcpConnection) alloc] init];
         
-        _address = address;
+        _scheme = scheme;
         
         _interface = interface;
         _usageCalculationInfo = usageCalculationInfo;
@@ -225,20 +224,20 @@ struct ctr_state {
             if ([MTSocksProxySettings secretSupportsExtendedPadding:_mtpSecret]) {
                 _useIntermediateFormat = true;
             }
-        } else if ([MTSocksProxySettings secretSupportsExtendedPadding:_address.secret]) {
+        } else if ([MTSocksProxySettings secretSupportsExtendedPadding:_scheme.address.secret]) {
             _useIntermediateFormat = true;
         }
         
         _resolveDisposable = [[MTMetaDisposable alloc] init];
         
         if (context.isTestingEnvironment) {
-            if (address.preferForMedia) {
+            if (scheme.address.preferForMedia) {
                 _datacenterTag = -(int32_t)(10000 + datacenterId);
             } else {
                 _datacenterTag = (int32_t)(10000 + datacenterId);
             }
         } else {
-            if (address.preferForMedia) {
+            if (scheme.address.preferForMedia) {
                 _datacenterTag = -(int32_t)datacenterId;
             } else {
                 _datacenterTag = (int32_t)datacenterId;
@@ -292,8 +291,8 @@ struct ctr_state {
             _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
             _socket.usageCalculationInfo = _usageCalculationInfo;
             
-            NSString *addressIp = _address.ip;
-            MTSignal *resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:addressIp port:_address.port isSocks:false]];
+            NSString *addressIp = _scheme.address.ip;
+            MTSignal *resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:addressIp port:_scheme.address.port isSocks:false]];
             
             if (_socksIp != nil) {
                 bool isHostname = true;
@@ -305,11 +304,14 @@ struct ctr_state {
                     isHostname = false;
                 }
                 
-                /*if (isHostname) {
-                    resolveSignal = [MTDNS resolveHostname:_socksIp];
-                } else {*/
+                if (isHostname) {
+                    int32_t port = _socksPort;
+                    resolveSignal = [[MTDNS resolveHostnameNative:_socksIp port:port] map:^id(NSString *resolvedIp) {
+                        return [[MTTcpConnectionData alloc] initWithIp:resolvedIp port:port isSocks:true];
+                    }];
+                } else {
                     resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:_socksIp port:_socksPort isSocks:true]];
-                //}
+                }
             } else if (_mtpIp != nil) {
                 bool isHostname = true;
                 struct in_addr ip4;
@@ -320,11 +322,14 @@ struct ctr_state {
                     isHostname = false;
                 }
                 
-                /*if (isHostname) {
-                    resolveSignal = [MTDNS resolveHostname:_mtpIp];
-                } else {*/
+                if (isHostname) {
+                    int32_t port = _mtpPort;
+                    resolveSignal = [[MTDNS resolveHostnameNative:_mtpIp port:port] map:^id(NSString *resolvedIp) {
+                        return [[MTTcpConnectionData alloc] initWithIp:resolvedIp port:port isSocks:false];
+                    }];
+                } else {
                     resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:_mtpIp port:_mtpPort isSocks:false]];
-                //}
+                }
             }
             
             __weak MTTcpConnection *weakSelf = self;
@@ -346,16 +351,16 @@ struct ctr_state {
                     if (MTLogEnabled()) {
                         if (strongSelf->_socksIp != nil) {
                             if (strongSelf->_socksUsername.length == 0) {
-                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort);
+                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort);
                             } else {
-                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_socksIp, (int)_socksPort, strongSelf->_socksUsername, strongSelf->_socksPassword);
+                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)_socksPort, strongSelf->_socksUsername, strongSelf->_socksPassword);
                             }
                         } else if (strongSelf->_mtpIp != nil) {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
-                        } else if (strongSelf->_address.secret != nil) {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d with secret %@]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port, strongSelf->_address.secret);
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
+                        } else if (strongSelf->_scheme.address.secret != nil) {
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d with secret %@]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_scheme.address.secret);
                         } else {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, strongSelf->_address.ip, (int)strongSelf->_address.port);
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port);
                         }
                     }
                     
@@ -512,8 +517,8 @@ struct ctr_state {
                         NSData *effectiveSecret = nil;
                         if (_mtpSecret != nil) {
                             effectiveSecret = _mtpSecret;
-                        } else if (_address.secret != nil) {
-                            effectiveSecret = _address.secret;
+                        } else if (_scheme.address.secret != nil) {
+                            effectiveSecret = _scheme.address.secret;
                         }
                         if (effectiveSecret.length != 16 && effectiveSecret.length != 17) {
                             effectiveSecret = nil;
@@ -635,9 +640,9 @@ struct ctr_state {
     req.AddrType = 1;
     
     struct in_addr ip4;
-    inet_aton(_address.ip.UTF8String, &ip4);
+    inet_aton(_scheme.address.ip.UTF8String, &ip4);
     req.DestAddr.IPv4 = ip4;
-    req.DestPort = _address.port;
+    req.DestPort = _scheme.address.port;
     
     NSMutableData *reqData = [[NSMutableData alloc] init];
     [reqData appendBytes:&req length:4];
@@ -1063,12 +1068,12 @@ struct ctr_state {
 {
     if (error != nil) {
         if (MTLogEnabled()) {
-            MTLog(@"[MTTcpConnection#%x disconnected from %@ (%@)]", (int)self, _address.ip, error);
+            MTLog(@"[MTTcpConnection#%x disconnected from %@ (%@)]", (int)self, _scheme.address.ip, error);
         }
     }
     else {
         if (MTLogEnabled()) {
-            MTLog(@"[MTTcpConnection#%x disconnected from %@]", (int)self, _address.ip);
+            MTLog(@"[MTTcpConnection#%x disconnected from %@]", (int)self, _scheme.address.ip);
         }
     }
     

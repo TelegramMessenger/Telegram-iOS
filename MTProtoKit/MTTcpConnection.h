@@ -1,5 +1,3 @@
-
-
 #import <Foundation/Foundation.h>
 
 @class MTDatacenterAddress;
@@ -7,12 +5,7 @@
 @class MTQueue;
 @class MTTcpConnection;
 @class MTNetworkUsageCalculationInfo;
-
-/*!
- MTTcpConnection delegate protocol
- 
- Note: messages could be sent to the receiver from an arbitrary thread, do not make assumtions.
- */
+@class MTTransportScheme;
 
 @protocol MTTcpConnectionDelegate <NSObject>
 
@@ -36,12 +29,12 @@
 @property (nonatomic, copy) void (^connectionReceivedData)(NSData *);
 
 @property (nonatomic, strong, readonly) id internalId;
-@property (nonatomic, strong, readonly) MTDatacenterAddress *address;
+@property (nonatomic, strong, readonly) MTTransportScheme *scheme;
 @property (nonatomic, strong, readonly) NSString *interface;
 
 + (MTQueue *)tcpQueue;
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 
 - (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 
