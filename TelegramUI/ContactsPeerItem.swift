@@ -316,7 +316,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = true
+        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.titleNode = TextNode()
         self.statusNode = TextNode()

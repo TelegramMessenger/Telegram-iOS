@@ -80,7 +80,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         self.highlightNode.isHidden = true
         
         self.imageNode = TransformImageNode()
-        self.imageNode.isLayerBacked = true
+        self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
         

@@ -173,7 +173,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 if let applyImage = applyImage {
                     let imageNode = applyImage()
                     if node.imageNode == nil {
-                        imageNode.isLayerBacked = true
+                        imageNode.isLayerBacked = !smartInvertColorsEnabled()
                         node.addSubnode(imageNode)
                         node.imageNode = imageNode
                     }

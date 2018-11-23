@@ -218,7 +218,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         
         self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 10
-        self.textNode.linkHighlightColor = UIColor(white: 1.0, alpha: 0.4)
+        self.textNode.linkHighlightColor = UIColor(rgb: 0x5ac8fa, alpha: 0.2)
 
         self.authorNameNode = ASTextNode()
         self.authorNameNode.maximumNumberOfLines = 1

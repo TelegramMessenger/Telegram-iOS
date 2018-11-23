@@ -106,7 +106,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
-        self.imageNode.isLayerBacked = true
+        self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
         self.imageNode.displaysAsynchronously = false
         
         var timebase: CMTimebase?

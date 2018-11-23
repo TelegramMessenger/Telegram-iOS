@@ -200,7 +200,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = true
+        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false

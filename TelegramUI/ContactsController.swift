@@ -21,7 +21,7 @@ public class ContactsController: ViewController {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    private var contactsAccessDisposable: Disposable?
+    private var authorizationDisposable: Disposable?
     
     public init(account: Account) {
         self.account = account
@@ -49,18 +49,25 @@ public class ContactsController: ViewController {
         }
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
-                    
-                    strongSelf.presentationData = presentationData
-                    
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                        strongSelf.updateThemeAndStrings()
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
                 }
-            })
+            }
+        })
+        
+        self.authorizationDisposable = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                strongSelf.tabBarItem.badgeValue = status != .allowed ? "!" : nil
+            }
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -69,7 +76,7 @@ public class ContactsController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
-        self.contactsAccessDisposable?.dispose()
+        self.authorizationDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -105,6 +112,12 @@ public class ContactsController: ViewController {
                         break
                 }
             }*/
+        }
+        
+        self.contactsNode.contactListNode.openPrivacyPolicy = { [weak self] in
+            if let strongSelf = self {
+                openExternalUrl(account: strongSelf.account, context: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
+            }
         }
         
         self.contactsNode.contactListNode.activateSearch = { [weak self] in

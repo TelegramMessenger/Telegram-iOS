@@ -15,7 +15,7 @@ enum ItemListDisclosureStyle {
 
 enum ItemListDisclosureLabelStyle {
     case text
-    case badge
+    case badge(UIColor)
     case color(UIColor)
 }
 
@@ -183,9 +183,11 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             var updatedLabelBadgeImage: UIImage?
             var updatedLabelImage: UIImage?
             
-            var hasBadge = false
-            if case .badge = item.labelStyle {
-                hasBadge = item.label.count > 0
+            var badgeColor: UIColor?
+            if case let .badge(color) = item.labelStyle {
+                if item.label.count > 0 {
+                    badgeColor = color
+                }
             }
             if case let .color(color) = item.labelStyle {
                 var updatedColor = true
@@ -201,11 +203,11 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
                 updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
-                if hasBadge {
-                    updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.theme.list.itemAccentColor)
+                if let badgeColor = badgeColor {
+                    updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
                 }
-            } else if hasBadge && !currentHasBadge {
-                updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.theme.list.itemAccentColor)
+            } else if let badgeColor = badgeColor, !currentHasBadge {
+                updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
             }
             
             var updateIcon = false
@@ -336,26 +338,26 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
                     
-                    let labelY: CGFloat
-                    if case .badge = item.labelStyle {
-                        labelY = 13.0
-                    } else {
-                        labelY = 11.0
-                    }
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: labelY), size: labelLayout.size)
-                    
                     if let updateBadgeImage = updatedLabelBadgeImage {
                         if strongSelf.labelBadgeNode.supernode == nil {
                             strongSelf.insertSubnode(strongSelf.labelBadgeNode, belowSubnode: strongSelf.labelNode)
                         }
                         strongSelf.labelBadgeNode.image = updateBadgeImage
                     }
-                    if !hasBadge && strongSelf.labelBadgeNode.supernode != nil {
+                    if badgeColor == nil && strongSelf.labelBadgeNode.supernode != nil {
                         strongSelf.labelBadgeNode.image = nil
                         strongSelf.labelBadgeNode.removeFromSupernode()
                     }
-                    strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width - 5.0, y: 12.0), size: CGSize(width: max(badgeDiameter, labelLayout.size.width + 10.0), height: badgeDiameter))
                     
+                    let badgeWidth = max(badgeDiameter, labelLayout.size.width + 10.0)
+                    strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth, y: 12.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
+                    
+                    if case .badge = item.labelStyle {
+                        strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: 13.0), size: labelLayout.size)
+                    } else {
+                        strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: 11.0), size: labelLayout.size)
+                    }
+ 
                     if case .color = item.labelStyle {
                         if let updatedLabelImage = updatedLabelImage {
                             strongSelf.labelImageNode.image = updatedLabelImage

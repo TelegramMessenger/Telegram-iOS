@@ -116,7 +116,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.imageNode = TransformImageNode()
-        self.imageNode.isLayerBacked = true
+        self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.notFoundNode = ASImageNode()
         self.notFoundNode.isLayerBacked = true

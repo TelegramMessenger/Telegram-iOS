@@ -79,7 +79,6 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.approximateDuration = approximateDuration
         
         self.imageNode = TransformImageNode()
-        self.imageNode.isLayerBacked = true
         
         self.playerItem = AVPlayerItem(url: URL(string: url)!)
         let player = AVPlayer(playerItem: self.playerItem)

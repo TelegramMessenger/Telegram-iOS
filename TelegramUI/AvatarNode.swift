@@ -177,6 +177,14 @@ public final class AvatarNode: ASDisplayNode {
         self.addSubnode(self.imageNode)
     }
     
+    override public func didLoad() {
+        super.didLoad()
+        
+        if #available(iOSApplicationExtension 11.0, *), !self.isLayerBacked {
+            self.view.accessibilityIgnoresInvertColors = true
+        }
+    }
+    
     override public var frame: CGRect {
         get {
             return super.frame

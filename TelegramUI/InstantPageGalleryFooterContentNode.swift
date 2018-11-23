@@ -36,7 +36,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
         self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 10
         self.textNode.insets = UIEdgeInsets(top: 8.0, left: 0.0, bottom: 8.0, right: 0.0)
-        self.textNode.linkHighlightColor = UIColor(white: 1.0, alpha: 0.4)
+        self.textNode.linkHighlightColor = UIColor(rgb: 0x5ac8fa, alpha: 0.2)
         
         super.init()
         

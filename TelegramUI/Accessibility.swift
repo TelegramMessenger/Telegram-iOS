@@ -1,6 +1,14 @@
 import SwiftSignalKit
 import UIKit
 
+func smartInvertColorsEnabled() -> Bool {
+    if #available(iOSApplicationExtension 11.0, *), UIAccessibilityIsInvertColorsEnabled() {
+        return true
+    } else {
+        return false
+    }
+}
+
 func reduceMotionEnabled() -> Signal<Bool, NoError> {
     return Signal { subscriber in
         subscriber.putNext(UIAccessibility.isReduceMotionEnabled)

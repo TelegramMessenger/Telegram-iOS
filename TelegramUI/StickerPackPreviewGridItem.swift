@@ -64,7 +64,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     
     override init() {
         self.imageNode = TransformImageNode()
-        self.imageNode.isLayerBacked = true
+        self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
         //self.imageNode.alphaTransitionOnFirstUpdate = true
         
         self.textNode = ASTextNode()

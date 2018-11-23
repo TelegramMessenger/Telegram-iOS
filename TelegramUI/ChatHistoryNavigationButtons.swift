@@ -90,11 +90,11 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     
     func updateLayout(transition: ContainedViewLayoutTransition) -> CGSize {
         let buttonSize = CGSize(width: 38.0, height: 38.0)
-        let completeSize = CGSize(width: buttonSize.width, height: buttonSize.height * 2.0 + 6.0)
+        let completeSize = CGSize(width: buttonSize.width, height: buttonSize.height * 2.0 + 12.0)
         var mentionsOffset: CGFloat = 0.0
         
         if self.displayDownButton {
-            mentionsOffset = buttonSize.height + 8.0
+            mentionsOffset = buttonSize.height + 12.0
             transition.updateAlpha(node: self.downButton, alpha: 1.0)
             transition.updateTransformScale(node: self.downButton, scale: 1.0)
         } else {

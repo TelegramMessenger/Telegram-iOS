@@ -31,6 +31,14 @@ public class TransformImageNode: ASDisplayNode {
         self.disposable.dispose()
     }
     
+    override public func didLoad() {
+        super.didLoad()
+        
+        if #available(iOSApplicationExtension 11.0, *), !self.isLayerBacked {
+            self.view.accessibilityIgnoresInvertColors = true
+        }
+    }
+    
     override public var frame: CGRect {
         didSet {
             if let overlayNode = self.overlayNode {

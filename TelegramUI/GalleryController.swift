@@ -305,8 +305,6 @@ class GalleryController: ViewController {
     private var performAction: (GalleryControllerInteractionTapAction) -> Void
     private var openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    private let resolveDisposable = MetaDisposable()
-    
     init(account: Account, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.account = account
         self.replaceRootController = replaceRootController
@@ -686,7 +684,6 @@ class GalleryController: ViewController {
     
     deinit {
         self.disposable.dispose()
-        self.resolveDisposable.dispose()
         self.centralItemAttributesDisposable.dispose()
         if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex, let mediaManager = self.account.telegramApplicationContext.mediaManager {
             mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)

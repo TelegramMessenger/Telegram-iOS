@@ -220,8 +220,8 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 self.visibleThumbnailLayers[item.fileReference.media.fileId] = thumbnailLayer
             }
             
-            let progessSize = CGSize(width: 24.0, height: 24.0)
-            let progressFrame =  CGRect(origin: CGPoint(x: item.frame.midX - progessSize.width / 2.0, y: item.frame.midY - progessSize.height / 2.0), size: progessSize)
+            let progressSize = CGSize(width: 24.0, height: 24.0)
+            let progressFrame =  CGRect(origin: CGPoint(x: item.frame.midX - progressSize.width / 2.0, y: item.frame.midY - progressSize.height / 2.0), size: progressSize)
             
             let updatedStatusSignal = account.postbox.mediaBox.resourceStatus(item.fileReference.media.resource)
             

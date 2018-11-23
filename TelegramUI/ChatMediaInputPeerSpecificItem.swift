@@ -72,13 +72,13 @@ final class ChatMediaInputPeerSpecificItemNode: ListViewItemNode {
     
     private let stickerFetchedDisposable = MetaDisposable()
     
-    init() {
+    init() {        
         self.highlightNode = ASImageNode()
         self.highlightNode.isLayerBacked = true
         self.highlightNode.isHidden = true
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = true
+        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         self.avatarNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         let imageSize = CGSize(width: 32.0, height: 32.0)

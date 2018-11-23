@@ -38,13 +38,15 @@ final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
     private var pulseImage: UIImage?
     
     override init() {
+        let isLayerBacked = !smartInvertColorsEnabled()
+        
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = true
+        self.avatarNode.isLayerBacked = isLayerBacked
         
         self.pulseNode = ASImageNode()
         self.pulseNode.isLayerBacked = true
@@ -54,7 +56,7 @@ final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
         
         super.init()
         
-        self.isLayerBacked = true
+        self.isLayerBacked = isLayerBacked
         
         self.addSubnode(self.pulseNode)
         self.addSubnode(self.backgroundNode)

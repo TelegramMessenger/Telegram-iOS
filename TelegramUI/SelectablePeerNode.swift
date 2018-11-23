@@ -89,14 +89,12 @@ final class SelectablePeerNode: ASDisplayNode {
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 60.0, height: 60.0))
-        self.avatarNode.isLayerBacked = true
+        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.textNode = ASTextNode()
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = true
         
-        
-       
         super.init()
         
         self.avatarNodeContainer.addSubnode(self.avatarSelectionNode)

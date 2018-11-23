@@ -14,6 +14,7 @@ public final class TelegramRootController: NavigationController {
     public var chatListController: ChatListController?
     public var accountSettingsController: ViewController?
     
+    private var permissionsDisposable: Disposable?
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
     
@@ -23,6 +24,8 @@ public final class TelegramRootController: NavigationController {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init(mode: .automaticMasterDetail, theme: NavigationControllerTheme(presentationTheme: self.presentationData.theme))
+        
+        //self.permissionsDisposable =
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -42,6 +45,7 @@ public final class TelegramRootController: NavigationController {
     }
     
     deinit {
+        self.permissionsDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
     }
     
@@ -111,5 +115,21 @@ public final class TelegramRootController: NavigationController {
             return
         }
         presentedLegacyShortcutCamera(account: self.account, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
+    }
+    
+    public func requestPermissions() {
+        guard let parentController = self.viewControllers.last as? ViewController else {
+            return
+        }
+        
+        let _ = (DeviceAccess.authorizationStatus(account: self.account, subject: .notifications)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { status in
+            if status != .allowed {
+                let controller = PermissionController(account: self.account)
+                controller.updateData(subject: .notifications, currentStatus: status)
+                parentController.present(controller, in: .window(.root))
+            }
+        })
     }
 }

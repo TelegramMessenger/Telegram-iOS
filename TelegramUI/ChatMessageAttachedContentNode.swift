@@ -249,7 +249,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         
         self.inlineImageNode = TransformImageNode()
         self.inlineImageNode.contentAnimations = [.subsequentUpdates]
-        self.inlineImageNode.isLayerBacked = true
+        self.inlineImageNode.isLayerBacked = !smartInvertColorsEnabled()
         self.inlineImageNode.displaysAsynchronously = false
         
         self.statusNode = ChatMessageDateAndStatusNode()

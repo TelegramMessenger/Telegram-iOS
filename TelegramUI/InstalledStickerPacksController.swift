@@ -236,7 +236,7 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
                     arguments.openSuggestOptions()
                 })
             case let .trending(theme, text, count):
-                return ItemListDisclosureItem(theme: theme, title: text, label: count == 0 ? "" : "\(count)", labelStyle: .badge, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(theme: theme, title: text, label: count == 0 ? "" : "\(count)", labelStyle: .badge(theme.list.itemAccentColor), sectionId: self.section, style: .blocks, action: {
                     arguments.openFeatured()
                 })
             case let .masks(theme, text):

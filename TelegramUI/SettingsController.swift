@@ -71,7 +71,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case recentCalls(PresentationTheme, UIImage?, String)
     case stickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
     
-    case notificationsAndSounds(PresentationTheme, UIImage?, String, NotificationExceptionsList?)
+    case notificationsAndSounds(PresentationTheme, UIImage?, String, NotificationExceptionsList?, Bool)
     case privacyAndSecurity(PresentationTheme, UIImage?, String)
     case dataAndStorage(PresentationTheme, UIImage?, String)
     case themes(PresentationTheme, UIImage?, String)
@@ -209,8 +209,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .notificationsAndSounds(lhsTheme, lhsImage, lhsText, lhsExceptionsList):
-                if case let .notificationsAndSounds(rhsTheme, rhsImage, rhsText, rhsExceptionsList) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsExceptionsList == rhsExceptionsList {
+            case let .notificationsAndSounds(lhsTheme, lhsImage, lhsText, lhsExceptionsList, lhsWarning):
+                if case let .notificationsAndSounds(rhsTheme, rhsImage, rhsText, rhsExceptionsList, rhsWarning) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText, lhsExceptionsList == rhsExceptionsList, lhsWarning == rhsWarning {
                     return true
                 } else {
                     return false
@@ -302,13 +302,13 @@ private enum SettingsEntry: ItemListNodeEntry {
                     arguments.openRecentCalls()
                 })
             case let .stickers(theme, image, text, value, archivedPacks):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, labelStyle: .badge, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: value, labelStyle: .badge(theme.list.itemAccentColor), sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(installedStickerPacksController(account: arguments.account, mode: .general, archivedPacks: archivedPacks, updatedPacks: { packs in
                         arguments.updateArchivedPacks(packs)
                     }))
                 })
-            case let .notificationsAndSounds(theme, image, text, exceptionsList):
-                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+            case let .notificationsAndSounds(theme, image, text, exceptionsList, warning):
+                return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: warning ? "!" : "", labelStyle: warning ? .badge(theme.list.itemDestructiveColor) : .text, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.pushController(notificationsAndSoundsController(account: arguments.account, exceptionsList: exceptionsList))
                 })
             case let .privacyAndSecurity(theme, image, text):
@@ -366,7 +366,7 @@ private struct SettingsState: Equatable {
     }
 }
 
-private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool) -> [SettingsEntry] {
+private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -398,7 +398,7 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         entries.append(.recentCalls(presentationData.theme, SettingsItemIcons.recentCalls, presentationData.strings.CallSettings_RecentCalls))
         entries.append(.stickers(presentationData.theme, SettingsItemIcons.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         
-        entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions))
+        entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsAuthorizationStatus != .allowed))
         entries.append(.privacyAndSecurity(presentationData.theme, SettingsItemIcons.security, presentationData.strings.Settings_PrivacySettings))
         entries.append(.dataAndStorage(presentationData.theme, SettingsItemIcons.dataAndStorage, presentationData.strings.Settings_ChatSettings))
         entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.Settings_Appearance))
@@ -673,19 +673,20 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }
     updatePassport()
     
+    let notificationAuthorizationStatus = Promise<AccessType>(.allowed)
+    notificationAuthorizationStatus.set(DeviceAccess.authorizationStatus(account: account, subject: .notifications))
     
     let notifyExceptions = Promise<NotificationExceptionsList?>(nil)
     let updateNotifyExceptions: () -> Void = {
         notifyExceptions.set(notificationExceptionsList(network: account.network) |> map(Optional.init))
     }
- //   updateNotifyExceptions()
     
     let hasWatchApp = Promise<Bool>(false)
     if let context = account.applicationContext as? TelegramApplicationContext, let watchManager = context.watchManager {
         hasWatchApp.set(watchManager.watchAppInstalled)
     }
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, combineLatest(account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), notifyExceptions.get()), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()))
+    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, combineLatest(account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), notifyExceptions.get(), notificationAuthorizationStatus.get()), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()))
         |> map { presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let proxySettings: ProxySettings = preferencesAndExceptions.0.values[PreferencesKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
             
@@ -708,7 +709,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
             
             let (hasPassport, hasWatchApp) = hasPassportAndWatch
             
-            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp), style: .blocks)
+            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp), style: .blocks)
             
             return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -717,8 +718,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
     
-    let controller = ItemListController(account: account, state: signal, tabBarItem: (account.applicationContext as! TelegramApplicationContext).presentationData |> map { presentationData in
-        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon)
+    let controller = ItemListController(account: account, state: signal, tabBarItem: combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, notificationAuthorizationStatus.get()) |> map { presentationData, status in
+        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon, badgeValue: status != .allowed ? "!" : nil)
     })
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)

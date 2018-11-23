@@ -2,11 +2,14 @@ import Foundation
 import UIKit
 import AVFoundation
 import Display
+import TelegramCore
 import SwiftSignalKit
 import Photos
 import CoreLocation
 import Contacts
 import AddressBook
+import UserNotifications
+import CoreTelephony
 
 import LegacyComponents
 
@@ -33,9 +36,13 @@ public enum DeviceAccessSubject {
     case mediaLibrary(DeviceAccessMediaLibrarySubject)
     case location(DeviceAccessLocationSubject)
     case contacts
+    case notifications
+    case siri
+    case cellularData
 }
 
-private enum AccessType {
+public enum AccessType {
+    case notDetermined
     case allowed
     case denied
     case restricted
@@ -49,11 +56,109 @@ public final class DeviceAccess {
         return self.contactsPromise.get()
     }
     
+    private static let notificationsPromise = Promise<AccessType?>(nil)
+    
     public static func isMicrophoneAccessAuthorized() -> Bool? {
         return AVAudioSession.sharedInstance().recordPermission() == .granted
     }
     
-    public static func authorizeAccess(to subject: DeviceAccessSubject, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, openSettings: @escaping () -> Void, displayNotificatoinFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void) {
+    public static func authorizationStatus(account: Account, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
+        switch subject {
+            case .notifications:
+                let status = Signal<AccessType, NoError> { subscriber in
+                    if #available(iOSApplicationExtension 10.0, *) {
+                        UNUserNotificationCenter.current().getNotificationSettings(completionHandler: { settings in
+                            switch settings.authorizationStatus {
+                                case .authorized:
+                                    subscriber.putNext(.allowed)
+                                case .denied:
+                                    subscriber.putNext(.denied)
+                                case .notDetermined:
+                                    subscriber.putNext(.notDetermined)
+                                default:
+                                    subscriber.putNext(.notDetermined)
+                            }
+                            subscriber.putCompletion()
+                        })
+                    } else {
+                        subscriber.putNext(.notDetermined)
+                        subscriber.putCompletion()
+                    }
+                    return EmptyDisposable
+                }
+                return account.telegramApplicationContext.applicationBindings.applicationInForeground
+                |> distinctUntilChanged
+                |> mapToSignal { inForeground -> Signal<AccessType, NoError> in
+                    return status
+                }
+            case .contacts:
+                let status = Signal<AccessType, NoError> { subscriber in
+                    if #available(iOSApplicationExtension 9.0, *) {
+                        switch CNContactStore.authorizationStatus(for: .contacts) {
+                            case .notDetermined:
+                                subscriber.putNext(.notDetermined)
+                            case .authorized:
+                                subscriber.putNext(.allowed)
+                            default:
+                                subscriber.putNext(.denied)
+                        }
+                        subscriber.putCompletion()
+                    } else {
+                        switch ABAddressBookGetAuthorizationStatus() {
+                            case .notDetermined:
+                                subscriber.putNext(.notDetermined)
+                            case .authorized:
+                                subscriber.putNext(.allowed)
+                            default:
+                                subscriber.putNext(.denied)
+                        }
+                        subscriber.putCompletion()
+                    }
+                    return EmptyDisposable
+                }
+                return status
+                |> then(self.contacts
+                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                        if let authorized = authorized {
+                            return .single(authorized ? .allowed : .denied)
+                        } else {
+                            return .complete()
+                        }
+                    })
+            case .cellularData:
+                return Signal { subscriber in
+                    if #available(iOSApplicationExtension 9.0, *) {
+                        func statusForCellularState(_ state: CTCellularDataRestrictedState) -> AccessType? {
+                            switch state {
+                            case .restricted:
+                                return .denied
+                            case .notRestricted:
+                                return .allowed
+                            default:
+                                return nil
+                            }
+                        }
+                        let cellState = CTCellularData.init()
+                        if let status = statusForCellularState(cellState.restrictedState) {
+                            subscriber.putNext(status)
+                        }
+                        cellState.cellularDataRestrictionDidUpdateNotifier = { restrictedState in
+                            if let status = statusForCellularState(restrictedState) {
+                                subscriber.putNext(status)
+                            }
+                        }
+                    } else {
+                        subscriber.putNext(.notDetermined)
+                        subscriber.putCompletion()
+                    }
+                    return EmptyDisposable
+            }
+            default:
+                return .single(.notDetermined)
+        }
+    }
+    
+    public static func authorizeAccess(to subject: DeviceAccessSubject, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, openSettings: @escaping () -> Void, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void) {
             switch subject {
                 case .camera:
                     let status = PGCamera.cameraAuthorizationStatus()
@@ -108,7 +213,7 @@ public final class DeviceAccess {
                                     openSettings()
                                 })]), nil)
                                 if case .voiceCall = microphoneSubject {
-                                    displayNotificatoinFromBackground(text)
+                                    displayNotificationFromBackground(text)
                                 }
                             }
                         })
@@ -231,6 +336,8 @@ public final class DeviceAccess {
                             }
                         }
                     })
+                default:
+                    break
             }
     }
 }

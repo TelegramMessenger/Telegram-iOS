@@ -181,9 +181,9 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     override func didLoad() {
         super.didLoad()
         
-        /*let recognizer = SwipeToDismissGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        recognizer.delegate = self
-        self.view.addGestureRecognizer(recognizer)*/
+        if #available(iOSApplicationExtension 11.0, *), !self.isLayerBacked {
+            self.view.accessibilityIgnoresInvertColors = true
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

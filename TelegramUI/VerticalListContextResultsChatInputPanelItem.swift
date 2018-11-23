@@ -117,7 +117,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         
         self.iconImageNode = TransformImageNode()
         self.iconImageNode.contentAnimations = [.subsequentUpdates]
-        self.iconImageNode.isLayerBacked = true
+        self.iconImageNode.isLayerBacked = !smartInvertColorsEnabled()
         self.iconImageNode.displaysAsynchronously = false
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -327,9 +327,8 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
                     
-                    
-                    let progressFrame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - 37) / 2), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - 37) / 2)), size: CGSize(width: 37, height: 37))
-                    
+                    let progressSize = CGSize(width: 24.0, height: 24.0)
+                    let progressFrame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - progressSize.width) / 2.0), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - progressSize.height) / 2.0)), size: progressSize)
                     
                     if let updatedStatusSignal = updatedStatusSignal {
                         strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in

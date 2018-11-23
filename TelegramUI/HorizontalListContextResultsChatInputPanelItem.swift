@@ -148,7 +148,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
-        self.imageNode.isLayerBacked = true
+        self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
         self.imageNode.displaysAsynchronously = false
         
         var timebase: CMTimebase?
@@ -350,7 +350,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         }
                     }
                     
-                    let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeLayout.contentSize.width - 37) / 2), y: floorToScreenPixels((nodeLayout.contentSize.height - 37) / 2)), size: CGSize(width: 37, height: 37))
+                    let progressSize = CGSize(width: 24.0, height: 24.0)
+                    let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeLayout.contentSize.width - progressSize.width) / 2.0), y: floorToScreenPixels((nodeLayout.contentSize.height - progressSize.height) / 2.0)), size: progressSize)
 
                     strongSelf.statusNode.removeFromSupernode()
                     strongSelf.addSubnode(strongSelf.statusNode)

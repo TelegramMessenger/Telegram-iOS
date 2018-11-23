@@ -59,7 +59,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         self.button = HighlightTrackingButton()
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = true
+        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.label = ImmediateTextNode()
         self.label.isUserInteractionEnabled = false

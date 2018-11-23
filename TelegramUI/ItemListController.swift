@@ -93,15 +93,17 @@ final class ItemListControllerTabBarItem: Equatable {
     let title: String
     let image: UIImage?
     let selectedImage: UIImage?
+    let badgeValue: String?
     
-    init(title: String, image: UIImage?, selectedImage: UIImage?) {
+    init(title: String, image: UIImage?, selectedImage: UIImage?, badgeValue: String? = nil) {
         self.title = title
         self.image = image
         self.selectedImage = selectedImage
+        self.badgeValue = badgeValue
     }
     
     static func ==(lhs: ItemListControllerTabBarItem, rhs: ItemListControllerTabBarItem) -> Bool {
-        return lhs.title == rhs.title && lhs.image === rhs.image && lhs.selectedImage === rhs.selectedImage
+        return lhs.title == rhs.title && lhs.image === rhs.image && lhs.selectedImage === rhs.selectedImage && lhs.badgeValue == rhs.badgeValue
     }
 }
 

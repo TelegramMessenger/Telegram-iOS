@@ -604,7 +604,6 @@ public func recentSessionsController(account: Account) -> ViewController {
     let websitesSignal: Signal<([WebAuthorization], [PeerId : Peer])?, NoError> = .single(nil) |> then(webSessions(network: account.network) |> map(Optional.init))
     websitesPromise.set(websitesSignal)
     
-    
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, mode.get(), statePromise.get(), sessionsPromise.get(), websitesPromise.get())
@@ -635,6 +634,8 @@ public func recentSessionsController(account: Account) -> ViewController {
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if sessions == nil {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+            } else if let sessions = sessions, sessions.count == 1 {
+                emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
             }
             
             let title: ItemListControllerTitle

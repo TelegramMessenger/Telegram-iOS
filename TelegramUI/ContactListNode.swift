@@ -559,6 +559,7 @@ final class ContactListNode: ASDisplayNode {
     
     var activateSearch: (() -> Void)?
     var openPeer: ((ContactListPeer) -> Void)?
+    var openPrivacyPolicy: (() -> Void)?
     
     private let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
     private let disposable = MetaDisposable()
@@ -566,6 +567,8 @@ final class ContactListNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)>
+    
+    private let authorizationNode: PermissionControllerNode
     
     init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
@@ -579,6 +582,9 @@ final class ContactListNode: ASDisplayNode {
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.disableAnimations))
         
+        self.authorizationNode = PermissionControllerNode(theme: defaultLightAuthorizationTheme, strings: self.presentationData.strings)
+        self.authorizationNode.updateData(subject: .contacts, currentStatus: .denied)
+        
         super.init()
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
@@ -586,8 +592,9 @@ final class ContactListNode: ASDisplayNode {
         self.selectionStateValue = selectionState
         self.selectionStatePromise.set(.single(selectionState))
         
-        self.addSubnode(self.listNode)
-        
+        //self.addSubnode(self.listNode)
+        self.addSubnode(self.authorizationNode)
+
         let processingQueue = Queue()
         let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
         
@@ -808,6 +815,13 @@ final class ContactListNode: ASDisplayNode {
             fixSearchableListNodeScrolling(strongSelf.listNode)
         }
         
+        self.authorizationNode.allow = { [weak self] in
+            self?.account.telegramApplicationContext.applicationBindings.openSettings()
+        }
+        self.authorizationNode.openPrivacyPolicy = { [weak self] in
+            self?.openPrivacyPolicy?()
+        }
+        
         self.enableUpdates = true
     }
     
@@ -821,6 +835,11 @@ final class ContactListNode: ASDisplayNode {
         if updatedSelectionState != self.selectionStateValue {
             self.selectionStateValue = updatedSelectionState
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        return result
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -856,6 +875,10 @@ final class ContactListNode: ASDisplayNode {
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
+        let sublayout = layout.addedInsets(insets: UIEdgeInsetsMake(0.0, 0.0, 40.0, 0.0))
+        transition.updateFrame(node: self.authorizationNode, frame: self.bounds)
+        self.authorizationNode.containerLayoutUpdated(sublayout, navigationBarHeight: 0.0, transition: transition)
         
         if !self.hasValidLayout {
             self.hasValidLayout = true

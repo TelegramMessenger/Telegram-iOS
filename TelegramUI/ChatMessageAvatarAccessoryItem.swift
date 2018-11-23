@@ -42,13 +42,15 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
     let avatarNode: AvatarNode
     
     override init() {
+        let isLayerBacked = !smartInvertColorsEnabled()
+        
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = true
+        self.avatarNode.isLayerBacked = isLayerBacked
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         
         super.init()
         
-        self.isLayerBacked = true
+        self.isLayerBacked = isLayerBacked
         self.addSubnode(self.avatarNode)
     }
     
