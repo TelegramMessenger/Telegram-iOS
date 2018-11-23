@@ -36,8 +36,7 @@
 
 - (void)requestConnection
 {
-    if (_backoffTimer == nil)
-    {
+    if (_backoffTimer == nil) {
         [self timerEvent:false];
     }
 }

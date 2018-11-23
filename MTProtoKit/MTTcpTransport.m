@@ -341,6 +341,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     
     id<MTTransportDelegate> delegate = self.delegate;
     if (scheme != nil) {
+        if ([delegate respondsToSelector:@selector(transportConnectionFailed:scheme:)]) {
+            [delegate transportConnectionFailed:self scheme:scheme];
+        }
         if ([delegate respondsToSelector:@selector(transportConnectionProblemsStatusChanged:scheme:hasConnectionProblems:isProbablyHttp:)]) {
             [delegate transportConnectionProblemsStatusChanged:self scheme:scheme hasConnectionProblems:true isProbablyHttp:false];
         }
@@ -782,6 +785,25 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             id<MTTransportDelegate> delegate = self.delegate;
             if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
                 [delegate transportConnectionContextUpdateStateChanged:self isUpdatingConnectionContext:false];
+        }
+    }];
+}
+
+- (void)updateSchemes:(NSArray<MTTransportScheme *> * _Nonnull)schemes {
+    MTTcpTransportContext *transportContext = _transportContext;
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
+        if ([transportContext.schemes isEqualToArray:schemes]) {
+            return;
+        }
+        transportContext.schemes = schemes;
+        bool reset = false;
+        if (![transportContext.schemes containsObject:transportContext.connection.scheme]) {
+            reset = true;
+        } else if (!transportContext.connectionIsValid) {
+            reset = true;
+        }
+        if (reset) {
+            [transportContext.connectionBehaviour requestConnection];
         }
     }];
 }

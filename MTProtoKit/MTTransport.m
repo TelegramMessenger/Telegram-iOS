@@ -90,4 +90,7 @@
 {
 }
 
+- (void)updateSchemes:(NSArray<MTTransportScheme *> * _Nonnull)schemes {
+}
+
 @end

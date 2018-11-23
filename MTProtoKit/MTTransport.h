@@ -64,4 +64,6 @@
 
 - (void)activeTransactionIds:(void (^)(NSArray *activeTransactionId))completion;
 
+- (void)updateSchemes:(NSArray<MTTransportScheme *> * _Nonnull)schemes;
+
 @end
