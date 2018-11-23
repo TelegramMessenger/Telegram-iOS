@@ -79,6 +79,7 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
         return EmptyDisposable
     }, openSettings: {
     }, openAppStorePage: {
+    }, registerForNotifications: {
     }, getWindowHost: {
         return nil
     }, presentNativeController: { _ in

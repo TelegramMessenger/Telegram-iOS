@@ -575,20 +575,22 @@ final class AuthorizedApplicationContext {
                             
                             DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, present: { c, a in
                             }, openSettings: {
-                            }, { _ in  
+                            }, { _ in
                             })
-                            
+
                             if #available(iOS 10.0, *) {
                                 INPreferences.requestSiriAuthorization { _ in
                                 }
                             }
-                            
+
                             if #available(iOS 12.0, *) {
                                 let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
                                 userActivity.interaction?.donate(completion: { _ in
-                                    
+
                                 })
                             }
+                            
+                            strongSelf.rootController.requestPermissions()
                             
                             if let passcodeController = strongSelf.passcodeController {
                                 if let chatListController = strongSelf.rootController.chatListController {

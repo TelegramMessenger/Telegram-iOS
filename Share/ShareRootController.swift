@@ -130,7 +130,7 @@ class ShareRootController: UIViewController {
             }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
             }, pushIdleTimerExtension: {
                 return EmptyDisposable
-            }, openSettings: {}, openAppStorePage: {}, getWindowHost: {
+            }, openSettings: {}, openAppStorePage: {}, registerForNotifications: {}, getWindowHost: {
                 return nil
             }, presentNativeController: { _ in
             }, dismissNativeController: {
