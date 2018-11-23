@@ -674,7 +674,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
     updatePassport()
     
     let notificationAuthorizationStatus = Promise<AccessType>(.allowed)
-    notificationAuthorizationStatus.set(DeviceAccess.authorizationStatus(account: account, subject: .notifications))
+    notificationAuthorizationStatus.set(.single(.allowed)
+    |> then(DeviceAccess.authorizationStatus(account: account, subject: .notifications)))
     
     let notifyExceptions = Promise<NotificationExceptionsList?>(nil)
     let updateNotifyExceptions: () -> Void = {

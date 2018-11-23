@@ -592,8 +592,7 @@ final class ContactListNode: ASDisplayNode {
         self.selectionStateValue = selectionState
         self.selectionStatePromise.set(.single(selectionState))
         
-        //self.addSubnode(self.listNode)
-        self.addSubnode(self.authorizationNode)
+        self.addSubnode(self.listNode)
 
         let processingQueue = Queue()
         let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
@@ -835,11 +834,6 @@ final class ContactListNode: ASDisplayNode {
         if updatedSelectionState != self.selectionStateValue {
             self.selectionStateValue = updatedSelectionState
         }
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let result = super.hitTest(point, with: event)
-        return result
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

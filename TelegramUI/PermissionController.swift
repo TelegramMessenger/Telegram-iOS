@@ -13,12 +13,16 @@ final class PermissionController : ViewController {
     private let strings: PresentationStrings
     private let theme: AuthorizationTheme
     
+    private var animatedIn = false
+    
+    private var allow: (() -> Void)?
+    
     init(account: Account) {
         self.account = account
         self.strings = account.telegramApplicationContext.currentPresentationData.with { $0 }.strings
         self.theme = defaultLightAuthorizationTheme
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
+        super.init(navigationBarPresentationData: nil)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -37,13 +41,24 @@ final class PermissionController : ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         self.controllerNode.allow = { [weak self] in
-            self?.account.telegramApplicationContext.applicationBindings.openSettings()
+            self?.allow?()
         }
         self.controllerNode.next = { [weak self] in
             self?.dismiss(completion: nil)
         }
-        self.controllerNode.openPrivacyPolicy = {
-            
+        self.controllerNode.openPrivacyPolicy = { [weak self] in
+            if let strongSelf = self {
+                openExternalUrl(account: strongSelf.account, context: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: nil, dismissInput: {})
+            }
+        }
+    }
+    
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if !self.animatedIn {
+            self.animatedIn = true
+            self.controllerNode.animateIn()
         }
     }
     
@@ -51,7 +66,8 @@ final class PermissionController : ViewController {
         self.controllerNode.animateOut(completion: completion)
     }
     
-    func updateData(subject: DeviceAccessSubject, currentStatus: AccessType) {
+    func updateData(subject: DeviceAccessSubject, currentStatus: AccessType, allow: @escaping () -> Void) {
+        self.allow = allow
         self.controllerNode.updateData(subject: .notifications, currentStatus: currentStatus)
     }
     

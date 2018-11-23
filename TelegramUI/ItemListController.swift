@@ -217,6 +217,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                         strongSelf.tabBarItem.title = tabBarItemInfo.title
                         strongSelf.tabBarItem.image = tabBarItemInfo.image
                         strongSelf.tabBarItem.selectedImage = tabBarItemInfo.selectedImage
+                        strongSelf.tabBarItem.badgeValue = tabBarItemInfo.badgeValue
                     }
                 }
             })

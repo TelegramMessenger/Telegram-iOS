@@ -122,12 +122,22 @@ public final class TelegramRootController: NavigationController {
             return
         }
         
-        let _ = (DeviceAccess.authorizationStatus(account: self.account, subject: .notifications)
+        let account = self.account
+        let _ = (DeviceAccess.authorizationStatus(account: account, subject: .notifications)
         |> take(1)
         |> deliverOnMainQueue).start(next: { status in
             if status != .allowed {
                 let controller = PermissionController(account: self.account)
-                controller.updateData(subject: .notifications, currentStatus: status)
+                controller.updateData(subject: .notifications, currentStatus: status, allow: {
+                    switch status {
+                        case .notDetermined:
+                            account.telegramApplicationContext.applicationBindings.registerForNotifications()
+                        case .denied:
+                            account.telegramApplicationContext.applicationBindings.openSettings()
+                        default:
+                            break
+                    }
+                })
                 parentController.present(controller, in: .window(.root))
             }
         })

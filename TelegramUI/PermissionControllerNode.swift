@@ -47,9 +47,6 @@ final class PermissionControllerNode: ASDisplayNode {
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
         self.textNode.displaysAsynchronously = false
-        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.primaryColor)
-        let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.accentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
-        self.textNode.attributedText = parseMarkdownIntoAttributedString(strings.Login_TermsOfServiceLabel.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
         
         self.buttonNode = SolidRoundedButtonNode(theme: self.theme, height: 48.0, cornerRadius: 9.0)
         
@@ -77,6 +74,7 @@ final class PermissionControllerNode: ASDisplayNode {
         
         self.buttonNode.pressed = { [weak self] in
             self?.allow?()
+            self?.dismiss?()
         }
     
         self.privacyPolicyNode.addTarget(self, action: #selector(self.privacyPolicyPressed), forControlEvents: .touchUpInside)
@@ -158,7 +156,7 @@ final class PermissionControllerNode: ASDisplayNode {
         }
         
         let nextSize = self.nextNode.measure(layout.size)
-        transition.updateFrame(node: self.nextNode, frame: CGRect(x: layout.size.width - insets.right - nextSize.width - 16.0, y: insets.top + 10.0 + 60.0, width: nextSize.width, height: nextSize.height))
+        transition.updateFrame(node: self.nextNode, frame: CGRect(x: layout.size.width - insets.right - nextSize.width - 16.0, y: insets.top + 10.0, width: nextSize.width, height: nextSize.height))
         
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.semibold(fontSize), textColor: self.theme.primaryColor)
         
@@ -190,6 +188,10 @@ final class PermissionControllerNode: ASDisplayNode {
     
     @objc func nextPressed() {
         self.next?()
+    }
+    
+    func animateIn(completion: (() -> Void)? = nil) {
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
