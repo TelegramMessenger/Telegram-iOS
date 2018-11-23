@@ -83,7 +83,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             account = accountManager(basePath: rootPath + "/accounts-metadata")
             |> take(1)
             |> mapToSignal { accountManager -> Signal<Account, NoError> in
-                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion), supplementary: true, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: accountAuxiliaryMethods)
+                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: accountAuxiliaryMethods)
                 |> mapToSignal { account -> Signal<Account, NoError> in
                     if let account = account {
                         switch account {

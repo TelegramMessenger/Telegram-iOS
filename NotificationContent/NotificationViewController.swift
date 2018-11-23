@@ -77,7 +77,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
             |> take(1)
             |> introduceError(NotificationContentAuthorizationError.self)
             |> mapToSignal { accountManager -> Signal<(Account, AccountManager), NotificationContentAuthorizationError> in
-                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion), supplementary: true, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: telegramAccountAuxiliaryMethods)
                 |> introduceError(NotificationContentAuthorizationError.self)
                 |> mapToSignal { account -> Signal<(Account, AccountManager), NotificationContentAuthorizationError> in
                     if let account = account {

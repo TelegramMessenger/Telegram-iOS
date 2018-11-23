@@ -354,7 +354,7 @@ private enum QueuedWakeup: Int32 {
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer)
         
         let appGroupName = "group.\(Bundle.main.bundleIdentifier!)"
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
@@ -1209,7 +1209,7 @@ private enum QueuedWakeup: Int32 {
                             if let callbackUrl = URL(string: secureIdCallbackUrl(with: secureIdData.callbackUrl, peerId: secureIdData.peerId, result: .cancel, parameters: [:])) {
                                 UIApplication.shared.openURL(callbackUrl)
                             }
-                        }), TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})]), on: .root, blockInteraction: false)
+                        }), TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                     } else if let confirmationCode = parseConfirmationCodeUrl(url) {
                         context.rootController.applyConfirmationCode(confirmationCode)
                     }

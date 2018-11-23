@@ -81,26 +81,26 @@ class TodayViewController: UIViewController, NCWidgetProviding {
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
             initializeAccountManagement()
             account = accountManager(basePath: rootPath + "/accounts-metadata")
-                |> take(1)
-                |> mapToSignal { accountManager -> Signal<Account, NoError> in
-                    return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion), supplementary: true, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
-                        |> mapToSignal { account -> Signal<Account, NoError> in
-                            if let account = account {
-                                switch account {
-                                case .upgrading:
-                                    return .complete()
-                                case let .authorized(account):
-                                    accountCache = account
-                                    return .single(account)
-                                case .unauthorized:
-                                    return .complete()
-                                }
-                            } else {
-                                return .complete()
-                            }
+            |> take(1)
+            |> mapToSignal { accountManager -> Signal<Account, NoError> in
+                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
+                |> mapToSignal { account -> Signal<Account, NoError> in
+                    if let account = account {
+                        switch account {
+                        case .upgrading:
+                            return .complete()
+                        case let .authorized(account):
+                            accountCache = account
+                            return .single(account)
+                        case .unauthorized:
+                            return .complete()
+                        }
+                    } else {
+                        return .complete()
                     }
                 }
-                |> take(1)
+            }
+            |> take(1)
         }
         
         let applicationInterface = account |> afterNext { account in
