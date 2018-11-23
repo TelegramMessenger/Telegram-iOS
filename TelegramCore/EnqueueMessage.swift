@@ -406,22 +406,33 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature)
                             } else {
                                 if sourceMessage.id.peerId != account.peerId {
-                                    var sourceId: PeerId? = nil
-                                    var sourceMessageId: MessageId? = nil
-                                    if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
-                                        sourceId = peer.id
-                                        sourceMessageId = sourceMessage.id
-                                    }
-                                    
-                                    var authorSignature: String?
-                                    for attribute in sourceMessage.attributes {
-                                        if let attribute = attribute as? AuthorSignatureMessageAttribute {
-                                            authorSignature = attribute.signature
-                                            break
+                                    var hasHiddenForwardMedia = false
+                                    for media in sourceMessage.media {
+                                        if let file = media as? TelegramMediaFile {
+                                            if file.isMusic {
+                                                hasHiddenForwardMedia = true
+                                            }
                                         }
                                     }
                                     
-                                    forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature)
+                                    if !hasHiddenForwardMedia {
+                                        var sourceId: PeerId? = nil
+                                        var sourceMessageId: MessageId? = nil
+                                        if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
+                                            sourceId = peer.id
+                                            sourceMessageId = sourceMessage.id
+                                        }
+                                        
+                                        var authorSignature: String?
+                                        for attribute in sourceMessage.attributes {
+                                            if let attribute = attribute as? AuthorSignatureMessageAttribute {
+                                                authorSignature = attribute.signature
+                                                break
+                                            }
+                                        }
+                                        
+                                        forwardInfo = StoreMessageForwardInfo(authorId: author.id, sourceId: sourceId, sourceMessageId: sourceMessageId, date: sourceMessage.timestamp, authorSignature: authorSignature)
+                                    }
                                 } else {
                                     forwardInfo = nil
                                 }
