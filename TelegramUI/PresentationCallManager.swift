@@ -62,6 +62,10 @@ public final class PresentationCallManager {
     private var callSettings: (VoiceCallSettings, VoipConfiguration)?
     private var callSettingsDisposable: Disposable?
     
+    public static var voipMaxLayer: Int32 {
+        return OngoingCallContext.
+    }
+    
     public init(account: Account, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), networkType: Signal<NetworkType, NoError>, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager) {
         self.account = account
         self.getDeviceAccessData = getDeviceAccessData

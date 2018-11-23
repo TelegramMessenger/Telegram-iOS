@@ -224,6 +224,10 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     }
 }
 
++ (int32_t)maxLayer {
+    return tgvoip::VoIPController::connectionMaxLayer;
+}
+
 - (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving {
     self = [super init];
     if (self != nil) {
