@@ -154,15 +154,16 @@
     
     _panelView = [[UIView alloc] initWithFrame:CGRectMake(0, screenSize.height - 49, screenSize.width, 49)];
     
+    TGNavigationBarPallete *pallete = [[LegacyComponentsGlobals provider] navigationBarPallete];
     if (iosMajorVersion() >= 7 && [TGViewController isWidescreen])
     {
         UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame:_panelView.bounds];
         toolbar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         [_panelView addSubview:toolbar];
+        toolbar.barTintColor = pallete.backgroundColor;
     }
     else
     {
-        TGNavigationBarPallete *pallete = [[LegacyComponentsGlobals provider] navigationBarPallete];
         _panelView.backgroundColor = pallete.backgroundColor;
         _panelView.backgroundColor = [UIColor grayColor];
     }
@@ -170,8 +171,6 @@
     [self.view addSubview:_panelView];
     
     CGFloat separatorWidth = TGScreenPixel;
-    
-    TGNavigationBarPallete *pallete = [[LegacyComponentsGlobals provider] navigationBarPallete];
     
     _cancelButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, CGFloor(_panelView.frame.size.width / 2) - separatorWidth, _panelView.frame.size.height)];
     _cancelButton.backgroundColor = [UIColor clearColor];
