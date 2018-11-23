@@ -39,7 +39,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         self.peersScrollNode = ASScrollNode()
         self.peersScrollNode.view.showsHorizontalScrollIndicator = false
         
-        let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: .green, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.opaqueItemBackgroundColor)
+        let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: .green, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.opaqueItemBackgroundColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
         
         self.peerNodes = members.map { peer in
             let node = SelectablePeerNode()
@@ -59,7 +59,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         let peer = TelegramGroup(id: PeerId(namespace: 0, id: 0), title: title, photo: image.flatMap { [$0] } ?? [], participantCount: Int(memberCount), role: .member, membership: .Left, flags: [], migrationReference: nil, creationDate: 0, version: 0)
         
         self.addSubnode(self.avatarNode)
-        self.avatarNode.setPeer(account: account, peer: peer)
+        self.avatarNode.setPeer(account: account, peer: peer, emptyColor: theme.list.mediaPlaceholderColor)
         
         self.addSubnode(self.titleNode)
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)

@@ -377,6 +377,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let (size, insets) = self.validEmptyNodeLayout {
                 emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: size, insets: insets, transition: .immediate)
             }
+            emptyNode.isHidden = self.restrictedNode != nil
             self.emptyNode = emptyNode
             self.historyNodeContainer.supernode?.insertSubnode(emptyNode, aboveSubnode: self.historyNodeContainer)
             if animated {
@@ -1330,12 +1331,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.historyNodeContainer.isHidden = true
                 self.navigateButtons.isHidden = true
                 self.loadingNode.isHidden = true
+                self.emptyNode?.isHidden = true
             } else if let restrictedNode = self.restrictedNode {
                 self.restrictedNode = nil
                 restrictedNode.removeFromSupernode()
                 self.historyNodeContainer.isHidden = false
                 self.navigateButtons.isHidden = false
                 self.loadingNode.isHidden = false
+                self.emptyNode?.isHidden = false
             }
             
             let layoutTransition: ContainedViewLayoutTransition = transition

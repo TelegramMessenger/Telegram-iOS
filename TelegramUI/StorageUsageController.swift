@@ -516,11 +516,13 @@ func storageUsageController(account: Account) -> ViewController {
                             }
                             sizeIndex[categoryId] = (true, categorySize)
                             totalSize += categorySize
-                            let index = itemIndex
-                            items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize), value: true, action: { value in
-                                toggleCheck(categoryId, index)
-                            }))
-                            itemIndex += 1
+                            if categorySize > 1024 {
+                                let index = itemIndex
+                                items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize), value: true, action: { value in
+                                    toggleCheck(categoryId, index)
+                                }))
+                                itemIndex += 1
+                            }
                         }
                     }
                     

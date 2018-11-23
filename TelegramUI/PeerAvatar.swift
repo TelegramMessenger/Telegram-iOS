@@ -62,22 +62,24 @@ public func peerAvatarImageData(account: Account, peer: Peer, authorOfMessage: M
     }
 }
 
-func peerAvatarImage(account: Account, peer: Peer, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) -> Signal<UIImage?, NoError>? {
+func peerAvatarImage(account: Account, peer: Peer, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), emptyColor: UIColor? = nil) -> Signal<UIImage?, NoError>? {
     if let imageData = peerAvatarImageData(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation) {
         return imageData |> deliverOn(account.graphicsThreadPool)
         |> map { data -> UIImage? in
-            if let data = data, let image = generateImage(displayDimensions, contextGenerator: { size, context -> Void in
-                if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
-                    context.setBlendMode(.copy)
-                    context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions))
-                    context.setBlendMode(.destinationOut)
-                    context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions))
+            return generateImage(displayDimensions, contextGenerator: { size, context -> Void in
+                if let data = data {
+                    if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                        context.setBlendMode(.copy)
+                        context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions))
+                        context.setBlendMode(.destinationOut)
+                        context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions))
+                    }
+                } else if let emptyColor = emptyColor {
+                    context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
+                    context.setFillColor(emptyColor.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions))
                 }
-            }) {
-                return image
-            } else {
-                return nil
-            }
+            })
         }
     } else {
         return nil

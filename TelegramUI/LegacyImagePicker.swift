@@ -29,9 +29,7 @@ private final class LegacyImagePickerController: LegacyController, TGLegacyCamer
 }
 
 func legacyImagePicker(theme: PresentationTheme, completion: @escaping (UIImage?) -> Void) -> ViewController {
-    var dismissImpl: (() -> Void)?
     let legacyController = LegacyImagePickerController(presentation: .modal(animateIn: true), theme: theme, completion: { image in
-        dismissImpl?()
         completion(image)
     })
     
@@ -40,10 +38,6 @@ func legacyImagePicker(theme: PresentationTheme, completion: @escaping (UIImage?
     imagePickerController.completionDelegate = legacyController
     
     legacyController.bind(controller: imagePickerController)
-    
-    dismissImpl = { [weak legacyController] in
-        legacyController?.dismiss()
-    }
     
     return legacyController
 }

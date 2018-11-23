@@ -23,6 +23,7 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let excludeSavedMessages = ChatListNodePeersFilter(rawValue: 1 << 7)
     
     public static let doNotSearchMessages = ChatListNodePeersFilter(rawValue: 1 << 8)
+    public static let removeSearchHeader = ChatListNodePeersFilter(rawValue: 1 << 9)
 
 }
 

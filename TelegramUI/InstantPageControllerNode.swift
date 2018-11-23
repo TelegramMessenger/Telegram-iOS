@@ -1195,7 +1195,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let strongSelf = self {
                     for (_, itemNode) in strongSelf.visibleItemsWithNodes {
                         if let transitionNode = itemNode.transitionNode(media: entry.media) {
-                            return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { _ in
+                            return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { view in
+                                if let strongSelf = self {
+                                    strongSelf.scrollNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.scrollNode.view)
+                                }
                             })
                         }
                     }

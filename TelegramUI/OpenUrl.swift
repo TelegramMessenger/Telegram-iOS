@@ -205,7 +205,7 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                         
                         c.presentationArguments = a
                             
-                            account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(c, on: .root, blockInteraction: false)
+                        account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(c, on: .root, blockInteraction: false, completion: {})
                     }, dismissInput: {
                         dismissInput()
                     })
@@ -436,7 +436,7 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                                 account.telegramApplicationContext.applicationBindings.dismissNativeController()
                                 
                                 navigationController.view.window?.endEditing(true)
-                                account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(controller, on: .root, blockInteraction: false)
+                                account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(controller, on: .root, blockInteraction: false, completion: {})
                             }
                         }
                         return

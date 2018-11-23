@@ -200,7 +200,7 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil) {
+    public func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil) {
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
         if let overrideImage = overrideImage {
@@ -230,7 +230,7 @@ public final class AvatarNode: ASDisplayNode {
             
             let theme = account.telegramApplicationContext.currentPresentationData.with { $0 }.theme
             
-            if let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation) {
+            if let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, emptyColor: emptyColor) {
                 self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
                 

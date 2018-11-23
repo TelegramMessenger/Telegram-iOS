@@ -389,7 +389,12 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                         strongSelf._scrubbingTimestamp.set(.single(nil))
                         if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
                             if let statusValue = strongSelf.statusValue {
-                                strongSelf.ignoreSeekId = statusValue.seekId
+                                switch statusValue.status {
+                                    case .buffering:
+                                        break
+                                    default:
+                                        strongSelf.ignoreSeekId = statusValue.seekId
+                                }
                             }
                             strongSelf.seek?(scrubbingTimestampValue)
                         }

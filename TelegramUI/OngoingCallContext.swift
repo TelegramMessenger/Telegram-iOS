@@ -136,6 +136,10 @@ final class OngoingCallContext {
     private let audioSessionDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
     
+    static var maxLayer: Int32 {
+        return OngoingCallThreadLocalContext.maxLayer()
+    }
+    
     init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)

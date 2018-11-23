@@ -142,7 +142,7 @@ extern "C" {
   *
   * opus_encode() and opus_encode_float() return the number of bytes actually written to the packet.
   * The return value <b>can be negative</b>, which indicates that an error has occurred. If the return value
-  * is 1 byte, then the packet does not need to be transmitted (DTX).
+  * is 2 bytes or less, then the packet does not need to be transmitted (DTX).
   *
   * Once the encoder state if no longer needed, it can be destroyed with
   *
@@ -198,7 +198,7 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_encoder_get_size(int channels);
  *                                     This must be one of 8000, 12000, 16000,
  *                                     24000, or 48000.
  * @param [in] channels <tt>int</tt>: Number of channels (1 or 2) in input signal
- * @param [in] application <tt>int</tt>: PostboxCoding mode (@ref OPUS_APPLICATION_VOIP/@ref OPUS_APPLICATION_AUDIO/@ref OPUS_APPLICATION_RESTRICTED_LOWDELAY)
+ * @param [in] application <tt>int</tt>: Coding mode (@ref OPUS_APPLICATION_VOIP/@ref OPUS_APPLICATION_AUDIO/@ref OPUS_APPLICATION_RESTRICTED_LOWDELAY)
  * @param [out] error <tt>int*</tt>: @ref opus_errorcodes
  * @note Regardless of the sampling rate and number channels selected, the Opus encoder
  * can switch to a lower audio bandwidth or number of channels if the bitrate
@@ -222,7 +222,7 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusEncoder *opus_encoder_create(
  *                                      This must be one of 8000, 12000, 16000,
  *                                      24000, or 48000.
   * @param [in] channels <tt>int</tt>: Number of channels (1 or 2) in input signal
-  * @param [in] application <tt>int</tt>: PostboxCoding mode (OPUS_APPLICATION_VOIP/OPUS_APPLICATION_AUDIO/OPUS_APPLICATION_RESTRICTED_LOWDELAY)
+  * @param [in] application <tt>int</tt>: Coding mode (OPUS_APPLICATION_VOIP/OPUS_APPLICATION_AUDIO/OPUS_APPLICATION_RESTRICTED_LOWDELAY)
   * @retval #OPUS_OK Success or @ref opus_errorcodes
   */
 OPUS_EXPORT int opus_encoder_init(
@@ -531,7 +531,7 @@ OPUS_EXPORT int opus_packet_parse(
    const unsigned char *frames[48],
    opus_int16 size[48],
    int *payload_offset
-) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(4);
+) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(5);
 
 /** Gets the bandwidth of an Opus packet.
   * @param [in] data <tt>char*</tt>: Opus packet

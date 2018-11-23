@@ -637,7 +637,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             }
             
         }, selectPeer: {
-            var filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages]
+            var filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages, .removeSearchHeader]
             switch mode {
             case .groups:
                 filter.insert(.onlyGroups)
@@ -654,6 +654,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 
                 presentControllerImpl?(notificationPeerExceptionController(account: account, peerId: peerId, mode: mode, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peerId, sound).start(next: { _ in
+                        updateNotificationsDisposable.set(nil)
                        _ = combineLatest(updatePeerSound(peerId, sound), account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { _, peer in
                             updateState { value in
                                 return value.withUpdatedPeerSound(peer, sound)
@@ -663,6 +664,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                         
                     })
                 }, updatePeerNotificationInterval: { peerId, muteInterval in
+                    updateNotificationsDisposable.set(nil)
                    _ = combineLatest(updatePeerNotificationInterval(peerId, muteInterval), account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { _, peer in
                         updateState { value in
                             return value.withUpdatedPeerMuteInterval(peer, muteInterval)
@@ -682,11 +684,11 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated})
                 }
             } |> deliverOnMainQueue).start(completed: {
-
+                updateNotificationsDisposable.set(nil)
+                updateState { value in
+                    return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default)
+                }
                 _ = combineLatest(updatePeerSound(peer.id, .default), updatePeerNotificationInterval(peer.id, nil)).start(next: { _, _ in
-                    updateState { value in
-                        return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default)
-                    }
                     updateNotificationsView()
                 })
                 

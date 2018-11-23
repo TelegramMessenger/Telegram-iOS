@@ -88,7 +88,20 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
             } else if !toEntries.isEmpty {
                 if let collectionId = collectionId {
                     for i in 0 ..< toEntries.count {
-                        if case let .collectionIndex(collectionIndex) = toEntries[i].index, collectionIndex.collectionId == collectionId {
+                        var indexMatches = false
+                        switch toEntries[i].index {
+                            case let .collectionIndex(collectionIndex):
+                                if collectionIndex.collectionId == collectionId {
+                                    indexMatches = true
+                                }
+                            case .peerSpecificSetup:
+                                if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue {
+                                    indexMatches = true
+                                }
+                            default:
+                                break
+                        }
+                        if indexMatches {
                             var directionHint: GridNodePreviousItemsTransitionDirectionHint = .up
                             if !fromEntries.isEmpty && fromEntries[0].index < toEntries[i].index {
                                 directionHint = .down
@@ -537,49 +550,49 @@ final class ChatMediaInputNode: ChatInputNode {
         self.addSubnode(self.collectionListContainer)
         
         let itemCollectionsView = self.itemCollectionsViewPosition.get()
-            |> distinctUntilChanged
-            |> mapToSignal { position -> Signal<(ItemCollectionsView, StickerPacksCollectionUpdate), NoError> in
-                switch position {
-                    case .initial:
-                        var firstTime = true
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
-                            |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
-                                let update: StickerPacksCollectionUpdate
-                                if firstTime {
-                                    firstTime = false
-                                    update = .initial
-                                } else {
-                                    update = .generic
-                                }
-                                return (view, update)
-                            }
-                    case let .scroll(aroundIndex):
-                        var firstTime = true
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 300)
-                            |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
-                                let update: StickerPacksCollectionUpdate
-                                if firstTime {
-                                    firstTime = false
-                                    update = .scroll
-                                } else {
-                                    update = .generic
-                                }
-                                return (view, update)
-                            }
-                    case let .navigate(index, collectionId):
-                        var firstTime = true
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 300)
-                            |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
-                                let update: StickerPacksCollectionUpdate
-                                if firstTime {
-                                    firstTime = false
-                                    update = .navigate(index, collectionId)
-                                } else {
-                                    update = .generic
-                                }
-                                return (view, update)
+        |> distinctUntilChanged
+        |> mapToSignal { position -> Signal<(ItemCollectionsView, StickerPacksCollectionUpdate), NoError> in
+            switch position {
+                case .initial:
+                    var firstTime = true
+                    return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
+                    |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
+                        let update: StickerPacksCollectionUpdate
+                        if firstTime {
+                            firstTime = false
+                            update = .initial
+                        } else {
+                            update = .generic
                         }
-                }
+                        return (view, update)
+                    }
+                case let .scroll(aroundIndex):
+                    var firstTime = true
+                    return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 300)
+                    |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
+                        let update: StickerPacksCollectionUpdate
+                        if firstTime {
+                            firstTime = false
+                            update = .scroll
+                        } else {
+                            update = .generic
+                        }
+                        return (view, update)
+                    }
+                case let .navigate(index, collectionId):
+                    var firstTime = true
+                    return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 300)
+                    |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
+                        let update: StickerPacksCollectionUpdate
+                        if firstTime {
+                            firstTime = false
+                            update = .navigate(index, collectionId)
+                        } else {
+                            update = .generic
+                        }
+                        return (view, update)
+                    }
+            }
         }
         
         let previousEntries = Atomic<([ChatMediaInputPanelEntry], [ChatMediaInputGridEntry])>(value: ([], []))
@@ -666,8 +679,12 @@ final class ChatMediaInputNode: ChatInputNode {
                 
                 if let topVisibleSection = visibleItems.topSectionVisible as? ChatMediaInputStickerGridSection {
                     topVisibleCollectionId = topVisibleSection.collectionId
-                } else if let topVisible = visibleItems.topVisible, let item = topVisible.1 as? ChatMediaInputStickerGridItem {
-                    topVisibleCollectionId = item.index.collectionId
+                } else if let topVisible = visibleItems.topVisible {
+                    if let item = topVisible.1 as? ChatMediaInputStickerGridItem {
+                        topVisibleCollectionId = item.index.collectionId
+                    } else if let _ = topVisible.1 as? StickerPanePeerSpecificSetupGridItem {
+                        topVisibleCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0)
+                    }
                 }
                 if let collectionId = topVisibleCollectionId {
                     if strongSelf.inputNodeInteraction.highlightedItemCollectionId != collectionId {

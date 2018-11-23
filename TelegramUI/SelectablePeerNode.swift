@@ -17,14 +17,16 @@ final class SelectablePeerNodeTheme {
     let checkBackgroundColor: UIColor
     let checkFillColor: UIColor
     let checkColor: UIColor
+    let avatarPlaceholderColor: UIColor
     
-    init(textColor: UIColor, secretTextColor: UIColor, selectedTextColor: UIColor, checkBackgroundColor: UIColor, checkFillColor: UIColor, checkColor: UIColor) {
+    init(textColor: UIColor, secretTextColor: UIColor, selectedTextColor: UIColor, checkBackgroundColor: UIColor, checkFillColor: UIColor, checkColor: UIColor, avatarPlaceholderColor: UIColor) {
         self.textColor = textColor
         self.secretTextColor = secretTextColor
         self.selectedTextColor = selectedTextColor
         self.checkBackgroundColor = checkBackgroundColor
         self.checkFillColor = checkFillColor
         self.checkColor = checkColor
+        self.avatarPlaceholderColor = avatarPlaceholderColor
     }
     
     func isEqual(to: SelectablePeerNodeTheme) -> Bool {
@@ -49,6 +51,9 @@ final class SelectablePeerNodeTheme {
         if !self.checkColor.isEqual(to.checkColor) {
             return false
         }
+        if !self.avatarPlaceholderColor.isEqual(to.avatarPlaceholderColor) {
+            return false
+        }
         return true
     }
 }
@@ -67,7 +72,7 @@ final class SelectablePeerNode: ASDisplayNode {
     
     private var peer: RenderedPeer?
     
-    var theme: SelectablePeerNodeTheme = SelectablePeerNodeTheme(textColor: .black, secretTextColor: .green, selectedTextColor: .blue, checkBackgroundColor: .white, checkFillColor: .blue, checkColor: .white) {
+    var theme: SelectablePeerNodeTheme = SelectablePeerNodeTheme(textColor: .black, secretTextColor: .green, selectedTextColor: .blue, checkBackgroundColor: .white, checkFillColor: .blue, checkColor: .white, avatarPlaceholderColor: .white) {
         didSet {
             if !self.theme.isEqual(to: oldValue) {
                 if let peer = self.peer, let mainPeer = peer.chatMainPeer {
@@ -122,7 +127,7 @@ final class SelectablePeerNode: ASDisplayNode {
         }
         self.textNode.maximumNumberOfLines = UInt(numberOfLines)
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(account: account, peer: mainPeer, overrideImage: overrideImage)
+        self.avatarNode.setPeer(account: account, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor)
         self.setNeedsLayout()
     }
     

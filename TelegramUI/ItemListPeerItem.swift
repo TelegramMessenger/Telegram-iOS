@@ -601,9 +601,9 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0)))
                     
                     if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, overrideImage: .savedMessagesIcon)
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor)
                     } else {
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer)
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 48.0 + UIScreenPixel + UIScreenPixel))

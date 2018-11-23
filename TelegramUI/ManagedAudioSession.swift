@@ -121,12 +121,14 @@ public struct AudioSessionActivationState {
 public class ManagedAudioSessionControl {
     private let setupImpl: (Bool) -> Void
     private let activateImpl: (ManagedAudioSessionControlActivate) -> Void
+    private let setupAndActivateImpl: (Bool, ManagedAudioSessionControlActivate) -> Void
     private let setOutputModeImpl: (AudioSessionOutputMode) -> Void
     
-    fileprivate init(setupImpl: @escaping (Bool) -> Void, activateImpl: @escaping (ManagedAudioSessionControlActivate) -> Void, setOutputModeImpl: @escaping (AudioSessionOutputMode) -> Void) {
+    fileprivate init(setupImpl: @escaping (Bool) -> Void, activateImpl: @escaping (ManagedAudioSessionControlActivate) -> Void, setOutputModeImpl: @escaping (AudioSessionOutputMode) -> Void, setupAndActivateImpl: @escaping (Bool, ManagedAudioSessionControlActivate) -> Void) {
         self.setupImpl = setupImpl
         self.activateImpl = activateImpl
         self.setOutputModeImpl = setOutputModeImpl
+        self.setupAndActivateImpl = setupAndActivateImpl
     }
     
     public func setup(synchronous: Bool = false) {
@@ -135,6 +137,10 @@ public class ManagedAudioSessionControl {
     
     public func activate(_ completion: @escaping (AudioSessionActivationState) -> Void) {
         self.activateImpl(ManagedAudioSessionControlActivate(completion))
+    }
+    
+    public func setupAndActivate(synchronous: Bool = false, _ completion: @escaping (AudioSessionActivationState) -> Void) {
+        self.setupAndActivateImpl(synchronous, ManagedAudioSessionControlActivate(completion))
     }
     
     public func setOutputMode(_ mode: AudioSessionOutputMode) {
@@ -349,8 +355,7 @@ public final class ManagedAudioSession {
     
     func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activate: @escaping (AudioSessionActivationState) -> Void, deactivate: @escaping () -> Signal<Void, NoError>) -> Disposable {
         return self.push(audioSessionType: audioSessionType, once: once, manualActivate: { control in
-            control.setup()
-            control.activate({ state in
+            control.setupAndActivate(synchronous: false, { state in
                 activate(state)
             })
         }, deactivate: deactivate)
@@ -361,21 +366,21 @@ public final class ManagedAudioSession {
         let queue = self.queue
         queue.async {
             self.holders.append(HolderRecord(id: id, audioSessionType: audioSessionType, control: ManagedAudioSessionControl(setupImpl: { [weak self] synchronous in
-                if let strongSelf = self {
-                    let f: () -> Void = {
+                let f: () -> Void = {
+                    if let strongSelf = self {
                         for holder in strongSelf.holders {
                             if holder.id == id && holder.active {
-                                strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode)
+                                strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode, activateNow: false)
                                 break
                             }
                         }
                     }
-                    
-                    if synchronous {
-                        strongSelf.queue.sync(f)
-                    } else {
-                        strongSelf.queue.async(f)
-                    }
+                }
+                
+                if synchronous {
+                    queue.sync(f)
+                } else {
+                    queue.async(f)
                 }
             }, activateImpl: { [weak self] completion in
                 if let strongSelf = self {
@@ -403,6 +408,26 @@ public final class ManagedAudioSession {
                                 }
                             }
                         }
+                    }
+                }
+            }, setupAndActivateImpl: { [weak self] synchronous, completion in
+                queue.async {
+                    let f: () -> Void = {
+                        if let strongSelf = self {
+                            for holder in strongSelf.holders {
+                                if holder.id == id && holder.active {
+                                    strongSelf.setup(type: audioSessionType, outputMode: holder.outputMode, activateNow: true)
+                                    completion.f(AudioSessionActivationState(isHeadsetConnected: strongSelf.isHeadsetPluggedInValue))
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    
+                    if synchronous {
+                        queue.sync(f)
+                    } else {
+                        queue.async(f)
                     }
                 }
             }), activate: { [weak self] state in
@@ -519,7 +544,7 @@ public final class ManagedAudioSession {
     private func applyNoneDelayed() {
         self.deactivateTimer?.invalidate()
         
-        if self.currentTypeAndOutputMode?.0 == .voiceCall {
+        if self.currentTypeAndOutputMode?.0 == .voiceCall || self.currentTypeAndOutputMode?.0 == .record {
             self.applyNone()
         } else {
             let deactivateTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
@@ -575,7 +600,7 @@ public final class ManagedAudioSession {
         }
     }
     
-    private func setup(type: ManagedAudioSessionType, outputMode: AudioSessionOutputMode) {
+    private func setup(type: ManagedAudioSessionType, outputMode: AudioSessionOutputMode, activateNow: Bool) {
         self.deactivateTimer?.invalidate()
         self.deactivateTimer = nil
         
@@ -600,9 +625,13 @@ public final class ManagedAudioSession {
                     case .record, .voiceCall:
                         options.insert(.allowBluetooth)
                 }
-                try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type, headphones: self.isHeadsetPluggedInValue), with: options)
                 print("ManagedAudioSession setting active \(type != .none)")
-                try AVAudioSession.sharedInstance().setMode(type == .voiceCall ? AVAudioSessionModeVoiceChat : AVAudioSessionModeDefault)
+                if #available(iOSApplicationExtension 11.0, *) {
+                    try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type, headphones: self.isHeadsetPluggedInValue), mode: type == .voiceCall ? AVAudioSessionModeVoiceChat : AVAudioSessionModeDefault, routeSharingPolicy: .default, options: options)
+                } else {
+                    try AVAudioSession.sharedInstance().setCategory(nativeCategoryForType(type, headphones: self.isHeadsetPluggedInValue), with: options)
+                    try AVAudioSession.sharedInstance().setMode(type == .voiceCall ? AVAudioSessionModeVoiceChat : AVAudioSessionModeDefault)
+                }
             } catch let error {
                 print("ManagedAudioSession setup error \(error)")
             }
@@ -617,6 +646,10 @@ public final class ManagedAudioSession {
             for subscriber in self.isPlaybackActiveSubscribers.copyItems() {
                 subscriber(true)
             }
+        }
+        
+        if activateNow {
+            self.activate()
         }
     }
     

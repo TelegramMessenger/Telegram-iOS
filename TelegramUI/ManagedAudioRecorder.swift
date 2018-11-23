@@ -288,7 +288,7 @@ final class ManagedAudioRecorderContext {
             self.processSamples = true
         }*/
         
-        if let beginToneData = beginToneData {
+        if beginWithTone, let beginToneData = beginToneData {
             self.tonePlayer = TonePlayer()
             self.tonePlayer?.play(data: beginToneData, completed: { [weak self] in
                 queue.async {

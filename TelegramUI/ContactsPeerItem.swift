@@ -567,7 +567,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
                                     overrideImage = .savedMessagesIcon
                                 }
-                                strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage)
+                                strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor)
                             }
                         case let .deviceContact(_, contact):
                             let letters: [String]

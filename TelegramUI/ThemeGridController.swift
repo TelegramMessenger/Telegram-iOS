@@ -72,15 +72,30 @@ final class ThemeGridController: ViewController {
             self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
         }, selectCustomWallpaper: { [weak self] in
             if let strongSelf = self {
-                strongSelf.present(legacyImagePicker(theme: strongSelf.presentationData.theme, completion: { image in
-                    if let strongSelf = self, let image = image {
-                        strongSelf.present(legacyWallpaperEditor(theme: strongSelf.presentationData.theme, image: image, completion: { image in
-                            if let image = image {
-                                self?.applyCustomWallpaperImage(image)
-                            }
-                        }), in: .window(.root))
+                var completionImpl: ((UIImage?) -> Void)?
+                let legacyPicker = legacyImagePicker(theme: strongSelf.presentationData.theme, completion: { image in
+                    completionImpl?(image)
+                })
+                var lastPresentationTimestamp = 0.0
+                completionImpl = { [weak legacyPicker] image in
+                    guard let strongSelf = self, let image = image else {
+                        legacyPicker?.dismiss()
+                        return
                     }
-                }), in: .window(.root))
+                    let timestamp = CACurrentMediaTime()
+                    if timestamp < lastPresentationTimestamp + 1.0 {
+                        return
+                    }
+                    lastPresentationTimestamp = timestamp
+                    strongSelf.present(legacyWallpaperEditor(theme: strongSelf.presentationData.theme, image: image, completion: { image in
+                        if let image = image {
+                            self?.applyCustomWallpaperImage(image)
+                            legacyPicker?.dismiss()
+                        }
+                    }), in: .window(.root))
+                }
+                
+                strongSelf.present(legacyPicker, in: .window(.root), blockInteraction: true)
             }
         })
         self._ready.set(self.controllerNode.ready.get())
