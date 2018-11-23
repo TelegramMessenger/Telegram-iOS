@@ -71,6 +71,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSaving) {
 
 - (void)setIsMuted:(bool)isMuted;
 - (void)setNetworkType:(OngoingCallNetworkType)networkType;
++ (int)getConnectionMaxLayer;
 
 @end
 

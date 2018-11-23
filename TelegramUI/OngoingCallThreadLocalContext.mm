@@ -387,4 +387,8 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     }
 }
 
++ (int)getConnectionMaxLayer{
+	return tgvoip::VoIPController::GetConnectionMaxLayer();
+}
+
 @end

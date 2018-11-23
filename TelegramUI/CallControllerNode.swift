@@ -515,7 +515,7 @@ private func attributedStringForDebugInfo(_ info: String, version: String) -> NS
     string = string.replacingOccurrences(of: "Jitter ", with: "\nJitter ")
     string = string.replacingOccurrences(of: "Key fingerprint:\n", with: "Key fingerprint: ")
     
-    let attributedString = NSMutableAttributedString(string: string, attributes: [NSAttributedStringKey.font: Font.monospace(15), NSAttributedStringKey.foregroundColor: UIColor.white])
+    let attributedString = NSMutableAttributedString(string: string, attributes: [NSAttributedStringKey.font: Font.monospace(10), NSAttributedStringKey.foregroundColor: UIColor.white])
     
     let titleStyle = NSMutableParagraphStyle()
     titleStyle.alignment = .center
@@ -527,11 +527,11 @@ private func attributedStringForDebugInfo(_ info: String, version: String) -> NS
     let secondaryColor = UIColor(rgb: 0xa6a9a8)
     let activeColor = UIColor(rgb: 0xa0d875)
     
-    let titleAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(17), NSAttributedStringKey.paragraphStyle: titleStyle]
-    let nameAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(15), NSAttributedStringKey.foregroundColor: secondaryColor]
+    let titleAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(15), NSAttributedStringKey.paragraphStyle: titleStyle]
+    let nameAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(10), NSAttributedStringKey.foregroundColor: secondaryColor]
     let styleAttributes = [NSAttributedStringKey.paragraphStyle: style]
     let typeAttributes = [NSAttributedStringKey.foregroundColor: secondaryColor]
-    let activeAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(15), NSAttributedStringKey.foregroundColor: activeColor]
+    let activeAttributes = [NSAttributedStringKey.font: Font.semiboldMonospace(10), NSAttributedStringKey.foregroundColor: activeColor]
     
     let range = string.startIndex ..< string.endIndex
     string.enumerateSubstrings(in: range, options: NSString.EnumerationOptions.byLines) { (line, range, _, _) in
