@@ -268,6 +268,9 @@
             NSDictionary *datacenterAddressSetById = [keychain objectForKey:@"datacenterAddressSetById" group:@"persistent"];
             if (datacenterAddressSetById != nil) {
                 _datacenterAddressSetById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAddressSetById];
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTContext loaded datacenterAddressSetById: %@]", _datacenterAddressSetById);
+                }
             }
             
             [_apiEnvironment.datacenterAddressOverrides enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, MTDatacenterAddress *address, __unused BOOL *stop) {
@@ -289,6 +292,9 @@
                 [transportSchemeStats enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, NSDictionary<MTDatacenterAddress *, MTTransportSchemeStats *> *values, __unused BOOL *stop) {
                     _transportSchemeStats[nDatacenterId] = [[NSMutableDictionary alloc] initWithDictionary:transportSchemeStats];
                 }];
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTContext loaded transportSchemeStats: %@]", _transportSchemeStats);
+                }
             }
             
             NSDictionary *authTokenById = [keychain objectForKey:@"authTokenById" group:@"persistent"];
