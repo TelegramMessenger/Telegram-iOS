@@ -10,7 +10,7 @@ import SwiftSignalKit
 #endif
 
 let kCallMinLayer:Int32 = 65;
-let kCallMaxLayer:Int32 = 75;
+let kCallMaxLayer:Int32 = 92; // TODO figure out how to replace this with [OngoingCallThreadLocalContext getConnectionMaxLayer] or call VoIPController::GetConnectionMaxLayer() directly. These modern programming languages drive me crazy.
 
 public enum CallSessionError: Equatable {
     case generic
