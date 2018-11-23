@@ -1369,15 +1369,15 @@ final class MessageHistoryTable: Table {
         if let forwardInfo = message.forwardInfo {
             intermediateForwardInfo = IntermediateMessageForwardInfo(forwardInfo)
             
-            var forwardInfoFlags: Int8 = 1
+            var forwardInfoFlags: Int8 = 1 << 0
             if forwardInfo.sourceId != nil {
-                forwardInfoFlags |= 2
+                forwardInfoFlags |= 1 << 1
             }
             if forwardInfo.sourceMessageId != nil {
-                forwardInfoFlags |= 4
+                forwardInfoFlags |= 1 << 2
             }
             if forwardInfo.authorSignature != nil {
-                forwardInfoFlags |= 8
+                forwardInfoFlags |= 1 << 3
             }
             sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
             var forwardAuthorId: Int64 = forwardInfo.authorId.toInt64()
@@ -2519,13 +2519,13 @@ final class MessageHistoryTable: Table {
                 value.read(&forwardAuthorId, offset: 0, length: 8)
                 value.read(&forwardDate, offset: 0, length: 4)
                 
-                if (forwardInfoFlags & 2) != 0 {
+                if (forwardInfoFlags & (1 << 1)) != 0 {
                     var forwardSourceIdValue: Int64 = 0
                     value.read(&forwardSourceIdValue, offset: 0, length: 8)
                     forwardSourceId = PeerId(forwardSourceIdValue)
                 }
                 
-                if (forwardInfoFlags & 4) != 0 {
+                if (forwardInfoFlags & (1 << 2)) != 0 {
                     var forwardSourceMessagePeerId: Int64 = 0
                     var forwardSourceMessageNamespace: Int32 = 0
                     var forwardSourceMessageIdId: Int32 = 0
@@ -2535,7 +2535,7 @@ final class MessageHistoryTable: Table {
                     forwardSourceMessageId = MessageId(peerId: PeerId(forwardSourceMessagePeerId), namespace: forwardSourceMessageNamespace, id: forwardSourceMessageIdId)
                 }
                 
-                if (forwardInfoFlags & 8) != 0 {
+                if (forwardInfoFlags & (1 << 3)) != 0 {
                     var signatureLength: Int32 = 0
                     value.read(&signatureLength, offset: 0, length: 4)
                     authorSignature = String(data: Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self).advanced(by: value.offset), count: Int(signatureLength)), encoding: .utf8)
