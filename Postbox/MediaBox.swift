@@ -223,8 +223,8 @@ public final class MediaBox {
         }
     }
     
-    public func resourceStatus(_ resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
-        return Signal { subscriber in
+    public func resourceStatus(_ resource: MediaResource, approximateSynchronousValue: Bool = false) -> Signal<MediaResourceStatus, NoError> {
+        let signal = Signal<MediaResourceStatus, NoError> { subscriber in
             let disposable = MetaDisposable()
             
             self.concurrentQueue.async {
@@ -316,6 +316,20 @@ public final class MediaBox {
             }
             
             return disposable
+        }
+        if approximateSynchronousValue {
+            return Signal<Signal<MediaResourceStatus, NoError>, NoError> { subscriber in
+                let paths = self.storePathsForId(resource.id)
+                if let _ = fileSize(paths.complete) {
+                    subscriber.putNext(.single(.Local))
+                } else {
+                    subscriber.putNext(.single(.Remote) |> then(signal))
+                }
+                subscriber.putCompletion()
+                return EmptyDisposable
+            } |> switchToLatest
+        } else {
+            return signal
         }
     }
     
