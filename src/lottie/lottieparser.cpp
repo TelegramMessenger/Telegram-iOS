@@ -915,6 +915,9 @@ std::shared_ptr<LOTData> LottieParserImpl::parseObjectTypeAttr()
     } else if (0 == strcmp(type, "rp")) {
         curLayerRef->mHasRepeater = true;
         return parseReapeaterObject();
+    }  else if (0 == strcmp(type, "mm")) {
+        vWarning << "Merge Path is not supported yet";
+        return nullptr;
     } else {
 #ifdef DEBUG_PARSER
         vDebug << "The Object Type not yet handled = " << type;
