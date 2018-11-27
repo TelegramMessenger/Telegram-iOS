@@ -247,3 +247,7 @@ public struct SharedDataKeys {
         return key
     }()
 }
+
+public func applicationSpecificItemCacheCollectionId(_ value: Int8) -> Int8 {
+    return 64 + value
+}
