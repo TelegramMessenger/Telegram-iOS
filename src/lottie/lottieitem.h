@@ -311,9 +311,20 @@ class LOTShapeItem: public LOTPathDataItem
 public:
    LOTShapeItem(LOTShapeData *data);
 private:
+   struct Cache {
+        int                     mFrameNo{-1};
+   };
+   Cache                        mCache;
    void updatePath(VPath& path, int frameNo) final;
    LOTShapeData             *mData;
-   bool hasChanged(int) final { return true; }
+   bool hasChanged(int frameNo) final {
+       int prevFrame = mCache.mFrameNo;
+       mCache.mFrameNo = frameNo;
+       if (prevFrame == -1) return true;
+       if (prevFrame == frameNo) return false;
+
+       return mData->mShape.changed(prevFrame, frameNo);
+   }
 };
 
 class LOTPolystarItem: public LOTPathDataItem

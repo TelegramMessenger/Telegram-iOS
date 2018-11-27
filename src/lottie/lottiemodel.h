@@ -226,6 +226,18 @@ public:
         return 0;
     }
 
+    bool changed(int prevFrame, int curFrame) {
+        int first = mKeyFrames.front().mStartFrame;
+        int last = mKeyFrames.back().mEndFrame;
+
+        if ((first > prevFrame  && first > curFrame) ||
+            (last < prevFrame  && last < curFrame)) {
+            return false;
+        }
+
+        return true;
+    }
+
 public:
     std::vector<LOTKeyFrame<T>>    mKeyFrames;
 };
@@ -242,6 +254,9 @@ public:
     }
     float angle(int frameNo) const {
         return isStatic() ? 0 : mAnimInfo->angle(frameNo);
+    }
+    bool changed(int prevFrame, int curFrame) {
+        return isStatic() ? false : mAnimInfo->changed(prevFrame, curFrame);
     }
 public:
     T                                 mValue;
