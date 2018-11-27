@@ -1504,7 +1504,7 @@
 "ReportPeer.ReasonSpam" = "Spam";
 "ReportPeer.ReasonViolence" = "Violence";
 "ReportPeer.ReasonPornography" = "Pornography";
-"ReportPeer.ReasonChildAbuse" = "Child Pornography";
+"ReportPeer.ReasonChildAbuse" = "Child Abuse";
 "ReportPeer.ReasonOther" = "Other";
 
 "ReportPeer.AlertSuccess" = "Thank you!\nYour report will be reviewed by our team very soon.";
@@ -3529,3 +3529,9 @@ Unused sets are archived when you add more.";
 
 "ChatList.ReadAll" = "Read All";
 "ChatList.Read" = "Read";
+"ChatList.DeleteConfirmation_1" = "Delete";
+"ChatList.DeleteConfirmation_2" = "Delete 2 Chats";
+"ChatList.DeleteConfirmation_3_10" = "Delete %@ Chats";
+"ChatList.DeleteConfirmation_any" = "Delete %@ Chats";
+"ChatList.DeleteConfirmation_many" = "Delete %@ Chats";
+"ChatList.DeleteConfirmation_0" = "Delete %@ Chats";
