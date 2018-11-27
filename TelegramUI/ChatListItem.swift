@@ -28,6 +28,7 @@ class ChatListItem: ListViewItem {
     let content: ChatListItemContent
     let editing: Bool
     let hasActiveRevealControls: Bool
+    let selected: Bool
     let enableContextActions: Bool
     let interaction: ChatListNodeInteraction
     
@@ -35,7 +36,7 @@ class ChatListItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(presentationData: ChatListPresentationData, account: Account, peerGroupId: PeerGroupId?, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, header: ListViewItemHeader?, enableContextActions: Bool, interaction: ChatListNodeInteraction) {
+    init(presentationData: ChatListPresentationData, account: Account, peerGroupId: PeerGroupId?, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.peerGroupId = peerGroupId
         self.account = account
@@ -43,6 +44,7 @@ class ChatListItem: ListViewItem {
         self.content = content
         self.editing = editing
         self.hasActiveRevealControls = hasActiveRevealControls
+        self.selected = selected
         self.header = header
         self.enableContextActions = enableContextActions
         self.interaction = interaction
@@ -51,7 +53,6 @@ class ChatListItem: ListViewItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ChatListItemNode()
-            node.setupItem(item: self)
             let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
             node.insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             
@@ -63,6 +64,7 @@ class ChatListItem: ListViewItem {
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, {
+                        node.setupItem(item: self)
                         apply(false)
                         node.updateIsHighlighted(transition: .immediate)
                     })
@@ -231,7 +233,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     var verificationIconNode: ASImageNode?
     let mutedIconNode: ASImageNode
     
-    var editableControlNode: ItemListEditableControlNode?
+    var selectableControlNode: ItemListSelectableControlNode?
     var reorderControlNode: ItemListEditableReorderControlNode?
     
     var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams)?
@@ -239,7 +241,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var isHighlighted: Bool = false
     
     override var canBeSelected: Bool {
-        if self.editableControlNode != nil {
+        if self.selectableControlNode != nil {
             return false
         } else {
             return super.canBeSelected
@@ -393,6 +395,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    override func tapped() {
+        guard let item = self.item, item.editing else {
+            return
+        }
+        item.interaction.togglePeerSelected(item.index.messageIndex.id.peerId)
+    }
+    
     func asyncLayout() -> (_ item: ChatListItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         let textLayout = TextNode.asyncLayout(self.textNode)
@@ -400,7 +409,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let authorLayout = TextNode.asyncLayout(self.authorNode)
         let inputActivitiesLayout = self.inputActivitiesNode.asyncLayout()
         let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
-        let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
+        let selectableControlLayout = ItemListSelectableControlNode.asyncLayout(self.selectableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
         
         let currentItem = self.layoutParams?.0
@@ -488,17 +497,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentVerificationIconImage: UIImage?
             var currentSecretIconImage: UIImage?
             
-            var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
+            var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var reorderControlSizeAndApply: (CGSize, () -> ItemListEditableReorderControlNode)?
             
             let editingOffset: CGFloat
             var reorderInset: CGFloat = 0.0
             if item.editing {
-                let sizeAndApply = editableControlLayout(itemHeight, item.presentationData.theme, isPeerGroup)
+                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, item.selected, true)
                 if !isAd {
-                    editableControlSizeAndApply = sizeAndApply
+                    selectableControlSizeAndApply = sizeAndApply
                 }
-                editingOffset = sizeAndApply.0.width
+                editingOffset = sizeAndApply.0
                 
                 if item.index.pinningIndex != nil && !isAd {
                     let sizeAndApply = reorderControlLayout(itemHeight, item.presentationData.theme)
@@ -758,32 +767,30 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     var crossfadeContent = false
-                    if let editableControlSizeAndApply = editableControlSizeAndApply {
-                        if strongSelf.editableControlNode == nil {
+                    if let selectableControlSizeAndApply = selectableControlSizeAndApply {
+                        let selectableControlSize = CGSize(width: selectableControlSizeAndApply.0, height: layout.contentSize.height)
+                        let selectableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: selectableControlSize)
+                        if strongSelf.selectableControlNode == nil {
                             crossfadeContent = true
-                            let editableControlNode = editableControlSizeAndApply.1()
-                            editableControlNode.tapped = {
-                                if let strongSelf = self {
-                                    strongSelf.setRevealOptionsOpened(true, animated: true)
-                                    strongSelf.revealOptionsInteractivelyOpened()
-                                }
-                            }
-                            strongSelf.editableControlNode = editableControlNode
-                            strongSelf.addSubnode(editableControlNode)
-                            let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: editableControlSizeAndApply.0)
-                            editableControlNode.frame = editableControlFrame
-                            transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
-                            editableControlNode.alpha = 0.0
-                            transition.updateAlpha(node: editableControlNode, alpha: 1.0)
+                            let selectableControlNode = selectableControlSizeAndApply.1(selectableControlSize, false)
+                            strongSelf.selectableControlNode = selectableControlNode
+                            strongSelf.addSubnode(selectableControlNode)
+                            selectableControlNode.frame = selectableControlFrame
+                            transition.animatePosition(node: selectableControlNode, from: CGPoint(x: -selectableControlFrame.size.width / 2.0, y: selectableControlFrame.midY))
+                            selectableControlNode.alpha = 0.0
+                            transition.updateAlpha(node: selectableControlNode, alpha: 1.0)
+                        } else if let selectableControlNode = strongSelf.selectableControlNode {
+                            transition.updateFrame(node: selectableControlNode, frame: selectableControlFrame)
+                            let _ = selectableControlSizeAndApply.1(selectableControlSize, transition.isAnimated)
                         }
-                    } else if let editableControlNode = strongSelf.editableControlNode {
+                    } else if let selectableControlNode = strongSelf.selectableControlNode {
                         crossfadeContent = true
-                        var editableControlFrame = editableControlNode.frame
-                        editableControlFrame.origin.x = -editableControlFrame.size.width
-                        strongSelf.editableControlNode = nil
-                        transition.updateAlpha(node: editableControlNode, alpha: 0.0)
-                        transition.updateFrame(node: editableControlNode, frame: editableControlFrame, completion: { [weak editableControlNode] _ in
-                            editableControlNode?.removeFromSupernode()
+                        var selectableControlFrame = selectableControlNode.frame
+                        selectableControlFrame.origin.x = -selectableControlFrame.size.width
+                        strongSelf.selectableControlNode = nil
+                        transition.updateAlpha(node: selectableControlNode, alpha: 0.0)
+                        transition.updateFrame(node: selectableControlNode, frame: selectableControlFrame, completion: { [weak selectableControlNode] _ in
+                            selectableControlNode?.removeFromSupernode()
                         })
                     }
                     
@@ -1010,6 +1017,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition.animatePosition(node: strongSelf.authorNode, from: CGPoint(x: authorPosition.x - contentDeltaX, y: authorPosition.y))
                     }
                     
+                    if crossfadeContent {
+                        strongSelf.authorNode.recursivelyEnsureDisplaySynchronously(true)
+                        strongSelf.titleNode.recursivelyEnsureDisplaySynchronously(true)
+                        strongSelf.textNode.recursivelyEnsureDisplaySynchronously(true)
+                    }
+                    
                     let separatorInset: CGFloat
                     if (!nextIsPinned && item.index.pinningIndex != nil) || last {
                         separatorInset = 0.0
@@ -1020,7 +1033,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: itemHeight - separatorHeight), size: CGSize(width: params.width - separatorInset, height: separatorHeight)))
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
-                    if item.index.pinningIndex != nil {
+                    if item.selected {
+                        strongSelf.backgroundNode.backgroundColor = theme.itemSelectedBackgroundColor
+                    } else if item.index.pinningIndex != nil {
                         strongSelf.backgroundNode.backgroundColor = theme.pinnedItemBackgroundColor
                     } else {
                         strongSelf.backgroundNode.backgroundColor = theme.itemBackgroundColor
@@ -1059,11 +1074,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let _ = self.item, let params = self.layoutParams?.5 {
             let editingOffset: CGFloat
-            if let editableControlNode = self.editableControlNode {
-                editingOffset = editableControlNode.bounds.size.width
-                var editableControlFrame = editableControlNode.frame
-                editableControlFrame.origin.x = params.leftInset + offset
-                transition.updateFrame(node: editableControlNode, frame: editableControlFrame)
+            if let selectableControlNode = self.selectableControlNode {
+                editingOffset = selectableControlNode.bounds.size.width
+                var selectableControlFrame = selectableControlNode.frame
+                selectableControlFrame.origin.x = params.leftInset + offset
+                transition.updateFrame(node: selectableControlNode, frame: selectableControlFrame)
             } else {
                 editingOffset = 0.0
             }

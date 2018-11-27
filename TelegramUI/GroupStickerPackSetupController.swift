@@ -309,7 +309,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
     
     let initialData = Promise<InitialStickerPackData?>()
     if let currentPackInfo = currentPackInfo {
-        initialData.set(cachedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: currentPackInfo.id.id, accessHash: currentPackInfo.accessHash))
+        initialData.set(cachedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: currentPackInfo.id.id, accessHash: currentPackInfo.accessHash), forceRemote: false)
         |> map { result -> InitialStickerPackData? in
             switch result {
                 case .none:
@@ -349,7 +349,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
                     }
                 }
                 return .single((searchText, .searching))
-                |> then((loadedStickerPack(postbox: account.postbox, network: account.network, reference: .name(searchText.lowercased())) |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
+                |> then((loadedStickerPack(postbox: account.postbox, network: account.network, reference: .name(searchText.lowercased()), forceActualized: false) |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
                 |> mapToSignal { value -> Signal<(String, GroupStickerPackSearchState), NoError> in
                     switch value {
                         case .fetching:

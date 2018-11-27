@@ -274,7 +274,7 @@ public func archivedStickerPacksController(account: Account, archived: [Archived
         if !add {
             return
         }
-        let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: info.id.id, accessHash: info.accessHash))
+        let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
         |> mapToSignal { result -> Signal<Void, NoError> in
             switch result {
                 case let .result(info, items, installed):

@@ -147,19 +147,32 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
         case let .peerName(name, parameter):
             return resolvePeerByName(account: account, name: name)
             |> take(1)
-            |> map { peerId -> ResolvedUrl? in
-                if let peerId = peerId {
+            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+                return account.postbox.transaction { transaction -> Peer? in
+                    if let peerId = peerId {
+                        return transaction.getPeer(peerId)
+                    } else {
+                        return nil
+                    }
+                }
+            }
+            |> map { peer -> ResolvedUrl? in
+                if let peer = peer {
                     if let parameter = parameter {
                         switch parameter {
                             case let .botStart(payload):
-                                return .botStart(peerId: peerId, payload: payload)
+                                return .botStart(peerId: peer.id, payload: payload)
                             case let .groupBotStart(payload):
-                                return .groupBotStart(peerId: peerId, payload: payload)
+                                return .groupBotStart(peerId: peer.id, payload: payload)
                             case let .channelMessage(id):
-                                return .channelMessage(peerId: peerId, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))
+                                return .channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id))
                         }
                     } else {
-                        return .peer(peerId, .chat(textInputState: nil, messageId: nil))
+                        if let peer = peer as? TelegramUser, peer.botInfo != nil {
+                            return .peer(peer.id, .info)
+                        } else {
+                            return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
+                        }
                     }
                 } else {
                     return nil

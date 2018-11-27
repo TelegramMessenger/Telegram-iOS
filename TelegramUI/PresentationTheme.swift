@@ -333,6 +333,7 @@ public final class PresentationThemeChatList {
     public let itemBackgroundColor: UIColor
     public let pinnedItemBackgroundColor: UIColor
     public let itemHighlightedBackgroundColor: UIColor
+    public let itemSelectedBackgroundColor: UIColor
     public let titleColor: UIColor
     public let secretTitleColor: UIColor
     public let dateTextColor: UIColor
@@ -356,12 +357,13 @@ public final class PresentationThemeChatList {
     public let verifiedIconForegroundColor: UIColor
     public let secretIconColor: UIColor
     
-    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, searchBarKeyboardColor: PresentationThemeKeyboardColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor) {
+    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, searchBarKeyboardColor: PresentationThemeKeyboardColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
         self.itemBackgroundColor = itemBackgroundColor
         self.pinnedItemBackgroundColor = pinnedItemBackgroundColor
         self.itemHighlightedBackgroundColor = itemHighlightedBackgroundColor
+        self.itemSelectedBackgroundColor = itemSelectedBackgroundColor
         self.titleColor = titleColor
         self.secretTitleColor = secretTitleColor
         self.dateTextColor = dateTextColor

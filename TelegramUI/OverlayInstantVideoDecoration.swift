@@ -71,7 +71,7 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
             if let snapshot = snapshot {
                 self.contentContainerNode.view.addSubview(snapshot)
                 if let validLayoutSize = self.validLayoutSize {
-                    snapshot.frame = CGRect(origin: CGPoint(), size: validLayoutSize)
+                    snapshot.frame = CGRect(origin: CGPoint(), size: snapshot.frame.size)
                 }
             }
         }

@@ -217,7 +217,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
             }
         }, install: { [weak self] info in
             if let strongSelf = self {
-                let _ = (loadedStickerPack(postbox: strongSelf.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash))
+                let _ = (loadedStickerPack(postbox: strongSelf.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                     |> mapToSignal { result -> Signal<Void, NoError> in
                         switch result {
                             case let .result(info, items, installed):

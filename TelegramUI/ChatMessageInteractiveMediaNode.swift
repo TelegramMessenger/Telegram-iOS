@@ -178,7 +178,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             var unboundSize: CGSize
             if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
-            } else if let file = media as? TelegramMediaFile, let dimensions = file.dimensions {
+            } else if let file = media as? TelegramMediaFile, var dimensions = file.dimensions {
+                if let thumbnail = file.previewRepresentations.first {
+                    let dimensionsVertical = dimensions.width < dimensions.height
+                    let thumbnailVertical = thumbnail.dimensions.width < thumbnail.dimensions.height
+                    if dimensionsVertical != thumbnailVertical {
+                        dimensions = CGSize(width: dimensions.height, height: dimensions.width)
+                    }
+                }
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
                 if file.isAnimated {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 480.0, height: 480.0))
