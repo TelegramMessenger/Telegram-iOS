@@ -351,16 +351,16 @@ struct ctr_state {
                     if (MTLogEnabled()) {
                         if (strongSelf->_socksIp != nil) {
                             if (strongSelf->_socksUsername.length == 0) {
-                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort);
+                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort);
                             } else {
-                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)_socksPort, strongSelf->_socksUsername, strongSelf->_socksPassword);
+                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort, strongSelf->_socksUsername, strongSelf->_socksPassword);
                             }
                         } else if (strongSelf->_mtpIp != nil) {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
                         } else if (strongSelf->_scheme.address.secret != nil) {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d with secret %@]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_scheme.address.secret);
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d with secret %@]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_scheme.address.secret);
                         } else {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port);
+                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port);
                         }
                     }
                     
@@ -368,7 +368,7 @@ struct ctr_state {
                     if (![strongSelf->_socket connectToHost:connectionData.ip onPort:connectionData.port viaInterface:strongSelf->_interface withTimeout:12 error:&error] || error != nil) {
                         [strongSelf closeAndNotifyWithError:true];
                     } else if (strongSelf->_socksIp == nil) {
-                        if (_useIntermediateFormat) {
+                        if (strongSelf->_useIntermediateFormat) {
                             [strongSelf->_socket readDataToLength:4 withTimeout:-1 tag:MTTcpReadTagPacketFullLength];
                         } else {
                             [strongSelf->_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
@@ -379,7 +379,7 @@ struct ctr_state {
                         req.NumberOfMethods = 1;
                         req.Methods[0] = 0x00;
                         
-                        if (_socksUsername != nil) {
+                        if (strongSelf->_socksUsername != nil) {
                             req.NumberOfMethods += 1;
                             req.Methods[1] = 0x02;
                         }

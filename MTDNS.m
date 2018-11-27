@@ -74,6 +74,7 @@
     self = [super init];
     if (self != nil) {
         _subscribers = [[MTBag alloc] init];
+        _disposable = disposable;
     }
     return self;
 }
@@ -201,6 +202,9 @@
             hints.ai_protocol = IPPROTO_TCP;
             
             NSString *portStr = [NSString stringWithFormat:@"%d", port];
+            if (MTLogEnabled()) {
+                MTLog(@"[MTDNS lookup %@:%@]", host, portStr);
+            }
             int gai_error = getaddrinfo([host UTF8String], [portStr UTF8String], &hints, &res0);
             
             NSString *address4 = nil;
@@ -226,20 +230,29 @@
             }
             
             if (address4 != nil) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDNS lookup %@:%@ success ipv4]", host, portStr);
+                }
                 [subscriber putNext:address4];
                 [subscriber putCompletion];
             } else if (address6 != nil) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDNS lookup %@:%@ success ipv6]", host, portStr);
+                }
                 [subscriber putNext:address6];
                 [subscriber putCompletion];
             } else {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTDNS lookup %@:%@ error %d]", host, portStr, gai_error);
+                }
                 [subscriber putError:nil];
             }
         }];
         return disposable;
     }];
-    return [[lookupOnce catch:^MTSignal *(__unused id error) {
+    return [[[lookupOnce catch:^MTSignal *(__unused id error) {
         return [[MTSignal complete] delay:2.0 onQueue:[MTDNSContext sharedQueue]];
-    }] take:1];
+    }] restart] take:1];
 }
 
 @end
