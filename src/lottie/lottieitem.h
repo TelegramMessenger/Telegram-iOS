@@ -222,11 +222,20 @@ public:
    bool staticPath() const { return mStaticPath; }
 protected:
    virtual void updatePath(VPath& path, int frameNo) = 0;
-   virtual bool hasChanged(int frameNo) = 0;
+   virtual bool hasChanged(int prevFrame, int curFrame) = 0;
 private:
+   bool hasChanged(int frameNo) {
+       int prevFrame = mFrameNo;
+       mFrameNo = frameNo;
+       if (prevFrame == -1) return true;
+       if (mStaticPath ||
+           (prevFrame == frameNo)) return false;
+       return hasChanged(prevFrame, frameNo);
+   }
    VPath                                   mLocalPath;
    VPath                                   mTemp;
    VPath                                   mFinalPath;
+   int                                     mFrameNo{-1};
    bool                                    mPathChanged{true};
    bool                                    mNeedUpdate{true};
    bool                                    mStaticPath;
@@ -240,34 +249,10 @@ protected:
    void updatePath(VPath& path, int frameNo) final;
    LOTRectData           *mData;
 
-   struct Cache {
-        int                  mFrameNo{-1};
-        float                mRoundness;
-        VPointF              mPos;
-        VPointF              mSize;
-   };
-   Cache                     mCache;
-
-   void updateCache(int frameNo, VPointF pos, VPointF size, float roundness) {
-        mCache.mFrameNo = frameNo;
-        mCache.mPos = pos;
-        mCache.mSize = size;
-        mCache.mRoundness = roundness;
-   }
-   bool hasChanged(int frameNo) final {
-        if (mCache.mFrameNo != -1 && staticPath()) return false;
-        if (mCache.mFrameNo == frameNo) return false;
-
-        VPointF pos = mData->mPos.value(frameNo);
-        VPointF size = mData->mSize.value(frameNo);
-        float   roundness = mData->mRound.value(frameNo);
-
-        if (vCompare(mCache.mPos.x(), pos.x()) && vCompare(mCache.mPos.y(), pos.y()) &&
-            vCompare(mCache.mSize.x(), size.x()) && vCompare(mCache.mSize.y(), size.y()) &&
-            vCompare(mCache.mRoundness, roundness))
-          return false;
-
-        return true;
+   bool hasChanged(int prevFrame, int curFrame) final {
+       return (mData->mPos.changed(prevFrame, curFrame) ||
+               mData->mSize.changed(prevFrame, curFrame) ||
+               mData->mRound.changed(prevFrame, curFrame)) ? true : false;
    }
 };
 
@@ -278,31 +263,9 @@ public:
 private:
    void updatePath(VPath& path, int frameNo) final;
    LOTEllipseData           *mData;
-
-   struct Cache {
-        int                  mFrameNo{-1};
-        VPointF              mPos;
-        VPointF              mSize;
-   };
-   Cache                     mCache;
-
-   void updateCache(int frameNo, VPointF pos, VPointF size) {
-        mCache.mFrameNo = frameNo;
-        mCache.mPos = pos;
-        mCache.mSize = size;
-   }
-   bool hasChanged(int frameNo) final {
-        if (mCache.mFrameNo != -1 && staticPath()) return false;
-        if (mCache.mFrameNo == frameNo) return false;
-
-        VPointF pos = mData->mPos.value(frameNo);
-        VPointF size = mData->mSize.value(frameNo);
-
-        if (vCompare(mCache.mPos.x(), pos.x()) && vCompare(mCache.mPos.y(), pos.y()) &&
-            vCompare(mCache.mSize.x(), size.x()) && vCompare(mCache.mSize.y(), size.y()))
-          return false;
-
-        return true;
+   bool hasChanged(int prevFrame, int curFrame) final {
+       return (mData->mPos.changed(prevFrame, curFrame) ||
+               mData->mSize.changed(prevFrame, curFrame)) ? true : false;
    }
 };
 
@@ -311,19 +274,10 @@ class LOTShapeItem: public LOTPathDataItem
 public:
    LOTShapeItem(LOTShapeData *data);
 private:
-   struct Cache {
-        int                     mFrameNo{-1};
-   };
-   Cache                        mCache;
    void updatePath(VPath& path, int frameNo) final;
    LOTShapeData             *mData;
-   bool hasChanged(int frameNo) final {
-       int prevFrame = mCache.mFrameNo;
-       mCache.mFrameNo = frameNo;
-       if (prevFrame == -1) return true;
-       if (prevFrame == frameNo) return false;
-
-       return mData->mShape.changed(prevFrame, frameNo);
+   bool hasChanged(int prevFrame, int curFrame) final {
+       return mData->mShape.changed(prevFrame, curFrame);
    }
 };
 
@@ -335,48 +289,14 @@ private:
    void updatePath(VPath& path, int frameNo) final;
    LOTPolystarData             *mData;
 
-   struct Cache {
-        int                     mFrameNo{-1};
-        VPointF                 mPos;
-        float                   mPoints{0};
-        float                   mInnerRadius{0};
-        float                   mOuterRadius{0};
-        float                   mInnerRoundness{0};
-        float                   mOuterRoundness{0};
-        float                   mRotation{0};
-   };
-   Cache                        mCache;
-
-   void updateCache(int frameNo, VPointF pos, float points, float innerRadius, float outerRadius,
-                    float innerRoundness, float outerRoundness, float rotation) {
-        mCache.mFrameNo = frameNo;
-        mCache.mPos = pos;
-        mCache.mPoints = points;
-        mCache.mInnerRadius = innerRadius;
-        mCache.mOuterRadius = outerRadius;
-        mCache.mInnerRoundness = innerRoundness;
-        mCache.mOuterRoundness = outerRoundness;
-        mCache.mRotation = rotation;
-   }
-   bool hasChanged(int frameNo) final {
-        if (mCache.mFrameNo != -1 && staticPath()) return false;
-        if (mCache.mFrameNo == frameNo) return false;
-
-        VPointF pos = mData->mPos.value(frameNo);
-        float   points = mData->mPointCount.value(frameNo);
-        float   innerRadius = mData->mInnerRadius.value(frameNo);
-        float   outerRadius = mData->mOuterRadius.value(frameNo);
-        float   innerRoundness = mData->mInnerRoundness.value(frameNo);
-        float   outerRoundness = mData->mOuterRoundness.value(frameNo);
-        float   rotation = mData->mRotation.value(frameNo);
-
-        if (vCompare(mCache.mPos.x(), pos.x()) && vCompare(mCache.mPos.y(), pos.y()) &&
-            vCompare(mCache.mPoints, points) && vCompare(mCache.mRotation, rotation) &&
-            vCompare(mCache.mInnerRadius, innerRadius) && vCompare(mCache.mOuterRadius, outerRadius) &&
-            vCompare(mCache.mInnerRoundness, innerRoundness) && vCompare(mCache.mOuterRoundness, outerRoundness))
-          return false;
-
-        return true;
+   bool hasChanged(int prevFrame, int curFrame) final {
+       return (mData->mPos.changed(prevFrame, curFrame) ||
+               mData->mPointCount.changed(prevFrame, curFrame) ||
+               mData->mInnerRadius.changed(prevFrame, curFrame) ||
+               mData->mOuterRadius.changed(prevFrame, curFrame) ||
+               mData->mInnerRoundness.changed(prevFrame, curFrame) ||
+               mData->mOuterRoundness.changed(prevFrame, curFrame) ||
+               mData->mRotation.changed(prevFrame, curFrame)) ? true : false;
    }
 };
 
