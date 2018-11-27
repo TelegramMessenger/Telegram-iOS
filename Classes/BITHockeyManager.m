@@ -146,7 +146,6 @@ static bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,
   }
 }
 
-
 #pragma mark - Public Class Methods
 
 + (BITHockeyManager *)sharedHockeyManager {
