@@ -580,24 +580,31 @@
             }
         }];
     };
-    
+        
     NSNumber *groupedId;
     NSInteger i = 0;
-    if (selectionContext.grouping && selectedItems.count > 1)
-        groupedId = @([self generateGroupedId]);
+    bool grouping = selectionContext.grouping;
     
     bool hasAnyTimers = false;
-    if (editingContext != nil)
+    if (editingContext != nil || grouping)
     {
         for (TGMediaAsset *asset in selectedItems)
         {
-            if ([editingContext timerForItem:asset] != nil)
-            {
+            if ([editingContext timerForItem:asset] != nil) {
                 hasAnyTimers = true;
-                break;
+            }
+            id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
+            if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]]) {
+                TGVideoEditAdjustments *videoAdjustments = (TGVideoEditAdjustments *)adjustments;
+                if (videoAdjustments.sendAsGif) {
+                    grouping = false;
+                }
             }
         }
     }
+    
+    if (grouping && selectedItems.count > 1)
+        groupedId = @([self generateGroupedId]);
     
     for (TGMediaAsset *asset in selectedItems)
     {
