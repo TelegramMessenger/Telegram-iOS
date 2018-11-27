@@ -168,10 +168,10 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                 return .channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id))
                         }
                     } else {
-                        if let peer = peer as? TelegramUser, peer.botInfo != nil {
-                            return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
-                        } else {
+                        if let peer = peer as? TelegramUser, peer.botInfo == nil {
                             return .peer(peer.id, .info)
+                        } else {
+                            return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
                         }
                     }
                 } else {
