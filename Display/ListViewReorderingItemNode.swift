@@ -11,7 +11,7 @@ final class ListViewReorderingItemNode: ASDisplayNode {
     
     init(itemNode: ListViewItemNode, initialLocation: CGPoint) {
         self.itemNode = itemNode
-        self.copyView = itemNode.view.snapshotContentTree()
+        self.copyView = itemNode.view.snapshotView(afterScreenUpdates: false)
         self.initialLocation = initialLocation
         
         super.init()
