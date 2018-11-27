@@ -59,6 +59,7 @@ public func webpagePreviewWithProgress(account: Account, url: String, webpageId:
                                         return .single(.result(media))
                                         |> then(
                                             account.stateManager.updatedWebpage(media.webpageId)
+                                            |> take(1)
                                             |> map { next -> WebpagePreviewWithProgressResult in
                                                 return .result(next)
                                             }
