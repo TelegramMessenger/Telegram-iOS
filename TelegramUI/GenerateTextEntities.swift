@@ -21,6 +21,12 @@ private let identifierDelimiterSet: CharacterSet = {
     set.formUnion(CharacterSet.whitespacesAndNewlines)
     return set
 }()
+private let externalIdentifierDelimiterSet: CharacterSet = {
+    var set = CharacterSet.punctuationCharacters
+    set.formUnion(CharacterSet.whitespacesAndNewlines)
+    set.remove(".")
+    return set
+}()
 
 private enum CurrentEntityType {
     case command
@@ -51,6 +57,7 @@ public struct EnabledEntityTypes: OptionSet {
     public static let hashtag = EnabledEntityTypes(rawValue: 1 << 2)
     public static let url = EnabledEntityTypes(rawValue: 1 << 3)
     public static let phoneNumber = EnabledEntityTypes(rawValue: 1 << 4)
+    public static let external = EnabledEntityTypes(rawValue: 1 << 5)
     
     public static let all: EnabledEntityTypes = [.command, .mention, .hashtag, .url, .phoneNumber]
 }
@@ -113,6 +120,8 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
         detector = dataDetector
     }
     
+    let delimiterSet = enabledTypes.contains(.external) ? externalIdentifierDelimiterSet : identifierDelimiterSet
+    
     if let detector = detector {
         detector.enumerateMatches(in: text, options: [], range: NSMakeRange(0, utf16.count), using: { result, _, _ in
             if let result = result {
@@ -144,7 +153,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
         if let scalar = scalar {
             if scalar == "/" {
                 notFound = false
-                if previousScalar != nil && !identifierDelimiterSet.contains(previousScalar!) {
+                if previousScalar != nil && !delimiterSet.contains(previousScalar!) {
                     currentEntity = nil
                 } else {
                     if let (type, range) = currentEntity {
@@ -178,7 +187,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                         case .command, .mention:
                             if validIdentifierSet.contains(scalar) {
                                 currentEntity = (type, range.lowerBound ..< utf16.index(after: index))
-                            } else if identifierDelimiterSet.contains(scalar) {
+                            } else if delimiterSet.contains(scalar) {
                                 if let (type, range) = currentEntity {
                                     commitEntity(utf16, type, range, enabledTypes, &entities)
                                 }
@@ -187,7 +196,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                         case .hashtag:
                             if validHashtagSet.contains(scalar) {
                                 currentEntity = (type, range.lowerBound ..< utf16.index(after: index))
-                            } else if identifierDelimiterSet.contains(scalar) {
+                            } else if delimiterSet.contains(scalar) {
                                 if let (type, range) = currentEntity {
                                     commitEntity(utf16, type, range, enabledTypes, &entities)
                                 }

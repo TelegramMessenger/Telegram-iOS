@@ -65,8 +65,9 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func principalGraphics(_ theme: PresentationTheme, wallpaper: Bool) -> PrincipalThemeEssentialGraphics {
-        let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
+    static func principalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
+        let hasWallpaper = !wallpaper.isEmpty && !wallpaper.isBuiltin
+        let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
         return theme.object(key.rawValue, { theme in
             return PrincipalThemeEssentialGraphics(theme.chat, wallpaper: wallpaper)
         }) as! PrincipalThemeEssentialGraphics
@@ -86,7 +87,7 @@ struct PresentationResourcesChat {
     
     static func chatServiceVerticalLineImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatServiceVerticalLineImage.rawValue, { theme in
-            return generateLineImage(color: theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            return generateLineImage(color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText)
         })
     }
     
@@ -168,16 +169,6 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatServiceBubbleFillImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatServiceBubbleFillImage.rawValue, { theme in
-            return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context -> Void in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.chat.serviceMessage.serviceMessageFillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-            })?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
-        })
-    }
-    
     static func chatBubbleSecretMediaIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleSecretMediaIcon.rawValue, { theme in
             generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SecretMediaIcon"), color: theme.chat.bubble.mediaOverlayControlForegroundColor)
@@ -195,12 +186,6 @@ struct PresentationResourcesChat {
             } else {
                 return nil
             }
-        })
-    }
-    
-    static func chatFreeformContentAdditionalInfoBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatFreeformContentAdditionalInfoBackgroundImage.rawValue, { theme in
-            return generateStretchableFilledCircleImage(radius: 4.0, color: theme.chat.serviceMessage.serviceMessageFillColor)
         })
     }
     
@@ -286,15 +271,9 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatEmptyItemBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatEmptyItemBackgroundImage.rawValue, { theme in
-            return generateStretchableFilledCircleImage(radius: 14.0, color: theme.chat.serviceMessage.serviceMessageFillColor)
-        })
-    }
-    
     static func chatEmptyItemIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatEmptyItemIconImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Chat"), color: theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Chat"), color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText)
         })
     }
     
@@ -900,12 +879,6 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatLoadingIndicatorBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatLoadingIndicatorBackgroundImage.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 30.0, color: theme.chat.serviceMessage.serviceMessageFillColor)
-        })
-    }
-    
     static func chatBubbleReplyThumbnailPlayImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleReplyThumbnailPlayImage.rawValue, { theme in
             return generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
@@ -1002,8 +975,8 @@ struct PresentationResourcesChat {
                 
                 context.translateBy(x: 0.0, y: 1.0)
                 
-                context.setFillColor(theme.chat.serviceMessage.serviceMessagePrimaryTextColor.cgColor)
-                context.setStrokeColor(theme.chat.serviceMessage.serviceMessagePrimaryTextColor.cgColor)
+                context.setFillColor(theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText.cgColor)
+                context.setStrokeColor(theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText.cgColor)
                 context.setLineWidth(1.32)
                 
                 let _ = try? drawSvgPath(context, path: "M4.5,0.600000024 C5.88071187,0.600000024 7,1.88484952 7,3.46979169 L7,7.39687502 C7,8.9818172 5.88071187,10.2666667 4.5,10.2666667 C3.11928813,10.2666667 2,8.9818172 2,7.39687502 L2,3.46979169 C2,1.88484952 3.11928813,0.600000024 4.5,0.600000024 S ")

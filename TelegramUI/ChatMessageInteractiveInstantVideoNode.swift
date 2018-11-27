@@ -312,8 +312,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         let durationFillColor: UIColor
                         switch statusDisplayType {
                             case .free:
-                                durationTextColor = theme.theme.chat.serviceMessage.serviceMessagePrimaryTextColor
-                                durationFillColor = theme.theme.chat.serviceMessage.serviceMessageFillColor
+                                 let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                                durationTextColor = serviceColor.primaryText
+                                durationFillColor = serviceColor.fill
                             case .bubble:
                                 durationFillColor = .clear
                                 if item.message.effectivelyIncoming(item.account.peerId) {

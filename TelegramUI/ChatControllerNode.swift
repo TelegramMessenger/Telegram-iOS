@@ -189,7 +189,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode = ChatHistoryListNode(account: account, chatLocation: chatLocation, tagMask: nil, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
-        self.loadingNode = ChatLoadingNode(theme: chatPresentationInterfaceState.theme)
+        self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper)
         
         self.inputPanelBackgroundNode = ASDisplayNode()
         self.inputPanelBackgroundNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColor
@@ -1323,7 +1323,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             if let restrictionText = restrictionText {
                 if self.restrictedNode == nil {
-                    let restrictedNode = ChatRecentActionsEmptyNode(theme: chatPresentationInterfaceState.theme)
+                    let restrictedNode = ChatRecentActionsEmptyNode(theme: chatPresentationInterfaceState.theme, chatWallpaper: chatPresentationInterfaceState.chatWallpaper)
                     self.historyNodeContainer.supernode?.insertSubnode(restrictedNode, aboveSubnode: self.historyNodeContainer)
                     self.restrictedNode = restrictedNode
                 }

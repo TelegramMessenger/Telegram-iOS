@@ -275,26 +275,18 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
     )
     
     let serviceMessage = PresentationThemeServiceMessage(
-        serviceMessageFillColor: UIColor(rgb: 0x748391, alpha: 0.45),
-        serviceMessagePrimaryTextColor: .white,
-        serviceMessageLinkHighlightColor: UIColor(rgb: 0x748391, alpha: 0.25),
+        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x748391, alpha: 0.45), primaryText: .white, linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), dateFillStatic: UIColor(rgb: 0x748391, alpha: 0.45), dateFillFloating: UIColor(rgb: 0x939fab, alpha: 0.5)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x000000, alpha: 0.25), primaryText: .white, linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), dateFillStatic: UIColor(rgb: 0x000000, alpha: 0.25), dateFillFloating: UIColor(rgb: 0x000000, alpha: 0.2))),
         unreadBarFillColor: UIColor(white: 1.0, alpha: 0.9),
         unreadBarStrokeColor: UIColor(white: 0.0, alpha: 0.2),
         unreadBarTextColor: UIColor(rgb: 0x86868d),
-        dateFillStaticColor: UIColor(rgb: 0x748391, alpha: 0.45),
-        dateFillFloatingColor: UIColor(rgb: 0x939fab, alpha: 0.5),
         dateTextColor: .white
     )
     
     let serviceMessageDay = PresentationThemeServiceMessage(
-        serviceMessageFillColor: UIColor(rgb: 0xffffff, alpha: 0.8),
-        serviceMessagePrimaryTextColor: UIColor(rgb: 0x8D8E93),
-        serviceMessageLinkHighlightColor: UIColor(rgb: 0x748391, alpha: 0.25),
+        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0xffffff, alpha: 0.8), primaryText: UIColor(rgb: 0x8D8E93), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), dateFillStatic: UIColor(rgb: 0xffffff, alpha: 0.8), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.8)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0xffffff, alpha: 0.8), primaryText: UIColor(rgb: 0x8D8E93), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), dateFillStatic: UIColor(rgb: 0xffffff, alpha: 0.8), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.8))),
         unreadBarFillColor: UIColor(rgb: 0xffffff),
         unreadBarStrokeColor: UIColor(rgb: 0xffffff),
         unreadBarTextColor: UIColor(rgb: 0x8D8E93),
-        dateFillStaticColor: UIColor(rgb: 0xffffff, alpha: 0.8),
-        dateFillFloatingColor: UIColor(rgb: 0xffffff, alpha: 0.8),
         dateTextColor: UIColor(rgb: 0x8D8E93)
     )
     

@@ -1,19 +1,23 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import TelegramCore
 
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     private let activityIndicator: ActivityIndicator
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = PresentationResourcesChat.chatLoadingIndicatorBackgroundImage(theme)
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.chat.serviceMessage.serviceMessagePrimaryTextColor, 22.0, 2.0, false), speed: .regular)
+        let graphics = PresentationResourcesChat.principalGraphics(theme, wallpaper: chatWallpaper)
+        self.backgroundNode.image = graphics.chatLoadingIndicatorBackgroundImage
+        
+        let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: chatWallpaper)
+        self.activityIndicator = ActivityIndicator(type: .custom(serviceColor.primaryText, 22.0, 2.0, false), speed: .regular)
         
         super.init()
         

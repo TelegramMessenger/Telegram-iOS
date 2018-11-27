@@ -18,7 +18,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
         super.init()
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer, _ authorName: String?, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer, _ authorName: String?, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode) {
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         
         return { theme, strings, type, peer, authorName, constrainedSize in
@@ -34,10 +34,11 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? theme.chat.bubble.incomingAccentTextColor : theme.chat.bubble.outgoingAccentTextColor
+                    titleColor = incoming ? theme.theme.chat.bubble.incomingAccentTextColor : theme.theme.chat.bubble.outgoingAccentTextColor
                     completeSourceString = strings.Message_ForwardedMessage(peerString)
                 case .standalone:
-                    titleColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
+                    let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                    titleColor = serviceColor.primaryText
                     completeSourceString = strings.Message_ForwardedMessageShort(peerString)
             }
             

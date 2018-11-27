@@ -90,13 +90,8 @@ enum PresentationResourceKey: Int32 {
     
     case chatBubbleMediaOverlayControlSecret
     
-    case chatLoadingIndicatorBackgroundImage
-    case chatServiceBubbleFillImage
-    
     case chatBubbleSecretMediaIcon
     case chatBubbleSecretMediaCompactIcon
-    
-    case chatFreeformContentAdditionalInfoBackgroundImage
     
     case chatInstantVideoWithWallpaperBackgroundImage
     case chatInstantVideoWithoutWallpaperBackgroundImage
@@ -126,7 +121,6 @@ enum PresentationResourceKey: Int32 {
     case chatInfoItemBackgroundImageWithWallpaper
     case chatInfoItemBackgroundImageWithoutWallpaper
     
-    case chatEmptyItemBackgroundImage
     case chatEmptyItemIconImage
     
     case chatInputPanelCloseIconImage

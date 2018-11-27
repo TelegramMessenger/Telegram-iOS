@@ -9,14 +9,12 @@ private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
 class ChatHoleItem: ListViewItem {
     let index: MessageIndex
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let presentationData: ChatPresentationData
     //let header: ChatMessageDateHeader
     
-    init(index: MessageIndex, theme: PresentationTheme, strings: PresentationStrings) {
+    init(index: MessageIndex, presentationData: ChatPresentationData) {
         self.index = index
-        self.theme = theme
-        self.strings = strings
+        self.presentationData = presentationData
         //self.header = ChatMessageDateHeader(timestamp: index.timestamp, theme: theme, strings: strings)
     }
     
@@ -81,11 +79,14 @@ class ChatHoleItemNode: ListViewItemNode {
         let currentItem = self.item
         return { item, params, dateAtBottom in
             var updatedBackground: UIImage?
-            if item.theme !== currentItem?.theme {
-                updatedBackground = PresentationResourcesChat.chatServiceBubbleFillImage(item.theme)
+            if item.presentationData.theme !== currentItem?.presentationData.theme {
+                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                updatedBackground = graphics.chatServiceBubbleFillImage
             }
             
-            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Channel_NotificationLoading, font: titleFont, textColor: item.theme.chat.serviceMessage.serviceMessagePrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+            
+            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Channel_NotificationLoading, font: titleFont, textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let backgroundSize = CGSize(width: size.size.width + 8.0 + 8.0, height: 20.0)
             

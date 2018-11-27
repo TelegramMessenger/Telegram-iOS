@@ -202,6 +202,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     switch type {
                         case .twitter, .instagram:
                             entityTypes.insert(.mention)
+                            entityTypes.insert(.hashtag)
+                            entityTypes.insert(.external)
                         default:
                             break
                     }
@@ -324,6 +326,21 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                 return .url(url: "https://twitter.com/\(mention)", concealed: false)
                             case .instagram:
                                 return .url(url: "https://instagram.com/\(mention)", concealed: false)
+                            default:
+                                break
+                        }
+                    }
+                case let .hashtag(_, value):
+                    if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
+                        var hashtag = value
+                        if hashtag.hasPrefix("#") {
+                            hashtag = String(hashtag[hashtag.index(after: hashtag.startIndex)...])
+                        }
+                        switch websiteType(of: content) {
+                            case .twitter:
+                                return .url(url: "https://twitter.com/hashtag/\(hashtag)", concealed: false)
+                            case .instagram:
+                                return .url(url: "https://instagram.com/explore/tags/\(hashtag)", concealed: false)
                             default:
                                 break
                         }

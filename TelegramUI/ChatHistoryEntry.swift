@@ -24,7 +24,7 @@ public enum ChatHistoryMessageSelection: Equatable {
 }
 
 enum ChatHistoryEntry: Identifiable, Comparable {
-    case HoleEntry(MessageHistoryHole, PresentationTheme, PresentationStrings)
+    case HoleEntry(MessageHistoryHole, ChatPresentationData)
     case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, Bool)
     case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, Bool)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
@@ -33,7 +33,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     
     var stableId: UInt64 {
         switch self {
-            case let .HoleEntry(hole, _, _):
+            case let .HoleEntry(hole, _):
                 return UInt64(hole.stableId) | ((UInt64(1) << 40))
             case let .MessageEntry(message, _, _, _, _, _):
                 return UInt64(message.stableId) | ((UInt64(2) << 40))
@@ -50,7 +50,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     
     var index: MessageIndex {
         switch self {
-            case let .HoleEntry(hole, _, _):
+            case let .HoleEntry(hole, _):
                 return hole.maxIndex
             case let .MessageEntry(message, _, _, _, _, _):
                 return MessageIndex(message)
@@ -67,8 +67,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
 
     static func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
         switch lhs {
-            case let .HoleEntry(lhsHole, lhsTheme, lhsStrings):
-                if case let .HoleEntry(rhsHole, rhsTheme, rhsStrings) = rhs, lhsHole == rhsHole, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+            case let .HoleEntry(lhsHole, lhsPresentationData):
+                if case let .HoleEntry(rhsHole, rhsPresentationData) = rhs, lhsHole == rhsHole, lhsPresentationData === rhsPresentationData {
                     return true
                 } else {
                     return false

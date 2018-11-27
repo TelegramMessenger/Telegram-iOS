@@ -1,12 +1,14 @@
 import Foundation
 import Display
 import AsyncDisplayKit
+import TelegramCore
 
 private let titleFont = Font.medium(16.0)
 private let textFont = Font.regular(15.0)
 
 final class ChatRecentActionsEmptyNode: ASDisplayNode {
     private var theme: PresentationTheme
+    private var chatWallpaper: TelegramWallpaper
     
     private let backgroundNode: ASImageNode
     private let titleNode: TextNode
@@ -17,8 +19,9 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
     private var title: String = ""
     private var text: String = ""
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper) {
         self.theme = theme
+        self.chatWallpaper = chatWallpaper
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
@@ -31,7 +34,8 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundNode.image = PresentationResourcesChat.chatEmptyItemBackgroundImage(self.theme)
+        let graphics = PresentationResourcesChat.principalGraphics(theme, wallpaper: chatWallpaper)
+        self.backgroundNode.image = graphics.chatEmptyItemBackgroundImage
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
@@ -48,9 +52,11 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.title, font: titleFont, textColor: self.theme.chat.serviceMessage.serviceMessagePrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let serviceColor = serviceMessageColorComponents(theme: self.theme, wallpaper: self.chatWallpaper)
+        
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.title, font: titleFont, textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let spacing: CGFloat = titleLayout.size.height.isZero ? 0.0 : 5.0
-        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.text, font: textFont, textColor: self.theme.chat.serviceMessage.serviceMessagePrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.text, font: textFont, textColor: serviceColor.primaryText), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         
         let contentSize = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + insets.left + insets.right, height: insets.top + insets.bottom + titleLayout.size.height + spacing + textLayout.size.height)
         let backgroundFrame = CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize)

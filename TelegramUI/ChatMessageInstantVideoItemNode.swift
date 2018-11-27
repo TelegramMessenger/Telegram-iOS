@@ -141,14 +141,16 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             for attribute in item.message.attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - videoLayout.contentSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     
                     if let currentReplyBackgroundNode = currentReplyBackgroundNode {
                         updatedReplyBackgroundNode = currentReplyBackgroundNode
                     } else {
                         updatedReplyBackgroundNode = ASImageNode()
                     }
-                    replyBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.presentationData.theme.theme)
+                    
+                    let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    replyBackgroundImage = graphics.chatServiceBubbleFillImage
                     break
                 } else if let attribute = attribute as? InlineBotMessageAttribute {
                     if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
@@ -184,7 +186,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     forwardAuthorSignature = nil
                 }
                 let availableWidth = max(60.0, availableContentWidth - videoLayout.contentSize.width + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData.theme, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 
                 if let currentForwardBackgroundNode = currentForwardBackgroundNode {
                     updatedForwardBackgroundNode = currentForwardBackgroundNode
@@ -192,7 +194,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     updatedForwardBackgroundNode = ASImageNode()
                 }
                 
-                forwardBackgroundImage = PresentationResourcesChat.chatServiceBubbleFillImage(item.presentationData.theme.theme)
+                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                forwardBackgroundImage = graphics.chatServiceBubbleFillImage
             }
             
             var maxContentWidth = videoLayout.contentSize.width

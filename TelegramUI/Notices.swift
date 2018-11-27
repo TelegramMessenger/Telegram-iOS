@@ -75,6 +75,33 @@ final class ApplicationSpecificCounterNotice: NoticeEntry {
     }
 }
 
+final class ApplicationSpecificTimestampNotice: NoticeEntry {
+    let value: Int32
+    
+    init(value: Int32) {
+        self.value = value
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.value = decoder.decodeInt32ForKey("v", orElse: 0)
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.value, forKey: "v")
+    }
+    
+    func isEqual(to: NoticeEntry) -> Bool {
+        if let to = to as? ApplicationSpecificTimestampNotice {
+            if self.value != to.value {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private func noticeNamespace(namespace: Int32) -> ValueBoxKey {
     let key = ValueBoxKey(length: 4)
     key.setInt32(0, value: namespace)
@@ -106,6 +133,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
 private struct ApplicationSpecificNoticeKeys {
     private static let botPaymentLiabilityNamespace: Int32 = 1
     private static let globalNamespace: Int32 = 2
+    private static let permissionsNamespace: Int32 = 3
     
     static func botPaymentLiabilityNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: botPaymentLiabilityNamespace), key: noticeKey(peerId: peerId, key: 0))

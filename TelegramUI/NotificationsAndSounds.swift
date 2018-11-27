@@ -572,16 +572,16 @@ private func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound 
 private func notificationsAndSoundsEntries(authorizationStatus: AccessType, globalSettings: GlobalNotificationSettingsSet, inAppSettings: InAppNotificationSettings, exceptions: (users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode), presentationData: PresentationData) -> [NotificationsAndSoundsEntry] {
     var entries: [NotificationsAndSoundsEntry] = []
     
-    switch authorizationStatus {
-        case .denied:
-            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
-            entries.append(.permissionEnable(presentationData.theme, "Turn ON in Settings"))
-        case .notDetermined:
-            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
-            entries.append(.permissionEnable(presentationData.theme, "Turn Notifications ON"))
-        default:
-            break
-    }
+//    switch authorizationStatus {
+//        case .denied:
+//            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
+//            entries.append(.permissionEnable(presentationData.theme, "Turn ON in Settings"))
+//        case .notDetermined:
+//            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
+//            entries.append(.permissionEnable(presentationData.theme, "Turn Notifications ON"))
+//        default:
+//            break
+//    }
     
     entries.append(.messageHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications))
     entries.append(.messageAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.privateChats.enabled))

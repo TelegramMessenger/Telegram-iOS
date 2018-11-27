@@ -13,11 +13,21 @@ final class InstantPageReferenceController: ViewController {
     private var animatedIn = false
     
     private let account: Account
+    private let theme: InstantPageTheme
+    private let webPage: TelegramMediaWebpage
     private let item: InstantPageTextItem
+    private let openUrl: (InstantPageUrlItem) -> Void
+    private let openUrlIn: (InstantPageUrlItem) -> Void
+    private let present: (ViewController, Any?) -> Void
     
-    init(account: Account, item: InstantPageTextItem) {
+    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, item: InstantPageTextItem, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.account = account
+        self.theme = theme
+        self.webPage = webPage
         self.item = item
+        self.openUrl = openUrl
+        self.openUrlIn = openUrlIn
+        self.present = present
         
         super.init(navigationBarPresentationData: nil)
         
@@ -29,7 +39,7 @@ final class InstantPageReferenceController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InstantPageReferenceControllerNode(account: self.account, item: self.item)
+        self.displayNode = InstantPageReferenceControllerNode(account: self.account, theme: self.theme, webPage: self.webPage, item: self.item, openUrl: self.openUrl, openUrlIn: self.openUrlIn, present: self.present)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }

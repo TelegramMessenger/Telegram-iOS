@@ -720,7 +720,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
     let icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
     
     let controller = ItemListController(account: account, state: signal, tabBarItem: combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, notificationAuthorizationStatus.get()) |> map { presentationData, status in
-        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon, badgeValue: status != .allowed ? "!" : nil)
+        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon, badgeValue: nil)
+        //return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon, badgeValue: status != .allowed ? "!" : nil)
     })
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)

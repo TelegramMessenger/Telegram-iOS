@@ -153,7 +153,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             let themeUpdated = theme != currentTheme || type != currentType
             
-            let graphics = PresentationResourcesChat.principalGraphics(theme.theme, wallpaper: !theme.wallpaper.isEmpty)
+            let graphics = PresentationResourcesChat.principalGraphics(theme.theme, wallpaper: theme.wallpaper)
             
             switch type {
                 case .BubbleIncoming:
@@ -201,7 +201,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case .FreeIncoming:
-                    dateColor = theme.theme.chat.serviceMessage.serviceMessagePrimaryTextColor
+                    let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                    dateColor = serviceColor.primaryText
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
                     loadedCheckFullImage = graphics.checkFreeFullImage
@@ -212,7 +213,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.freeImpressionIcon
                     }
                 case let .FreeOutgoing(status):
-                    dateColor = theme.theme.chat.serviceMessage.serviceMessagePrimaryTextColor
+                    let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                    dateColor = serviceColor.primaryText
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0

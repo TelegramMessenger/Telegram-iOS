@@ -26,6 +26,8 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(CachedChannelAdminIds.self, f: { CachedChannelAdminIds(decoder: $0) })
     declareEncodable(StickerSettings.self, f: { StickerSettings(decoder: $0) })
     declareEncodable(InstantPagePresentationSettings.self, f: { InstantPagePresentationSettings(decoder: $0) })
+    declareEncodable(InstantPageStoredState.self, f: { InstantPageStoredState(decoder: $0) })
+    declareEncodable(InstantPageStoredDetailsState.self, f: { InstantPageStoredDetailsState(decoder: $0) })
     declareEncodable(WatchPresetSettings.self, f: { WatchPresetSettings(decoder: $0) })
     return
 }()

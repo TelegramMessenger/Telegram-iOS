@@ -190,14 +190,10 @@ private let bubble = PresentationThemeChatBubble(
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(
-    serviceMessageFillColor: UIColor(rgb: 0x18222D, alpha: 1.0),
-    serviceMessagePrimaryTextColor: UIColor(rgb: 0xffffff),
-    serviceMessageLinkHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.12),
+    components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x18222D, alpha: 1.0), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), dateFillStatic: UIColor(rgb: 0x18222D, alpha: 1.0), dateFillFloating: UIColor(rgb: 0x18222D, alpha: 0.2)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x18222D, alpha: 1.0), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), dateFillStatic: UIColor(rgb: 0x18222D, alpha: 1.0), dateFillFloating: UIColor(rgb: 0x18222D, alpha: 0.2))),
     unreadBarFillColor: UIColor(rgb: 0x213040),
     unreadBarStrokeColor: UIColor(rgb: 0x213040),
     unreadBarTextColor: UIColor(rgb: 0xffffff),
-    dateFillStaticColor: UIColor(rgb: 0x18222D, alpha: 1.0),
-    dateFillFloatingColor: UIColor(rgb: 0x18222D, alpha: 0.2),
     dateTextColor: UIColor(rgb: 0xffffff)
 )
 

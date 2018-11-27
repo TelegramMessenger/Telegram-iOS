@@ -30,7 +30,8 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
             
-            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: serviceColor.primaryText)
         }
         
         let insets = UIEdgeInsets(top: 6.0, left: 10.0, bottom: 6.0, right: 10.0)
@@ -100,9 +101,11 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
                 titleString = interfaceState.strings.Conversation_EncryptedPlaceholderTitleOutgoing(title).0
             }
             
-            self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
             
-            self.subtitleNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_EncryptedDescriptionTitle, font: messageFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: serviceColor.primaryText)
+            
+            self.subtitleNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_EncryptedDescriptionTitle, font: messageFont, textColor: serviceColor.primaryText)
             
             let strings: [String] = [
                 interfaceState.strings.Conversation_EncryptedDescription1,
@@ -111,7 +114,7 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
                 interfaceState.strings.Conversation_EncryptedDescription4
             ]
             
-            let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor) }
+            let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: serviceColor.primaryText) }
             
             let lockIcon = PresentationResourcesChat.chatEmptyItemLockIcon(interfaceState.theme)
             
@@ -210,10 +213,12 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
             
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Cloud"), color: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+            
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Cloud"), color: serviceColor.primaryText)
             
             let titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
-            self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: serviceColor.primaryText)
             
             let strings: [String] = [
                 interfaceState.strings.Conversation_ClousStorageInfo_Description1,
@@ -222,7 +227,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 interfaceState.strings.Conversation_ClousStorageInfo_Description4
             ]
             
-            let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: interfaceState.theme.chat.serviceMessage.serviceMessagePrimaryTextColor) }
+            let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: serviceColor.primaryText) }
             
             for i in 0 ..< lines.count {
                 if i >= self.lineNodes.count {
@@ -324,7 +329,8 @@ final class ChatEmptyNode: ASDisplayNode {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
             
-            self.backgroundNode.image = PresentationResourcesChat.chatEmptyItemBackgroundImage(interfaceState.theme)
+            let graphics = PresentationResourcesChat.principalGraphics(interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+            self.backgroundNode.image = graphics.chatEmptyItemBackgroundImage
         }
         
         let contentType: ChatEmptyNodeContentType

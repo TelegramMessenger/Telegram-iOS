@@ -43,7 +43,6 @@ private enum JoinState: Equatable {
 
 final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let account: Account
-    let initialPeer: Peer
     let safeInset: CGFloat
     private let transparent: Bool
     private let rtl: Bool
@@ -58,18 +57,17 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let activityIndicator: ActivityIndicator
     private let checkNode: ASImageNode
     
-    private var peer: Peer?
+    var peer: Peer?
     private var peerDisposable: Disposable?
     
     private let joinDisposable = MetaDisposable()
-    
     private var joinState: JoinState = .none
     
     init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
-        self.initialPeer = initialPeer
+        self.peer = initialPeer
         self.safeInset = safeInset
         self.transparent = transparent
         self.rtl = rtl
@@ -140,7 +138,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         self.joinNode.addTarget(self, action: #selector(self.joinPressed), forControlEvents: .touchUpInside)
         
         let account = self.account
-        let signal = actualizedPeer(postbox: account.postbox, network: account.network, peer: self.initialPeer)
+        let signal = actualizedPeer(postbox: account.postbox, network: account.network, peer: initialPeer)
         |> mapToSignal({ peer -> Signal<Peer, NoError> in
             if let peer = peer as? TelegramChannel, let username = peer.username, peer.accessHash == nil {
                 return .single(peer) |> then(resolvePeerByName(account: account, name: username)
@@ -160,8 +158,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     
         self.peerDisposable = (signal |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
-                let textColor = strongSelf.transparent ? UIColor.white : strongSelf.theme.panelPrimaryColor
-                strongSelf.nameNode.attributedText = NSAttributedString(string: peer.displayTitle, font: Font.medium(17.0), textColor: textColor)
+                strongSelf.peer = peer
                 if let peer = peer as? TelegramChannel {
                     var joinState = strongSelf.joinState
                     if case .member = peer.participationStatus {
@@ -178,6 +175,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
                     }
                     strongSelf.updateJoinState(joinState)
                 }
+                strongSelf.applyThemeAndStrings(themeUpdated: false)
                 strongSelf.setNeedsLayout()
             }
         })
@@ -214,6 +212,11 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
             let secondaryColor = self.transparent ? UIColor.white : self.theme.panelSecondaryColor
             self.checkNode.image = generateTintedImage(image: UIImage(bundleImageName: "Instant View/PanelCheck"), color: secondaryColor)
             self.activityIndicator.type = .custom(self.theme.panelAccentColor, 22.0, 2.0, false)
+            
+            if !self.transparent {
+                self.backgroundColor = self.theme.panelBackgroundColor
+                self.highlightedBackgroundNode.backgroundColor = self.theme.panelHighlightedBackgroundColor
+            }
         }
         self.setNeedsLayout()
     }
@@ -289,13 +292,15 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     }
     
     @objc func buttonPressed() {
-        self.openPeer(self.initialPeer.id)
+        if let peer = self.peer {
+            self.openPeer(peer.id)
+        }
     }
     
     @objc func joinPressed() {
-        if case .notJoined = self.joinState {
+        if let peer = self.peer, case .notJoined = self.joinState {
             self.updateJoinState(.inProgress)
-            self.joinDisposable.set((joinChannel(account: self.account, peerId: self.initialPeer.id) |> deliverOnMainQueue).start(error: { [weak self] _ in
+            self.joinDisposable.set((joinChannel(account: self.account, peerId: peer.id) |> deliverOnMainQueue).start(error: { [weak self] _ in
                 if let strongSelf = self {
                     if case .inProgress = strongSelf.joinState {
                         strongSelf.updateJoinState(.notJoined)

@@ -2,28 +2,44 @@ import Foundation
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import SafariServices
 
 class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+    private let account: Account
+    private let theme: InstantPageTheme
     private var presentationData: PresentationData
+    private let webPage: TelegramMediaWebpage
+    private let item: InstantPageTextItem
 
-    private var containerLayout: (ContainerViewLayout, CGFloat)?
-    
     private let dimNode: ASDisplayNode
-
     private let wrappingScrollNode: ASScrollNode
     private let contentContainerNode: ASDisplayNode
     private let contentBackgroundNode: ASImageNode
-    
+    private var contentNode: InstantPageContentNode?
     private let titleNode: ASTextNode
     private let separatorNode: ASDisplayNode
-    
     private let closeButton: HighlightableButtonNode
+    private var linkHighlightingNode: LinkHighlightingNode?
+    private var textSelectionNode: LinkHighlightingNode?
+    
+    private var containerLayout: (ContainerViewLayout, CGFloat)?
+    
+    private var openUrl: (InstantPageUrlItem) -> Void
+    private var openUrlIn: (InstantPageUrlItem) -> Void
+    private var present: (ViewController, Any?) -> Void
     
     var dismiss: (() -> Void)?
     var close: (() -> Void)?
     
-    init(account: Account, item: InstantPageTextItem) {
+    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, item: InstantPageTextItem, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.theme = theme
+        self.webPage = webPage
+        self.item = item
+        self.openUrl = openUrl
+        self.openUrlIn = openUrlIn
+        self.present = present
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -33,7 +49,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
-        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
+        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.theme.overlayPanelColor)
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
@@ -45,10 +61,10 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
         self.contentBackgroundNode.image = roundedBackground
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.ShareMenu_ShareTo, font: Font.medium(20.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InstantPage_Reference, font: Font.medium(17.0), textColor: self.theme.panelSecondaryColor)
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        self.separatorNode.backgroundColor = self.theme.controlColor
         
         self.closeButton = HighlightableButtonNode()
             
@@ -65,6 +81,9 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
         
         self.wrappingScrollNode.addSubnode(self.contentBackgroundNode)
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
+        
+        self.contentContainerNode.addSubnode(self.titleNode)
+        self.contentContainerNode.addSubnode(self.separatorNode)
     }
     
     override func didLoad() {
@@ -73,6 +92,21 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
         if #available(iOSApplicationExtension 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        recognizer.delaysTouchesBegan = false
+        recognizer.tapActionAtPoint = { [weak self] point in
+            if let strongSelf = self, let contentNode = strongSelf.contentNode {
+                return strongSelf.tapActionAtPoint(point.offsetBy(dx: -contentNode.frame.minX, dy: -contentNode.frame.minY))
+            }
+            return .waitForSingleTap
+        }
+        recognizer.highlight = { [weak self] point in
+            if let strongSelf = self, let contentNode = strongSelf.contentNode {
+                strongSelf.updateTouchesAtPoint(point?.offsetBy(dx: -contentNode.frame.minX, dy: -contentNode.frame.minY))
+            }
+        }
+        self.contentContainerNode.view.addGestureRecognizer(recognizer)
     }
     
     @objc func closeButtonPressed() {
@@ -139,42 +173,253 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.containerLayout = (layout, navigationBarHeight)
+        
         var insets = layout.insets(options: [.statusBar, .input])
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
-        var bottomInset: CGFloat = 10.0 + cleanInsets.bottom
-        if insets.bottom > 0 {
-            bottomInset -= 12.0
+        let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
+        let titleAreaHeight: CGFloat = 54.0
+        var contentHeight = titleAreaHeight + bottomInset
+        
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        
+        if self.contentNode == nil || self.contentNode?.frame.width != width {
+            self.contentNode?.removeFromSupernode()
+            
+            let sideInset: CGFloat = 16.0
+            let (_, items, contentSize) = layoutTextItemWithString(self.item.attributedString, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: 0.0, y: sideInset))
+            let contentNode = InstantPageContentNode(account: self.account, strings: self.presentationData.strings, theme: self.theme, items: items, contentSize: contentSize, inOverlayPanel: true, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in })
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: sideInset, y: titleAreaHeight), size: contentSize))
+            self.contentContainerNode.insertSubnode(contentNode, at: 0)
+            self.contentNode = contentNode
+            
+            contentHeight += contentSize.height + sideInset
+            
+            contentNode.updateVisibleItems(visibleBounds: contentNode.bounds, animated: false)
         }
         
-        let titleAreaHeight: CGFloat = 54.0
-        
-        let buttonHeight: CGFloat = 57.0
-        let sectionSpacing: CGFloat = 8.0
-        
-        let maximumContentHeight = layout.size.height - insets.top - max(bottomInset + buttonHeight, insets.bottom) - sectionSpacing
-        
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 10.0 + layout.safeInsets.left)
-        
         let sideInset = floor((layout.size.width - width) / 2.0)
+        let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
+        let contentFrame = contentContainerFrame
         
-        let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
-        let contentFrame = contentContainerFrame.insetBy(dx: 0.0, dy: 0.0)
-        
-        self.containerLayout = (layout, navigationBarHeight)
-    
+        var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.size.width, height: contentFrame.size.height + 2000.0))
+        if backgroundFrame.minY < contentFrame.minY {
+            backgroundFrame.origin.y = contentFrame.minY
+        }
+        transition.updateFrame(node: self.contentBackgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let titleSize = self.titleNode.measure(CGSize(width: width, height: titleAreaHeight))
-        let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: 15.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: 17.0, y: 17.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         //transition.updateFrame(node: self.closeButtonNode, frame: CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: width, height: buttonHeight)))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleAreaHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+    }
+    
+    func tapActionAtPoint(_ point: CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction {
+        if let contentNode = self.contentNode {
+            for item in contentNode.currentLayout.items {
+                let frame = contentNode.effectiveFrameForItem(item)
+                if frame.contains(point) {
+                    if item is InstantPagePeerReferenceItem {
+                        return .fail
+                    } else if item is InstantPageAudioItem {
+                        return .fail
+                    } else if item is InstantPageArticleItem {
+                        return .fail
+                    } else if item is InstantPageFeedbackItem {
+                        return .fail
+                    }
+                    if !(item is InstantPageImageItem || item is InstantPagePlayableVideoItem) {
+                        break
+                    }
+                }
+            }
+        }
+        return .waitForSingleTap
+    }
+    
+    private func updateTouchesAtPoint(_ location: CGPoint?) {
+        var rects: [CGRect]?
+        if let contentNode = self.contentNode, let location = location {
+            for item in contentNode.currentLayout.items {
+                let itemFrame = contentNode.effectiveFrameForItem(item)
+                if itemFrame.contains(location) {
+                    var contentOffset = CGPoint()
+                    if let item = item as? InstantPageScrollableItem {
+                        contentOffset = contentNode.scrollableContentOffset(item: item)
+                    }
+                    var itemRects = item.linkSelectionRects(at: location.offsetBy(dx: -itemFrame.minX + contentOffset.x, dy: -itemFrame.minY))
+                    for i in 0 ..< itemRects.count {
+                        itemRects[i] = itemRects[i].offsetBy(dx: itemFrame.minX - contentOffset.x + contentNode.frame.minX, dy: itemFrame.minY + contentNode.frame.minY).insetBy(dx: -2.0, dy: -2.0)
+                    }
+                    if !itemRects.isEmpty {
+                        rects = itemRects
+                        break
+                    }
+                }
+            }
+        }
+        
+        if let rects = rects {
+            let linkHighlightingNode: LinkHighlightingNode
+            if let current = self.linkHighlightingNode {
+                linkHighlightingNode = current
+            } else {
+                linkHighlightingNode = LinkHighlightingNode(color: self.theme.linkHighlightColor)
+                linkHighlightingNode.isUserInteractionEnabled = false
+                self.linkHighlightingNode = linkHighlightingNode
+                self.contentContainerNode.addSubnode(linkHighlightingNode)
+            }
+            linkHighlightingNode.frame = CGRect(origin: CGPoint(), size: self.contentContainerNode.bounds.size)
+            linkHighlightingNode.updateRects(rects)
+        } else if let linkHighlightingNode = self.linkHighlightingNode {
+            self.linkHighlightingNode = nil
+            linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                linkHighlightingNode?.removeFromSupernode()
+            })
+        }
+    }
+    
+    private func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
+        if let contentNode = self.contentNode {
+            for item in contentNode.currentLayout.items {
+                let itemFrame = contentNode.effectiveFrameForItem(item)
+                if itemFrame.contains(location) {
+                    if let item = item as? InstantPageTextItem, item.selectable {
+                        return (item, CGPoint(x: itemFrame.minX - item.frame.minX + contentNode.frame.minX, y: itemFrame.minY - item.frame.minY + contentNode.frame.minY))
+                    } else if let item = item as? InstantPageScrollableItem {
+                        let contentOffset = contentNode.scrollableContentOffset(item: item)
+                        if let (textItem, parentOffset) = item.textItemAtLocation(location.offsetBy(dx: -itemFrame.minX + contentOffset.x, dy: -itemFrame.minY)) {
+                            return (textItem, itemFrame.origin.offsetBy(dx: parentOffset.x - contentOffset.x + contentNode.frame.minX, dy: parentOffset.y + contentNode.frame.minY))
+                        }
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    
+    private func urlForTapLocation(_ location: CGPoint) -> InstantPageUrlItem? {
+        if let contentNode = self.contentNode, let (item, parentOffset) = self.textItemAtLocation(location) {
+            return item.urlAttribute(at: location.offsetBy(dx: -item.frame.minX - parentOffset.x + contentNode.frame.minX, dy: -item.frame.minY - parentOffset.y + contentNode.frame.minY))
+        }
+        return nil
+    }
+    
+    @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        guard let contentNode = self.contentNode else {
+            return
+        }
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    let location = location.offsetBy(dx: -contentNode.frame.minX, dy: -contentNode.frame.minY)
+                    switch gesture {
+                        case .tap:
+                            if let url = self.urlForTapLocation(location) {
+                                self.close?()
+                                self.openUrl(url)
+                            }
+                        case .longTap:
+                            if let url = self.urlForTapLocation(location) {
+                                let canOpenIn = availableOpenInOptions(applicationContext: self.account.telegramApplicationContext, item: .url(url: url.url)).count > 1
+                                let openText = canOpenIn ? self.presentationData.strings.Conversation_FileOpenIn : self.presentationData.strings.Conversation_LinkDialogOpen
+                                let actionSheet = ActionSheetController(instantPageTheme: self.theme)
+                                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                                    ActionSheetTextItem(title: url.url),
+                                    ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        if let strongSelf = self {
+                                            strongSelf.close?()
+                                            if canOpenIn {
+                                                strongSelf.openUrlIn(url)
+                                            } else {
+                                                strongSelf.openUrl(url)
+                                            }
+                                        }
+                                    }),
+                                    ActionSheetButtonItem(title: self.presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        UIPasteboard.general.string = url.url
+                                    }),
+                                    ActionSheetButtonItem(title: self.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        if let link = URL(string: url.url) {
+                                            let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                                        }
+                                    })
+                                    ]), ActionSheetItemGroup(items: [
+                                        ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                            actionSheet?.dismissAnimated()
+                                        })
+                                    ])])
+                                self.present(actionSheet, nil)
+                            } else if let (item, parentOffset) = self.textItemAtLocation(location) {
+                                let textFrame = item.frame
+                                var itemRects = item.lineRects()
+                                for i in 0 ..< itemRects.count {
+                                    itemRects[i] = itemRects[i].offsetBy(dx: parentOffset.x + textFrame.minX, dy: parentOffset.y + textFrame.minY).insetBy(dx: -2.0, dy: -2.0)
+                                }
+                                self.updateTextSelectionRects(itemRects, text: item.plainText())
+                            }
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
+        }
+    }
+    
+    private func updateTextSelectionRects(_ rects: [CGRect], text: String?) {
+        if let text = text, !rects.isEmpty {
+            let textSelectionNode: LinkHighlightingNode
+            if let current = self.textSelectionNode {
+                textSelectionNode = current
+            } else {
+                textSelectionNode = LinkHighlightingNode(color: UIColor.lightGray.withAlphaComponent(0.4))
+                textSelectionNode.isUserInteractionEnabled = false
+                self.textSelectionNode = textSelectionNode
+                self.contentContainerNode.addSubnode(textSelectionNode)
+            }
+            textSelectionNode.frame = CGRect(origin: CGPoint(), size: self.contentContainerNode.bounds.size)
+            textSelectionNode.updateRects(rects)
+            
+            var coveringRect = rects[0]
+            for i in 1 ..< rects.count {
+                coveringRect = coveringRect.union(rects[i])
+            }
+            
+            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                UIPasteboard.general.string = text
+            }), ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
+                if let strongSelf = self, case let .Loaded(content) = strongSelf.webPage.content {
+                    strongSelf.present(ShareController(account: strongSelf.account, subject: .quote(text: text, url: content.url)), nil)
+                }
+            })])
+            controller.dismissed = { [weak self] in
+                self?.updateTextSelectionRects([], text: nil)
+            }
+            self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                if let strongSelf = self {
+                    return (strongSelf.contentContainerNode, coveringRect.insetBy(dx: -3.0, dy: -3.0), strongSelf, strongSelf.bounds)
+                } else {
+                    return nil
+                }
+            }))
+            textSelectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+        } else if let textSelectionNode = self.textSelectionNode {
+            self.textSelectionNode = nil
+            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.removeFromSupernode()
+            })
+        }
     }
 }

@@ -10,7 +10,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     private let segmentedControl: UISegmentedControl
     let listNode: ListView
     
-    private var chatController: ChatController?
+    var chatController: ChatController?
     
     private let account: Account
     private let query: String

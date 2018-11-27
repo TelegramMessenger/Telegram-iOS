@@ -413,7 +413,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     var commonHeader: ListViewItemHeader?
     switch presentation {
         case .orderedByPresence:
-            commonHeader = ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
+            commonHeader = nil //ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
         default:
             break
     }
@@ -568,7 +568,7 @@ final class ContactListNode: ASDisplayNode {
     private var presentationDataDisposable: Disposable?
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)>
     
-    private let authorizationNode: PermissionControllerNode
+    private var authorizationNode: PermissionContentNode?
     
     init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
         self.account = account
@@ -582,8 +582,7 @@ final class ContactListNode: ASDisplayNode {
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.disableAnimations))
         
-        self.authorizationNode = PermissionControllerNode(theme: defaultLightAuthorizationTheme, strings: self.presentationData.strings)
-        self.authorizationNode.updateData(subject: .contacts, currentStatus: .denied)
+        //self.authorizationNode = //PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         super.init()
         
@@ -814,12 +813,12 @@ final class ContactListNode: ASDisplayNode {
             fixSearchableListNodeScrolling(strongSelf.listNode)
         }
         
-        self.authorizationNode.allow = { [weak self] in
-            self?.account.telegramApplicationContext.applicationBindings.openSettings()
-        }
-        self.authorizationNode.openPrivacyPolicy = { [weak self] in
-            self?.openPrivacyPolicy?()
-        }
+//        self.authorizationNode.allow = { [weak self] in
+//            self?.account.telegramApplicationContext.applicationBindings.openSettings()
+//        }
+//        self.authorizationNode.openPrivacyPolicy = { [weak self] in
+//            self?.openPrivacyPolicy?()
+//        }
         
         self.enableUpdates = true
     }
@@ -870,9 +869,9 @@ final class ContactListNode: ASDisplayNode {
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        let sublayout = layout.addedInsets(insets: UIEdgeInsetsMake(0.0, 0.0, 40.0, 0.0))
-        transition.updateFrame(node: self.authorizationNode, frame: self.bounds)
-        self.authorizationNode.containerLayoutUpdated(sublayout, navigationBarHeight: 0.0, transition: transition)
+        //let sublayout = layout.addedInsets(insets: UIEdgeInsetsMake(0.0, 0.0, 40.0, 0.0))
+        //transition.updateFrame(node: self.authorizationNode, frame: self.bounds)
+        //self.authorizationNode.containerLayoutUpdated(sublayout, navigationBarHeight: 0.0, transition: transition)
         
         if !self.hasValidLayout {
             self.hasValidLayout = true

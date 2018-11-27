@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import TelegramCore
 
 public enum PresentationThemeParsingError: Error {
     case generic
@@ -563,28 +564,59 @@ public final class PresentationThemeChatBubble {
     }
 }
 
-public final class PresentationThemeServiceMessage {
-    public let serviceMessageFillColor: UIColor
-    public let serviceMessagePrimaryTextColor: UIColor
-    public let serviceMessageLinkHighlightColor: UIColor
+public final class PresentationThemeServiceMessageColorComponents {
+    public let fill: UIColor
+    public let primaryText: UIColor
+    public let linkHighlight: UIColor
     
+    public let dateFillStatic: UIColor
+    public let dateFillFloating: UIColor
+    
+    public init(fill: UIColor, primaryText: UIColor, linkHighlight: UIColor, dateFillStatic: UIColor, dateFillFloating: UIColor) {
+        self.fill = fill
+        self.primaryText = primaryText
+        self.linkHighlight = linkHighlight
+        self.dateFillStatic = dateFillStatic
+        self.dateFillFloating = dateFillFloating
+    }
+}
+
+public final class PresentationThemeServiceMessageColor {
+    public let withDefaultWallpaper: PresentationThemeServiceMessageColorComponents
+    public let withCustomWallpaper: PresentationThemeServiceMessageColorComponents
+    
+    public init(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents, withCustomWallpaper: PresentationThemeServiceMessageColorComponents) {
+        self.withDefaultWallpaper = withDefaultWallpaper
+        self.withCustomWallpaper = withCustomWallpaper
+    }
+}
+
+public func serviceMessageColorComponents(theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
+    return serviceMessageColorComponents(chatTheme: theme.chat, wallpaper: wallpaper)
+}
+
+public func serviceMessageColorComponents(chatTheme: PresentationThemeChat, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
+    if wallpaper != .builtin {
+        return chatTheme.serviceMessage.components.withCustomWallpaper
+    } else {
+        return chatTheme.serviceMessage.components.withDefaultWallpaper
+    }
+}
+
+public final class PresentationThemeServiceMessage {
+    public let components: PresentationThemeServiceMessageColor
+
     public let unreadBarFillColor: UIColor
     public let unreadBarStrokeColor: UIColor
     public let unreadBarTextColor: UIColor
     
-    public let dateFillStaticColor: UIColor
-    public let dateFillFloatingColor: UIColor
     public let dateTextColor: UIColor
     
-    public init(serviceMessageFillColor: UIColor, serviceMessagePrimaryTextColor: UIColor, serviceMessageLinkHighlightColor: UIColor, unreadBarFillColor: UIColor, unreadBarStrokeColor: UIColor, unreadBarTextColor: UIColor, dateFillStaticColor: UIColor, dateFillFloatingColor: UIColor, dateTextColor: UIColor) {
-        self.serviceMessageFillColor = serviceMessageFillColor
-        self.serviceMessagePrimaryTextColor = serviceMessagePrimaryTextColor
-        self.serviceMessageLinkHighlightColor = serviceMessageLinkHighlightColor
+    public init(components: PresentationThemeServiceMessageColor, unreadBarFillColor: UIColor, unreadBarStrokeColor: UIColor, unreadBarTextColor: UIColor, dateTextColor: UIColor) {
+        self.components = components
         self.unreadBarFillColor = unreadBarFillColor
         self.unreadBarStrokeColor = unreadBarStrokeColor
         self.unreadBarTextColor = unreadBarTextColor
-        self.dateFillStaticColor = dateFillStaticColor
-        self.dateFillFloatingColor = dateFillFloatingColor
         self.dateTextColor = dateTextColor
     }
 }
