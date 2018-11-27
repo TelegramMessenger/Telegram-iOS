@@ -20,6 +20,7 @@ public struct PendingMessageStatus: Equatable {
 
 private enum PendingMessageState {
     case none
+    case collectingInfo(message: Message)
     case waitingForUploadToStart(groupId: Int64?, upload: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>)
     case uploading(groupId: Int64?)
     case waitingToBeSent(groupId: Int64?, content: PendingMessageUploadedContentAndReuploadInfo)
@@ -29,6 +30,8 @@ private enum PendingMessageState {
         switch self {
             case .none:
                 return nil
+            case let .collectingInfo(message):
+                return message.groupingKey
             case let .waitingForUploadToStart(groupId, _):
                 return groupId
             case let .uploading(groupId):
@@ -338,14 +341,27 @@ public final class PendingMessageManager {
                     }
                     
                     messageContext.activityType = uploadActivityTypeForMessage(message)
-                    
-                    let (contentUploadSignal, contentType) = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, message: message)
-                    messageContext.contentType = contentType
-                    
-                    if strongSelf.canBeginUploadingMessage(id: message.id, type: contentType) {
-                        strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
+                    strongSelf.collectUploadingInfo(messageContext: messageContext, message: message)
+                }
+                
+                for (messageContext, _) in strongSelf.messageContexts.values.compactMap({ messageContext -> (PendingMessageContext, Message)? in
+                    if case let .collectingInfo(message) = messageContext.state {
+                        return (messageContext, message)
                     } else {
-                        messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
+                        return nil
+                    }
+                }).sorted(by: { lhs, rhs in
+                    return MessageIndex(lhs.1) < MessageIndex(rhs.1)
+                }) {
+                    if case let .collectingInfo(message) = messageContext.state {
+                        let (contentUploadSignal, contentType) = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, message: message)
+                        messageContext.contentType = contentType
+                        
+                        if strongSelf.canBeginUploadingMessage(id: message.id, type: contentType) {
+                            strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
+                        } else {
+                            messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
+                        }
                     }
                 }
             }
@@ -373,6 +389,10 @@ public final class PendingMessageManager {
             switch context.state {
                 case .none:
                     continue loop
+                case let .collectingInfo(message):
+                    if message.groupingKey == groupId {
+                        return nil
+                    }
                 case let .waitingForUploadToStart(contextGroupId, _):
                     if contextGroupId == groupId {
                         return nil
@@ -466,6 +486,10 @@ public final class PendingMessageManager {
         }))
     }
     
+    private func collectUploadingInfo(messageContext: PendingMessageContext, message: Message) {
+        messageContext.state = .collectingInfo(message: message)
+    }
+    
     private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, groupId: Int64?, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
         messageContext.state = .uploading(groupId: groupId)
         
@@ -497,19 +521,6 @@ public final class PendingMessageManager {
                 }
             }
             return .complete()
-        }
-        |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, NoError> in
-            if groupId != nil, case .content = result {
-                return Signal { subscriber in
-                    queue.justDispatch {
-                        subscriber.putNext(result)
-                        subscriber.putCompletion()
-                    }
-                    return EmptyDisposable
-                }
-            } else {
-                return .single(result)
-            }
         }).start(next: { [weak self] next in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
