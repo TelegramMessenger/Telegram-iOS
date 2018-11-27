@@ -365,7 +365,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if hasThumbnail {
                     fileIconImage = nil
                 } else {
-                    let principalGraphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)
+                    let principalGraphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     
                     fileIconImage = incoming ? principalGraphics.radialIndicatorFileIconIncoming : principalGraphics.radialIndicatorFileIconOutgoing
                 }

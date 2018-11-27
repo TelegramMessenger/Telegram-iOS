@@ -234,14 +234,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             for attribute in item.message.attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     
                     if let currentReplyBackgroundNode = currentReplyBackgroundNode {
                         updatedReplyBackgroundNode = currentReplyBackgroundNode
                     } else {
                         updatedReplyBackgroundNode = ASImageNode()
                     }
-                    replyBackgroundImage = PresentationResourcesChat.chatFreeformContentAdditionalInfoBackgroundImage(item.presentationData.theme.theme)
+                    
+                    let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
                     break
                 }
             }

@@ -268,7 +268,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                 insets.bottom += inputHeight
             }
         }
-        let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
+        let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
         if state.data.state?.kind != self.contentNode?.kind {
             if let dataState = state.data.state {
                 let title: String

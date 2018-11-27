@@ -711,13 +711,13 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     }
     
     var height: CGFloat = 0.0
-    if !lines.isEmpty && !(string.length == 1 && hasAnchors) {
+    if !lines.isEmpty && !(string.string == "\u{200b}" && hasAnchors) {
         height = lines.last!.frame.maxY + extraDescent
     }
     
     var textWidth = boundingWidth
     var requiresScroll = false
-    if maxLineWidth > boundingWidth + 10.0 {
+    if !imageItems.isEmpty && maxLineWidth > boundingWidth + 10.0 {
         textWidth = maxLineWidth
         requiresScroll = true
     }

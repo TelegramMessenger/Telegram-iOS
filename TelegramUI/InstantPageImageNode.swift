@@ -23,7 +23,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var currentSize: CGSize?
     
+    private var fetchStatus: MediaResourceStatus?
     private var fetchedDisposable = MetaDisposable()
+    private var statusDisposable = MetaDisposable()
     
     private var themeUpdated: Bool = false
     
@@ -47,15 +49,26 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         
         self.addSubnode(self.imageNode)
         
-        if let image = media.media as? TelegramMediaImage {
+        if let image = media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            
+            self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(largest.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
+                displayLinkDispatcher.dispatch {
+                    if let strongSelf = self {
+                        strongSelf.fetchStatus = status
+                        strongSelf.updateFetchStatus()
+                    }
+                }
+            }))
             
             if media.url != nil {
                 self.linkIconNode.image = UIImage(bundleImageName: "Instant View/ImageLink")
                 self.addSubnode(self.linkIconNode)
             }
+            
+            self.addSubnode(self.statusNode)
         } else if let file = media.media as? TelegramMediaFile {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             if file.mimeType.hasPrefix("image/") {
@@ -68,7 +81,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             self.addSubnode(self.pinNode)
             
             var zoom: Int32 = 12
-            var dimensions = CGSize(width: 200, height: 100)
+            var dimensions = CGSize(width: 200.0, height: 100.0)
             for attribute in self.attributes {
                 if let mapAttribute = attribute as? InstantPageMapAttribute {
                     zoom = mapAttribute.zoom
@@ -83,12 +96,13 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
             self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
-            self.addSubnode(statusNode)
+            self.addSubnode(self.statusNode)
         }
     }
     
     deinit {
         self.fetchedDisposable.dispose()
+        self.statusDisposable.dispose()
     }
     
     override func didLoad() {
@@ -115,6 +129,27 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         }
     }
     
+    private func updateFetchStatus() {
+        var state: RadialStatusNodeState = .none
+        if let fetchStatus = self.fetchStatus {
+            switch fetchStatus {
+                case let .Fetching(isActive, progress):
+                    var adjustedProgress = progress
+                    if isActive {
+                        adjustedProgress = max(adjustedProgress, 0.027)
+                    }
+                    state = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
+                default:
+                    break
+            }
+        }
+        self.statusNode.transitionToState(state, completion: { [weak statusNode] in
+            if state == .none {
+                statusNode?.removeFromSupernode()
+            }
+        })
+    }
+    
     override func layout() {
         super.layout()
         
@@ -126,12 +161,15 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             
             self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
             
+            let radialStatusSize: CGFloat = 50.0
+            self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - radialStatusSize) / 2.0), y: floorToScreenPixels((size.height - radialStatusSize) / 2.0), width: radialStatusSize, height: radialStatusSize)
+            
             if let image = self.media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
                 let imageSize = largest.dimensions.aspectFilled(size)
                 let boundingSize = size
                 let radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
                 let makeLayout = self.imageNode.asyncLayout()
-                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.theme.pageBackgroundColor))
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.theme.panelBackgroundColor))
                 apply()
                 
                 self.linkIconNode.frame = CGRect(x: size.width - 38.0, y: 14.0, width: 24.0, height: 24.0)
@@ -168,9 +206,6 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 let makeLayout = self.imageNode.asyncLayout()
                 let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: self.theme.pageBackgroundColor))
                 apply()
-                
-                let radialStatusSize: CGFloat = 50.0
-                self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - radialStatusSize) / 2.0), y: floorToScreenPixels((size.height - radialStatusSize) / 2.0), width: radialStatusSize, height: radialStatusSize)
             }
         }
     }

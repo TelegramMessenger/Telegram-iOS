@@ -71,7 +71,6 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
                     self.inputNode.textField.textContentType = .oneTimeCode
                 }
             case .email:
-                
                 self.inputNode.textField.autocapitalizationType = .none
                 self.inputNode.textField.autocorrectionType = .no
                 self.inputNode.textField.keyboardType = .emailAddress

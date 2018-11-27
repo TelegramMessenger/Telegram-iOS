@@ -780,7 +780,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         forwardSource = forwardInfo.author
                         forwardAuthorSignature = nil
                     }
-                    let sizeAndApply = forwardInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = forwardInfoLayout(item.presentationData.theme, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     forwardInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     forwardInfoOriginY = headerSize.height
@@ -794,7 +794,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     } else {
                         headerSize.height += 2.0
                     }
-                    let sizeAndApply = replyInfoLayout(item.presentationData.theme.theme, item.presentationData.strings, item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = replyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     replyInfoOriginY = headerSize.height
@@ -1101,7 +1101,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
             
-            let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
+            let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
             
             var updatedMergedTop = mergedBottom
             var updatedMergedBottom = mergedTop
@@ -1903,7 +1903,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
             if let backgroundType = self.backgroundType {
-                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
+                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 
                 if highlighted {
                     self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, transition: .immediate)

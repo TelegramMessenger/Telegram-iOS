@@ -45,7 +45,6 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                 title = presentationData.strings.ReportPeer_ReasonOther
         }
         items.append(ActionSheetButtonItem(title: title, action: { [weak controller] in
-            //account.reportPeer#ae189d5f peer:InputPeer reason:ReportReason = Bool;
             var reportReason: ReportReason?
             switch option {
                 case .spam:
@@ -54,8 +53,8 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                     reportReason = .violence
                 case .pornoghraphy:
                     reportReason = .porno
-            case .copyright:
-                reportReason = .copyright
+                case .copyright:
+                    reportReason = .copyright
                 case .other:
                     break
             }

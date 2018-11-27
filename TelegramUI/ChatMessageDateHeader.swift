@@ -113,7 +113,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
-        let graphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)
+        let graphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
         
         self.backgroundNode.image = graphics.dateStaticBackground
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
@@ -169,7 +169,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     }
     
     func updatePresentationData(_ presentationData: ChatPresentationData) {
-        let graphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)
+        let graphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
         
         self.backgroundNode.image = graphics.dateStaticBackground
         self.stickBackgroundNode.image = graphics.dateFloatingBackground

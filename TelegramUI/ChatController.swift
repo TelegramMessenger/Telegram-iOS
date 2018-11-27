@@ -71,6 +71,8 @@ let ChatControllerCount = Atomic<Int32>(value: 0)
 public final class ChatController: TelegramController, KeyShortcutResponder, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
+    weak var parentController: ViewController?
+    
     public var peekActions: ChatControllerPeekActions = .standard
     private var didSetup3dTouch: Bool = false
     
@@ -4335,6 +4337,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         return nil
     }
     
+    func scrollToEndOfHistory() {
+        self.chatDisplayNode.historyNode.scrollToEndOfHistory()
+    }
+    
     public func navigateToMessage(messageLocation: NavigateToMessageLocation, animated: Bool, completion: (() -> Void)? = nil) {
         self.navigateToMessage(from: nil, to: messageLocation, rememberInStack: false, animated: animated, completion: completion)
     }
@@ -4508,7 +4514,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 return
             }
             
-            if case .peer(peerId) = strongSelf.chatLocation {
+            if case .peer(peerId) = strongSelf.chatLocation, strongSelf.parentController == nil {
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(messageIds).withoutSelectionState() }) })
                 strongController.dismiss()
             } else if peerId == strongSelf.account.peerId {
@@ -4566,7 +4572,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             }
                         }))
                         
-                        (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                        if let parentController = strongSelf.parentController {
+                            (parentController.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                        } else {
+                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                        }
                     }
                 })
             }
@@ -4765,35 +4775,43 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     
     private func reportPeer() {
         if let peer = self.presentationInterfaceState.renderedPeer?.peer {
-            let title: String
-            var infoString: String?
-            if let _ = peer as? TelegramGroup {
-                title = self.presentationData.strings.Conversation_ReportSpam
-            } else if let _ = peer as? TelegramChannel {
-                title = self.presentationData.strings.Conversation_ReportSpam
-            } else {
-                title = self.presentationData.strings.Conversation_ReportSpam
-                infoString = self.presentationData.strings.Conversation_ReportSpamConfirmation
-            }
-            let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
-            
-            var items: [ActionSheetItem] = []
-            if let infoString = infoString {
-                items.append(ActionSheetTextItem(title: infoString))
-            }
-            items.append(ActionSheetButtonItem(title: title, color: .destructive, action: { [weak self, weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                if let strongSelf = self {
-                    strongSelf.deleteChat(reportChatSpam: true)
-                }
-            }))
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-            ])])
             self.chatDisplayNode.dismissInput()
-            self.present(actionSheet, in: .window(.root))
+            
+            if let peer = peer as? TelegramChannel, let username = peer.username, !username.isEmpty {
+                self.present(peerReportOptionsController(account: account, subject: .peer(peer.id), present: { [weak self] c, a in
+                    self?.present(c, in: .window(.root))
+                }), in: .window(.root))
+            } else {
+                let title: String
+                var infoString: String?
+                if let _ = peer as? TelegramGroup {
+                    title = self.presentationData.strings.Conversation_ReportSpam
+                } else if let _ = peer as? TelegramChannel {
+                    title = self.presentationData.strings.Conversation_ReportSpam
+                } else {
+                    title = self.presentationData.strings.Conversation_ReportSpam
+                    infoString = self.presentationData.strings.Conversation_ReportSpamConfirmation
+                }
+                let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+                
+                var items: [ActionSheetItem] = []
+                if let infoString = infoString {
+                    items.append(ActionSheetTextItem(title: infoString))
+                }
+                items.append(ActionSheetButtonItem(title: title, color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    if let strongSelf = self {
+                        strongSelf.deleteChat(reportChatSpam: true)
+                    }
+                }))
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                
+                self.present(actionSheet, in: .window(.root))
+            }
         }
     }
     

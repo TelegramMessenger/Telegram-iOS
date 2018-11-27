@@ -22,7 +22,7 @@ private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, P
     return result
 }
 
-private func attributedServiceMessageString(theme: PresentationTheme, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
+private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     return universalServiceMessageString(theme: theme, strings: strings, message: message, accountPeerId: accountPeerId)
 }
 
@@ -30,12 +30,15 @@ func plainServiceMessageString(strings: PresentationStrings, message: Message, a
     return universalServiceMessageString(theme: nil, strings: strings, message: message, accountPeerId: accountPeerId)?.string
 }
 
-private func universalServiceMessageString(theme: PresentationTheme?, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
+private func universalServiceMessageString(theme: ChatPresentationThemeData?, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     var attributedString: NSAttributedString?
     
-    let theme = theme?.chat.serviceMessage
-    
-    let primaryTextColor = theme?.serviceMessagePrimaryTextColor ?? UIColor.black
+    let primaryTextColor: UIColor
+    if let theme = theme {
+        primaryTextColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper).primaryText
+    } else {
+        primaryTextColor = .black
+    }
     
     let bodyAttributes = MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [:])
     
@@ -507,7 +510,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme.theme, strings: item.presentationData.strings, message: item.message, accountPeerId: item.account.peerId)
+                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, message: item.message, accountPeerId: item.account.peerId)
             
                 var image: TelegramMediaImage?
                 for media in item.message.media {
@@ -549,7 +552,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             
                 
-                let backgroundApply = backgroundLayout(item.presentationData.theme.theme.chat.serviceMessage.serviceMessageFillColor, labelRects, 10.0, 10.0, 0.0)
+                let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let backgroundApply = backgroundLayout(serviceColor.fill, labelRects, 10.0, 10.0, 0.0)
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
                 let layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
@@ -635,7 +639,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.theme.chat.serviceMessage.serviceMessageLinkHighlightColor)
+                    let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    linkHighlightingNode = LinkHighlightingNode(color: serviceColor.linkHighlight)
                     linkHighlightingNode.inset = 2.5
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.labelNode)

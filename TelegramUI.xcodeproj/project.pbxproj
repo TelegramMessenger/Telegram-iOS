@@ -63,6 +63,10 @@
 		09B4EE4F21A7B75D00847FA6 /* PermissionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4E21A7B75D00847FA6 /* PermissionControllerNode.swift */; };
 		09B4EE5221A7CC3E00847FA6 /* SolidRoundedButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5121A7CC3E00847FA6 /* SolidRoundedButtonNode.swift */; };
 		09B4EE5621A8149C00847FA6 /* NotificationPermissionInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5521A8149C00847FA6 /* NotificationPermissionInfoItem.swift */; };
+		09B4EE5E21AC626B00847FA6 /* PermissionContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5D21AC626B00847FA6 /* PermissionContentNode.swift */; };
+		09B4EE6021AD4A0E00847FA6 /* InstantPageContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5F21AD4A0E00847FA6 /* InstantPageContentNode.swift */; };
+		09B4EE6221AD791600847FA6 /* InstantPageStoredState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE6121AD791600847FA6 /* InstantPageStoredState.swift */; };
+		09B4EE6421AD7B3E00847FA6 /* ItemCacheKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE6321AD7B3E00847FA6 /* ItemCacheKeys.swift */; };
 		09C3466D2167D63A00B76780 /* Accessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C3466C2167D63A00B76780 /* Accessibility.swift */; };
 		09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */; };
 		09C9EA33219F79F600E90146 /* ID3Artwork.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA31219F79F500E90146 /* ID3Artwork.m */; };
@@ -1134,6 +1138,10 @@
 		09B4EE4E21A7B75D00847FA6 /* PermissionControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionControllerNode.swift; sourceTree = "<group>"; };
 		09B4EE5121A7CC3E00847FA6 /* SolidRoundedButtonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolidRoundedButtonNode.swift; sourceTree = "<group>"; };
 		09B4EE5521A8149C00847FA6 /* NotificationPermissionInfoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionInfoItem.swift; sourceTree = "<group>"; };
+		09B4EE5D21AC626B00847FA6 /* PermissionContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionContentNode.swift; sourceTree = "<group>"; };
+		09B4EE5F21AD4A0E00847FA6 /* InstantPageContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageContentNode.swift; sourceTree = "<group>"; };
+		09B4EE6121AD791600847FA6 /* InstantPageStoredState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageStoredState.swift; sourceTree = "<group>"; };
+		09B4EE6321AD7B3E00847FA6 /* ItemCacheKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemCacheKeys.swift; sourceTree = "<group>"; };
 		09C3466C2167D63A00B76780 /* Accessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accessibility.swift; sourceTree = "<group>"; };
 		09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
 		09C9EA31219F79F500E90146 /* ID3Artwork.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ID3Artwork.m; sourceTree = "<group>"; };
@@ -2358,6 +2366,7 @@
 			children = (
 				09B4EE4C21A7B73800847FA6 /* PermissionController.swift */,
 				09B4EE4E21A7B75D00847FA6 /* PermissionControllerNode.swift */,
+				09B4EE5D21AC626B00847FA6 /* PermissionContentNode.swift */,
 				09B4EE5121A7CC3E00847FA6 /* SolidRoundedButtonNode.swift */,
 			);
 			name = Permissions;
@@ -3113,6 +3122,7 @@
 			children = (
 				D0215D371E040F53001A0B1E /* InstantPageNode.swift */,
 				D0215D391E041003001A0B1E /* InstantPageLayout.swift */,
+				09B4EE5F21AD4A0E00847FA6 /* InstantPageContentNode.swift */,
 				D0215D3B1E041014001A0B1E /* InstantPageItem.swift */,
 				D0215D3D1E041048001A0B1E /* InstantPageMedia.swift */,
 				D0215D3F1E0410D9001A0B1E /* InstantPageLinkSelectionView.swift */,
@@ -3158,6 +3168,7 @@
 				09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */,
 				09619B9321A4ABF500493558 /* InstantPageReferenceController.swift */,
 				09619B9421A4ABF600493558 /* InstantPageReferenceControllerNode.swift */,
+				09B4EE6121AD791600847FA6 /* InstantPageStoredState.swift */,
 			);
 			name = "Instant Page";
 			sourceTree = "<group>";
@@ -4553,6 +4564,7 @@
 				0902838C2194AEB90067EFBD /* ImageTransparency.swift */,
 				09C9EA32219F79F600E90146 /* ID3Artwork.h */,
 				09C9EA31219F79F500E90146 /* ID3Artwork.m */,
+				09B4EE6321AD7B3E00847FA6 /* ItemCacheKeys.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -4917,6 +4929,7 @@
 				D0EC6CB01EB9F58800EBF1C3 /* objects.c in Sources */,
 				D0EC6CB11EB9F58800EBF1C3 /* program.c in Sources */,
 				D0E412DA206A894800BEE4A2 /* SecureIdValueFormFileItem.swift in Sources */,
+				09B4EE6221AD791600847FA6 /* InstantPageStoredState.swift in Sources */,
 				D0EC6CB21EB9F58800EBF1C3 /* rngs.c in Sources */,
 				D083491C209361DC008CFD52 /* AvatarGalleryItemFooterContentNode.swift in Sources */,
 				D0EC6CB31EB9F58800EBF1C3 /* shader.c in Sources */,
@@ -5002,6 +5015,7 @@
 				D0EC6CD81EB9F58800EBF1C3 /* ShakeAnimation.swift in Sources */,
 				D0EC6CD91EB9F58800EBF1C3 /* ValidateAddressNameInteractive.swift in Sources */,
 				D0BE30452061C09000FBE6D8 /* SecureIdAuthContentNode.swift in Sources */,
+				09B4EE5E21AC626B00847FA6 /* PermissionContentNode.swift in Sources */,
 				D0E412CC206A6B2300BEE4A2 /* FormControllerActionItem.swift in Sources */,
 				D0471B5A1EFE70400074D609 /* BotCheckoutInfoControllerNode.swift in Sources */,
 				D0EC6CDA1EB9F58800EBF1C3 /* NumericFormat.swift in Sources */,
@@ -5073,6 +5087,7 @@
 				096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */,
 				D01776B81F1D6FB30044446D /* RadialProgressContentNode.swift in Sources */,
 				D05D8B762195CD930064586F /* SetupTwoStepVerificationControllerNode.swift in Sources */,
+				09B4EE6421AD7B3E00847FA6 /* ItemCacheKeys.swift in Sources */,
 				D0EC6CFA1EB9F58800EBF1C3 /* ManagedAudioSession.swift in Sources */,
 				D0EB5ADF1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift in Sources */,
 				D0EC6CFB1EB9F58800EBF1C3 /* ManagedAudioRecorder.swift in Sources */,
@@ -5641,6 +5656,7 @@
 				D0FC194D201F82A000FEDBB2 /* OpenResolvedUrl.swift in Sources */,
 				D0EC6E251EB9F58900EBF1C3 /* StickerPackPreviewGridItem.swift in Sources */,
 				D0EC6E261EB9F58900EBF1C3 /* StickerPreviewController.swift in Sources */,
+				09B4EE6021AD4A0E00847FA6 /* InstantPageContentNode.swift in Sources */,
 				D0EC6E271EB9F58900EBF1C3 /* StickerPreviewControllerNode.swift in Sources */,
 				D0EC6E281EB9F58900EBF1C3 /* ContactsController.swift in Sources */,
 				D0EC6E291EB9F58900EBF1C3 /* ContactsControllerNode.swift in Sources */,

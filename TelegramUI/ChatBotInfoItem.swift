@@ -110,7 +110,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             
             var updatedBackgroundImage: UIImage?
             if currentTheme != item.presentationData.theme {
-                //let principalGraphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
+                //let principalGraphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 updatedBackgroundImage = PresentationResourcesChat.chatInfoItemBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             }
             

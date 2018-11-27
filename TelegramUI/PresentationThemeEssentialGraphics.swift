@@ -76,6 +76,11 @@ public final class PrincipalThemeEssentialGraphics {
     public let checkFreeFullImage: UIImage
     public let checkFreePartialImage: UIImage
     
+    public let chatServiceBubbleFillImage: UIImage
+    public let chatFreeformContentAdditionalInfoBackgroundImage: UIImage
+    public let chatEmptyItemBackgroundImage: UIImage
+    public let chatLoadingIndicatorBackgroundImage: UIImage
+    
     public let clockBubbleIncomingFrameImage: UIImage
     public let clockBubbleIncomingMinImage: UIImage
     public let clockBubbleOutgoingFrameImage: UIImage
@@ -98,9 +103,9 @@ public final class PrincipalThemeEssentialGraphics {
     public let radialIndicatorFileIconIncoming: UIImage
     public let radialIndicatorFileIconOutgoing: UIImage
     
-    init(_ theme: PresentationThemeChat, wallpaper: Bool) {
-        let incoming: PresentationThemeBubbleColorComponents = !wallpaper ? theme.bubble.incoming.withoutWallpaper : theme.bubble.incoming.withWallpaper
-        let outgoing: PresentationThemeBubbleColorComponents = !wallpaper ? theme.bubble.outgoing.withoutWallpaper : theme.bubble.outgoing.withWallpaper
+    init(_ theme: PresentationThemeChat, wallpaper: TelegramWallpaper) {
+        let incoming: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.bubble.incoming.withoutWallpaper : theme.bubble.incoming.withWallpaper
+        let outgoing: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.bubble.outgoing.withoutWallpaper : theme.bubble.outgoing.withWallpaper
         
         self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none)
         self.chatMessageBackgroundIncomingHighlightedImage = messageBubbleImage(incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .none)
@@ -135,8 +140,18 @@ public final class PrincipalThemeEssentialGraphics {
         self.checkMediaFullImage = generateCheckImage(partial: false, color: .white)!
         self.checkMediaPartialImage = generateCheckImage(partial: true, color: .white)!
         
-        self.checkFreeFullImage = generateCheckImage(partial: false, color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
-        self.checkFreePartialImage = generateCheckImage(partial: true, color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
+        let serviceColor = serviceMessageColorComponents(chatTheme: theme, wallpaper: wallpaper)
+        self.checkFreeFullImage = generateCheckImage(partial: false, color: serviceColor.primaryText)!
+        self.checkFreePartialImage = generateCheckImage(partial: true, color: serviceColor.primaryText)!
+        
+        self.chatServiceBubbleFillImage = generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context -> Void in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(serviceColor.fill.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        })!.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
+        self.chatFreeformContentAdditionalInfoBackgroundImage = generateStretchableFilledCircleImage(radius: 4.0, color: serviceColor.fill)!
+        self.chatEmptyItemBackgroundImage = generateStretchableFilledCircleImage(radius: 14.0, color: serviceColor.fill)!
+        self.chatLoadingIndicatorBackgroundImage = generateStretchableFilledCircleImage(diameter: 30.0, color: serviceColor.fill)!
         
         self.clockBubbleIncomingFrameImage = generateClockFrameImage(color: theme.bubble.incomingPendingActivityColor)!
         self.clockBubbleIncomingMinImage = generateClockMinImage(color: theme.bubble.incomingPendingActivityColor)!
@@ -146,28 +161,28 @@ public final class PrincipalThemeEssentialGraphics {
         self.clockMediaFrameImage = generateClockFrameImage(color: .white)!
         self.clockMediaMinImage = generateClockMinImage(color: .white)!
         
-        self.clockFreeFrameImage = generateClockFrameImage(color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
-        self.clockFreeMinImage = generateClockMinImage(color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
+        self.clockFreeFrameImage = generateClockFrameImage(color: serviceColor.primaryText)!
+        self.clockFreeMinImage = generateClockMinImage(color: serviceColor.primaryText)!
         
         self.dateAndStatusMediaBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.bubble.mediaDateAndStatusFillColor)!
-        self.dateAndStatusFreeBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.serviceMessage.serviceMessageFillColor)!
+        self.dateAndStatusFreeBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: serviceColor.primaryText)!
         
         let impressionCountImage = UIImage(bundleImageName: "Chat/Message/ImpressionCount")!
         self.incomingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.bubble.incomingSecondaryTextColor)!
         self.outgoingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.bubble.outgoingSecondaryTextColor)!
         self.mediaImpressionIcon = generateTintedImage(image: impressionCountImage, color: .white)!
-        self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.serviceMessage.serviceMessagePrimaryTextColor)!
+        self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: serviceColor.primaryText)!
         
         let chatDateSize: CGFloat = 20.0
         self.dateStaticBackground = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.serviceMessage.dateFillStaticColor.cgColor)
+            context.setFillColor(serviceColor.dateFillStatic.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
         
         self.dateFloatingBackground = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.serviceMessage.dateFillFloatingColor.cgColor)
+            context.setFillColor(serviceColor.dateFillFloating.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
         

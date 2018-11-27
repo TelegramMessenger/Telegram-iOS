@@ -5,7 +5,7 @@ import Display
 private let textFont: UIFont = Font.regular(16.0)
 
 final class SolidRoundedButtonNode: ASDisplayNode {
-    private var theme: AuthorizationTheme
+    private var theme: PresentationTheme
     
     private let buttonBackgroundNode: ASImageNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -25,7 +25,7 @@ final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
-    init(title: String? = nil, theme: AuthorizationTheme, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0) {
+    init(title: String? = nil, theme: PresentationTheme, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0) {
         self.theme = theme
         self.buttonHeight = height
         self.buttonCornerRadius = cornerRadius
@@ -35,7 +35,7 @@ final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonBackgroundNode.isLayerBacked = true
         self.buttonBackgroundNode.displayWithoutProcessing = true
         self.buttonBackgroundNode.displaysAsynchronously = false
-        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.accentColor)
+        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.list.itemCheckColors.fillColor)
         
         self.buttonNode = HighlightTrackingButtonNode()
         
@@ -72,7 +72,7 @@ final class SolidRoundedButtonNode: ASDisplayNode {
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
         if self.title != self.labelNode.attributedText?.string {
-            self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.medium(17.0), textColor: self.theme.backgroundColor)
+            self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.medium(17.0), textColor: self.theme.list.itemCheckColors.foregroundColor)
         }
         
         let labelSize = self.labelNode.updateLayout(buttonSize)

@@ -88,6 +88,9 @@ final class HashtagSearchController: TelegramController {
     
     override func loadDisplayNode() {
         self.displayNode = HashtagSearchControllerNode(account: self.account, peer: self.peer, query: self.query, theme: self.presentationData.theme, strings: self.presentationData.strings)
+        if let chatController = self.controllerNode.chatController {
+            chatController.parentController = self
+        }
         
         self.displayNodeDidLoad()
     }

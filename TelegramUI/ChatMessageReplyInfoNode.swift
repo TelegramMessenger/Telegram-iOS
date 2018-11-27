@@ -39,7 +39,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: PresentationTheme, _ strings: PresentationStrings, _ account: Account, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ account: Account, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
         
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
@@ -50,23 +50,24 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let titleString = message.author?.displayTitle(strings: strings) ?? strings.User_DeletedAccount
             let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
             
-            let placeholderColor: UIColor =  message.effectivelyIncoming(account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor
+            let placeholderColor: UIColor =  message.effectivelyIncoming(account.peerId) ? theme.theme.chat.bubble.incomingMediaPlaceholderColor : theme.theme.chat.bubble.outgoingMediaPlaceholderColor
             let titleColor: UIColor
             let lineImage: UIImage?
             let textColor: UIColor
                 
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? theme.chat.bubble.incomingAccentTextColor : theme.chat.bubble.outgoingAccentTextColor
-                    lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(theme)
+                    titleColor = incoming ? theme.theme.chat.bubble.incomingAccentTextColor : theme.theme.chat.bubble.outgoingAccentTextColor
+                    lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(theme.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(theme.theme)
                     if isMedia {
-                        textColor = incoming ? theme.chat.bubble.incomingSecondaryTextColor : theme.chat.bubble.outgoingSecondaryTextColor
+                        textColor = incoming ? theme.theme.chat.bubble.incomingSecondaryTextColor : theme.theme.chat.bubble.outgoingSecondaryTextColor
                     } else {
-                        textColor = incoming ? theme.chat.bubble.incomingPrimaryTextColor : theme.chat.bubble.outgoingPrimaryTextColor
+                        textColor = incoming ? theme.theme.chat.bubble.incomingPrimaryTextColor : theme.theme.chat.bubble.outgoingPrimaryTextColor
                     }
                 case .standalone:
-                    titleColor = theme.chat.serviceMessage.serviceMessagePrimaryTextColor
-                    lineImage = PresentationResourcesChat.chatServiceVerticalLineImage(theme)
+                    let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                    titleColor = serviceColor.primaryText
+                    lineImage = PresentationResourcesChat.chatServiceVerticalLineImage(theme.theme)
                     textColor = titleColor
             }
             

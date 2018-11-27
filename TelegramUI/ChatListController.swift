@@ -369,7 +369,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         })
                     }
                     
-                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), animated: animated, completion: { [weak self] in
+                    var scrollToEndIfExists = false
+                    if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                        scrollToEndIfExists = true
+                    }
+                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), scrollToEndIfExists: scrollToEndIfExists, animated: animated, completion: { [weak self] in
                         self?.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                     })
                 }
@@ -379,7 +383,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.chatListDisplayNode.chatListNode.groupSelected = { [weak self] groupId in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .group(groupId))
+                    var scrollToEndIfExists = false
+                    if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                        scrollToEndIfExists = true
+                    }
+                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .group(groupId), scrollToEndIfExists: scrollToEndIfExists)
                     strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
             }

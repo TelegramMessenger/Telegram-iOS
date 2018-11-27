@@ -166,11 +166,11 @@ private func mappedInsertEntries(account: Account, chatLocation: ChatLocation, a
                         item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: messages[0].0, selection: .none, displayHeader: search)
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
-            case let .HoleEntry(_, theme, strings):
+            case let .HoleEntry(_, presentationData):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatHoleItem(index: entry.entry.index, theme: theme, strings: strings)
+                        item = ChatHoleItem(index: entry.entry.index, presentationData: presentationData)
                     case .list:
                         item = ListMessageHoleItem()
                 }
@@ -209,11 +209,11 @@ private func mappedUpdateEntries(account: Account, chatLocation: ChatLocation, a
                         item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, account: account, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: messages[0].0, selection: .none, displayHeader: search)
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
-            case let .HoleEntry(_, theme, strings):
+            case let .HoleEntry(_, presentationData):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatHoleItem(index: entry.entry.index, theme: theme, strings: strings)
+                        item = ChatHoleItem(index: entry.entry.index, presentationData: presentationData)
                     case .list:
                         item = ListMessageHoleItem()
                 }

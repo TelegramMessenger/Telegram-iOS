@@ -32,7 +32,7 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
     
     func matchesNode(_ node: InstantPageNode) -> Bool {
         if let node = node as? InstantPagePeerReferenceNode {
-            return self.initialPeer.id == node.initialPeer.id && self.safeInset == node.safeInset
+            return self.initialPeer.id == node.peer?.id && self.safeInset == node.safeInset
         } else {
             return false
         }

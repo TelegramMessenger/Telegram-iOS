@@ -32,6 +32,14 @@ extension TelegramWallpaper {
                 return true
         }
     }
+    var isBuiltin: Bool {
+        switch self {
+            case .builtin:
+                return true
+            default:
+                return false
+        }
+    }
 }
 
 public final class ChatPresentationThemeData: Equatable {

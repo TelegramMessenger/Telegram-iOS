@@ -4,58 +4,88 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 
-final class PermissionControllerNode: ASDisplayNode {
-    private let theme: AuthorizationTheme
-    private let strings: PresentationStrings
+enum PermissionStateKind: Int32 {
+    case contacts
+    case notifications
+    case siri
+    case cellularData
+}
+
+private enum PermissionRequestStatus {
+    case requestable
+    case denied
+}
+
+private enum PermissionNotificationsRequestStatus {
+    case requestable
+    case denied
+    case unreachable
+}
+
+private enum PermissionState: Equatable {
+    case contacts(status: PermissionRequestStatus)
+    case notifications(status: PermissionNotificationsRequestStatus)
+    case siri(status: PermissionRequestStatus)
+    case cellularData
     
-    private let iconNode: ASImageNode
-    private let titleNode: ImmediateTextNode
-    private let textNode: ImmediateTextNode
-    private let buttonNode: SolidRoundedButtonNode
-    private let privacyPolicyNode: HighlightableButtonNode
-    private let nextNode: HighlightableButtonNode
-    
-    private var layoutArguments: (ContainerViewLayout, CGFloat)?
-    
-    private var title: String?
-    
-    var allow: (() -> Void)?
-    var next: (() -> Void)? {
-        didSet {
-            self.nextNode.isHidden = self.next == nil
+    var kind: PermissionStateKind {
+        switch self {
+            case .contacts:
+                return .contacts
+            case .notifications:
+                return .notifications
+            case .siri:
+                return .siri
+            case .cellularData:
+                return .cellularData
         }
     }
+}
+
+private struct PermissionControllerDataState: Equatable {
+    var state: PermissionState?
+}
+
+private struct PermissionControllerLayoutState: Equatable {
+    let layout: ContainerViewLayout
+    let navigationHeight: CGFloat
+}
+
+private struct PermissionControllerInnerState: Equatable {
+    var layout: PermissionControllerLayoutState?
+    var data: PermissionControllerDataState
+}
+
+private struct PermissionControllerState: Equatable {
+    var layout: PermissionControllerLayoutState
+    var data: PermissionControllerDataState
+}
+
+extension PermissionControllerState {
+    init?(_ state: PermissionControllerInnerState) {
+        guard let layout = state.layout else {
+            return nil
+        }
+        self.init(layout: layout, data: state.data)
+    }
+}
+
+final class PermissionControllerNode: ASDisplayNode {
+    private let account: Account
+    private var presentationData: PresentationData
+    
+    private var innerState: PermissionControllerInnerState
+    
+    private var contentNode: PermissionContentNode?
+    
+    var allow: (() -> Void)?
     var openPrivacyPolicy: (() -> Void)?
     var dismiss: (() -> Void)?
     
-    init(theme: AuthorizationTheme, strings: PresentationStrings) {
-        self.theme = theme
-        self.strings = strings
-        
-        self.iconNode = ASImageNode()
-        self.iconNode.isLayerBacked = true
-        self.iconNode.displayWithoutProcessing = true
-        self.iconNode.displaysAsynchronously = false
-        
-        self.titleNode = ImmediateTextNode()
-        self.titleNode.maximumNumberOfLines = 0
-        self.titleNode.textAlignment = .center
-        self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.displaysAsynchronously = false
-        
-        self.textNode = ImmediateTextNode()
-        self.textNode.textAlignment = .center
-        self.textNode.maximumNumberOfLines = 0
-        self.textNode.displaysAsynchronously = false
-        
-        self.buttonNode = SolidRoundedButtonNode(theme: self.theme, height: 48.0, cornerRadius: 9.0)
-        
-        self.privacyPolicyNode = HighlightableButtonNode()
-        self.privacyPolicyNode.setTitle("Privacy Policy", with: Font.regular(16.0), with: self.theme.accentColor, for: .normal)
-        
-        self.nextNode = HighlightableButtonNode()
-        self.nextNode.setTitle("Skip", with: Font.regular(17.0), with: self.theme.accentColor, for: .normal)
-        self.nextNode.isHidden = true
+    init(account: Account) {
+        self.account = account
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.innerState = PermissionControllerInnerState(layout: nil, data: PermissionControllerDataState(state: nil))
         
         super.init()
         
@@ -63,119 +93,124 @@ final class PermissionControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = self.theme.backgroundColor
-        
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.buttonNode)
-        self.addSubnode(self.privacyPolicyNode)
-        self.addSubnode(self.nextNode)
-        
-        self.buttonNode.pressed = { [weak self] in
-            self?.allow?()
-            self?.dismiss?()
-        }
-    
-        self.privacyPolicyNode.addTarget(self, action: #selector(self.privacyPolicyPressed), forControlEvents: .touchUpInside)
-        self.nextNode.addTarget(self, action: #selector(self.nextPressed), forControlEvents: .touchUpInside)
+        self.applyPresentationData()
     }
     
-    func updateData(subject: DeviceAccessSubject, currentStatus: AccessType) {
-        var icon: UIImage?
-        var title = ""
-        var text = ""
-        var buttonTitle = ""
-        var hasPrivacyPolicy = false
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
         
-        switch subject {
-            case .contacts:
-                icon = UIImage(bundleImageName: "Settings/Permissions/Contacts")
-                title = "Sync Your Contacts"
-                text = "See who's on Telegram and switch seamlessly, without having to \"add\" to add your friends."
-                if currentStatus == .denied {
-                    buttonTitle = "Allow in Settings"
-                } else {
-                    buttonTitle = "Allow Access"
-                }
-                hasPrivacyPolicy = true
-            case .notifications:
-                icon = UIImage(bundleImageName: "Settings/Permissions/Notifications")
-                title = "Turn ON Notifications"
-                text = "Don't miss important messages from your friends and coworkers."
-                if currentStatus == .denied || currentStatus == .restricted {
-                    buttonTitle = "Turn ON in Settings"
-                } else {
-                    buttonTitle = "Turn Notifications ON"
-                }
-            case .cellularData:
-                icon = UIImage(bundleImageName: "Settings/Permissions/CellularData")
-                title = "Turn ON Mobile Data"
-                text = "Don't worry, Telegram keeps network usage to a minimum. You can further control this in Settings > Data and Storage."
-                buttonTitle = "Turn ON in Settings"
-            case .siri:
-                title = "Turn ON Siri"
-                text = "Use Siri to send messages and make calls."
-                if currentStatus == .denied {
-                    buttonTitle = "Turn ON in Settings"
-                } else {
-                    buttonTitle = "Turn Siri ON"
-                }
-            default:
-                break
+        self.applyPresentationData()
+    }
+    
+    private func applyPresentationData() {
+        self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor    }
+    
+    func animateIn(completion: (() -> Void)? = nil) {
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+    }
+    
+    func animateOut(completion: (() -> Void)? = nil) {
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+            completion?()
+        })
+    }
+    
+    private func updateState(_ f: (PermissionControllerInnerState) -> PermissionControllerInnerState, transition: ContainedViewLayoutTransition) {
+        let updatedState = f(self.innerState)
+        if updatedState != self.innerState {
+            self.innerState = updatedState
+            if let state = PermissionControllerState(updatedState) {
+                self.transition(state: state, transition: transition)
+            }
         }
+    }
+    
+    private func transition(state: PermissionControllerState, transition: ContainedViewLayoutTransition) {
+        let insets = state.layout.layout.insets(options: [.statusBar])
+        let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
         
-        self.iconNode.image = icon
-        self.title = title
-
-        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.primaryColor)
-        let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.accentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
-        self.textNode.attributedText = parseMarkdownIntoAttributedString(text.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
-        
-        self.buttonNode.title = buttonTitle
-        
-        self.privacyPolicyNode.isHidden = !hasPrivacyPolicy
-        
-        if let (layout, navigationHeight) = self.layoutArguments {
-            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+        if state.data.state?.kind != self.contentNode?.kind {
+            if let dataState = state.data.state {
+                let icon: UIImage?
+                let title: String
+                let text: String
+                let buttonTitle: String
+                let hasPrivacyPolicy: Bool
+                
+                switch dataState {
+                    case let .contacts(status):
+                        icon = UIImage(bundleImageName: "Settings/Permissions/Contacts")
+                        title = self.presentationData.strings.Permissions_ContactsTitle
+                        text = self.presentationData.strings.Permissions_ContactsText
+                        if status == .denied {
+                            buttonTitle = self.presentationData.strings.Permissions_ContactsAllowInSettings
+                        } else {
+                            buttonTitle = self.presentationData.strings.Permissions_ContactsAllow
+                        }
+                        hasPrivacyPolicy = true
+                    case let .notifications(status):
+                        icon = UIImage(bundleImageName: "Settings/Permissions/Notifications")
+                        title = self.presentationData.strings.Permissions_NotificationsTitle
+                        text = self.presentationData.strings.Permissions_NotificationsText
+                        if status == .denied {
+                            buttonTitle = self.presentationData.strings.Permissions_NotificationsAllowInSettings
+                        } else {
+                            buttonTitle = self.presentationData.strings.Permissions_NotificationsAllow
+                        }
+                        hasPrivacyPolicy = false
+                    case let .siri(status):
+                        icon = UIImage(bundleImageName: "Settings/Permissions/CellularData")
+                        title = self.presentationData.strings.Permissions_SiriTitle
+                        text = self.presentationData.strings.Permissions_SiriText
+                        if status == .denied {
+                            buttonTitle = self.presentationData.strings.Permissions_SiriAllowInSettings
+                        } else {
+                            buttonTitle = self.presentationData.strings.Permissions_SiriAllow
+                        }
+                        hasPrivacyPolicy = false
+                    case .cellularData:
+                        icon = UIImage(bundleImageName: "Settings/Permissions/CellularData")
+                        title = self.presentationData.strings.Permissions_CellularDataTitle
+                        text = self.presentationData.strings.Permissions_CellularDataText
+                        buttonTitle = self.presentationData.strings.Permissions_CellularDataAllowInSettings
+                        hasPrivacyPolicy = false
+                }
+                
+                let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind, icon: icon, title: title, text: text, buttonTitle: buttonTitle, buttonAction: {}, openPrivacyPolicy: hasPrivacyPolicy ? self.openPrivacyPolicy : nil)
+                self.insertSubnode(contentNode, at: 0)
+                contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: .immediate)
+                contentNode.frame = contentFrame
+                if let currentContentNode = self.contentNode {
+                    transition.updatePosition(node: currentContentNode, position: CGPoint(x: -contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
+                        currentContentNode?.removeFromSupernode()
+                    })
+                    transition.animateHorizontalOffsetAdditive(node: contentNode, offset: -contentFrame.width)
+                } else if transition.isAnimated {
+                    contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                }
+                self.contentNode = contentNode
+            } else if let currentContentNode = self.contentNode {
+                transition.updateAlpha(node: currentContentNode, alpha: 0.0, completion: { [weak currentContentNode] _ in
+                    currentContentNode?.removeFromSupernode()
+                })
+                self.contentNode = nil
+            }
+        } else if let contentNode = self.contentNode {
+            transition.updateFrame(node: contentNode, frame: contentFrame)
+            contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: transition)
         }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.layoutArguments = (layout, navigationBarHeight)
+        self.updateState({ state in
+            var state = state
+            state.layout = PermissionControllerLayoutState(layout: layout, navigationHeight: navigationBarHeight)
+            return state
+        }, transition: transition)
+    }
+    
+    func activateNextAction() {
         
-        let insets = layout.insets(options: [.statusBar])
-        let fontSize: CGFloat
-        let sideInset: CGFloat
-        if layout.size.width > 330.0 {
-            fontSize = 22.0
-            sideInset = 38.0
-        } else {
-            fontSize = 18.0
-            sideInset = 20.0
-        }
-        
-        let nextSize = self.nextNode.measure(layout.size)
-        transition.updateFrame(node: self.nextNode, frame: CGRect(x: layout.size.width - insets.right - nextSize.width - 16.0, y: insets.top + 10.0, width: nextSize.width, height: nextSize.height))
-        
-        self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.semibold(fontSize), textColor: self.theme.primaryColor)
-        
-        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        let buttonHeight = self.buttonNode.updateLayout(width: layout.size.width, transition: transition)
-
-        var items: [AuthorizationLayoutItem] = []
-        if let icon = self.iconNode.image {
-            items.append(AuthorizationLayoutItem(node: self.iconNode, size: icon.size, spacingBefore: AuthorizationLayoutItemSpacing(weight: 122.0, maxValue: 122.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 15.0, maxValue: 15.0)))
-        }
-        items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-        items.append(AuthorizationLayoutItem(node: self.textNode, size: textSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 5.0, maxValue: 5.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 35.0, maxValue: 35.0)))
-        items.append(AuthorizationLayoutItem(node: self.buttonNode, size: CGSize(width: layout.size.width, height: buttonHeight), spacingBefore: AuthorizationLayoutItemSpacing(weight: 35.0, maxValue: 35.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 50.0)))
-        
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 20.0)), items: items, transition: transition, failIfDoesNotFit: false)
-        
-        let privacyPolicySize = self.privacyPolicyNode.measure(layout.size)
-        transition.updateFrame(node: self.privacyPolicyNode, frame: CGRect(x: (layout.size.width - privacyPolicySize.width) / 2.0, y: self.buttonNode.frame.maxY + (layout.size.height - self.buttonNode.frame.maxY - insets.bottom - privacyPolicySize.height) / 2.0, width: privacyPolicySize.width, height: privacyPolicySize.height))
     }
     
     @objc func allowPressed() {
@@ -184,22 +219,5 @@ final class PermissionControllerNode: ASDisplayNode {
     
     @objc func privacyPolicyPressed() {
         self.openPrivacyPolicy?()
-    }
-    
-    @objc func nextPressed() {
-        self.next?()
-    }
-    
-    func animateIn(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-    }
-    
-    func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.dismiss?()
-            }
-            completion?()
-        })
     }
 }

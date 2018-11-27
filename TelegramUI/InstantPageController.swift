@@ -71,6 +71,10 @@ final class InstantPageController: ViewController {
         self.settingsDisposable?.dispose()
     }
     
+    override func viewWillDisappear(_ animated: Bool) {
+        let _ = updateInstantPageStoredStateInteractively(postbox: self.account.postbox, webPage: self.webPage, state: self.controllerNode.currentState).start()
+    }
+    
     override public func loadDisplayNode() {
         self.displayNode = InstantPageControllerNode(account: self.account, settings: self.settings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
@@ -96,7 +100,12 @@ final class InstantPageController: ViewController {
         
         self.displayNodeDidLoad()
         
-        self.controllerNode.updateWebPage(self.webPage, anchor: self.anchor)
+        let _ = (instantPageStoredState(postbox: self.account.postbox, webPage: self.webPage)
+        |> deliverOnMainQueue).start(next: { [weak self] state in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updateWebPage(strongSelf.webPage, anchor: strongSelf.anchor, state: state)
+            }
+        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
