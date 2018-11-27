@@ -266,18 +266,26 @@ func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
 
 func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
     return webpagePreview(account: account, url: url)
-    |> map { webpage -> ResolvedUrl in
-        if let webpage = webpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
-            var anchorValue: String?
-            if let anchorRange = url.range(of: "#") {
-                let anchor = url[anchorRange.upperBound...]
-                if !anchor.isEmpty {
-                    anchorValue = String(anchor)
+    |> mapToSignal { webpage -> Signal<ResolvedUrl, NoError> in
+        if let webpage = webpage {
+            if case let .Loaded(content) = webpage.content {
+                if content.instantPage != nil {
+                    var anchorValue: String?
+                    if let anchorRange = url.range(of: "#") {
+                        let anchor = url[anchorRange.upperBound...]
+                        if !anchor.isEmpty {
+                            anchorValue = String(anchor)
+                        }
+                    }
+                    return .single(.instantView(webpage, anchorValue))
+                } else {
+                    return .single(.externalUrl(url))
                 }
+            } else {
+                return .complete()
             }
-            return .instantView(webpage, anchorValue)
         } else {
-            return .externalUrl(url)
+            return .single(.externalUrl(url))
         }
     }
 }

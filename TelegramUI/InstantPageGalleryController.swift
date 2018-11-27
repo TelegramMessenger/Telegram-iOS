@@ -132,11 +132,9 @@ class InstantPageGalleryController: ViewController {
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    private var openUrl: (InstantPageUrlItem) -> Void
+    var openUrl: ((InstantPageUrlItem) -> Void)?
+    private var innerOpenUrl: (InstantPageUrlItem) -> Void
     private var openUrlOptions: (InstantPageUrlItem) -> Void
-    
-    private let resolveUrlDisposable = MetaDisposable()
-    private let loadWebpageDisposable = MetaDisposable()
     
     init(account: Account, webPage: TelegramMediaWebpage, entries: [InstantPageGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.account = account
@@ -147,10 +145,9 @@ class InstantPageGalleryController: ViewController {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         var openLinkImpl: ((InstantPageUrlItem) -> Void)?
-        self.openUrl = { url in
+        self.innerOpenUrl = { url in
             openLinkImpl?(url)
         }
-        
         var openLinkOptionsImpl: ((InstantPageUrlItem) -> Void)?
         self.openUrlOptions = { url in
             openLinkOptionsImpl?(url)
@@ -171,7 +168,7 @@ class InstantPageGalleryController: ViewController {
                 strongSelf.centralEntryIndex = centralIndex
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
-                        $0.item(account: account, webPage: webPage, presentationData: strongSelf.presentationData, openUrl: strongSelf.openUrl, openUrlOptions: strongSelf.openUrlOptions)
+                        $0.item(account: account, webPage: webPage, presentationData: strongSelf.presentationData, openUrl: strongSelf.innerOpenUrl, openUrlOptions: strongSelf.openUrlOptions)
                     }), centralItemIndex: centralIndex, keepFirst: false)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
@@ -198,53 +195,8 @@ class InstantPageGalleryController: ViewController {
         
         openLinkImpl = { [weak self] url in
             if let strongSelf = self {
-                strongSelf.resolveUrlDisposable.set((resolveUrl(account: strongSelf.account, url: url.url) |> deliverOnMainQueue).start(next: { [weak self] result in
-                    if let strongSelf = self {
-                        let navigationController = strongSelf.baseNavigationController
-                        strongSelf.dismiss(forceAway: true)
-                        switch result {
-                            case let .externalUrl(externalUrl):
-                                if let webpageId = url.webpageId {
-                                    var anchor: String?
-                                    if let anchorRange = externalUrl.range(of: "#") {
-                                        anchor = String(externalUrl[anchorRange.upperBound...])
-                                    }
-                                    strongSelf.loadWebpageDisposable.set((webpagePreview(account: strongSelf.account, url: externalUrl, webpageId: webpageId) |> deliverOnMainQueue).start(next: { webpage in
-                                        if let strongSelf = self, let navigationController = navigationController, let webpage = webpage {
-                                            navigationController.pushViewController(InstantPageController(account: strongSelf.account, webPage: webpage, anchor: anchor))
-                                        }
-                                    }))
-                                } else {
-                                    openExternalUrl(account: strongSelf.account, url: externalUrl, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: navigationController, dismissInput: {
-                                        self?.view.endEditing(true)
-                                    })
-                                }
-                            default:
-                                openResolvedUrl(result, account: strongSelf.account, navigationController: navigationController, openPeer: { peerId, navigation in
-                                    self?.dismiss(forceAway: true)
-                                    switch navigation {
-                                        case let .chat(_, messageId):
-                                            if let navigationController = navigationController {
-                                                navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId)
-                                            }
-                                        case .info:
-                                            let _ = (strongSelf.account.postbox.loadedPeerWithId(peerId)
-                                                |> deliverOnMainQueue).start(next: { peer in
-                                                    if let strongSelf = self, let navigationController = navigationController, let controller = peerInfoController(account: strongSelf.account, peer: peer) {
-                                                        navigationController.pushViewController(controller)
-                                                    }
-                                                })
-                                        default:
-                                            break
-                                    }
-                                }, present: { c, _ in
-                                    self?.present(c, in: .window(.root))
-                                }, dismissInput: {
-                                    self?.view.endEditing(true)
-                                })
-                        }
-                    }
-                }))
+                strongSelf.dismiss(forceAway: false)
+                strongSelf.openUrl?(url)
             }
         }
         
@@ -285,8 +237,6 @@ class InstantPageGalleryController: ViewController {
     
     deinit {
         self.disposable.dispose()
-        self.resolveUrlDisposable.dispose()
-        self.loadWebpageDisposable.dispose()
         self.centralItemAttributesDisposable.dispose()
     }
     
@@ -357,7 +307,7 @@ class InstantPageGalleryController: ViewController {
         }
         
         self.galleryNode.pager.replaceItems(self.entries.map({
-            $0.item(account: account, webPage: self.webPage, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
+            $0.item(account: account, webPage: self.webPage, presentationData: self.presentationData, openUrl: self.innerOpenUrl, openUrlOptions: self.openUrlOptions)
         }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in

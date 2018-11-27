@@ -35,6 +35,7 @@ struct InstantPageTextImageItem {
 
 struct InstantPageTextAnchorItem {
     let name: String
+    let empty: Bool
 }
 
 final class InstantPageTextLine {
@@ -76,7 +77,7 @@ final class InstantPageTextItem: InstantPageItem {
     var frame: CGRect
     let alignment: NSTextAlignment
     let medias: [InstantPageMedia] = []
-    let anchors: [String: Int]
+    let anchors: [String: (Int, Bool)]
     let wantsNode: Bool = false
     let separatesTiles: Bool = false
     var selectable: Bool = true
@@ -92,13 +93,13 @@ final class InstantPageTextItem: InstantPageItem {
         self.lines = lines
         var index = 0
         var rtlLineIndices = Set<Int>()
-        var anchors: [String: Int] = [:]
+        var anchors: [String: (Int, Bool)] = [:]
         for line in lines {
             if line.isRTL {
                 rtlLineIndices.insert(index)
             }
             for anchor in line.anchorItems {
-                anchors[anchor.name] = index
+                anchors[anchor.name] = (index, anchor.empty)
             }
             index += 1
         }
@@ -506,11 +507,13 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
             let attrDictionaryDelegate = [(kCTRunDelegateAttributeName as NSAttributedStringKey): (delegate as Any), NSAttributedStringKey(rawValue: InstantPageMediaIdAttribute): id.id, NSAttributedStringKey(rawValue: InstantPageMediaDimensionsAttribute): dimensions]
             return NSAttributedString(string: " ", attributes: attrDictionaryDelegate)
         case let .anchor(text, name):
-            styleStack.push(.anchor(name))
+            var empty = false
             var text = text
             if case .empty = text {
+                empty = true
                 text = .plain("\u{200b}")
             }
+            styleStack.push(.anchor(name, empty))
             let result = attributedStringForRichText(text, styleStack: styleStack, url: url)
             styleStack.pop()
             return result
@@ -673,8 +676,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
                     markedItems.append(InstantPageTextMarkedItem(frame: CGRect(x: workingLineOrigin.x + lowerX, y: workingLineOrigin.y + delta, width: upperX - lowerX, height: lineHeight), color: color))
                 }
-                if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageAnchorAttribute)] as? String {
-                    anchorItems.append(InstantPageTextAnchorItem(name: item))
+                if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageAnchorAttribute)] as? Dictionary<String, Any>, let name = item["name"] as? String, let empty = item["empty"] as? Bool {
+                    anchorItems.append(InstantPageTextAnchorItem(name: name, empty: empty))
                 }
             }
             

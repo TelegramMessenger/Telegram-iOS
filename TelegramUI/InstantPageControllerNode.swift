@@ -345,8 +345,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             else if let anchor = self.initialAnchor, !anchor.isEmpty {
                 if let items = self.currentLayout?.items {
                     self.setupScrollOffsetOnLayout = false
-                    if let (item, lineOffset, detailsItems) = self.findAnchorItem(anchor, items: items) {
-                        contentOffset = CGPoint(x: 0.0, y: item.frame.minY - self.scrollNode.view.contentInset.top)
+                    if let (item, lineOffset, _, _) = self.findAnchorItem(anchor, items: items) {
+                        contentOffset = CGPoint(x: 0.0, y: item.frame.minY + lineOffset - self.scrollNode.view.contentInset.top)
                     }
                 }
             } else {
@@ -964,25 +964,25 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func findAnchorItem(_ anchor: String, items: [InstantPageItem]) -> (InstantPageItem, CGFloat, [InstantPageDetailsItem])? {
+    private func findAnchorItem(_ anchor: String, items: [InstantPageItem]) -> (InstantPageItem, CGFloat, Bool, [InstantPageDetailsItem])? {
         for item in items {
             if let item = item as? InstantPageAnchorItem, item.anchor == anchor {
-                return (item, -10.0, [])
+                return (item, -10.0, false, [])
             } else if let item = item as? InstantPageTextItem {
-                if let lineIndex = item.anchors[anchor] {
-                    return (item, item.lines[lineIndex].frame.minY - 10.0, [])
+                if let (lineIndex, empty) = item.anchors[anchor] {
+                    return (item, item.lines[lineIndex].frame.minY - 10.0, !empty, [])
                 }
             }
             else if let item = item as? InstantPageTableItem {
-                if let offset = item.anchors[anchor] {
-                    return (item, offset - 10.0, [])
+                if let (offset, empty) = item.anchors[anchor] {
+                    return (item, offset - 10.0, !empty, [])
                 }
             }
             else if let item = item as? InstantPageDetailsItem {
-                if let (foundItem, offset, detailsItems) = self.findAnchorItem(anchor, items: item.items) {
+                if let (foundItem, offset, reference, detailsItems) = self.findAnchorItem(anchor, items: item.items) {
                     var detailsItems = detailsItems
                     detailsItems.insert(item, at: 0)
-                    return (foundItem, offset, detailsItems)
+                    return (foundItem, offset, reference, detailsItems)
                 }
             }
         }
@@ -1009,8 +1009,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if !anchor.isEmpty {
-            if let (item, lineOffset, detailsItems) = findAnchorItem(String(anchor), items: items) {
-                if let item = item as? InstantPageTextItem, item.plainText().count > 1 {
+            if let (item, lineOffset, reference, detailsItems) = findAnchorItem(String(anchor), items: items) {
+                if let item = item as? InstantPageTextItem, reference {
                     self.presentReferenceView(item: item)
                 } else {
                     var previousDetailsNode: InstantPageDetailsNode?
@@ -1225,6 +1225,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             }))
+            controller.openUrl = { [weak self] url in
+                self?.openUrl(url)
+            }
             self.present(controller, InstantPageGalleryControllerPresentationArguments(transitionArguments: { [weak self] entry -> GalleryTransitionArguments? in
                 if let strongSelf = self {
                     for (_, itemNode) in strongSelf.visibleItemsWithNodes {

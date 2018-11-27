@@ -390,6 +390,7 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
         self.addSubnode(self.pagerNode)
         self.addSubnode(self.pageControlNode)
         self.pageControlNode.pagesCount = medias.count
+        self.pageControlNode.setPage(0)
         self.pagerNode.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self, let index = index {
                 strongSelf.pageControlNode.setPage(CGFloat(index))

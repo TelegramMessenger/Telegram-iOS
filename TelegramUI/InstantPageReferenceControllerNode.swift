@@ -189,9 +189,9 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
             self.contentNode?.removeFromSupernode()
             
             let sideInset: CGFloat = 16.0
-            let (_, items, contentSize) = layoutTextItemWithString(self.item.attributedString, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: 0.0, y: sideInset))
-            let contentNode = InstantPageContentNode(account: self.account, strings: self.presentationData.strings, theme: self.theme, items: items, contentSize: contentSize, inOverlayPanel: true, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in })
-            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: sideInset, y: titleAreaHeight), size: contentSize))
+            let (_, items, contentSize) = layoutTextItemWithString(self.item.attributedString, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: sideInset, y: sideInset))
+            let contentNode = InstantPageContentNode(account: self.account, strings: self.presentationData.strings, theme: self.theme, items: items, contentSize: CGSize(width: width, height: contentSize.height), inOverlayPanel: true, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in })
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleAreaHeight), size: CGSize(width: width, height: contentSize.height)))
             self.contentContainerNode.insertSubnode(contentNode, at: 0)
             self.contentNode = contentNode
             

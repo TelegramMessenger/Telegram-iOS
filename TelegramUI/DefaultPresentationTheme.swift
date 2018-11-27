@@ -199,7 +199,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         outgoingFileDescriptionColor: UIColor(rgb: 0x6fb26a),
         incomingFileDurationColor: UIColor(rgb: 0x525252, alpha: 0.6),
         outgoingFileDurationColor: UIColor(rgb: 0x008c09, alpha: 0.8),
-        shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.25), withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.45)),
+        shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.3), withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.45)),
         shareButtonStrokeColor: .clear,
         shareButtonForegroundColor: .white,
         mediaOverlayControlBackgroundColor: UIColor(white: 0.0, alpha: 0.6),
