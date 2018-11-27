@@ -12,6 +12,8 @@
 		09E12476214D0978009FC9C3 /* DeviceMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E12475214D0978009FC9C3 /* DeviceMetrics.swift */; };
 		D00701982029CAD6006B9E34 /* TooltipController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701972029CAD6006B9E34 /* TooltipController.swift */; };
 		D007019A2029CAE2006B9E34 /* TooltipControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */; };
+		D0076F2021AC9C930059500A /* ToolbarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0076F1F21AC9C930059500A /* ToolbarNode.swift */; };
+		D0076F2221ACA5020059500A /* Toolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0076F2121ACA5020059500A /* Toolbar.swift */; };
 		D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0078A671C92B21400DF6D92 /* StatusBar.swift */; };
 		D00C7CD21E3657570080C3D5 /* TextFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */; };
 		D01159BB1F40E96C0039383E /* DisplayMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D01159B91F40E96C0039383E /* DisplayMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -199,6 +201,8 @@
 		09E12475214D0978009FC9C3 /* DeviceMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceMetrics.swift; sourceTree = "<group>"; };
 		D00701972029CAD6006B9E34 /* TooltipController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipController.swift; sourceTree = "<group>"; };
 		D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipControllerNode.swift; sourceTree = "<group>"; };
+		D0076F1F21AC9C930059500A /* ToolbarNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarNode.swift; sourceTree = "<group>"; };
+		D0076F2121ACA5020059500A /* Toolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toolbar.swift; sourceTree = "<group>"; };
 		D0078A671C92B21400DF6D92 /* StatusBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBar.swift; sourceTree = "<group>"; };
 		D00C7CD11E3657570080C3D5 /* TextFieldNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextFieldNode.swift; sourceTree = "<group>"; };
 		D01159B71F40E96B0039383E /* DisplayMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DisplayMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -448,6 +452,8 @@
 				D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */,
 				D0DC48551BF945DD00F672FD /* TabBarNode.swift */,
 				D0A134632034DE580059716A /* TabBarTapRecognizer.swift */,
+				D0076F2121ACA5020059500A /* Toolbar.swift */,
+				D0076F1F21AC9C930059500A /* ToolbarNode.swift */,
 			);
 			name = "Tab Bar";
 			sourceTree = "<group>";
@@ -586,7 +592,6 @@
 				D07921AA1B6FC911005C23D9 /* Status Bar */,
 				D0FF9B2E1E7196E2000C66DB /* Keyboard */,
 				D05CC3211B695AA600E235A3 /* Navigation */,
-				D0DC48521BF93D7C00F672FD /* Tabs */,
 				D02BDAEC1B6A7053008AFAD2 /* Nodes */,
 				D0E49C861B83A1680099E553 /* Image Cache */,
 				D05CC2E11B69534100E235A3 /* Supporting Files */,
@@ -768,13 +773,6 @@
 				D0DA44511E4DCC11005FDCA7 /* TextAlertController.swift */,
 			);
 			name = Alert;
-			sourceTree = "<group>";
-		};
-		D0DC48521BF93D7C00F672FD /* Tabs */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Tabs;
 			sourceTree = "<group>";
 		};
 		D0E49C861B83A1680099E553 /* Image Cache */ = {
@@ -1017,6 +1015,7 @@
 				D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */,
 				D05174B41EAA833200A1BF36 /* CASeeThroughTracingLayer.m in Sources */,
 				D03AA4D9202D8E5E0056C405 /* GlobalOverlayPresentationContext.swift in Sources */,
+				D0076F2221ACA5020059500A /* Toolbar.swift in Sources */,
 				D0F8C3932014FB7C00236FC5 /* ListView.swift in Sources */,
 				D03E7DE61C96B96E00C07816 /* NavigationBarTransitionContainer.swift in Sources */,
 				D0C85DD01D1C082E00124894 /* ActionSheetItemGroupsContainerNode.swift in Sources */,
@@ -1113,6 +1112,7 @@
 				D05CC2A21B69326C00E235A3 /* WindowContent.swift in Sources */,
 				D05CC3151B695A9600E235A3 /* NavigationTransitionCoordinator.swift in Sources */,
 				D03B0E701D6331FB00955575 /* StatusBarHost.swift in Sources */,
+				D0076F2021AC9C930059500A /* ToolbarNode.swift in Sources */,
 				D02383801DDF7916004018B6 /* LegacyPresentedController.swift in Sources */,
 				D08E90471D243C2F00533158 /* HighlightTrackingButton.swift in Sources */,
 				D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */,

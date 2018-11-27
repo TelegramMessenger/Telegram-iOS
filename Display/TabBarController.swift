@@ -127,6 +127,8 @@ open class TabBarController: ViewController {
                     }
                 }))
             }
+        }, toolbarActionSelected: { [weak self] left in
+            self?.currentController?.toolbarActionSelected(left: left)
         })
         
         self.updateSelectedIndex()
@@ -182,7 +184,7 @@ open class TabBarController: ViewController {
         }
         
         if let validLayout = self.validLayout {
-            self.tabBarControllerNode.containerLayoutUpdated(validLayout, transition: .immediate)
+            self.tabBarControllerNode.containerLayoutUpdated(validLayout, toolbar: self.currentController?.toolbar, transition: .immediate)
         }
     }
     
@@ -191,7 +193,7 @@ open class TabBarController: ViewController {
         
         self.validLayout = layout
         
-        self.tabBarControllerNode.containerLayoutUpdated(layout, transition: transition)
+        self.tabBarControllerNode.containerLayoutUpdated(layout, toolbar: self.currentController?.toolbar, transition: transition)
         
         if let currentController = self.currentController {
             currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)

@@ -2912,31 +2912,28 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         
+        let indicatorInsets: CGFloat = 3.0
+        
         if let verticalScrollIndicator = self.verticalScrollIndicator {
-            var totalEstimatedHeight: CGFloat = 0.0
-            var estimatedOffset: CGFloat = 0.0
-            let visibleHeight = self.visibleSize.height - self.insets.top - self.insets.bottom
-            if !self.itemNodes.isEmpty {
-                totalEstimatedHeight = totalVisibleHeight / CGFloat(self.itemNodes.count) * CGFloat(self.items.count)
-                for i in 0 ..< self.itemNodes.count {
-                    if let index = self.itemNodes[i].index {
-                        break
-                        let topOffset = self.insets.top - self.itemNodes[0].apparentFrame.minY
-                        estimatedOffset = CGFloat(index)
-                    }
-                }
+            /*let size = self.visibleSize.height
+            let range = computeVerticalScrollRange()
+            let extent = computeVerticalScrollExtent()
+            let mOffset = computeVerticalScrollOffset()
+            
+            let thickness: CGFloat = 3.0
+            var length = round(size * extent / range)
+            var offset = round((size - length) * mOffset / (range - extent))
+            
+            let minLength = thickness * 2.0
+            if length < minLength {
+                length = minLength
+            }
+            if offset + length > size {
+                offset = size - length
             }
             
-            /*
-             visibleHeight - indicatorInsets * 2.0 -> totalEstimatedHeight
-             x -> visibleHeight
-             */
-            
-            let indicatorInsets: CGFloat = 2.0
-            let indicatorMaxHeight: CGFloat = visibleHeight - indicatorInsets * 2.0
-            
-            let indicatorHeight: CGFloat = max(3.0, floor(indicatorMaxHeight * indicatorMaxHeight / totalEstimatedHeight))
-            verticalScrollIndicator.frame = CGRect(origin: CGPoint(x: self.visibleSize.width - 3.0 - indicatorInsets, y: self.insets.top + indicatorInsets), size: CGSize(width: 3.0, height: indicatorHeight))
+            let indicatorHeight: CGFloat = max(3.0, 30.0)
+            verticalScrollIndicator.frame = CGRect(origin: CGPoint(x: self.visibleSize.width - 3.0 - indicatorInsets, y: self.insets.top + offset), size: CGSize(width: 3.0, height: length))*/
         }
     }
     
@@ -3408,6 +3405,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                                 itemNode.setHighlighted(true, at: selectionTouchLocation.offsetBy(dx: -itemNodeFrame.minX, dy: -itemNodeFrame.minY), animated: false)
                             } else {
                                 self.highlightedItemIndex = nil
+                                itemNode.tapped()
                             }
                             break
                         }

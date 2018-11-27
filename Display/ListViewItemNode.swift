@@ -120,6 +120,9 @@ open class ListViewItemNode: ASDisplayNode {
         
     }
     
+    open func tapped() {
+    }
+    
     open func longTapped() {
     }
     

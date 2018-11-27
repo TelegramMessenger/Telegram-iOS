@@ -116,6 +116,7 @@ open class ViewControllerPresentationArguments {
     
     public let statusBar: StatusBar
     public let navigationBar: NavigationBar?
+    private(set) var toolbar: Toolbar?
     
     private var previewingContext: Any?
     
@@ -423,10 +424,24 @@ open class ViewControllerPresentationArguments {
         }
         return traceViewVisibility(view: self.view, rect: self.view.bounds)
     }
+    
+    public func setToolbar(_ toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
+        if self.toolbar != toolbar {
+            self.toolbar = toolbar
+            if let parent = self.parent as? TabBarController {
+                if parent.currentController === self {
+                    parent.requestLayout(transition: transition)
+                }
+            }
+        }
+    }
+    
+    open func toolbarActionSelected(left: Bool) {
+    }
 }
 
 private func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
-    if layer.bounds.intersects(rect) {
+    if layer.bounds.contains(rect) {
         if layer.isHidden {
             return false
         }
