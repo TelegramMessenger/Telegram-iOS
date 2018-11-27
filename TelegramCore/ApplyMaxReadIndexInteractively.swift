@@ -114,23 +114,33 @@ func applySecretOutgoingMessageReadActions(transaction: Transaction, id: Message
     }
 }
 
-public func togglePeerUnreadMarkInteractively(postbox: Postbox, viewTracker: AccountViewTracker, peerId: PeerId) -> Signal<Void, NoError> {
+public func togglePeerUnreadMarkInteractively(postbox: Postbox, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
-        let namespace: MessageId.Namespace
-        if peerId.namespace == Namespaces.Peer.SecretChat {
-            namespace = Namespaces.Message.SecretIncoming
-        } else {
-            namespace = Namespaces.Message.Cloud
-        }
-        if let states = transaction.getPeerReadStates(peerId) {
-            for i in 0 ..< states.count {
-                if states[i].0 == namespace {
-                    if states[i].1.isUnread {
+        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: viewTracker, peerId: peerId, setToValue: setToValue)
+    }
+}
+
+public func togglePeerUnreadMarkInteractively(transaction: Transaction, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) {
+    let namespace: MessageId.Namespace
+    if peerId.namespace == Namespaces.Peer.SecretChat {
+        namespace = Namespaces.Message.SecretIncoming
+    } else {
+        namespace = Namespaces.Message.Cloud
+    }
+    if let states = transaction.getPeerReadStates(peerId) {
+        for i in 0 ..< states.count {
+            if states[i].0 == namespace {
+                if states[i].1.isUnread {
+                    if setToValue == nil || !(setToValue!) {
                         if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: namespace) {
                             let _ = transaction.applyInteractiveReadMaxIndex(index)
+                        } else {
+                            transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: false, interactive: true)
                         }
                         viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
-                    } else if namespace == Namespaces.Message.Cloud || namespace == Namespaces.Message.SecretIncoming {
+                    }
+                } else if namespace == Namespaces.Message.Cloud || namespace == Namespaces.Message.SecretIncoming {
+                    if setToValue == nil || setToValue! {
                         transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: true, interactive: true)
                     }
                 }
@@ -147,4 +157,10 @@ public func clearPeerUnseenPersonalMessagesInteractively(account: Account, peerI
         account.viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
     }
     |> ignoreValues
+}
+
+public func markAllChatsAsReadInteractively(transaction: Transaction, viewTracker: AccountViewTracker) {
+    for peerId in transaction.getUnreadChatListPeerIds() {
+        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: viewTracker, peerId: peerId, setToValue: false)
+    }
 }

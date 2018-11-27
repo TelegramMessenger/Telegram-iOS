@@ -71,6 +71,7 @@ public enum ReportReason: Equatable {
     case spam
     case violence
     case porno
+    case childAbuse
     case copyright
     case custom(String)
 }
@@ -84,6 +85,8 @@ private extension ReportReason {
                 return .inputReportReasonViolence
             case .porno:
                 return .inputReportReasonPornography
+            case .childAbuse:
+                return .inputReportReasonChildAbuse
             case .copyright:
                 return .inputReportReasonCopyright
             case let .custom(text):

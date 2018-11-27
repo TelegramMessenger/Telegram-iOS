@@ -8741,6 +8741,7 @@ extension Api {
         case inputReportReasonPornography
         case inputReportReasonOther(text: String)
         case inputReportReasonCopyright
+        case inputReportReasonChildAbuse
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -8774,6 +8775,12 @@ extension Api {
                     }
                     
                     break
+                case .inputReportReasonChildAbuse:
+                    if boxed {
+                        buffer.appendInt32(-1376497949)
+                    }
+                    
+                    break
     }
     }
     
@@ -8789,6 +8796,8 @@ extension Api {
                 return ("inputReportReasonOther", [("text", text)])
                 case .inputReportReasonCopyright:
                 return ("inputReportReasonCopyright", [])
+                case .inputReportReasonChildAbuse:
+                return ("inputReportReasonChildAbuse", [])
     }
     }
     
@@ -8814,6 +8823,9 @@ extension Api {
         }
         static func parse_inputReportReasonCopyright(_ reader: BufferReader) -> ReportReason? {
             return Api.ReportReason.inputReportReasonCopyright
+        }
+        static func parse_inputReportReasonChildAbuse(_ reader: BufferReader) -> ReportReason? {
+            return Api.ReportReason.inputReportReasonChildAbuse
         }
     
     }

@@ -34,7 +34,7 @@ public func peerSpecificStickerPack(postbox: Postbox, network: Network, peerId: 
         return signal
         |> mapToSignal { info, canInstall -> Signal<PeerSpecificStickerPackData, NoError> in
             if let info = info.info {
-                return cachedStickerPack(postbox: postbox, network: network, reference: .id(id: info.id.id, accessHash: info.accessHash))
+                return cachedStickerPack(postbox: postbox, network: network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceRemote: false)
                 |> map { result -> PeerSpecificStickerPackData in
                     if case let .result(info, items, _) = result {
                         return PeerSpecificStickerPackData(packInfo: (info, items), canSetup: canInstall)

@@ -56,16 +56,16 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
                 var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
                 for pack in packs {
                     switch pack {
-                    case let .stickerPack(text, fileIds):
-                        let key = ValueBoxKey(text).toMemoryBuffer()
-                        for fileId in fileIds {
-                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                            if indexKeysByFile[mediaId] == nil {
-                                indexKeysByFile[mediaId] = [key]
-                            } else {
-                                indexKeysByFile[mediaId]!.append(key)
+                        case let .stickerPack(text, fileIds):
+                            let key = ValueBoxKey(text).toMemoryBuffer()
+                            for fileId in fileIds {
+                                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                if indexKeysByFile[mediaId] == nil {
+                                    indexKeysByFile[mediaId] = [key]
+                                } else {
+                                    indexKeysByFile[mediaId]!.append(key)
+                                }
                             }
-                        }
                     }
                 }
                 
@@ -93,16 +93,16 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
         }
 }
 
-public func loadedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<LoadedStickerPack, NoError> {
-    return cachedStickerPack(postbox: postbox, network: network, reference: reference)
-        |> map { result -> LoadedStickerPack in
-            switch result {
-                case .none:
-                    return .none
-                case .fetching:
-                    return .fetching
-                case let .result(info, items, installed):
-                    return .result(info: info, items: items, installed: installed)
-            }
+public func loadedStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference, forceActualized: Bool) -> Signal<LoadedStickerPack, NoError> {
+    return cachedStickerPack(postbox: postbox, network: network, reference: reference, forceRemote: forceActualized)
+    |> map { result -> LoadedStickerPack in
+        switch result {
+            case .none:
+                return .none
+            case .fetching:
+                return .fetching
+            case let .result(info, items, installed):
+                return .result(info: info, items: items, installed: installed)
         }
+    }
 }
