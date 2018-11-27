@@ -294,11 +294,22 @@ public final class Transaction {
     }
     
     public func getTopPeerMessageIndex(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex? {
+        assert(!self.disposed)
         return self.postbox?.getTopPeerMessageIndex(peerId: peerId, namespace: namespace)
     }
     
     public func getPeerChatListIndex(_ peerId: PeerId) -> (PeerGroupId?, ChatListIndex)? {
+        assert(!self.disposed)
         return self.postbox?.chatListTable.getPeerChatListIndex(peerId: peerId)
+    }
+    
+    public func getUnreadChatListPeerIds() -> [PeerId] {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox)
+        } else {
+            return []
+        }
     }
     
     public func updatePeerChatListInclusion(_ id: PeerId, inclusion: PeerChatListInclusion) {

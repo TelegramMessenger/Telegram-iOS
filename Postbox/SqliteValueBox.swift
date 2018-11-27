@@ -115,6 +115,7 @@ final class SqliteValueBox: ValueBox {
     private let lock = NSRecursiveLock()
     
     fileprivate let basePath: String
+    private let databasePath: String
     private var database: Database!
     private var tables: [Int32: ValueBoxTable] = [:]
     private var fullTextTables: [Int32: ValueBoxFullTextTable] = [:]
@@ -151,6 +152,7 @@ final class SqliteValueBox: ValueBox {
     
     public init(basePath: String, queue: Queue) {
         self.basePath = basePath
+        self.databasePath = basePath + "/db_sqlite"
         self.queue = queue
         self.database = self.openDatabase()
     }
@@ -185,19 +187,21 @@ final class SqliteValueBox: ValueBox {
         
         //database.execute("PRAGMA cache_size=-2097152")
         resultCode = database.execute("PRAGMA mmap_size=0")
-        resultCode = database.execute("PRAGMA journal_mode=WAL")
         assert(resultCode)
         resultCode = database.execute("PRAGMA synchronous=NORMAL")
+        assert(resultCode)
+        resultCode = database.execute("PRAGMA journal_mode=WAL")
         assert(resultCode)
         resultCode = database.execute("PRAGMA temp_store=MEMORY")
         assert(resultCode)
         //resultCode = database.execute("PRAGMA wal_autocheckpoint=500")
         //database.execute("PRAGMA journal_size_limit=1536")
         
-        /*var statement: OpaquePointer? = nil
+        /*#if DEBUG
+        var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "PRAGMA integrity_check", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        while preparedStatement.step(handle: database.handle) {
+        while preparedStatement.step(handle: database.handle, path: self.databasePath) {
             let value = preparedStatement.valueAt(0)
             let text = String(data: Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self), count: value.length), encoding: .utf8)
             print("integrity_check: \(text ?? "")")
@@ -205,7 +209,11 @@ final class SqliteValueBox: ValueBox {
             //let value = preparedStatement.stringAt(0)
             //print("integrity_check: \(value)")
         }
-        preparedStatement.destroy()*/
+        preparedStatement.destroy()
+        #endif*/
+        
+        let _ = self.runPragma(database, "checkpoint_fullfsync = 1")
+        assert(self.runPragma(database, "checkpoint_fullfsync") == "1")
         
         let result = self.getUserVersion(database)
         if result < 2 {
@@ -241,7 +249,7 @@ final class SqliteValueBox: ValueBox {
                 let result = sqlite3_wal_checkpoint_v2(strongSelf.database.handle, nil, SQLITE_CHECKPOINT_PASSIVE, &nLog, &nFrames)
                 assert(result == SQLITE_OK)
                 strongSelf.lock.unlock()
-                //print("(SQLite WAL size \(nLog) removed \(nFrames))")
+                print("(SQLite WAL size \(nLog) removed \(nFrames))")
             }
         }))*/
         return database
@@ -277,10 +285,24 @@ final class SqliteValueBox: ValueBox {
         let status = sqlite3_prepare_v2(database.handle, "PRAGMA user_version", -1, &statement, nil)
         assert(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        let result = preparedStatement.step(handle: database.handle, path: self.basePath)
+        let _ = preparedStatement.step(handle: database.handle, path: self.databasePath)
         let value = preparedStatement.int64At(0)
         preparedStatement.destroy()
         return value
+    }
+    
+    private func runPragma(_ database: Database, _ pragma: String) -> String {
+        assert(self.queue.isCurrent())
+        var statement: OpaquePointer? = nil
+        let status = sqlite3_prepare_v2(database.handle, "PRAGMA \(pragma)", -1, &statement, nil)
+        assert(status == SQLITE_OK)
+        let preparedStatement = SqlitePreparedStatement(statement: statement)
+        var result: String?
+        if preparedStatement.step(handle: database.handle, path: self.databasePath) {
+            result = preparedStatement.stringAt(0)
+        }
+        preparedStatement.destroy()
+        return result ?? ""
     }
     
     private func listTables(_ database: Database) -> [ValueBoxTable] {
@@ -291,7 +313,7 @@ final class SqliteValueBox: ValueBox {
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxTable] = []
         
-        while preparedStatement.step(handle: database.handle, true, path: basePath + "/db_sqlite") {
+        while preparedStatement.step(handle: database.handle, true, path: self.databasePath) {
             let value = preparedStatement.int64At(0)
             let keyType = preparedStatement.int64At(1)
             tables.append(ValueBoxTable(id: Int32(value), keyType: ValueBoxKeyType(rawValue: Int32(keyType))!))
@@ -308,7 +330,7 @@ final class SqliteValueBox: ValueBox {
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxFullTextTable] = []
         
-        while preparedStatement.step(handle: database.handle, true, path: basePath + "/db_sqlite") {
+        while preparedStatement.step(handle: database.handle, true, path: self.databasePath) {
             let value = preparedStatement.int64At(0)
             tables.append(ValueBoxFullTextTable(id: Int32(value)))
         }
@@ -1018,7 +1040,7 @@ final class SqliteValueBox: ValueBox {
             
             var buffer: ReadBuffer?
             
-            while statement.step(handle: self.database.handle, path: self.basePath) {
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
                 buffer = statement.valueAt(0)
                 break
             }
@@ -1075,7 +1097,7 @@ final class SqliteValueBox: ValueBox {
                     
                     startTime = currentTime
                     
-                    while statement.step(handle: self.database.handle, path: self.basePath) {
+                    while statement.step(handle: self.database.handle, path: self.databasePath) {
                         startTime = CFAbsoluteTimeGetCurrent()
                         
                         let key = statement.keyAt(0)
@@ -1110,7 +1132,7 @@ final class SqliteValueBox: ValueBox {
                     
                     startTime = currentTime
                     
-                    while statement.step(handle: self.database.handle, path: self.basePath) {
+                    while statement.step(handle: self.database.handle, path: self.databasePath) {
                         startTime = CFAbsoluteTimeGetCurrent()
                         
                         let key = statement.int64KeyAt(0)
@@ -1160,7 +1182,7 @@ final class SqliteValueBox: ValueBox {
                     
                     startTime = currentTime
                     
-                    while statement.step(handle: self.database.handle, path: self.basePath) {
+                    while statement.step(handle: self.database.handle, path: self.databasePath) {
                         startTime = CFAbsoluteTimeGetCurrent()
                         
                         let key = statement.keyAt(0)
@@ -1194,7 +1216,7 @@ final class SqliteValueBox: ValueBox {
                     
                     startTime = currentTime
                     
-                    while statement.step(handle: self.database.handle, path: self.basePath) {
+                    while statement.step(handle: self.database.handle, path: self.databasePath) {
                         startTime = CFAbsoluteTimeGetCurrent()
                         
                         let key = statement.int64KeyAt(0)
@@ -1228,7 +1250,7 @@ final class SqliteValueBox: ValueBox {
             
             startTime = currentTime
             
-            while statement.step(handle: self.database.handle, path: self.basePath) {
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
                 startTime = CFAbsoluteTimeGetCurrent()
                 
                 let key = statement.keyAt(0)
@@ -1259,7 +1281,7 @@ final class SqliteValueBox: ValueBox {
             
             startTime = currentTime
             
-            while statement.step(handle: self.database.handle, path: self.basePath) {
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
                 startTime = CFAbsoluteTimeGetCurrent()
                 
                 let key = statement.keyAt(0)
@@ -1289,7 +1311,7 @@ final class SqliteValueBox: ValueBox {
             
             startTime = currentTime
             
-            while statement.step(handle: self.database.handle, path: self.basePath) {
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
                 startTime = CFAbsoluteTimeGetCurrent()
                 
                 let key = statement.int64KeyValueAt(0)
@@ -1315,25 +1337,25 @@ final class SqliteValueBox: ValueBox {
         
         if case .int64 = table.keyType {
             let statement = self.insertOrReplaceStatement(table, key: key, value: value)
-            while statement.step(handle: self.database.handle, path: self.basePath) {
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
             }
             statement.reset()
         } else {
             var exists = false
             let existsStatement = self.existsStatement(table, key: key)
-            if existsStatement.step(handle: self.database.handle, path: self.basePath) {
+            if existsStatement.step(handle: self.database.handle, path: self.databasePath) {
                 exists = true
             }
             existsStatement.reset()
             
             if exists {
                 let statement = self.updateStatement(table, key: key, value: value)
-                while statement.step(handle: self.database.handle, path: self.basePath) {
+                while statement.step(handle: self.database.handle, path: self.databasePath) {
                 }
                 statement.reset()
             } else {
                 let statement = self.insertStatement(table, key: key, value: value)
-                while statement.step(handle: self.database.handle, path: self.basePath) {
+                while statement.step(handle: self.database.handle, path: self.databasePath) {
                 }
                 statement.reset()
             }
@@ -1348,7 +1370,7 @@ final class SqliteValueBox: ValueBox {
             let startTime = CFAbsoluteTimeGetCurrent()
             
             let statement = self.deleteStatement(table, key: key)
-            while statement.step(handle: self.database.handle, path: self.basePath) {
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
             }
             statement.reset()
             
@@ -1362,7 +1384,7 @@ final class SqliteValueBox: ValueBox {
             let startTime = CFAbsoluteTimeGetCurrent()
             
             let statement = self.moveStatement(table, from: previousKey, to: updatedKey)
-            while statement.step(handle: self.database.handle, path: self.basePath) {
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
             }
             statement.reset()
             
@@ -1394,7 +1416,7 @@ final class SqliteValueBox: ValueBox {
             }
             
             if let statement = statement {
-                while statement.step(handle: self.database.handle, path: self.basePath) {
+                while statement.step(handle: self.database.handle, path: self.databasePath) {
                     let resultCollectionId = statement.stringAt(0)
                     let resultItemId = statement.stringAt(1)
                     
@@ -1425,7 +1447,7 @@ final class SqliteValueBox: ValueBox {
         }
         
         let statement = self.fullTextInsertStatement(table, collectionId: collectionIdData, itemId: itemIdData, contents: contentsData, tags: tagsData)
-        while statement.step(handle: self.database.handle, path: self.basePath) {
+        while statement.step(handle: self.database.handle, path: self.databasePath) {
         }
         statement.reset()
         
@@ -1441,7 +1463,7 @@ final class SqliteValueBox: ValueBox {
             }
             
             let statement = self.fullTextDeleteStatement(table, itemId: itemIdData)
-            while statement.step(handle: self.database.handle, path: self.basePath) {
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
             }
             statement.reset()
             
@@ -1575,7 +1597,7 @@ final class SqliteValueBox: ValueBox {
         self.lock.unlock()
         
         postboxLog("dropping DB")
-        let _ = try? FileManager.default.removeItem(atPath: self.basePath)
+        let _ = try? FileManager.default.removeItem(atPath: self.databasePath)
         self.database = self.openDatabase()
         
         tables.removeAll()

@@ -268,6 +268,18 @@ final class ChatListTable: Table {
         }
     }
     
+    func getUnreadChatListPeerIds(postbox: Postbox) -> [PeerId] {
+        var result: [PeerId] = []
+        self.valueBox.range(self.table, start: self.upperBound(groupId: nil), end: self.lowerBound(groupId: nil), keys: { key in
+            let (_, _, messageIndex, _) = extractKey(key)
+            if let state = postbox.readStateTable.getCombinedState(messageIndex.id.peerId), state.isUnread {
+                result.append(messageIndex.id.peerId)
+            }
+            return true
+        }, limit: 0)
+        return result
+    }
+    
     private func topGroupMessageIndex(groupId: PeerGroupId) -> MessageIndex? {
         var result: MessageIndex?
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
