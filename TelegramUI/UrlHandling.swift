@@ -252,10 +252,10 @@ func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
             }
         }
     }
-    let baseTelegraPhPaths = ["telegra.ph"]
+    let baseTelegraPhPaths = ["telegra.ph/", "t.me/iv?"]
     for basePath in baseTelegraPhPaths {
         for scheme in schemes {
-            let basePrefix = scheme + basePath + "/"
+            let basePrefix = scheme + basePath
             if url.lowercased().hasPrefix(basePrefix) {
                 return resolveInstantViewUrl(account: account, url: url)
             }

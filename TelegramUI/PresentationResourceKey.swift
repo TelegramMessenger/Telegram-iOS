@@ -72,6 +72,10 @@ enum PresentationResourceKey: Int32 {
     
     case chatPrincipalThemeEssentialGraphicsWithWallpaper
     case chatPrincipalThemeEssentialGraphicsWithoutWallpaper
+    
+    case chatPrincipalThemeAdditionalGraphicsWithCustomWallpaper
+    case chatPrincipalThemeAdditionalGraphicsWithDefaultWallpaper
+    
     case chatBubbleVerticalLineIncomingImage
     case chatBubbleVerticalLineOutgoingImage
     case chatServiceVerticalLineImage
@@ -85,9 +89,6 @@ enum PresentationResourceKey: Int32 {
     case chatBubbleConsumableContentOutgoingIcon
     case chatMediaConsumableContentIcon
     
-    case chatBubbleShareButtonImage
-    case chatBubbleNavigateButtonImage
-    
     case chatBubbleMediaOverlayControlSecret
     
     case chatBubbleSecretMediaIcon
@@ -97,16 +98,6 @@ enum PresentationResourceKey: Int32 {
     case chatInstantVideoWithoutWallpaperBackgroundImage
     
     case chatUnreadBarBackgroundImage
-    
-    case chatBubbleActionButtonIncomingMiddleImage
-    case chatBubbleActionButtonIncomingBottomLeftImage
-    case chatBubbleActionButtonIncomingBottomRightImage
-    case chatBubbleActionButtonIncomingBottomSingleImage
-    
-    case chatBubbleActionButtonOutgoingMiddleImage
-    case chatBubbleActionButtonOutgoingBottomLeftImage
-    case chatBubbleActionButtonOutgoingBottomRightImage
-    case chatBubbleActionButtonOutgoingBottomSingleImage
     
     case chatBubbleFileCloudFetchMediaIcon
     case chatBubbleFileCloudFetchIncomingIcon

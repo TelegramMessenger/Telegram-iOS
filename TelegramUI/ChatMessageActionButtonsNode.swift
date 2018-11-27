@@ -53,7 +53,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ account: Account, _ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ message: Message, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))) {
         let titleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         
         return { account, theme, strings, message, button, constrainedWidth, position in
@@ -73,18 +73,19 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 }
             }
             
-            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: incoming ? theme.chat.bubble.actionButtonsIncomingTextColor : theme.chat.bubble.actionButtonsOutgoingTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: incoming ? theme.theme.chat.bubble.actionButtonsIncomingTextColor : theme.theme.chat.bubble.actionButtonsOutgoingTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
             
+            let graphics = PresentationResourcesChat.additionalGraphics(theme.theme, wallpaper: theme.wallpaper)
             let backgroundImage: UIImage?
             switch position {
                 case .middle:
-                    backgroundImage = incoming ? PresentationResourcesChat.chatBubbleActionButtonIncomingMiddleImage(theme) : PresentationResourcesChat.chatBubbleActionButtonOutgoingMiddleImage(theme)
+                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingMiddleImage : graphics.chatBubbleActionButtonOutgoingMiddleImage
                 case .bottomLeft:
-                    backgroundImage = incoming ? PresentationResourcesChat.chatBubbleActionButtonIncomingBottomLeftImage(theme) : PresentationResourcesChat.chatBubbleActionButtonOutgoingBottomLeftImage(theme)
+                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomLeftImage : graphics.chatBubbleActionButtonOutgoingBottomLeftImage
                 case .bottomRight:
-                    backgroundImage = incoming ?  PresentationResourcesChat.chatBubbleActionButtonIncomingBottomRightImage(theme) : PresentationResourcesChat.chatBubbleActionButtonOutgoingBottomRightImage(theme)
+                    backgroundImage = incoming ?  graphics.chatBubbleActionButtonIncomingBottomRightImage : graphics.chatBubbleActionButtonOutgoingBottomRightImage
                 case .bottomSingle:
-                    backgroundImage = incoming ?  PresentationResourcesChat.chatBubbleActionButtonIncomingBottomSingleImage(theme) : PresentationResourcesChat.chatBubbleActionButtonOutgoingBottomSingleImage(theme)
+                    backgroundImage = incoming ?  graphics.chatBubbleActionButtonIncomingBottomSingleImage : graphics.chatBubbleActionButtonOutgoingBottomSingleImage
             }
             
             return (titleSize.size.width + sideInset + sideInset, { width in
@@ -134,7 +135,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ account: Account, _ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)) {
         let currentButtonLayouts = maybeNode?.buttonNodes.map { ChatMessageActionButtonNode.asyncLayout($0) } ?? []
         
         return { account, theme, strings, replyMarkup, message, constrainedWidth in

@@ -329,7 +329,7 @@ final class ChatEmptyNode: ASDisplayNode {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
             
-            let graphics = PresentationResourcesChat.principalGraphics(interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+            let graphics = PresentationResourcesChat.additionalGraphics(interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
             self.backgroundNode.image = graphics.chatEmptyItemBackgroundImage
         }
         

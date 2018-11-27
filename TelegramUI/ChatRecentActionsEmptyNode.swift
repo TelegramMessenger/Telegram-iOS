@@ -34,7 +34,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         
         super.init()
         
-        let graphics = PresentationResourcesChat.principalGraphics(theme, wallpaper: chatWallpaper)
+        let graphics = PresentationResourcesChat.additionalGraphics(theme, wallpaper: chatWallpaper)
         self.backgroundNode.image = graphics.chatEmptyItemBackgroundImage
         
         self.addSubnode(self.backgroundNode)

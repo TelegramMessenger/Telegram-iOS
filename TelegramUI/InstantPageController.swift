@@ -57,7 +57,6 @@ final class InstantPageController: ViewController {
                 if strongSelf.isNodeLoaded {
                     strongSelf.controllerNode.update(settings: settings, strings: strongSelf.presentationData.strings)
                 }
-                strongSelf._ready.set(.single(true))
             }
         })
     }
@@ -98,14 +97,15 @@ final class InstantPageController: ViewController {
             }
         })
         
-        self.displayNodeDidLoad()
-        
         let _ = (instantPageStoredState(postbox: self.account.postbox, webPage: self.webPage)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             if let strongSelf = self {
                 strongSelf.controllerNode.updateWebPage(strongSelf.webPage, anchor: strongSelf.anchor, state: state)
+                strongSelf._ready.set(.single(true))
             }
         })
+        
+        self.displayNodeDidLoad()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

@@ -73,6 +73,13 @@ struct PresentationResourcesChat {
         }) as! PrincipalThemeEssentialGraphics
     }
     
+    static func additionalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeAdditionalGraphics {
+        let key: PresentationResourceKey = wallpaper.isBuiltin ? PresentationResourceKey.chatPrincipalThemeAdditionalGraphicsWithDefaultWallpaper : PresentationResourceKey.chatPrincipalThemeAdditionalGraphicsWithCustomWallpaper
+        return theme.object(key.rawValue, { theme in
+            return PrincipalThemeAdditionalGraphics(theme.chat, wallpaper: wallpaper)
+        }) as! PrincipalThemeAdditionalGraphics
+    }
+    
     static func chatBubbleVerticalLineIncomingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleVerticalLineIncomingImage.rawValue, { theme in
             return generateLineImage(color: theme.chat.bubble.incomingAccentControlColor)
@@ -106,66 +113,6 @@ struct PresentationResourcesChat {
     static func chatMediaConsumableContentIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMediaConsumableContentIcon.rawValue, { theme in
             return generateFilledCircleImage(diameter: 4.0, color: theme.chat.bubble.mediaDateAndStatusTextColor)
-        })
-    }
-    
-    static func chatBubbleShareButtonImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleShareButtonImage.rawValue, { theme in
-            return generateImage(CGSize(width: 29.0, height: 29.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.chat.bubble.shareButtonFillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                let lineWidth: CGFloat = 1.0
-                let halfLineWidth = lineWidth / 2.0
-                var strokeAlpha: CGFloat = 0.0
-                theme.chat.bubble.shareButtonStrokeColor.getRed(nil, green: nil, blue: nil, alpha: &strokeAlpha)
-                if !strokeAlpha.isZero {
-                    context.setStrokeColor(theme.chat.bubble.shareButtonStrokeColor.cgColor)
-                    context.setLineWidth(lineWidth)
-                    context.strokeEllipse(in: CGRect(origin: CGPoint(x: halfLineWidth, y: halfLineWidth), size: CGSize(width: size.width - lineWidth, height: size.width - lineWidth)))
-                }
-                
-                if let image = UIImage(bundleImageName: "Chat/Message/ShareIcon") {
-                    let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
-                    
-                    context.translateBy(x: imageRect.midX, y: imageRect.midY)
-                    context.scaleBy(x: 1.0, y: -1.0)
-                    context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
-                    context.clip(to: imageRect, mask: image.cgImage!)
-                    context.setFillColor(theme.chat.bubble.shareButtonForegroundColor.cgColor)
-                    context.fill(imageRect)
-                }
-            })
-        })
-    }
-    
-    static func chatBubbleNavigateButtonImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleNavigateButtonImage.rawValue, { theme in
-            return generateImage(CGSize(width: 29.0, height: 29.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.chat.bubble.shareButtonFillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                let lineWidth: CGFloat = 1.0
-                let halfLineWidth = lineWidth / 2.0
-                var strokeAlpha: CGFloat = 0.0
-                theme.chat.bubble.shareButtonStrokeColor.getRed(nil, green: nil, blue: nil, alpha: &strokeAlpha)
-                if !strokeAlpha.isZero {
-                    context.setStrokeColor(theme.chat.bubble.shareButtonStrokeColor.cgColor)
-                    context.setLineWidth(lineWidth)
-                    context.strokeEllipse(in: CGRect(origin: CGPoint(x: halfLineWidth, y: halfLineWidth), size: CGSize(width: size.width - lineWidth, height: size.width - lineWidth)))
-                }
-                
-                if let image = UIImage(bundleImageName: "Chat/Message/NavigateToMessageIcon") {
-                    let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) + 1.0), size: image.size)
-                    
-                    context.translateBy(x: imageRect.midX, y: imageRect.midY)
-                    context.scaleBy(x: 1.0, y: -1.0)
-                    context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
-                    context.clip(to: imageRect, mask: image.cgImage!)
-                    context.setFillColor(theme.chat.bubble.shareButtonForegroundColor.cgColor)
-                    context.fill(imageRect)
-                }
-            })
         })
     }
     
@@ -208,55 +155,7 @@ struct PresentationResourcesChat {
             })?.stretchableImage(withLeftCapWidth: 1, topCapHeight: 4)
         })
     }
-    
-    static func chatBubbleActionButtonIncomingMiddleImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleActionButtonIncomingMiddleImage.rawValue, { theme in
-            return messageBubbleActionButtonImage(color: theme.chat.bubble.actionButtonsIncomingFillColor, strokeColor: theme.chat.bubble.actionButtonsIncomingStrokeColor, position: .middle)
-        })
-    }
-    
-    static func chatBubbleActionButtonIncomingBottomLeftImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleActionButtonIncomingBottomLeftImage.rawValue, { theme in
-            return messageBubbleActionButtonImage(color: theme.chat.bubble.actionButtonsIncomingFillColor, strokeColor: theme.chat.bubble.actionButtonsIncomingStrokeColor, position: .bottomLeft)
-        })
-    }
-    
-    static func chatBubbleActionButtonIncomingBottomRightImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleActionButtonIncomingBottomRightImage.rawValue, { theme in
-            return messageBubbleActionButtonImage(color: theme.chat.bubble.actionButtonsIncomingFillColor, strokeColor: theme.chat.bubble.actionButtonsIncomingStrokeColor, position: .bottomRight)
-        })
-    }
-    
-    static func chatBubbleActionButtonIncomingBottomSingleImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleActionButtonIncomingBottomSingleImage.rawValue, { theme in
-            return messageBubbleActionButtonImage(color: theme.chat.bubble.actionButtonsIncomingFillColor, strokeColor: theme.chat.bubble.actionButtonsIncomingStrokeColor, position: .bottomSingle)
-        })
-    }
-    
-    static func chatBubbleActionButtonOutgoingMiddleImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleActionButtonOutgoingMiddleImage.rawValue, { theme in
-            return messageBubbleActionButtonImage(color: theme.chat.bubble.actionButtonsOutgoingFillColor, strokeColor: theme.chat.bubble.actionButtonsOutgoingStrokeColor, position: .middle)
-        })
-    }
-    
-    static func chatBubbleActionButtonOutgoingBottomLeftImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleActionButtonOutgoingBottomLeftImage.rawValue, { theme in
-            return messageBubbleActionButtonImage(color: theme.chat.bubble.actionButtonsOutgoingFillColor, strokeColor: theme.chat.bubble.actionButtonsOutgoingStrokeColor, position: .bottomLeft)
-        })
-    }
-    
-    static func chatBubbleActionButtonOutgoingBottomRightImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleActionButtonOutgoingBottomRightImage.rawValue, { theme in
-            return messageBubbleActionButtonImage(color: theme.chat.bubble.actionButtonsOutgoingFillColor, strokeColor: theme.chat.bubble.actionButtonsOutgoingStrokeColor, position: .bottomRight)
-        })
-    }
-    
-    static func chatBubbleActionButtonOutgoingBottomSingleImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleActionButtonOutgoingBottomSingleImage.rawValue, { theme in
-            return messageBubbleActionButtonImage(color: theme.chat.bubble.actionButtonsOutgoingFillColor, strokeColor: theme.chat.bubble.actionButtonsOutgoingStrokeColor, position: .bottomSingle)
-        })
-    }
-    
+        
     static func chatInfoItemBackgroundImageWithoutWallpaper(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInfoItemBackgroundImageWithoutWallpaper.rawValue, { theme in
             return messageSingleBubbleLikeImage(fillColor: theme.chat.bubble.incoming.withoutWallpaper.fill, strokeColor: theme.chat.bubble.incoming.withoutWallpaper.stroke)

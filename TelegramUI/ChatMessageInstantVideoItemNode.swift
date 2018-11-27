@@ -149,7 +149,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         updatedReplyBackgroundNode = ASImageNode()
                     }
                     
-                    let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                     replyBackgroundImage = graphics.chatServiceBubbleFillImage
                     break
                 } else if let attribute = attribute as? InlineBotMessageAttribute {
@@ -194,14 +194,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     updatedForwardBackgroundNode = ASImageNode()
                 }
                 
-                let graphics = PresentationResourcesChat.principalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 forwardBackgroundImage = graphics.chatServiceBubbleFillImage
             }
             
             var maxContentWidth = videoLayout.contentSize.width
             var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
-                let (minWidth, buttonsLayout) = actionButtonsLayout(item.account, item.presentationData.theme.theme, item.presentationData.strings, replyMarkup, item.message, maxContentWidth)
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.account, item.presentationData.theme, item.presentationData.strings, replyMarkup, item.message, maxContentWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
@@ -390,7 +390,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, strokeColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, foregroundColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor)
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, foregroundColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor)
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true

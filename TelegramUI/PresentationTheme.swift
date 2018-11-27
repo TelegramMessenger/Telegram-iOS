@@ -412,6 +412,16 @@ public final class PresentationThemeBubbleColor {
     }
 }
 
+public final class PresentationThemeVariableColor {
+    public let withWallpaper: UIColor
+    public let withoutWallpaper: UIColor
+    
+    public init(withWallpaper: UIColor, withoutWallpaper: UIColor) {
+        self.withWallpaper = withWallpaper
+        self.withoutWallpaper = withoutWallpaper
+    }
+}
+
 public func bubbleColorComponents(theme: PresentationTheme, incoming: Bool, wallpaper: Bool) -> PresentationThemeBubbleColorComponents {
     if incoming {
         if wallpaper {
@@ -425,6 +435,14 @@ public func bubbleColorComponents(theme: PresentationTheme, incoming: Bool, wall
         } else {
             return theme.chat.bubble.outgoing.withoutWallpaper
         }
+    }
+}
+
+public func bubbleVariableColor(variableColor: PresentationThemeVariableColor, wallpaper: TelegramWallpaper) -> UIColor {
+    if wallpaper != .builtin {
+        return variableColor.withWallpaper
+    } else {
+        return variableColor.withoutWallpaper
     }
 }
 
@@ -469,18 +487,18 @@ public final class PresentationThemeChatBubble {
     public let incomingFileDurationColor: UIColor
     public let outgoingFileDurationColor: UIColor
     
-    public let shareButtonFillColor: UIColor
+    public let shareButtonFillColor: PresentationThemeVariableColor
     public let shareButtonStrokeColor: UIColor
     public let shareButtonForegroundColor: UIColor
     
     public let mediaOverlayControlBackgroundColor: UIColor
     public let mediaOverlayControlForegroundColor: UIColor
     
-    public let actionButtonsIncomingFillColor: UIColor
+    public let actionButtonsIncomingFillColor: PresentationThemeVariableColor
     public let actionButtonsIncomingStrokeColor: UIColor
     public let actionButtonsIncomingTextColor: UIColor
     
-    public let actionButtonsOutgoingFillColor: UIColor
+    public let actionButtonsOutgoingFillColor: PresentationThemeVariableColor
     public let actionButtonsOutgoingStrokeColor: UIColor
     public let actionButtonsOutgoingTextColor: UIColor
     
@@ -496,7 +514,7 @@ public final class PresentationThemeChatBubble {
     public let incomingMediaPlaceholderColor: UIColor
     public let outgoingMediaPlaceholderColor: UIColor
     
-    public init(incoming: PresentationThemeBubbleColor, outgoing: PresentationThemeBubbleColor, freeform: PresentationThemeBubbleColor, incomingPrimaryTextColor: UIColor, incomingSecondaryTextColor: UIColor, incomingLinkTextColor: UIColor, incomingLinkHighlightColor: UIColor, outgoingPrimaryTextColor: UIColor, outgoingSecondaryTextColor: UIColor, outgoingLinkTextColor: UIColor, outgoingLinkHighlightColor: UIColor, infoPrimaryTextColor: UIColor, infoLinkTextColor: UIColor, incomingAccentTextColor: UIColor, outgoingAccentTextColor: UIColor, incomingAccentControlColor: UIColor, outgoingAccentControlColor: UIColor, incomingMediaActiveControlColor: UIColor, outgoingMediaActiveControlColor: UIColor, incomingMediaInactiveControlColor: UIColor, outgoingMediaInactiveControlColor: UIColor, outgoingCheckColor: UIColor, incomingPendingActivityColor: UIColor, outgoingPendingActivityColor: UIColor, mediaDateAndStatusFillColor: UIColor, mediaDateAndStatusTextColor: UIColor, incomingFileTitleColor: UIColor, outgoingFileTitleColor: UIColor, incomingFileDescriptionColor: UIColor, outgoingFileDescriptionColor: UIColor, incomingFileDurationColor: UIColor, outgoingFileDurationColor: UIColor, shareButtonFillColor: UIColor, shareButtonStrokeColor: UIColor, shareButtonForegroundColor: UIColor, mediaOverlayControlBackgroundColor: UIColor, mediaOverlayControlForegroundColor: UIColor, actionButtonsIncomingFillColor: UIColor, actionButtonsIncomingStrokeColor: UIColor, actionButtonsIncomingTextColor: UIColor, actionButtonsOutgoingFillColor: UIColor, actionButtonsOutgoingStrokeColor: UIColor, actionButtonsOutgoingTextColor: UIColor, selectionControlBorderColor: UIColor, selectionControlFillColor: UIColor, selectionControlForegroundColor: UIColor, mediaHighlightOverlayColor: UIColor, deliveryFailedFillColor: UIColor, deliveryFailedForegroundColor: UIColor, incomingMediaPlaceholderColor: UIColor, outgoingMediaPlaceholderColor: UIColor) {
+    public init(incoming: PresentationThemeBubbleColor, outgoing: PresentationThemeBubbleColor, freeform: PresentationThemeBubbleColor, incomingPrimaryTextColor: UIColor, incomingSecondaryTextColor: UIColor, incomingLinkTextColor: UIColor, incomingLinkHighlightColor: UIColor, outgoingPrimaryTextColor: UIColor, outgoingSecondaryTextColor: UIColor, outgoingLinkTextColor: UIColor, outgoingLinkHighlightColor: UIColor, infoPrimaryTextColor: UIColor, infoLinkTextColor: UIColor, incomingAccentTextColor: UIColor, outgoingAccentTextColor: UIColor, incomingAccentControlColor: UIColor, outgoingAccentControlColor: UIColor, incomingMediaActiveControlColor: UIColor, outgoingMediaActiveControlColor: UIColor, incomingMediaInactiveControlColor: UIColor, outgoingMediaInactiveControlColor: UIColor, outgoingCheckColor: UIColor, incomingPendingActivityColor: UIColor, outgoingPendingActivityColor: UIColor, mediaDateAndStatusFillColor: UIColor, mediaDateAndStatusTextColor: UIColor, incomingFileTitleColor: UIColor, outgoingFileTitleColor: UIColor, incomingFileDescriptionColor: UIColor, outgoingFileDescriptionColor: UIColor, incomingFileDurationColor: UIColor, outgoingFileDurationColor: UIColor, shareButtonFillColor: PresentationThemeVariableColor, shareButtonStrokeColor: UIColor, shareButtonForegroundColor: UIColor, mediaOverlayControlBackgroundColor: UIColor, mediaOverlayControlForegroundColor: UIColor, actionButtonsIncomingFillColor: PresentationThemeVariableColor, actionButtonsIncomingStrokeColor: UIColor, actionButtonsIncomingTextColor: UIColor, actionButtonsOutgoingFillColor: PresentationThemeVariableColor, actionButtonsOutgoingStrokeColor: UIColor, actionButtonsOutgoingTextColor: UIColor, selectionControlBorderColor: UIColor, selectionControlFillColor: UIColor, selectionControlForegroundColor: UIColor, mediaHighlightOverlayColor: UIColor, deliveryFailedFillColor: UIColor, deliveryFailedForegroundColor: UIColor, incomingMediaPlaceholderColor: UIColor, outgoingMediaPlaceholderColor: UIColor) {
         self.incoming = incoming
         self.outgoing = outgoing
         self.freeform = freeform

@@ -40,6 +40,34 @@ private func generateClockMinImage(color: UIColor) -> UIImage? {
     })
 }
 
+private func chatBubbleActionButtonImage(fillColor: UIColor, strokeColor: UIColor, foregroundColor: UIColor, image: UIImage?, iconOffset: CGPoint = CGPoint()) -> UIImage? {
+    return generateImage(CGSize(width: 29.0, height: 29.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(fillColor.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        let lineWidth: CGFloat = 1.0
+        let halfLineWidth = lineWidth / 2.0
+        var strokeAlpha: CGFloat = 0.0
+        strokeColor.getRed(nil, green: nil, blue: nil, alpha: &strokeAlpha)
+        if !strokeAlpha.isZero {
+            context.setStrokeColor(strokeColor.cgColor)
+            context.setLineWidth(lineWidth)
+            context.strokeEllipse(in: CGRect(origin: CGPoint(x: halfLineWidth, y: halfLineWidth), size: CGSize(width: size.width - lineWidth, height: size.width - lineWidth)))
+        }
+        
+        if let image = image {
+            let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + iconOffset.x, y: floor((size.height - image.size.height) / 2.0) + iconOffset.y), size: image.size)
+            
+            context.translateBy(x: imageRect.midX, y: imageRect.midY)
+            context.scaleBy(x: 1.0, y: -1.0)
+            context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+            context.clip(to: imageRect, mask: image.cgImage!)
+            context.setFillColor(foregroundColor.cgColor)
+            context.fill(imageRect)
+        }
+    })
+}
+
 public final class PrincipalThemeEssentialGraphics {
     public let chatMessageBackgroundIncomingImage: UIImage
     public let chatMessageBackgroundIncomingHighlightedImage: UIImage
@@ -75,11 +103,6 @@ public final class PrincipalThemeEssentialGraphics {
     
     public let checkFreeFullImage: UIImage
     public let checkFreePartialImage: UIImage
-    
-    public let chatServiceBubbleFillImage: UIImage
-    public let chatFreeformContentAdditionalInfoBackgroundImage: UIImage
-    public let chatEmptyItemBackgroundImage: UIImage
-    public let chatLoadingIndicatorBackgroundImage: UIImage
     
     public let clockBubbleIncomingFrameImage: UIImage
     public let clockBubbleIncomingMinImage: UIImage
@@ -144,15 +167,6 @@ public final class PrincipalThemeEssentialGraphics {
         self.checkFreeFullImage = generateCheckImage(partial: false, color: serviceColor.primaryText)!
         self.checkFreePartialImage = generateCheckImage(partial: true, color: serviceColor.primaryText)!
         
-        self.chatServiceBubbleFillImage = generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context -> Void in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(serviceColor.fill.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        })!.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
-        self.chatFreeformContentAdditionalInfoBackgroundImage = generateStretchableFilledCircleImage(radius: 4.0, color: serviceColor.fill)!
-        self.chatEmptyItemBackgroundImage = generateStretchableFilledCircleImage(radius: 14.0, color: serviceColor.fill)!
-        self.chatLoadingIndicatorBackgroundImage = generateStretchableFilledCircleImage(diameter: 30.0, color: serviceColor.fill)!
-        
         self.clockBubbleIncomingFrameImage = generateClockFrameImage(color: theme.bubble.incomingPendingActivityColor)!
         self.clockBubbleIncomingMinImage = generateClockMinImage(color: theme.bubble.incomingPendingActivityColor)!
         self.clockBubbleOutgoingFrameImage = generateClockFrameImage(color: theme.bubble.outgoingPendingActivityColor)!
@@ -165,7 +179,7 @@ public final class PrincipalThemeEssentialGraphics {
         self.clockFreeMinImage = generateClockMinImage(color: serviceColor.primaryText)!
         
         self.dateAndStatusMediaBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.bubble.mediaDateAndStatusFillColor)!
-        self.dateAndStatusFreeBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: serviceColor.primaryText)!
+        self.dateAndStatusFreeBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: serviceColor.dateFillStatic)!
         
         let impressionCountImage = UIImage(bundleImageName: "Chat/Message/ImpressionCount")!
         self.incomingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.bubble.incomingSecondaryTextColor)!
@@ -188,5 +202,46 @@ public final class PrincipalThemeEssentialGraphics {
         
         self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: incoming.fill)!
         self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: outgoing.fill)!
+    }
+}
+
+public final class PrincipalThemeAdditionalGraphics {
+    public let chatServiceBubbleFillImage: UIImage
+    public let chatFreeformContentAdditionalInfoBackgroundImage: UIImage
+    public let chatEmptyItemBackgroundImage: UIImage
+    public let chatLoadingIndicatorBackgroundImage: UIImage
+    
+    public let chatBubbleShareButtonImage: UIImage
+    public let chatBubbleNavigateButtonImage: UIImage
+    public let chatBubbleActionButtonIncomingMiddleImage: UIImage
+    public let chatBubbleActionButtonIncomingBottomLeftImage: UIImage
+    public let chatBubbleActionButtonIncomingBottomRightImage: UIImage
+    public let chatBubbleActionButtonIncomingBottomSingleImage: UIImage
+    public let chatBubbleActionButtonOutgoingMiddleImage: UIImage
+    public let chatBubbleActionButtonOutgoingBottomLeftImage: UIImage
+    public let chatBubbleActionButtonOutgoingBottomRightImage: UIImage
+    public let chatBubbleActionButtonOutgoingBottomSingleImage: UIImage
+    
+    init(_ theme: PresentationThemeChat, wallpaper: TelegramWallpaper) {
+        let serviceColor = serviceMessageColorComponents(chatTheme: theme, wallpaper: wallpaper)
+        self.chatServiceBubbleFillImage = generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context -> Void in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(serviceColor.fill.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        })!.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
+        self.chatFreeformContentAdditionalInfoBackgroundImage = generateStretchableFilledCircleImage(radius: 4.0, color: serviceColor.fill)!
+        self.chatEmptyItemBackgroundImage = generateStretchableFilledCircleImage(radius: 14.0, color: serviceColor.fill)!
+        self.chatLoadingIndicatorBackgroundImage = generateStretchableFilledCircleImage(diameter: 30.0, color: serviceColor.fill)!
+        
+        self.chatBubbleShareButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.bubble.shareButtonFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.shareButtonStrokeColor, foregroundColor: theme.bubble.shareButtonForegroundColor, image: UIImage(bundleImageName: "Chat/Message/ShareIcon"))!
+        self.chatBubbleNavigateButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.bubble.shareButtonFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.shareButtonStrokeColor, foregroundColor: theme.bubble.shareButtonForegroundColor, image: UIImage(bundleImageName: "Chat/Message/NavigateToMessageIcon"), iconOffset: CGPoint(x: 0.0, y: 1.0))!
+        self.chatBubbleActionButtonIncomingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsIncomingStrokeColor, position: .middle)
+        self.chatBubbleActionButtonIncomingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsIncomingStrokeColor, position: .bottomLeft)
+        self.chatBubbleActionButtonIncomingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsIncomingStrokeColor, position: .bottomRight)
+        self.chatBubbleActionButtonIncomingBottomSingleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsIncomingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsIncomingStrokeColor, position: .bottomSingle)
+        self.chatBubbleActionButtonOutgoingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsOutgoingStrokeColor, position: .middle)
+        self.chatBubbleActionButtonOutgoingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsOutgoingStrokeColor, position: .bottomLeft)
+        self.chatBubbleActionButtonOutgoingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsOutgoingStrokeColor, position: .bottomRight)
+        self.chatBubbleActionButtonOutgoingBottomSingleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsOutgoingStrokeColor, position: .bottomSingle)
     }
 }

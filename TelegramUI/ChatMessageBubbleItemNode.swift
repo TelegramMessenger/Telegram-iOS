@@ -843,7 +843,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
-                let (minWidth, buttonsLayout) = actionButtonsLayout(item.account, item.presentationData.theme.theme, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.account, item.presentationData.theme, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
@@ -1080,19 +1080,21 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 if currentShareButtonNode != nil {
                     updatedShareButtonNode = currentShareButtonNode
                     if item.presentationData.theme !== currentItem?.presentationData.theme {
+                        let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                         if item.message.id.peerId == item.account.peerId {
-                            updatedShareButtonBackground = PresentationResourcesChat.chatBubbleNavigateButtonImage(item.presentationData.theme.theme)
+                            updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
                         } else {
-                            updatedShareButtonBackground = PresentationResourcesChat.chatBubbleShareButtonImage(item.presentationData.theme.theme)
+                            updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
                         }
                     }
                 } else {
                     let buttonNode = HighlightableButtonNode()
                     let buttonIcon: UIImage?
+                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                     if item.message.id.peerId == item.account.peerId {
-                        buttonIcon = PresentationResourcesChat.chatBubbleNavigateButtonImage(item.presentationData.theme.theme)
+                        buttonIcon = graphics.chatBubbleNavigateButtonImage
                     } else {
-                        buttonIcon = PresentationResourcesChat.chatBubbleShareButtonImage(item.presentationData.theme.theme)
+                        buttonIcon = graphics.chatBubbleShareButtonImage
                     }
                     buttonNode.setBackgroundImage(buttonIcon, for: [.normal])
                     updatedShareButtonNode = buttonNode
@@ -1953,8 +1955,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 if (translation.x < -45.0) != (self.currentSwipeToReplyTranslation < -45.0) {
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
-                        
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, strokeColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, foregroundColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor)
+
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, foregroundColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor)
                         self.swipeToReplyNode = swipeToReplyNode
                         self.addSubnode(swipeToReplyNode)
                         animateReplyNodeIn = true

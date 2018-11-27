@@ -13,7 +13,7 @@ final class ChatLoadingNode: ASDisplayNode {
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
         
-        let graphics = PresentationResourcesChat.principalGraphics(theme, wallpaper: chatWallpaper)
+        let graphics = PresentationResourcesChat.additionalGraphics(theme, wallpaper: chatWallpaper)
         self.backgroundNode.image = graphics.chatLoadingIndicatorBackgroundImage
         
         let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: chatWallpaper)
