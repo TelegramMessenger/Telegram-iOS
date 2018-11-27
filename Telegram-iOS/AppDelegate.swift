@@ -362,7 +362,7 @@ private enum QueuedWakeup: Int32 {
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
-            UIAlertView(title: nil, message: "Error 1", delegate: nil, cancelButtonTitle: "OK").show()
+            UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
             return true
         }
         
