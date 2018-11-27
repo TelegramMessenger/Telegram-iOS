@@ -8,13 +8,13 @@ public enum UnreadMessageCountsItem: Equatable {
 
 private enum MutableUnreadMessageCountsItemEntry {
     case total((ValueBoxKey, PreferencesEntry?)?, ChatListTotalUnreadState)
-    case peer(PeerId, Int32)
+    case peer(PeerId, CombinedPeerReadState?)
     case group(PeerGroupId, ChatListGroupReferenceUnreadCounters)
 }
 
 public enum UnreadMessageCountsItemEntry {
     case total(PreferencesEntry?, ChatListTotalUnreadState)
-    case peer(PeerId, Int32)
+    case peer(PeerId, CombinedPeerReadState?)
     case group(PeerGroupId, Int32)
 }
 
@@ -27,11 +27,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                 case let .total(preferencesKey):
                     return .total(preferencesKey.flatMap({ ($0, postbox.preferencesTable.get(key: $0)) }), postbox.messageHistoryMetadataTable.getChatListTotalUnreadState())
                 case let .peer(peerId):
-                    var count: Int32 = 0
-                    if let combinedState = postbox.readStateTable.getCombinedState(peerId) {
-                        count = combinedState.count
-                    }
-                    return .peer(peerId, count)
+                    return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
                 case let .group(groupId):
                     return .group(groupId, ChatListGroupReferenceUnreadCounters(postbox: postbox, groupId: groupId))
             }
@@ -69,11 +65,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                         }
                     case let .peer(peerId, _):
                         if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
-                            var updatedCount: Int32 = 0
-                            if let combinedState = postbox.readStateTable.getCombinedState(peerId) {
-                                updatedCount = combinedState.count
-                            }
-                            self.entries[i] = .peer(peerId, updatedCount)
+                            self.entries[i] = .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
                             updated = true
                         }
                     case let .group(_, counters):
@@ -126,9 +118,9 @@ public final class UnreadMessageCountsView: PostboxView {
             switch entry {
                 case .total:
                     break
-                case let .peer(peerId, count):
+                case let .peer(peerId, state):
                     if case .peer(peerId) = item {
-                        return count
+                        return state?.count ?? 0
                     }
                 case let .group(groupId, count):
                     if case .group(groupId) = item {
