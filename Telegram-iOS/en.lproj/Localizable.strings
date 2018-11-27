@@ -1504,6 +1504,7 @@
 "ReportPeer.ReasonSpam" = "Spam";
 "ReportPeer.ReasonViolence" = "Violence";
 "ReportPeer.ReasonPornography" = "Pornography";
+"ReportPeer.ReasonChildAbuse" = "Child Pornography";
 "ReportPeer.ReasonOther" = "Other";
 
 "ReportPeer.AlertSuccess" = "Thank you!\nYour report will be reviewed by our team very soon.";
@@ -3525,3 +3526,6 @@ Unused sets are archived when you add more.";
 "Login.CancelSignUpConfirmation" = "Do you want to stop the registration process?";
 
 "Passcode.AppLockedAlert" = "Telegram\nLocked";
+
+"ChatList.ReadAll" = "Read All";
+"ChatList.Read" = "Read";
