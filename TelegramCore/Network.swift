@@ -748,7 +748,14 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             let address = MTDatacenterAddress(ip: host, port: UInt16(port), preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false, secret: secret)
             self.context.addAddressForDatacenter(withId: Int(datacenterId), address: address)
             
-            let currentSchemes = self.context.transportSchemesForDatacenter(withId: Int(datacenterId), media: false, enforceMedia: false, isProxy: false)
+            let currentScheme = self.context.transportSchemeForDatacenter(withId: Int(datacenterId), media: false, isProxy: false)
+            if let currentScheme = currentScheme, currentScheme.address.isEqual(to: address) {
+            } else {
+                let scheme = MTTransportScheme(transport: MTTcpTransport.self, address: address, media: false)
+                self.context.updateTransportSchemeForDatacenter(withId: Int(datacenterId), transportScheme: scheme, media: false, isProxy: false)
+            }
+            
+            /*let currentSchemes = self.context.transportSchemesForDatacenter(withId: Int(datacenterId), media: false, enforceMedia: false, isProxy: false)
             var found = false
             for scheme in currentSchemes {
                 if scheme.address.isEqual(to: address) {
@@ -759,7 +766,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             if !found {
                 let scheme = MTTransportScheme(transport: MTTcpTransport.self, address: address, media: false)
                 self.context.updateTransportSchemeForDatacenter(withId: Int(datacenterId), transportScheme: scheme, media: false, isProxy: false)
-            }
+            }*/
         }
     }
     
