@@ -590,7 +590,17 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                                 case .creator, .admin:
                                     optionsMap[id]!.insert(.deleteGlobally)
                                 case .member:
-                                    break
+                                    var hasMediaToReport = false
+                                    for media in message.media {
+                                        if let _ = media as? TelegramMediaImage {
+                                            hasMediaToReport = true
+                                        } else if let file = media as? TelegramMediaFile, file.isVideo {
+                                            hasMediaToReport = true
+                                        }
+                                    }
+                                    if hasMediaToReport {
+                                        optionsMap[id]!.insert(.report)
+                                    }
                             }
                         }
                     } else if let _ = peer as? TelegramUser {

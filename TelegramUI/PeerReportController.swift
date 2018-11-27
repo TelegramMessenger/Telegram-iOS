@@ -14,6 +14,7 @@ private enum PeerReportOption {
     case violence
     case copyright
     case pornoghraphy
+    case childAbuse
     case other
 }
 
@@ -25,6 +26,7 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
         .spam,
         .violence,
         .pornoghraphy,
+        .childAbuse,
         .copyright,
         .other
     ]
@@ -32,6 +34,7 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
     var items: [ActionSheetItem] = []
     for option in options {
         let title: String
+        var color: ActionSheetButtonColor = .accent
         switch option {
             case .spam:
                 title = presentationData.strings.ReportPeer_ReasonSpam
@@ -39,12 +42,15 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                 title = presentationData.strings.ReportPeer_ReasonViolence
             case .pornoghraphy:
                 title = presentationData.strings.ReportPeer_ReasonPornography
+            case .childAbuse:
+                title = presentationData.strings.ReportPeer_ReasonChildAbuse
+                color = .destructive
             case .copyright:
                 title = presentationData.strings.ReportPeer_ReasonCopyright
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
         }
-        items.append(ActionSheetButtonItem(title: title, action: { [weak controller] in
+        items.append(ActionSheetButtonItem(title: title, color: color, action: { [weak controller] in
             var reportReason: ReportReason?
             switch option {
                 case .spam:
@@ -53,6 +59,8 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                     reportReason = .violence
                 case .pornoghraphy:
                     reportReason = .porno
+                case .childAbuse:
+                    reportReason = .childAbuse
                 case .copyright:
                     reportReason = .copyright
                 case .other:

@@ -14,8 +14,8 @@ final class ItemListSelectableControlNode: ASDisplayNode {
         self.addSubnode(self.checkNode)
     }
     
-    static func asyncLayout(_ node: ItemListSelectableControlNode?) -> (_ strokeColor: UIColor, _ fillColor: UIColor, _ foregroundColor: UIColor, _ selected: Bool) -> (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode) {
-        return { strokeColor, fillColor, foregroundColor, selected in
+    static func asyncLayout(_ node: ItemListSelectableControlNode?) -> (_ strokeColor: UIColor, _ fillColor: UIColor, _ foregroundColor: UIColor, _ selected: Bool, _ compact: Bool) -> (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode) {
+        return { strokeColor, fillColor, foregroundColor, selected, compact in
             let resultNode: ItemListSelectableControlNode
             if let node = node {
                 resultNode = node
@@ -23,10 +23,9 @@ final class ItemListSelectableControlNode: ASDisplayNode {
                 resultNode = ItemListSelectableControlNode(strokeColor: strokeColor, fillColor: fillColor, foregroundColor: foregroundColor)
             }
             
-            return (45.0, { size, animated in
-                
+            return (compact ? 38.0 : 45.0, { size, animated in
                 let checkSize = CGSize(width: 32.0, height: 32.0)
-                resultNode.checkNode.frame = CGRect(origin: CGPoint(x: 12.0, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
+                resultNode.checkNode.frame = CGRect(origin: CGPoint(x: compact ? 9 : 12.0, y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
                 resultNode.checkNode.setIsChecked(selected, animated: animated)
                 return resultNode
             })

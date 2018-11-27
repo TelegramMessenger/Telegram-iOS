@@ -129,7 +129,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: theme.list.controlSecondaryColor, foregroundColor: theme.list.itemAccentColor))
         self.leftDurationLabel = MediaPlayerTimeTextNode(textColor: theme.list.itemSecondaryTextColor)
+        self.leftDurationLabel.displaysAsynchronously = false
         self.rightDurationLabel = MediaPlayerTimeTextNode(textColor: theme.list.itemSecondaryTextColor)
+        self.rightDurationLabel.displaysAsynchronously = false
         self.rightDurationLabel.mode = .reversed
         self.rightDurationLabel.alignment = .right
         

@@ -42,7 +42,7 @@ final class PermissionContentNode: ASDisplayNode {
         self.actionButton = SolidRoundedButtonNode(theme: theme, height: 48.0, cornerRadius: 9.0)
         
         self.privacyPolicyButton = HighlightableButtonNode()
-        self.privacyPolicyButton.setTitle(strings.Permissions_PrivacyPolicy, with: Font.regular(16.0), with: theme.list.itemAccentColor, for: .normal)
+        //self.privacyPolicyButton.setTitle(strings.Permissions_PrivacyPolicy, with: Font.regular(16.0), with: theme.list.itemAccentColor, for: .normal)
         
         super.init()
         

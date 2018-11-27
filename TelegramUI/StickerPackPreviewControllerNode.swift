@@ -5,6 +5,37 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
+    let index: Int
+    let stickerItem: StickerPackItem
+    
+    var stableId: MediaId {
+        return self.stickerItem.file.fileId
+    }
+    
+    static func <(lhs: StickerPackPreviewGridEntry, rhs: StickerPackPreviewGridEntry) -> Bool {
+        return lhs.index < rhs.index
+    }
+    
+    func item(account: Account, interaction: StickerPackPreviewInteraction) -> StickerPackPreviewGridItem {
+        return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction)
+    }
+}
+
+private struct StickerPackPreviewGridTransaction {
+    let deletions: [Int]
+    let insertions: [GridNodeInsertItem]
+    let updates: [GridNodeUpdateItem]
+    
+    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], account: Account, interaction: StickerPackPreviewInteraction) {
+         let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
+        
+        self.deletions = deleteIndices
+        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
+        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
+    }
+}
+
 final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let account: Account
     private let openShare: () -> Void
@@ -42,7 +73,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     private var stickerPackUpdated = false
     private var stickerPackInitiallyInstalled : Bool?
     
-    private var didSetItems = false
+    private var currentItems: [StickerPackPreviewGridEntry] = []
     
     private var hapticFeedback: HapticFeedback?
     
@@ -267,7 +298,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
         let contentFrame = contentContainerFrame.insetBy(dx: 12.0, dy: 0.0)
         
-        var insertItems: [GridNodeInsertItem] = []
+        var transaction: StickerPackPreviewGridTransaction?
         
         var itemCount = 0
         var animateIn = false
@@ -286,16 +317,21 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                         self.activityIndicator = nil
                     }
                     itemCount = items.count
-                    if !self.didSetItems {
-                        let entities = generateTextEntities(info.title, enabledTypes: [.mention])
-                        self.contentTitleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: Font.medium(20.0), linkFont: Font.medium(20.0), boldFont: Font.medium(20.0), italicFont: Font.medium(20.0), fixedFont: Font.medium(20.0))
-                        
-                        self.didSetItems = true
-                        animateIn = true
-                        for i in 0 ..< items.count {
-                            insertItems.append(GridNodeInsertItem(index: i, item: StickerPackPreviewGridItem(account: self.account, stickerItem: items[i] as! StickerPackItem, interaction: self.interaction), previousIndex: nil))
+                    
+                    var updatedItems: [StickerPackPreviewGridEntry] = []
+                    for item in items {
+                        if let item = item as? StickerPackItem {
+                            updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
                         }
                     }
+                    
+                    if self.currentItems.isEmpty && !updatedItems.isEmpty {
+                        let entities = generateTextEntities(info.title, enabledTypes: [.mention])
+                        self.contentTitleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: Font.medium(20.0), linkFont: Font.medium(20.0), boldFont: Font.medium(20.0), italicFont: Font.medium(20.0), fixedFont: Font.medium(20.0))
+                        animateIn = true
+                    }
+                    transaction = StickerPackPreviewGridTransaction(previousList: self.currentItems, list: updatedItems, account: self.account, interaction: self.interaction)
+                    self.currentItems = updatedItems
             }
         }
         
@@ -335,7 +371,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))
         
-        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: insertItems, updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: gridSize, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transaction?.deletions ?? [], insertItems: transaction?.insertions ?? [], updateItems: transaction?.updates ?? [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: gridSize, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomGridInset, right: 0.0), preloadSize: 80.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth), lineSpacing: 0.0)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         transition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
         
         if animateIn {

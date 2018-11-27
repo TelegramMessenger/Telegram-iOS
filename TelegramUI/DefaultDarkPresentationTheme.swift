@@ -110,6 +110,7 @@ private let chatList = PresentationThemeChatList(
     itemBackgroundColor: UIColor(rgb: 0x000000),
     pinnedItemBackgroundColor: UIColor(rgb: 0x1c1c1d),
     itemHighlightedBackgroundColor: UIColor(rgb: 0x191919),
+    itemSelectedBackgroundColor: UIColor(rgb: 0x191919),
     titleColor: UIColor(rgb: 0xffffff),
     secretTitleColor: UIColor(rgb: 0xb2b2b2), //!!!
     dateTextColor: UIColor(rgb: 0x8e8e93),

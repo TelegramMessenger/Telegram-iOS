@@ -55,7 +55,19 @@ final class NativeVideoContent: UniversalVideoContent {
         self.nativeId = id
         self.fileReference = fileReference
         self.imageReference = imageReference
-        self.dimensions = fileReference.media.dimensions ?? CGSize(width: 128.0, height: 128.0)
+        if var dimensions = fileReference.media.dimensions {
+            if let thumbnail = fileReference.media.previewRepresentations.first {
+                let dimensionsVertical = dimensions.width < dimensions.height
+                let thumbnailVertical = thumbnail.dimensions.width < thumbnail.dimensions.height
+                if dimensionsVertical != thumbnailVertical {
+                    dimensions = CGSize(width: dimensions.height, height: dimensions.width)
+                }
+            }
+            self.dimensions = dimensions
+        } else {
+            self.dimensions = CGSize(width: 128.0, height: 128.0)
+        }
+        
         self.duration = fileReference.media.duration ?? 0
         self.streamVideo = streamVideo
         self.loopVideo = loopVideo

@@ -37,7 +37,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     private var didSuggestLocalization = false
     
     private var presentationData: PresentationData
+    private let presentationDataValue = Promise<PresentationData>()
     private var presentationDataDisposable: Disposable?
+    
+    private let stateDisposable = MetaDisposable()
     
     public init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool) {
         self.account = account
@@ -46,6 +49,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.groupId = groupId
         
         self.presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
+        self.presentationDataValue.set(.single(self.presentationData))
         
         self.titleView = NetworkStatusTitleView(theme: self.presentationData.theme)
         
@@ -207,18 +211,19 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
-                    
-                    strongSelf.presentationData = presentationData
-                    
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                        strongSelf.updateThemeAndStrings()
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                strongSelf.presentationDataValue.set(.single(presentationData))
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
                 }
-            })
+            }
+        })
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -233,6 +238,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.passcodeLockTooltipDisposable.dispose()
         self.suggestLocalizationDisposable.dispose()
         self.presentationDataDisposable?.dispose()
+        self.stateDisposable.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -477,6 +483,41 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
+        let account = self.account
+        let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.chatListNode.state
+        |> map { state -> Set<PeerId>? in
+            if !state.editing {
+                return nil
+            }
+            return state.selectedPeerIds
+        }
+        |> distinctUntilChanged
+        |> mapToSignal { selectedPeerIds -> Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> in
+            if let selectedPeerIds = selectedPeerIds {
+                return chatListSelectionOptions(postbox: account.postbox, peerIds: selectedPeerIds)
+                |> map { options -> (ChatListSelectionOptions, Set<PeerId>)? in
+                    return (options, selectedPeerIds)
+                }
+            } else {
+                return .single(nil)
+            }
+        }
+        
+        self.stateDisposable.set(combineLatest(queue: .mainQueue(), self.presentationDataValue.get(), peerIdsAndOptions).start(next: { [weak self] presentationData, peerIdsAndOptions in
+            var toolbar: Toolbar?
+            if let (options, _) = peerIdsAndOptions {
+                let leftAction: ToolbarAction
+                switch options.read {
+                    case let .all(enabled):
+                        leftAction = ToolbarAction(title: presentationData.strings.ChatList_ReadAll, isEnabled: enabled)
+                    case let .selective(enabled):
+                        leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
+                }
+                toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete))
+            }
+            self?.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
+        }))
+        
         /*self.badgeIconDisposable = (self.chatListDisplayNode.chatListNode.scrollToTopOption
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] option in
@@ -624,7 +665,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.navigationItem.rightBarButtonItem = editItem
         }
         self.chatListDisplayNode.chatListNode.updateState { state in
-            return state.withUpdatedEditing(true)
+            var state = state
+            state.editing = true
+            state.peerIdWithRevealedOptions = nil
+            return state
         }
     }
     
@@ -636,7 +680,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.navigationItem.rightBarButtonItem = editItem
         }
         self.chatListDisplayNode.chatListNode.updateState { state in
-            return state.withUpdatedEditing(false).withUpdatedPeerIdWithRevealedOptions(nil)
+            var state = state
+            state.editing = false
+            state.peerIdWithRevealedOptions = nil
+            state.selectedPeerIds.removeAll()
+            return state
         }
     }
     
@@ -824,5 +872,76 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             KeyShortcut(title: strings.KeyCommand_Find, input: "\t", modifiers: [], action: toggleSearch),
             KeyShortcut(input: UIKeyInputEscape, modifiers: [], action: toggleSearch)
         ]
+    }
+    
+    override public func toolbarActionSelected(left: Bool) {
+        let peerIds = self.chatListDisplayNode.chatListNode.currentState.selectedPeerIds
+        if left {
+            let signal: Signal<Void, NoError>
+            let account = self.account
+            if !peerIds.isEmpty {
+                signal = self.account.postbox.transaction { transaction -> Void in
+                    for peerId in peerIds {
+                        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: account.viewTracker, peerId: peerId, setToValue: false)
+                    }
+                }
+            } else {
+                signal = self.account.postbox.transaction { transaction -> Void in
+                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: account.viewTracker)
+                }
+            }
+            let _ = signal.start(completed: { [weak self] in
+                self?.donePressed()
+            })
+        } else if !peerIds.isEmpty {
+            let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+            var items: [ActionSheetItem] = []
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let account = strongSelf.account
+                let presentationData = strongSelf.presentationData
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                    self?.present(controller, in: .window(.root))
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.8, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
+                let signal: Signal<Void, NoError> = strongSelf.account.postbox.transaction { transaction -> Void in
+                    for peerId in peerIds {
+                        removePeerChat(transaction: transaction, mediaBox: account.postbox.mediaBox, peerId: peerId, reportChatSpam: false)
+                    }
+                }
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                let _ = signal.start(completed: {
+                    self?.donePressed()
+                })
+            }))
+            
+            actionSheet.setItemGroups([
+                ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])
+            ])
+            self.present(actionSheet, in: .window(.root))
+        }
     }
 }

@@ -75,7 +75,9 @@ public func chatListItemStrings(strings: PresentationStrings, message: Message?,
                             if message.text.isEmpty {
                                 isVideo = true
                             } else if #available(iOSApplicationExtension 9.0, *) {
-                                messageText = "📹 \(messageText)"
+                                if !fileMedia.isAnimated {
+                                    messageText = "📹 \(messageText)"
+                                }
                                 break inner
                             }
                         }

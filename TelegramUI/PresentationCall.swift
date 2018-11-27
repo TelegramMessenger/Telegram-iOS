@@ -391,7 +391,7 @@ public final class PresentationCall {
                         self.reportedIncomingCall = true
                         self.callKitIntegration?.reportIncomingCall(uuid: self.internalId, handle: "\(self.peerId.id)", displayTitle: self.peer?.displayTitle ?? "Unknown", completion: { [weak self] error in
                             if let error = error {
-                                if error.domain == "com.apple.CallKit.error.incomingcall" && error.code == -3 {
+                                if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
                                     Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
                                 } else {
                                     Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
@@ -486,33 +486,40 @@ public final class PresentationCall {
         }
         if let presentationState = presentationState {
             self.statePromise.set(presentationState)
-            self.updateTone(presentationState)
+            self.updateTone(presentationState, previous: previous)
         }
     }
     
-    private func updateTone(_ state: PresentationCallState) {
+    private func updateTone(_ state: PresentationCallState, previous: CallSession?) {
         var tone: PresentationCallTone?
-        switch state {
-            case .connecting:
-                tone = .connecting
-            case .requesting(true):
-                tone = .ringing
-            case let .terminated(reason):
-                if let reason = reason {
-                    switch reason {
-                        case let .ended(type):
-                            switch type {
-                                case .busy:
-                                    tone = .busy
-                                case .hungUp, .missed:
-                                    tone = .ended
+        if let previous = previous {
+            switch previous.state {
+                case .accepting, .active, .dropping, .requesting:
+                    switch state {
+                        case .connecting:
+                            tone = .connecting
+                        case .requesting(true):
+                            tone = .ringing
+                        case let .terminated(reason):
+                            if let reason = reason {
+                                switch reason {
+                                case let .ended(type):
+                                    switch type {
+                                    case .busy:
+                                        tone = .busy
+                                    case .hungUp, .missed:
+                                        tone = .ended
+                                    }
+                                case .error:
+                                    tone = .failed
+                                }
                             }
-                        case .error:
-                            tone = .failed
+                        default:
+                            break
                     }
-                }
-            default:
-                break
+                default:
+                    break
+            }
         }
         if tone != self.toneRenderer?.tone {
             if let tone = tone {

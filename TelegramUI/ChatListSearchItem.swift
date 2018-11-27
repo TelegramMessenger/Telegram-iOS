@@ -11,11 +11,13 @@ class ChatListSearchItem: ListViewItem {
     let selectable: Bool = false
     
     let theme: PresentationTheme
+    let isEnabled: Bool
     private let placeholder: String
     private let activate: () -> Void
     
-    init(theme: PresentationTheme, placeholder: String, activate: @escaping () -> Void) {
+    init(theme: PresentationTheme, isEnabled: Bool = true, placeholder: String, activate: @escaping () -> Void) {
         self.theme = theme
+        self.isEnabled = isEnabled
         self.placeholder = placeholder
         self.activate = activate
     }
@@ -30,7 +32,7 @@ class ChatListSearchItem: ListViewItem {
             if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
                 nextIsPinned = true
             }
-            let (layout, apply) = makeLayout(self, params, nextIsPinned)
+            let (layout, apply) = makeLayout(self, params, nextIsPinned, self.isEnabled)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -56,7 +58,7 @@ class ChatListSearchItem: ListViewItem {
                     if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
                         nextIsPinned = true
                     }
-                    let (nodeLayout, apply) = layout(self, params, nextIsPinned)
+                    let (nodeLayout, apply) = layout(self, params, nextIsPinned, self.isEnabled)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply(animation.isAnimated)
@@ -70,6 +72,7 @@ class ChatListSearchItem: ListViewItem {
 
 class ChatListSearchItemNode: ListViewItemNode {
     let searchBarNode: SearchBarPlaceholderNode
+    private var disabledOverlay: ASDisplayNode?
     var placeholder: String?
     
     fileprivate var activate: (() -> Void)? {
@@ -92,17 +95,17 @@ class ChatListSearchItemNode: ListViewItemNode {
         if let nextItem = nextItem as? ChatListItem, nextItem.index.pinningIndex != nil {
             nextIsPinned = true
         }
-        let (layout, apply) = makeLayout(item as! ChatListSearchItem, params, nextIsPinned)
+        let (layout, apply) = makeLayout(item as! ChatListSearchItem, params, nextIsPinned, (item as! ChatListSearchItem).isEnabled)
         apply(false)
         self.contentSize = layout.contentSize
         self.insets = layout.insets
     }
     
-    func asyncLayout() -> (_ item: ChatListSearchItem, _ params: ListViewItemLayoutParams, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ChatListSearchItem, _ params: ListViewItemLayoutParams, _ nextIsPinned: Bool, _ isEnabled: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let searchBarNodeLayout = self.searchBarNode.asyncLayout()
         let placeholder = self.placeholder
         
-        return { item, params, nextIsPinned in
+        return { item, params, nextIsPinned, isEnabled in
             let baseWidth = params.width - params.leftInset - params.rightInset
             
             let backgroundColor = nextIsPinned ? item.theme.chatList.pinnedItemBackgroundColor : item.theme.chatList.itemBackgroundColor
@@ -120,10 +123,35 @@ class ChatListSearchItemNode: ListViewItemNode {
                         transition = .immediate
                     }
                     
-                    strongSelf.searchBarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 8.0, y: 8.0), size: CGSize(width: baseWidth - 16.0, height: 28.0))
+                    let searchBarFrame = CGRect(origin: CGPoint(x: params.leftInset + 8.0, y: 8.0), size: CGSize(width: baseWidth - 16.0, height: 28.0))
+                    strongSelf.searchBarNode.frame = searchBarFrame
                     searchBarApply()
                     
                     strongSelf.searchBarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: baseWidth - 16.0, height: 28.0))
+                    
+                    if !item.isEnabled {
+                        if strongSelf.disabledOverlay == nil {
+                            let disabledOverlay = ASDisplayNode()
+                            strongSelf.addSubnode(disabledOverlay)
+                            strongSelf.disabledOverlay = disabledOverlay
+                            if animated {
+                                disabledOverlay.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                            }
+                        }
+                        if let disabledOverlay = strongSelf.disabledOverlay {
+                            disabledOverlay.backgroundColor = backgroundColor.withAlphaComponent(0.4)
+                            disabledOverlay.frame = searchBarFrame
+                        }
+                    } else if let disabledOverlay = strongSelf.disabledOverlay {
+                        strongSelf.disabledOverlay = nil
+                        if animated {
+                            disabledOverlay.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak disabledOverlay] _ in
+                                disabledOverlay?.removeFromSupernode()
+                            })
+                        } else {
+                            disabledOverlay.removeFromSupernode()
+                        }
+                    }
                     
                     transition.updateBackgroundColor(node: strongSelf, color: backgroundColor)
                 }
