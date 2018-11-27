@@ -214,6 +214,8 @@
 		09D304392174344900C00567 /* TGBridgeMessageEntities.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F42172953500BDF00F /* TGBridgeMessageEntities.m */; };
 		09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */; };
 		D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D001D5A91F878DA300DF975A /* PhoneCountries.txt */; };
+		D006CF9F21A8D11B00FDCD32 /* ModernProto.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */; };
+		D006CFA021A8D11B00FDCD32 /* ModernProto.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D00859A21B28189D00EAF753 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00859A11B28189D00EAF753 /* AppDelegate.swift */; };
 		D00859A91B28189D00EAF753 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D00859A81B28189D00EAF753 /* Images.xcassets */; };
 		D00859AC1B28189D00EAF753 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = D00859AA1B28189D00EAF753 /* LaunchScreen.xib */; };
@@ -512,6 +514,7 @@
 				D0B4AF901EC122A700D51FF6 /* TelegramUI.framework in Embed Frameworks */,
 				D096C2C21CC3C104006D814E /* Postbox.framework in Embed Frameworks */,
 				D096C2C51CC3C11A006D814E /* SwiftSignalKit.framework in Embed Frameworks */,
+				D006CFA021A8D11B00FDCD32 /* ModernProto.framework in Embed Frameworks */,
 				D0CAF3191D763B230011F558 /* MtProtoKitDynamic.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
@@ -879,6 +882,8 @@
 		09D304212174335F00C00567 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D001D5A91F878DA300DF975A /* PhoneCountries.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PhoneCountries.txt; path = "Telegram-iOS/Resources/PhoneCountries.txt"; sourceTree = "<group>"; };
+		D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ModernProto.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D006CFA121A8D12600FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModernProto.framework; path = "../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-ffbqcdyqpehxdvcwhyaorlehrrdc/Build/Products/Debug Hockeyapp-iphoneos/ModernProto.framework"; sourceTree = "<group>"; };
 		D008599C1B28189D00EAF753 /* Telegram X.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Telegram X.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00859A01B28189D00EAF753 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D00859A11B28189D00EAF753 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -1170,6 +1175,7 @@
 				D0CD17B51CC3AE14007C5650 /* AsyncDisplayKit.framework in Frameworks */,
 				D0D17E8A1CAAD66600C4750B /* Accelerate.framework in Frameworks */,
 				D0F575132083B96B00F1C1E1 /* CloudKit.framework in Frameworks */,
+				D006CF9F21A8D11B00FDCD32 /* ModernProto.framework in Frameworks */,
 				D0B4AF8F1EC122A700D51FF6 /* TelegramUI.framework in Frameworks */,
 				D096C2BE1CC3C021006D814E /* Display.framework in Frameworks */,
 				D055BD441B7E216400F06C0A /* MapKit.framework in Frameworks */,
@@ -1868,6 +1874,7 @@
 		D00859931B28189D00EAF753 = {
 			isa = PBXGroup;
 			children = (
+				D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */,
 				D023EBB31DDB2F0E00BD496D /* Resources */,
 				D03B0E791D63484500955575 /* Share */,
 				D0D268771D79A70A00C422DA /* SiriIntents */,
@@ -1974,6 +1981,7 @@
 		D00859C21B281E0000EAF753 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D006CFA121A8D12600FDCD32 /* ModernProto.framework */,
 				0972C6DF21791D950069E98A /* UserNotifications.framework */,
 				09C50E87217385CF009E676F /* WatchConnectivity.framework */,
 				09C50E852173854D009E676F /* WatchKit.framework */,
