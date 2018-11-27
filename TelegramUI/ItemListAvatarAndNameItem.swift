@@ -930,8 +930,10 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
     func updateAvatarHidden() {
         var hidden = false
         if let item = self.item, let context = item.context, let peer = item.peer, let hiddenAvatarRepresentation = context.hiddenAvatarRepresentation {
-            if peer.profileImageRepresentations.contains(hiddenAvatarRepresentation) {
-                hidden = true
+            for representation in peer.profileImageRepresentations {
+                if representation.resource.id.isEqual(to: hiddenAvatarRepresentation.resource.id) {
+                    hidden = true
+                }
             }
         }
         if hidden != self.avatarNode.isHidden {
