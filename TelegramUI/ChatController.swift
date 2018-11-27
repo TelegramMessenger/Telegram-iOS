@@ -4734,9 +4734,27 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         cancelImpl = { [weak self] in
             self?.resolvePeerByNameDisposable?.set(nil)
         }
-        disposable.set((resolveSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peerId in
-            if let strongSelf = self {
-                strongSelf.openResolved(.peer(peerId, navigation))
+        let account = self.account
+        disposable.set((resolveSignal
+        |> take(1)
+        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+            return account.postbox.transaction { transaction -> Peer? in
+                if let peerId = peerId {
+                    return transaction.getPeer(peerId)
+                } else {
+                    return nil
+                }
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            if let strongSelf = self, let peer = peer {
+                var navigation = navigation
+                if case .default = navigation {
+                    if let peer = peer as? TelegramUser, peer.botInfo != nil {
+                        navigation = .chat(textInputState: nil, messageId: nil)
+                    }
+                }
+                strongSelf.openResolved(.peer(peer.id, navigation))
             }
         }))
     }

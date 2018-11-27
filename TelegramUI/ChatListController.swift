@@ -888,7 +888,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         } else if !peerIds.isEmpty {
             let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
             var items: [ActionSheetItem] = []
-            items.append(ActionSheetButtonItem(title: self.presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
                 guard let strongSelf = self else {
