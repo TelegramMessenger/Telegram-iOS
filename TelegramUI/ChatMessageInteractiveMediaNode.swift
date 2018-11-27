@@ -318,7 +318,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 if file.isSticker {
                                     updateImageSignal = chatMessageSticker(account: account, file: file, small: false)
                                 } else {
-                                    updateImageSignal = chatMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(message), media: file))
+                                    updateImageSignal = mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia != nil)
                                 }
                             }
                             

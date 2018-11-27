@@ -39,8 +39,8 @@ func chatListSelectionOptions(postbox: Postbox, peerIds: Set<PeerId>) -> Signal<
             if let unreadCounts = view.views[key] as? UnreadMessageCountsView {
                 loop: for entry in unreadCounts.entries {
                     switch entry {
-                        case let .peer(_, count):
-                            if count != 0 {
+                        case let .peer(_, state):
+                            if let state = state, state.isUnread {
                                 hasUnread = true
                                 break loop
                             }

@@ -795,11 +795,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
+                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
                         if strongSelf.reorderControlNode == nil {
                             let reorderControlNode = reorderControlSizeAndApply.1()
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
-                            let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
                             reorderControlNode.frame = reorderControlFrame
                             reorderControlNode.alpha = 0.0
                             transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
@@ -809,6 +809,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             transition.updateAlpha(node: strongSelf.badgeBackgroundNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.mentionBadgeNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.statusNode, alpha: 0.0)
+                        } else if let reorderControlNode = strongSelf.reorderControlNode {
+                            let _ = reorderControlSizeAndApply.1()
+                            transition.updateFrame(node: reorderControlNode, frame: reorderControlFrame)
                         }
                     } else if let reorderControlNode = strongSelf.reorderControlNode {
                         strongSelf.reorderControlNode = nil
@@ -1045,7 +1048,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions))
+                    if item.editing {
+                        strongSelf.setRevealOptions((left: [], right: []))
+                    } else {
+                        strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions))
+                    }
                     strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: true)
                 }
             })

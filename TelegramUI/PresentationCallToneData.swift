@@ -74,8 +74,12 @@ enum PresentationCallTone {
     
     var loopCount: Int? {
         switch self {
-            case .busy, .failed, .ended:
+            case .busy:
                 return 3
+            case .failed:
+                return 1
+            case .ended:
+                return 1
             default:
                 return nil
         }

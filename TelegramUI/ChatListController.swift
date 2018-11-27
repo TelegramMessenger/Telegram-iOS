@@ -659,6 +659,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.chatListDisplayNode.chatListNode.updateState { state in
             var state = state
             state.editing = true
+            state.peerIdWithRevealedOptions = nil
             return state
         }
     }
