@@ -134,6 +134,8 @@ public func togglePeerUnreadMarkInteractively(transaction: Transaction, viewTrac
                     if setToValue == nil || !(setToValue!) {
                         if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: namespace) {
                             let _ = transaction.applyInteractiveReadMaxIndex(index)
+                        } else {
+                            transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: false, interactive: true)
                         }
                         viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
                     }

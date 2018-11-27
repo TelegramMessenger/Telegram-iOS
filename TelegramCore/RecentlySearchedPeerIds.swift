@@ -58,8 +58,8 @@ public func recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearchedP
             var unreadCounts: [PeerId: Int32] = [:]
             if let unreadCountsView = view.views[unreadCountsKey] as? UnreadMessageCountsView {
                 for entry in unreadCountsView.entries {
-                    if case let .peer(peerId, count) = entry {
-                        unreadCounts[peerId] = count
+                    if case let .peer(peerId, state) = entry {
+                        unreadCounts[peerId] = state?.count ?? 0
                     }
                 }
             }
