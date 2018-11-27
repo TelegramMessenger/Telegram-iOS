@@ -590,8 +590,6 @@ final class AuthorizedApplicationContext {
                                 })
                             }
                             
-                            strongSelf.rootController.requestPermissions()
-                            
                             if let passcodeController = strongSelf.passcodeController {
                                 if let chatListController = strongSelf.rootController.chatListController {
                                     let _ = chatListController.ready.get().start(next: { [weak passcodeController] _ in
