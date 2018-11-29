@@ -1066,6 +1066,12 @@ void LOTTrimItem::update()
         return;
     }
 
+    if (vCompare(std::fabs(mCache.mSegment.start - mCache.mSegment.end) , 1)) {
+        for (auto &i : mPathItems) {
+            i->updatePath(i->localPath());
+        }
+        return;
+    }
 
     if (mData->type() == LOTTrimData::TrimType::Simultaneously) {
         for (auto &i : mPathItems) {
