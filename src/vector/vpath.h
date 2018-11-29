@@ -143,7 +143,6 @@ inline int VPath::segments() const
 
 inline float VPath::length() const
 {
-    // TODO re-calculate when there is a change
     return d->length();
 }
 
