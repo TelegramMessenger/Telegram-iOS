@@ -56,11 +56,6 @@ mkdir -p %{buildroot}/%{_datadir}/license
 cp %{_builddir}/%{buildsubdir}/LICENSE %{buildroot}/%{_datadir}/license/%{name}
 
 
-%post -p /sbin/ldconfig
-echo "INFO: System should be restarted or execute: systemctl --user daemon-reload from user session to finish service installation."
-%postun -p /sbin/ldconfig
-
-
 %files
 %defattr(-,root,root,-)
 %{_libdir}/liblottie-player.so.*
