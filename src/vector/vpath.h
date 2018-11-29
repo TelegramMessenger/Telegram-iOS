@@ -15,6 +15,7 @@ public:
 
     enum class Element : uchar { MoveTo, LineTo, CubicTo, Close };
     bool  empty() const;
+    bool  null() const;
     void  moveTo(const VPointF &p);
     void  moveTo(float x, float y);
     void  lineTo(const VPointF &p);
@@ -49,10 +50,13 @@ public:
     const std::vector<VPath::Element> &elements() const;
     const std::vector<VPointF> &       points() const;
     void  clone(const VPath &srcPath);
+    bool unique() const { return d.unique();}
+    int refCount() const { return d.refCount();}
 
 private:
     struct VPathData {
         bool  empty() const { return m_elements.empty(); }
+        bool  null() const { return empty() && !m_elements.capacity();}
         void  moveTo(float x, float y);
         void  lineTo(float x, float y);
         void  cubicTo(float cx1, float cy1, float cx2, float cy2, float ex, float ey);
@@ -97,6 +101,14 @@ private:
 inline bool VPath::empty() const
 {
     return d->empty();
+}
+
+/*
+ * path is empty as well as null(no memory for data allocated yet).
+ */
+inline bool VPath::null() const
+{
+    return d->null();
 }
 
 inline void VPath::moveTo(const VPointF &p)

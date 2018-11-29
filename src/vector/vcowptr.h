@@ -67,6 +67,13 @@ public:
 
     auto operator-> () const noexcept -> const element_type* { return &read(); }
 
+    int refCount() const noexcept
+    {
+        assert(mModel);
+
+        return mModel->mRef;
+    }
+
     bool unique() const noexcept
     {
         assert(mModel);
