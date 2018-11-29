@@ -228,7 +228,7 @@ inline void VPath::addPath(const VPath &path)
 {
     if (path.empty()) return;
 
-    if (empty()) {
+    if (null()) {
         *this = path;
     } else {
         d.write().addPath(path.d.read());
