@@ -70,6 +70,8 @@
           '<(tgvoip_src_loc)/video/VideoSource.h',
           '<(tgvoip_src_loc)/video/VideoRenderer.cpp',
           '<(tgvoip_src_loc)/video/VideoRenderer.h',
+          '<(tgvoip_src_loc)/json11.cpp',
+          '<(tgvoip_src_loc)/json11.hpp',
 
           # Windows
           '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.cpp',

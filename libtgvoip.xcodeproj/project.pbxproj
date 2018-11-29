@@ -313,6 +313,7 @@
 		69DD8D02218CD401001E8140 /* VideoRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69DD8CFE218CD400001E8140 /* VideoRenderer.cpp */; };
 		69DD8D03218CD401001E8140 /* VideoSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69DD8CFF218CD400001E8140 /* VideoSource.cpp */; };
 		69E357B020F88955002E163B /* AudioIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E357A720F88954002E163B /* AudioIO.cpp */; };
+		69E629EE21AF62A900377D0F /* json11.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E629ED21AF62A900377D0F /* json11.cpp */; };
 		69FB0B2D20F6860E00827817 /* MessageThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FB0B2420F6860D00827817 /* MessageThread.cpp */; };
 /* End PBXBuildFile section */
 
@@ -1022,6 +1023,7 @@
 		69DD8D00218CD400001E8140 /* VideoSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoSource.h; sourceTree = "<group>"; };
 		69E357A720F88954002E163B /* AudioIO.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioIO.cpp; sourceTree = "<group>"; };
 		69E357AF20F88954002E163B /* AudioIO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioIO.h; sourceTree = "<group>"; };
+		69E629ED21AF62A900377D0F /* json11.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = json11.cpp; sourceTree = "<group>"; };
 		69F842361E67540700C110F7 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		69FB0B2420F6860D00827817 /* MessageThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MessageThread.cpp; sourceTree = "<group>"; };
 		69FB0B2C20F6860D00827817 /* MessageThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MessageThread.h; sourceTree = "<group>"; };
@@ -1067,6 +1069,7 @@
 				692AB8A71E6759DD00706ACC /* Info.plist */,
 				692AB8A81E6759DD00706ACC /* JitterBuffer.cpp */,
 				692AB8A91E6759DD00706ACC /* JitterBuffer.h */,
+				69E629ED21AF62A900377D0F /* json11.cpp */,
 				6915307A1E6B5BAB004F643F /* logging.cpp */,
 				692AB8AA1E6759DD00706ACC /* logging.h */,
 				692AB8AB1E6759DD00706ACC /* MediaStreamItf.cpp */,
@@ -2701,6 +2704,7 @@
 				697E9C4121A4ED6C00E03846 /* ns_core.c in Sources */,
 				69E357B020F88955002E163B /* AudioIO.cpp in Sources */,
 				697E9D3221A4ED6D00E03846 /* downsampled_render_buffer.cc in Sources */,
+				69E629EE21AF62A900377D0F /* json11.cpp in Sources */,
 				697E9D6B21A4ED6E00E03846 /* ooura_fft_sse2.cc in Sources */,
 				697E9C6421A4ED6C00E03846 /* adaptive_digital_gain_applier.cc in Sources */,
 				697E9C9421A4ED6D00E03846 /* noise_spectrum_estimator.cc in Sources */,

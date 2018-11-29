@@ -429,9 +429,7 @@ void NetworkSocketSOCKS5Proxy::Receive(NetworkPacket *packet){
 }
 
 void NetworkSocketSOCKS5Proxy::Open(){
-	if(protocol==PROTO_UDP){
-		unsigned char buf[1024];
-	}
+
 }
 
 void NetworkSocketSOCKS5Proxy::Close(){

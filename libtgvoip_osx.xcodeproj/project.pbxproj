@@ -314,6 +314,7 @@
 		697B6FD62136E1F3004C8E54 /* AudioIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 697B6FD42136E1F3004C8E54 /* AudioIO.cpp */; };
 		697B6FDA2136E2D9004C8E54 /* AudioIOCallback.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 697B6FD82136E2D9004C8E54 /* AudioIOCallback.cpp */; };
 		697B6FDF2136F01E004C8E54 /* MockReflector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 697B6FDE2136F01E004C8E54 /* MockReflector.cpp */; };
+		69A2076521AF628A003AC4F9 /* json11.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A2076421AF6289003AC4F9 /* json11.cpp */; };
 		69A6DF431E9614B700000E69 /* AudioInputAudioUnitOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A6DF3F1E9614B700000E69 /* AudioInputAudioUnitOSX.cpp */; };
 		69A6DF451E9614B700000E69 /* AudioOutputAudioUnitOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A6DF411E9614B700000E69 /* AudioOutputAudioUnitOSX.cpp */; };
 		69EBC7912136D220003CFE90 /* AudioInputAudioUnitOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2A87DDC1F4B6A61002D3F73 /* AudioInputAudioUnitOSX.cpp */; };
@@ -1039,6 +1040,7 @@
 		697B6FDC2136E673004C8E54 /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		697B6FDD2136F01E004C8E54 /* MockReflector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MockReflector.h; sourceTree = "<group>"; };
 		697B6FDE2136F01E004C8E54 /* MockReflector.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MockReflector.cpp; sourceTree = "<group>"; };
+		69A2076421AF6289003AC4F9 /* json11.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = json11.cpp; sourceTree = "<group>"; };
 		69A6DF3F1E9614B700000E69 /* AudioInputAudioUnitOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AudioInputAudioUnitOSX.cpp; path = os/darwin/AudioInputAudioUnitOSX.cpp; sourceTree = SOURCE_ROOT; };
 		69A6DF401E9614B700000E69 /* AudioInputAudioUnitOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AudioInputAudioUnitOSX.h; path = os/darwin/AudioInputAudioUnitOSX.h; sourceTree = SOURCE_ROOT; };
 		69A6DF411E9614B700000E69 /* AudioOutputAudioUnitOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AudioOutputAudioUnitOSX.cpp; path = os/darwin/AudioOutputAudioUnitOSX.cpp; sourceTree = SOURCE_ROOT; };
@@ -2218,6 +2220,7 @@
 				692AB8A71E6759DD00706ACC /* Info.plist */,
 				692AB8A81E6759DD00706ACC /* JitterBuffer.cpp */,
 				692AB8A91E6759DD00706ACC /* JitterBuffer.h */,
+				69A2076421AF6289003AC4F9 /* json11.cpp */,
 				6915307A1E6B5BAB004F643F /* logging.cpp */,
 				692AB8AA1E6759DD00706ACC /* logging.h */,
 				692AB8AB1E6759DD00706ACC /* MediaStreamItf.cpp */,
@@ -2825,6 +2828,7 @@
 				691E063821A4FD7600F838EF /* real_fft.c in Sources */,
 				691E066C21A4FD7600F838EF /* arith_routines_logist.c in Sources */,
 				691E060221A4FD7600F838EF /* sinc_resampler.cc in Sources */,
+				69A2076521AF628A003AC4F9 /* json11.cpp in Sources */,
 				691E076821A4FD7700F838EF /* subband_erle_estimator.cc in Sources */,
 				691E07A521A4FD7700F838EF /* echo_canceller3.cc in Sources */,
 				691E070621A4FD7700F838EF /* adaptive_mode_level_estimator.cc in Sources */,

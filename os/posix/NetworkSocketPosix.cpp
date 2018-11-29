@@ -161,7 +161,7 @@ void NetworkSocketPosix::Send(NetworkPacket *packet){
     			LOGI("Network unreachable, trying NAT64");
     		}
 		}
-	}else if(res!=packet->length && packet->protocol==PROTO_TCP){
+	}else if((size_t)res!=packet->length && packet->protocol==PROTO_TCP){
 		if(pendingOutgoingPacket){
 			LOGE("send returned less than packet length but there's already a pending packet");
 			failed=true;

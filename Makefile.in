@@ -804,7 +804,8 @@ am__libtgvoip_la_SOURCES_DIST = VoIPController.cpp Buffers.cpp \
 	PacketReassembler.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
-	os/posix/NetworkSocketPosix.cpp \
+	os/posix/NetworkSocketPosix.cpp video/VideoSource.cpp \
+	video/VideoRenderer.cpp json11.cpp \
 	os/darwin/AudioInputAudioUnit.cpp \
 	os/darwin/AudioOutputAudioUnit.cpp os/darwin/AudioUnitIO.cpp \
 	os/darwin/AudioInputAudioUnitOSX.cpp \
@@ -1412,6 +1413,7 @@ am__libtgvoip_la_SOURCES_DIST = VoIPController.cpp Buffers.cpp \
 	OpusEncoder.h PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
+	video/VideoSource.h video/VideoRenderer.h json11.hpp \
 	os/darwin/AudioInputAudioUnit.h \
 	os/darwin/AudioOutputAudioUnit.h os/darwin/AudioUnitIO.h \
 	os/darwin/AudioInputAudioUnitOSX.h \
@@ -1717,7 +1719,8 @@ am__objects_11 = VoIPController.lo Buffers.lo CongestionControl.lo \
 	OpusEncoder.lo PacketReassembler.lo VoIPGroupController.lo \
 	VoIPServerConfig.lo audio/AudioIO.lo audio/AudioInput.lo \
 	audio/AudioOutput.lo audio/Resampler.lo \
-	os/posix/NetworkSocketPosix.lo $(am__objects_1) \
+	os/posix/NetworkSocketPosix.lo video/VideoSource.lo \
+	video/VideoRenderer.lo json11.lo $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
 	$(am__objects_5) $(am__objects_6) $(am__objects_7) \
 	$(am__objects_8) $(am__objects_9) $(am__objects_10)
@@ -1752,7 +1755,8 @@ am__depfiles_remade = ./$(DEPDIR)/Buffers.Plo \
 	./$(DEPDIR)/OpusEncoder.Plo ./$(DEPDIR)/PacketReassembler.Plo \
 	./$(DEPDIR)/VoIPController.Plo \
 	./$(DEPDIR)/VoIPGroupController.Plo \
-	./$(DEPDIR)/VoIPServerConfig.Plo ./$(DEPDIR)/logging.Plo \
+	./$(DEPDIR)/VoIPServerConfig.Plo ./$(DEPDIR)/json11.Plo \
+	./$(DEPDIR)/logging.Plo \
 	./webrtc_dsp/absl/base/internal/$(DEPDIR)/raw_logging.Plo \
 	./webrtc_dsp/absl/base/internal/$(DEPDIR)/throw_delegate.Plo \
 	./webrtc_dsp/absl/strings/$(DEPDIR)/ascii.Plo \
@@ -2032,6 +2036,8 @@ am__depfiles_remade = ./$(DEPDIR)/Buffers.Plo \
 	os/linux/$(DEPDIR)/AudioOutputPulse.Plo \
 	os/linux/$(DEPDIR)/AudioPulse.Plo \
 	os/posix/$(DEPDIR)/NetworkSocketPosix.Plo \
+	video/$(DEPDIR)/VideoRenderer.Plo \
+	video/$(DEPDIR)/VideoSource.Plo \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse.Plo \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse_arm.Plo \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/cross_correlation_neon.Plo \
@@ -2125,6 +2131,7 @@ am__nobase_tgvoipinclude_HEADERS_DIST = VoIPController.h Buffers.h \
 	OpusEncoder.h PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
+	video/VideoSource.h video/VideoRenderer.h json11.hpp \
 	os/darwin/AudioInputAudioUnit.h \
 	os/darwin/AudioOutputAudioUnit.h os/darwin/AudioUnitIO.h \
 	os/darwin/AudioInputAudioUnitOSX.h \
@@ -2313,7 +2320,8 @@ SRC = VoIPController.cpp Buffers.cpp CongestionControl.cpp \
 	OpusDecoder.cpp OpusEncoder.cpp PacketReassembler.cpp \
 	VoIPGroupController.cpp VoIPServerConfig.cpp audio/AudioIO.cpp \
 	audio/AudioInput.cpp audio/AudioOutput.cpp audio/Resampler.cpp \
-	os/posix/NetworkSocketPosix.cpp $(am__append_1) \
+	os/posix/NetworkSocketPosix.cpp video/VideoSource.cpp \
+	video/VideoRenderer.cpp json11.cpp $(am__append_1) \
 	$(am__append_4) $(am__append_6) $(am__append_10) \
 	$(am__append_12) $(am__append_14) $(am__append_16) \
 	$(am__append_18) $(am__append_21) $(am__append_22)
@@ -2323,8 +2331,9 @@ TGVOIP_HDRS = VoIPController.h Buffers.h BlockingQueue.h \
 	MessageThread.h NetworkSocket.h OpusDecoder.h OpusEncoder.h \
 	PacketReassembler.h VoIPServerConfig.h audio/AudioIO.h \
 	audio/AudioInput.h audio/AudioOutput.h audio/Resampler.h \
-	os/posix/NetworkSocketPosix.h $(am__append_2) $(am__append_5) \
-	$(am__append_7) $(am__append_17)
+	os/posix/NetworkSocketPosix.h video/VideoSource.h \
+	video/VideoRenderer.h json11.hpp $(am__append_2) \
+	$(am__append_5) $(am__append_7) $(am__append_17)
 libtgvoip_la_SOURCES = $(SRC) $(TGVOIP_HDRS)
 tgvoipincludedir = $(includedir)/tgvoip
 nobase_tgvoipinclude_HEADERS = $(TGVOIP_HDRS)
@@ -2438,6 +2447,16 @@ os/posix/$(DEPDIR)/$(am__dirstamp):
 	@: > os/posix/$(DEPDIR)/$(am__dirstamp)
 os/posix/NetworkSocketPosix.lo: os/posix/$(am__dirstamp) \
 	os/posix/$(DEPDIR)/$(am__dirstamp)
+video/$(am__dirstamp):
+	@$(MKDIR_P) video
+	@: > video/$(am__dirstamp)
+video/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) video/$(DEPDIR)
+	@: > video/$(DEPDIR)/$(am__dirstamp)
+video/VideoSource.lo: video/$(am__dirstamp) \
+	video/$(DEPDIR)/$(am__dirstamp)
+video/VideoRenderer.lo: video/$(am__dirstamp) \
+	video/$(DEPDIR)/$(am__dirstamp)
 os/darwin/$(am__dirstamp):
 	@$(MKDIR_P) os/darwin
 	@: > os/darwin/$(am__dirstamp)
@@ -3544,6 +3563,8 @@ mostlyclean-compile:
 	-rm -f os/linux/*.lo
 	-rm -f os/posix/*.$(OBJEXT)
 	-rm -f os/posix/*.lo
+	-rm -f video/*.$(OBJEXT)
+	-rm -f video/*.lo
 	-rm -f webrtc_dsp/common_audio/signal_processing/*.$(OBJEXT)
 	-rm -f webrtc_dsp/common_audio/signal_processing/*.lo
 	-rm -f webrtc_dsp/common_audio/third_party/spl_sqrt_floor/*.$(OBJEXT)
@@ -3575,6 +3596,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/VoIPController.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/VoIPGroupController.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/VoIPServerConfig.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/json11.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logging.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./webrtc_dsp/absl/base/internal/$(DEPDIR)/raw_logging.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./webrtc_dsp/absl/base/internal/$(DEPDIR)/throw_delegate.Plo@am__quote@ # am--include-marker
@@ -3856,6 +3878,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@os/linux/$(DEPDIR)/AudioOutputPulse.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/linux/$(DEPDIR)/AudioPulse.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/posix/$(DEPDIR)/NetworkSocketPosix.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@video/$(DEPDIR)/VideoRenderer.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@video/$(DEPDIR)/VideoSource.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse_arm.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/cross_correlation_neon.Plo@am__quote@ # am--include-marker
@@ -4039,6 +4063,7 @@ clean-libtool:
 	-rm -rf os/darwin/.libs os/darwin/_libs
 	-rm -rf os/linux/.libs os/linux/_libs
 	-rm -rf os/posix/.libs os/posix/_libs
+	-rm -rf video/.libs video/_libs
 	-rm -rf webrtc_dsp/common_audio/signal_processing/.libs webrtc_dsp/common_audio/signal_processing/_libs
 	-rm -rf webrtc_dsp/common_audio/third_party/spl_sqrt_floor/.libs webrtc_dsp/common_audio/third_party/spl_sqrt_floor/_libs
 	-rm -rf webrtc_dsp/modules/audio_processing/aec/.libs webrtc_dsp/modules/audio_processing/aec/_libs
@@ -4340,6 +4365,8 @@ distclean-generic:
 	-rm -f os/linux/$(am__dirstamp)
 	-rm -f os/posix/$(DEPDIR)/$(am__dirstamp)
 	-rm -f os/posix/$(am__dirstamp)
+	-rm -f video/$(DEPDIR)/$(am__dirstamp)
+	-rm -f video/$(am__dirstamp)
 	-rm -f webrtc_dsp/absl/base/internal/$(DEPDIR)/$(am__dirstamp)
 	-rm -f webrtc_dsp/absl/base/internal/$(am__dirstamp)
 	-rm -f webrtc_dsp/absl/strings/$(DEPDIR)/$(am__dirstamp)
@@ -4432,6 +4459,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/VoIPController.Plo
 	-rm -f ./$(DEPDIR)/VoIPGroupController.Plo
 	-rm -f ./$(DEPDIR)/VoIPServerConfig.Plo
+	-rm -f ./$(DEPDIR)/json11.Plo
 	-rm -f ./$(DEPDIR)/logging.Plo
 	-rm -f ./webrtc_dsp/absl/base/internal/$(DEPDIR)/raw_logging.Plo
 	-rm -f ./webrtc_dsp/absl/base/internal/$(DEPDIR)/throw_delegate.Plo
@@ -4713,6 +4741,8 @@ distclean: distclean-am
 	-rm -f os/linux/$(DEPDIR)/AudioOutputPulse.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioPulse.Plo
 	-rm -f os/posix/$(DEPDIR)/NetworkSocketPosix.Plo
+	-rm -f video/$(DEPDIR)/VideoRenderer.Plo
+	-rm -f video/$(DEPDIR)/VideoSource.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse_arm.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/cross_correlation_neon.Plo
@@ -4787,6 +4817,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/VoIPController.Plo
 	-rm -f ./$(DEPDIR)/VoIPGroupController.Plo
 	-rm -f ./$(DEPDIR)/VoIPServerConfig.Plo
+	-rm -f ./$(DEPDIR)/json11.Plo
 	-rm -f ./$(DEPDIR)/logging.Plo
 	-rm -f ./webrtc_dsp/absl/base/internal/$(DEPDIR)/raw_logging.Plo
 	-rm -f ./webrtc_dsp/absl/base/internal/$(DEPDIR)/throw_delegate.Plo
@@ -5068,6 +5099,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f os/linux/$(DEPDIR)/AudioOutputPulse.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioPulse.Plo
 	-rm -f os/posix/$(DEPDIR)/NetworkSocketPosix.Plo
+	-rm -f video/$(DEPDIR)/VideoRenderer.Plo
+	-rm -f video/$(DEPDIR)/VideoSource.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse_arm.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/cross_correlation_neon.Plo

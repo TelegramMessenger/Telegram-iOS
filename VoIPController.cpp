@@ -19,6 +19,7 @@
 #include "OpusDecoder.h"
 #include "VoIPServerConfig.h"
 #include "PrivateDefines.h"
+#include "json11.hpp"
 #include <assert.h>
 #include <time.h>
 #include <math.h>
@@ -436,23 +437,7 @@ void VoIPController::SetNetworkType(int type){
 		bool isFirstChange=activeNetItfName.length()==0 && state!=STATE_ESTABLISHED && state!=STATE_RECONNECTING;
 		activeNetItfName=itfName;
 		if(IS_MOBILE_NETWORK(networkType)){
-			CellularCarrierInfo carrier;
-#if defined(__APPLE__) && TARGET_OS_IOS
-			carrier=DarwinSpecific::GetCarrierInfo();
-#elif defined(__ANDROID__)
-			jni::DoWithJNI([&carrier](JNIEnv* env){
-				jmethodID getCarrierInfoMethod=env->GetStaticMethodID(jniUtilitiesClass, "getCarrierInfo", "()[Ljava/lang/String;");
-				jobjectArray jinfo=(jobjectArray) env->CallStaticObjectMethod(jniUtilitiesClass, getCarrierInfoMethod);
-				if(jinfo && env->GetArrayLength(jinfo)==4){
-					carrier.name=jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 0));
-					carrier.countryCode=jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 1));
-					carrier.mcc=jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 2));
-					carrier.mnc=jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 3));
-				}else{
-					LOGW("Failed to get carrier info");
-				}
-			});
-#endif
+			CellularCarrierInfo carrier=GetCarrierInfo();
 			if(!carrier.name.empty()){
 				LOGI("Carrier: %s [%s; mcc=%s, mnc=%s]", carrier.name.c_str(), carrier.countryCode.c_str(), carrier.mcc.c_str(), carrier.mnc.c_str());
 			}
@@ -674,27 +659,34 @@ void VoIPController::GetStats(TrafficStats *stats){
 }
 
 string VoIPController::GetDebugLog(){
-	string log="{\"events\":[";
-
-	for(vector<string>::iterator itr=debugLogs.begin();itr!=debugLogs.end();++itr){
-		log+=(*itr);
-		if((itr+1)!=debugLogs.end())
-			log+=",";
+	vector<json11::Json> lpkts;
+	for(DebugLoggedPacket& lpkt:debugLoggedPackets){
+		lpkts.push_back(json11::Json::array{lpkt.timestamp, lpkt.seq, lpkt.length});
 	}
-	log+="],\"libtgvoip_version\":\"" LIBTGVOIP_VERSION "\"}";
-	return log;
-}
-
-void VoIPController::GetDebugLog(char *buffer){
-	strcpy(buffer, GetDebugLog().c_str());
-}
-
-size_t VoIPController::GetDebugLogLength(){
-	size_t len=128;
-	for(vector<string>::iterator itr=debugLogs.begin();itr!=debugLogs.end();++itr){
-		len+=(*itr).length()+1;
+	map<string, json11::Json> network{
+			{"type", NetworkTypeToString(networkType)}
+	};
+	if(IS_MOBILE_NETWORK(networkType)){
+		CellularCarrierInfo carrier=GetCarrierInfo();
+		if(!carrier.name.empty()){
+			network["carrier"]=carrier.name;
+			network["country"]=carrier.countryCode;
+			network["mcc"]=carrier.mcc;
+			network["mnc"]=carrier.mnc;
+		}
 	}
-	return len;
+	return json11::Json(json11::Json::object{
+			{"log_type", "out_packet_stats"},
+			{"libtgvoip_version", LIBTGVOIP_VERSION},
+			{"network", network},
+			{"protocol_version", std::min(peerVersion, PROTOCOL_VERSION)},
+			{"total_losses", json11::Json::object{
+					{"s", (int32_t)conctl->GetSendLossCount()},
+					{"r", (int32_t)recvLossCount}
+			}},
+			{"call_duration", GetCurrentTime()-connectionInitTime},
+			{"out_packet_stats", lpkts}
+	}).dump();
 }
 
 vector<AudioInputDevice> VoIPController::EnumerateAudioInputs(){
@@ -941,6 +933,29 @@ shared_ptr<VoIPController::Stream> VoIPController::GetStreamByType(int type, boo
 			return ss;
 	}
 	return s;
+}
+
+CellularCarrierInfo VoIPController::GetCarrierInfo(){
+#if defined(__APPLE__) && TARGET_OS_IOS
+	return DarwinSpecific::GetCarrierInfo();
+#elif defined(__ANDROID__)
+	CellularCarrierInfo carrier;
+	jni::DoWithJNI([&carrier](JNIEnv* env){
+		jmethodID getCarrierInfoMethod=env->GetStaticMethodID(jniUtilitiesClass, "getCarrierInfo", "()[Ljava/lang/String;");
+		jobjectArray jinfo=(jobjectArray) env->CallStaticObjectMethod(jniUtilitiesClass, getCarrierInfoMethod);
+		if(jinfo && env->GetArrayLength(jinfo)==4){
+			carrier.name=jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 0));
+			carrier.countryCode=jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 1));
+			carrier.mcc=jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 2));
+			carrier.mnc=jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 3));
+		}else{
+			LOGW("Failed to get carrier info");
+		}
+	});
+	return carrier;
+#else
+	return CellularCarrierInfo();
+#endif
 }
 
 #pragma mark - Audio I/O
@@ -1959,6 +1974,18 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 		}
 	}
 
+	if(config.logPacketStats){
+		DebugLoggedPacket dpkt={
+				static_cast<int32_t>(pseq),
+				GetCurrentTime()-connectionInitTime,
+				static_cast<int32_t>(packetInnerLen)
+		};
+		debugLoggedPackets.push_back(dpkt);
+		if(debugLoggedPackets.size()>=2500){
+			debugLoggedPackets.erase(debugLoggedPackets.begin(), debugLoggedPackets.begin()+500);
+		}
+	}
+
 	//LOGV("acks: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", lastRemoteAckSeq, remoteAcks[0], remoteAcks[1], remoteAcks[2], remoteAcks[3], remoteAcks[4], remoteAcks[5], remoteAcks[6], remoteAcks[7]);
 	//LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", lastRemoteSeq, recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
 	//LOGI("RTT = %.3lf", GetAverageRTT());
@@ -2035,7 +2062,6 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				if(srcEndpoint.type==Endpoint::Type::UDP_RELAY || (useTCP && srcEndpoint.type==Endpoint::Type::TCP_RELAY))
 					preferredRelay=srcEndpoint.id;
 			}
-			LogDebugInfo();
 		}
 	}
 	if(type==PKT_INIT_ACK){
@@ -2885,43 +2911,6 @@ void VoIPController::DebugCtl(int request, int param){
 	}
 }
 
-
-
-void VoIPController::LogDebugInfo(){
-	string json="{\"endpoints\":[";
-	unsigned int i=0;
-	for(pair<const int64_t, Endpoint>& _e:endpoints){
-		Endpoint& e=_e.second;
-		char buffer[1024];
-		const char* typeStr="unknown";
-		switch(e.type){
-			case Endpoint::Type::UDP_RELAY:
-				typeStr="udp_relay";
-				break;
-			case Endpoint::Type::UDP_P2P_INET:
-				typeStr="udp_p2p_inet";
-				break;
-			case Endpoint::Type::UDP_P2P_LAN:
-				typeStr="udp_p2p_lan";
-				break;
-			case Endpoint::Type::TCP_RELAY:
-				typeStr="tcp_relay";
-				break;
-		}
-		snprintf(buffer, 1024, "{\"address\":\"%s\",\"port\":%u,\"type\":\"%s\",\"rtt\":%u%s%s}", e.address.ToString().c_str(), e.port, typeStr, (unsigned int)round(e.averageRTT*1000), currentEndpoint==e.id ? ",\"in_use\":true" : "", preferredRelay==e.id ? ",\"preferred\":true" : "");
-		json+=buffer;
-		if(i!=endpoints.size()-1)
-			json+=",";
-		i++;
-	}
-	json+="],";
-	char buffer[1024];
-	const char* netTypeStr;
-	snprintf(buffer, 1024, "\"time\":%u,\"network_type\":\"%s\"}", (unsigned int)time(NULL), NetworkTypeToString(networkType).c_str());
-	json+=buffer;
-	debugLogs.push_back(json);
-}
-
 void VoIPController::SendUdpPing(Endpoint& endpoint){
 	if(endpoint.type!=Endpoint::Type::UDP_RELAY)
 		return;
@@ -3184,7 +3173,6 @@ void VoIPController::SendRelayPings(){
 				currentEndpoint=preferredRelay;
 				_currentEndpoint=_preferredRelay;
 			}
-			LogDebugInfo();
 		}
 		if(_currentEndpoint->type==Endpoint::Type::UDP_RELAY){
 			constexpr int64_t p2pID=(int64_t)(FOURCC('P','2','P','4')) << 32;
@@ -3195,12 +3183,10 @@ void VoIPController::SendRelayPings(){
 				if(endpoints.find(lanID)!=endpoints.end() && endpoints[lanID].averageRTT>0 && endpoints[lanID].averageRTT<minPing*relayToP2pSwitchThreshold){
 					currentEndpoint=lanID;
 					LOGI("Switching to p2p (LAN)");
-					LogDebugInfo();
 				}else{
 					if(p2p.averageRTT>0 && p2p.averageRTT<minPing*relayToP2pSwitchThreshold){
 						currentEndpoint=p2pID;
 						LOGI("Switching to p2p (Inet)");
-						LogDebugInfo();
 					}
 				}
 			}
@@ -3208,7 +3194,6 @@ void VoIPController::SendRelayPings(){
 			if(minPing>0 && minPing<_currentEndpoint->averageRTT*p2pToRelaySwitchThreshold){
 				LOGI("Switching to relay");
 				currentEndpoint=preferredRelay;
-				LogDebugInfo();
 			}
 		}
 	}

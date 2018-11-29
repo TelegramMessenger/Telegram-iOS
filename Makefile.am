@@ -22,7 +22,10 @@ audio/AudioIO.cpp \
 audio/AudioInput.cpp \
 audio/AudioOutput.cpp \
 audio/Resampler.cpp \
-os/posix/NetworkSocketPosix.cpp
+os/posix/NetworkSocketPosix.cpp \
+video/VideoSource.cpp \
+video/VideoRenderer.cpp \
+json11.cpp
 
 TGVOIP_HDRS = \
 VoIPController.h \
@@ -45,7 +48,10 @@ audio/AudioIO.h \
 audio/AudioInput.h \
 audio/AudioOutput.h \
 audio/Resampler.h \
-os/posix/NetworkSocketPosix.h
+os/posix/NetworkSocketPosix.h \
+video/VideoSource.h \
+video/VideoRenderer.h \
+json11.hpp
 
 if TARGET_OS_OSX
 

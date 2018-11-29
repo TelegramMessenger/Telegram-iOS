@@ -11,6 +11,7 @@
 #include <string>
 #include <stdint.h>
 #include "threading.h"
+#include "json11.hpp"
 
 namespace tgvoip{
 
@@ -23,13 +24,12 @@ public:
 	double GetDouble(std::string name, double fallback);
 	std::string GetString(std::string name, std::string fallback);
 	bool GetBoolean(std::string name, bool fallback);
-	void Update(std::map<std::string, std::string> newValues);
-    void Update(const char **values, int count);
+	void Update(std::string jsonString);
 
 private:
 	static ServerConfig* sharedInstance;
 	bool ContainsKey(std::string key);
-	std::map<std::string, std::string> config;
+    json11::Json config;
 	Mutex mutex;
 };
 }

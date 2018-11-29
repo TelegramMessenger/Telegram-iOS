@@ -113,7 +113,7 @@ namespace tgvoip{
 				data=NULL;
 			length=capacity;
 		};
-		Buffer(const Buffer& other)=delete; // use Buffer::CopyOf to copy contents explicitly
+		TGVOIP_DISALLOW_COPY_AND_ASSIGN(Buffer); // use Buffer::CopyOf to copy contents explicitly
 		Buffer(Buffer&& other) noexcept {
 			data=other.data;
 			length=other.length;

@@ -161,21 +161,6 @@ namespace tgvoip{
 
 	};
 
-	struct EncodedVideoFrame{
-		unsigned char* data;
-		size_t size;
-		uint32_t flags;
-
-		EncodedVideoFrame(size_t size){
-			this->size=size;
-			data=(unsigned char*)malloc(size);
-		}
-
-		~EncodedVideoFrame(){
-			free(data);
-		}
-	};
-
 	class VoIPController{
 		friend class VoIPGroupController;
 	public:
@@ -207,6 +192,8 @@ namespace tgvoip{
 			bool enableAGC;
 
 			bool enableCallUpgrade;
+
+			bool logPacketStats=false;
 		};
 
 		struct TrafficStats{
@@ -306,12 +293,6 @@ namespace tgvoip{
 		 * @return
 		 */
 		std::string GetDebugLog();
-		/**
-		 *
-		 * @param buffer
-		 */
-		void GetDebugLog(char* buffer);
-		size_t GetDebugLogLength();
 		/**
 		 *
 		 * @return
@@ -488,6 +469,7 @@ namespace tgvoip{
 		Endpoint* GetEndpointForPacket(const PendingOutgoingPacket& pkt);
 		bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue=true);
 		static std::string NetworkTypeToString(int type);
+		CellularCarrierInfo GetCarrierInfo();
 
 	private:
 		struct Stream{
@@ -533,6 +515,11 @@ namespace tgvoip{
 			UDP_NOT_AVAILABLE,
 			UDP_BAD
 		};
+		struct DebugLoggedPacket{
+			int32_t seq;
+			double timestamp;
+			int32_t length;
+		};
 
 		void RunRecvThread();
 		void RunSendThread();
@@ -550,7 +537,6 @@ namespace tgvoip{
 		Endpoint& GetEndpointByType(int type);
 		void SendPacketReliably(unsigned char type, unsigned char* data, size_t len, double retryInterval, double timeout);
 		uint32_t GenerateOutSeq();
-		void LogDebugInfo();
 		void ActuallySendPacket(NetworkPacket& pkt, Endpoint& ep);
 		void InitializeAudio();
 		void StartAudio();
@@ -630,7 +616,6 @@ namespace tgvoip{
 		TrafficStats stats;
 		bool receivedInit;
 		bool receivedInitAck;
-		std::vector<std::string> debugLogs;
 		bool isOutgoing;
 		NetworkSocket* udpSocket;
 		NetworkSocket* realUdpSocket;
@@ -688,6 +673,7 @@ namespace tgvoip{
 		HistoricBuffer<unsigned int, 5> unsentStreamPacketsHistory;
 		bool needReInitUdpProxy=true;
 		bool needRate=false;
+		std::vector<DebugLoggedPacket> debugLoggedPackets;
 
 		uint32_t initTimeoutID=MessageThread::INVALID_ID;
 		uint32_t noStreamsNopID=MessageThread::INVALID_ID;

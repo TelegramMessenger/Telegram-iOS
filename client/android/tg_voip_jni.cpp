@@ -214,7 +214,7 @@ namespace tgvoip {
 		((VoIPController*)(intptr_t)inst)->SetMicMute(mute);
 	}
 
-	void VoIPController_nativeSetConfig(JNIEnv* env, jobject thiz, jlong inst, jdouble recvTimeout, jdouble initTimeout, jint dataSavingMode, jboolean enableAEC, jboolean enableNS, jboolean enableAGC, jstring logFilePath, jstring statsDumpPath){
+	void VoIPController_nativeSetConfig(JNIEnv* env, jobject thiz, jlong inst, jdouble recvTimeout, jdouble initTimeout, jint dataSavingMode, jboolean enableAEC, jboolean enableNS, jboolean enableAGC, jstring logFilePath, jstring statsDumpPath, jboolean logPacketStats){
 		VoIPController::Config cfg;
 		cfg.initTimeout=initTimeout;
 		cfg.recvTimeout=recvTimeout;
@@ -223,6 +223,7 @@ namespace tgvoip {
 		cfg.enableNS=enableNS;
 		cfg.enableAGC=enableAGC;
 		cfg.enableCallUpgrade=false;
+		cfg.logPacketStats=logPacketStats;
 		if(logFilePath){
 			cfg.logFilePath=jni::JavaStringToStdString(env, logFilePath);
 		}
@@ -320,18 +321,8 @@ namespace tgvoip {
 
 #pragma mark - VoIPServerConfig
 
-	void VoIPServerConfig_nativeSetConfig(JNIEnv* env, jclass clasz, jobjectArray keys, jobjectArray values){
-		std::map<std::string, std::string> config;
-		int len=env->GetArrayLength(keys);
-		int i;
-		for(i=0;i<len;i++){
-			jstring jkey=(jstring)env->GetObjectArrayElement(keys, i);
-			jstring jval=(jstring)env->GetObjectArrayElement(values, i);
-			if(jkey==NULL|| jval==NULL)
-				continue;
-			config[jni::JavaStringToStdString(env, jkey)]=jni::JavaStringToStdString(env, jval);
-		}
-		ServerConfig::GetSharedInstance()->Update(config);
+	void VoIPServerConfig_nativeSetConfig(JNIEnv* env, jclass clasz, jstring jsonString){
+		ServerConfig::GetSharedInstance()->Update(jni::JavaStringToStdString(env, jsonString));
 	}
 
 #pragma mark - Resampler
@@ -540,7 +531,7 @@ extern "C" void tgvoipRegisterNatives(JNIEnv* env){
 			{"nativeGetDebugString", "(J)Ljava/lang/String;", (void*)&tgvoip::VoIPController_nativeGetDebugString},
 			{"nativeSetNetworkType", "(JI)V", (void*)&tgvoip::VoIPController_nativeSetNetworkType},
 			{"nativeSetMicMute", "(JZ)V", (void*)&tgvoip::VoIPController_nativeSetMicMute},
-			{"nativeSetConfig", "(JDDIZZZLjava/lang/String;Ljava/lang/String;)V", (void*)&tgvoip::VoIPController_nativeSetConfig},
+			{"nativeSetConfig", "(JDDIZZZLjava/lang/String;Ljava/lang/String;Z)V", (void*)&tgvoip::VoIPController_nativeSetConfig},
 			{"nativeDebugCtl", "(JII)V", (void*)&tgvoip::VoIPController_nativeDebugCtl},
 			{"nativeGetVersion", "()Ljava/lang/String;", (void*)&tgvoip::VoIPController_nativeGetVersion},
 			{"nativeGetPreferredRelayID", "(J)J", (void*)&tgvoip::VoIPController_nativeGetPreferredRelayID},
@@ -594,7 +585,7 @@ extern "C" void tgvoipRegisterNatives(JNIEnv* env){
 
 	// VoIPServerConfig
 	JNINativeMethod serverConfigMethods[]={
-			{"nativeSetConfig", "([Ljava/lang/String;[Ljava/lang/String;)V", (void*)&tgvoip::VoIPServerConfig_nativeSetConfig}
+			{"nativeSetConfig", "(Ljava/lang/String;)V", (void*)&tgvoip::VoIPServerConfig_nativeSetConfig}
 	};
 	env->RegisterNatives(serverConfig, serverConfigMethods, sizeof(serverConfigMethods)/sizeof(JNINativeMethod));
 
