@@ -24,12 +24,12 @@ private:
         float gap;
     };
     const VDasher::Dash *mDashArray;
-    int                  mArraySize;
+    int                  mArraySize{0};
     VPointF              mCurPt;
-    int                  mIndex; /* index to the dash Array */
+    int                  mIndex{0}; /* index to the dash Array */
     float                mCurrentLength;
     bool                 mDiscard;
-    float                mDashOffset;
+    float                mDashOffset{0};
     VPath                mResult;
     bool                 mStartNewSegment=true;
 };

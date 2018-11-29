@@ -6,11 +6,10 @@ V_BEGIN_NAMESPACE
 
 VDasher::VDasher(const float *dashArray, int size)
 {
-    if (!(size % 2)) vCritical << "invalid dashArray format";
-
     mDashArray = reinterpret_cast<const VDasher::Dash *>(dashArray);
     mArraySize = size / 2;
-    mDashOffset = dashArray[size - 1];
+    if (size % 2)
+        mDashOffset = dashArray[size - 1];
     mIndex = 0;
     mCurrentLength = 0;
     mDiscard = false;
