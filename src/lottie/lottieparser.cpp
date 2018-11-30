@@ -617,8 +617,12 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
             asset->mAssetType = GetInt();
         } else if (0 == strcmp(key, "id")) { /* reference id*/
-            RAPIDJSON_ASSERT(PeekType() == kStringType);
-            asset->mRefId = std::string(GetString());
+            if (PeekType() == kStringType) {
+                asset->mRefId = std::string(GetString());
+            } else {
+                RAPIDJSON_ASSERT(PeekType() == kNumberType);
+                asset->mRefId = std::to_string(GetInt());
+            }
         } else if (0 == strcmp(key, "layers")) {
             RAPIDJSON_ASSERT(PeekType() == kArrayType);
             EnterArray();
