@@ -239,7 +239,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.backgroundNode.contents = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)?.cgImage
-        //self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
+        self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNodeContainer)

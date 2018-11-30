@@ -1214,6 +1214,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                                 isNotAccessible = cachedChannelData.isNotAccessible
                             }
                             
+                            var hasBots: Bool = false
+                            if let cachedGroupData = peerView.cachedData as? CachedGroupData {
+                                if !cachedGroupData.botInfos.isEmpty {
+                                    hasBots = true
+                                }
+                            } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                                if !cachedChannelData.botInfos.isEmpty {
+                                    hasBots = true
+                                }
+                            }
+                            
                             var explicitelyCanPinMessages: Bool = false
                             if let cachedUserData = peerView.cachedData as? CachedUserData {
                                 explicitelyCanPinMessages = cachedUserData.canPinMessages
@@ -1227,7 +1238,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             }
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in return renderedPeer
-                                }.updatedIsNotAccessible(isNotAccessible).updatedIsContact(isContact).updatedPeerIsMuted(peerIsMuted).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
+                                }.updatedIsNotAccessible(isNotAccessible).updatedIsContact(isContact).updatedHasBots(hasBots).updatedPeerIsMuted(peerIsMuted).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages)
                             })
                             if !strongSelf.didSetChatLocationInfoReady {
                                 strongSelf.didSetChatLocationInfoReady = true
@@ -1829,6 +1840,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         var options = transition.options
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
+                        let _ = options.insert(.PreferSynchronousResourceLoading)
                         options.remove(.AnimateInsertion)
                         options.insert(.RequestItemInsertionAnimations)
                         

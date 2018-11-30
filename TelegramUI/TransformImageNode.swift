@@ -47,11 +47,21 @@ public class TransformImageNode: ASDisplayNode {
         }
     }
     
-    public func setSignal(_ signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, dispatchOnDisplayLink: Bool = true) {
+    public func setSignal(_ signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, attemptSynchronously: Bool = false, dispatchOnDisplayLink: Bool = true) {
         let argumentsPromise = self.argumentsPromise
         
+        var shouldAttemptSynchronously = attemptSynchronously
         let result = combineLatest(signal, argumentsPromise.get())
-        |> deliverOn(Queue.concurrentDefaultQueue())
+        |> mapToSignal { transform, arguments -> Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments), NoError> in
+            let result: Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments), NoError> = .single((transform, arguments))
+            if shouldAttemptSynchronously {
+                shouldAttemptSynchronously = false
+                return result
+            } else {
+                return result
+                |> deliverOn(Queue.concurrentDefaultQueue())
+            }
+        }
         |> mapToThrottled { transform, arguments -> Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments, UIImage?)?, NoError> in
             return deferred {
                 if let context = transform(arguments) {

@@ -262,7 +262,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.addSubnode(self.statusNode)
     }
     
-    func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: AutomaticMediaDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ account: Account, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ constrainedSize: CGSize) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: AutomaticMediaDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ account: Account, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ constrainedSize: CGSize) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let textAsyncLayout = TextNode.asyncLayout(self.textNode)
         let currentImage = self.media as? TelegramMediaImage
         let imageLayout = self.inlineImageNode.asyncLayout()
@@ -329,7 +329,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             var updateInlineImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var textCutout = TextNodeCutout()
             var initialWidth: CGFloat = CGFloat.greatestFiniteMagnitude
-            var refineContentImageLayout: ((CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> ChatMessageInteractiveMediaNode)))?
+            var refineContentImageLayout: ((CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode)))?
             var refineContentFileLayout: ((CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode)))?
 
             var contentInstantVideoSizeAndApply: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> ChatMessageInteractiveInstantVideoNode)?
@@ -560,7 +560,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 }
                 
-                var finalizeContentImageLayout: ((CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> ChatMessageInteractiveMediaNode))?
+                var finalizeContentImageLayout: ((CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))?
                 if let refineContentImageLayout = refineContentImageLayout {
                     let (refinedWidth, finalizeImageLayout) = refineContentImageLayout(textConstrainedSize, ImageCorners(radius: 4.0))
                     finalizeContentImageLayout = finalizeImageLayout
@@ -634,7 +634,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         imageFrame = CGRect(origin: CGPoint(x: boundingWidth - inlineImageSize.width - insets.right, y: 0.0), size: inlineImageSize)
                     }
                     
-                    var contentImageSizeAndApply: (CGSize, (ContainedViewLayoutTransition) -> ChatMessageInteractiveMediaNode)?
+                    var contentImageSizeAndApply: (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode)?
                     if let finalizeContentImageLayout = finalizeContentImageLayout {
                         let (size, apply) = finalizeContentImageLayout(boundingWidth - insets.left - insets.right)
                         contentImageSizeAndApply = (size, apply)
@@ -689,7 +689,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - insets.right, y: statusFrame.origin.y), size: statusFrame.size)
                     }
                     
-                    return (adjustedBoundingSize, { [weak self] animation in
+                    return (adjustedBoundingSize, { [weak self] animation, synchronousLoads in
                         if let strongSelf = self {
                             strongSelf.account = account
                             strongSelf.message = message
@@ -734,7 +734,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if let (contentImageSize, contentImageApply) = contentImageSizeAndApply {
                                 contentMediaHeight = contentImageSize.height
                                 
-                                let contentImageNode = contentImageApply(transition)
+                                let contentImageNode = contentImageApply(transition, synchronousLoads)
                                 if strongSelf.contentImageNode !== contentImageNode {
                                     strongSelf.contentImageNode = contentImageNode
                                     strongSelf.addSubnode(contentImageNode)
@@ -745,7 +745,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     }
                                     contentImageNode.visibility = strongSelf.visibility
                                 }
-                                let _ = contentImageApply(transition)
+                                let _ = contentImageApply(transition, synchronousLoads)
                                 let contentImageFrame: CGRect
                                 if let (_, flags) = mediaAndFlags, flags.contains(.preferMediaBeforeText) {
                                     contentImageFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: contentImageSize)
