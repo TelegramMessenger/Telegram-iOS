@@ -39,11 +39,30 @@ final class PresentationContext {
         return self.view != nil && self.layout != nil
     }
     
-    private(set) var controllers: [ViewController] = []
+    private(set) var controllers: [(ViewController, PresentationSurfaceLevel)] = []
     
     private var presentationDisposables = DisposableSet()
     
     var topLevelSubview: UIView?
+    
+    private func topLevelSubview(for level: PresentationSurfaceLevel) -> UIView? {
+        var topController: ViewController?
+        for (controller, controllerLevel) in self.controllers.reversed() {
+            if !controller.isViewLoaded || controller.view.superview == nil {
+                continue
+            }
+            if controllerLevel.rawValue > level.rawValue {
+                topController = controller
+            } else {
+                break
+            }
+        }
+        if let topController = topController {
+            return topController.view
+        } else {
+            return topLevelSubview
+        }
+    }
     
     private var nextBlockInteractionToken = 0
     private var blockInteractionTokens = Set<Int>()
@@ -67,7 +86,7 @@ final class PresentationContext {
         }
     }
     
-    public func present(_ controller: ViewController, on: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void) {
+    public func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void) {
         let controllerReady = controller.ready.get()
         |> filter({ $0 })
         |> take(1)
@@ -103,11 +122,17 @@ final class PresentationContext {
                     if let blockInteractionToken = blockInteractionToken {
                         strongSelf.removeBlockInteraction(blockInteractionToken)
                     }
-                    if strongSelf.controllers.contains(where: { $0 === controller }) {
+                    if strongSelf.controllers.contains(where: { $0.0 === controller }) {
                         return
                     }
                     
-                    strongSelf.controllers.append(controller)
+                    var insertIndex: Int?
+                    for i in (0 ..< strongSelf.controllers.count).reversed() {
+                        if strongSelf.controllers[i].1.rawValue > level.rawValue {
+                            insertIndex = i
+                        }
+                    }
+                    strongSelf.controllers.insert((controller, level), at: insertIndex ?? strongSelf.controllers.count)
                     if let view = strongSelf.view, let layout = strongSelf.layout {
                         controller.navigation_setDismiss({ [weak controller] in
                             if let strongSelf = self, let controller = controller {
@@ -117,14 +142,14 @@ final class PresentationContext {
                         controller.setIgnoreAppearanceMethodInvocations(true)
                         if layout != initialLayout {
                             controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-                            if let topLevelSubview = strongSelf.topLevelSubview {
+                            if let topLevelSubview = strongSelf.topLevelSubview(for: level) {
                                 view.insertSubview(controller.view, belowSubview: topLevelSubview)
                             } else {
                                 view.addSubview(controller.view)
                             }
                             controller.containerLayoutUpdated(layout, transition: .immediate)
                         } else {
-                            if let topLevelSubview = strongSelf.topLevelSubview {
+                            if let topLevelSubview = strongSelf.topLevelSubview(for: level) {
                                 view.insertSubview(controller.view, belowSubview: topLevelSubview)
                             } else {
                                 view.addSubview(controller.view)
@@ -138,7 +163,7 @@ final class PresentationContext {
                 }
             }))
         } else {
-            self.controllers.append(controller)
+            self.controllers.append((controller, level))
         }
     }
     
@@ -147,7 +172,7 @@ final class PresentationContext {
     }
     
     private func dismiss(_ controller: ViewController) {
-        if let index = self.controllers.index(where: { $0 === controller }) {
+        if let index = self.controllers.index(where: { $0.0 === controller }) {
             self.controllers.remove(at: index)
             controller.viewWillDisappear(false)
             controller.view.removeFromSuperview()
@@ -162,7 +187,7 @@ final class PresentationContext {
         if wasReady != self.ready {
             self.readyChanged(wasReady: wasReady)
         } else if self.ready {
-            for controller in self.controllers {
+            for (controller, _) in self.controllers {
                 controller.containerLayoutUpdated(layout, transition: transition)
             }
         }
@@ -178,7 +203,7 @@ final class PresentationContext {
     
     private func addViews() {
         if let view = self.view, let layout = self.layout {
-            for controller in self.controllers {
+            for (controller, _) in self.controllers {
                 controller.viewWillAppear(false)
                 if let topLevelSubview = self.topLevelSubview {
                     view.insertSubview(controller.view, belowSubview: topLevelSubview)
@@ -193,7 +218,7 @@ final class PresentationContext {
     }
     
     private func removeViews() {
-        for controller in self.controllers {
+        for (controller, _) in self.controllers {
             controller.viewWillDisappear(false)
             controller.view.removeFromSuperview()
             controller.viewDidDisappear(false)
@@ -201,7 +226,7 @@ final class PresentationContext {
     }
     
     func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        for controller in self.controllers.reversed() {
+        for (controller, _) in self.controllers.reversed() {
             if controller.isViewLoaded {
                 if let result = controller.view.hitTest(point, with: event) {
                     return result
@@ -214,7 +239,7 @@ final class PresentationContext {
     func combinedSupportedOrientations() -> ViewControllerSupportedOrientations {
         var mask = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
         
-        for controller in self.controllers {
+        for (controller, _) in self.controllers {
             mask = mask.intersection(controller.supportedOrientations)
         }
         
@@ -224,7 +249,7 @@ final class PresentationContext {
     func combinedDeferScreenEdgeGestures() -> UIRectEdge {
         var edges: UIRectEdge = []
         
-        for controller in self.controllers {
+        for (controller, _) in self.controllers {
             edges = edges.union(controller.deferScreenEdgeGestures)
         }
         

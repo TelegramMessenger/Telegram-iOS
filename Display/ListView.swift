@@ -2523,7 +2523,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 
                 self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
                 
-                if let offset = offset , abs(offset) > CGFloat.ulpOfOne {
+                if let offset = offset, !offset.isZero {
                     let lowestNodeToInsertBelow = self.lowestNodeToInsertBelow()
                     for itemNode in temporaryPreviousNodes {
                         itemNode.frame = itemNode.frame.offsetBy(dx: 0.0, dy: offset)
@@ -2550,6 +2550,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     }
                     
                     let animation: CABasicAnimation
+                    let reverseAnimation: CABasicAnimation
                     switch scrollToItem.curve {
                         case let .Spring(duration):
                             let springAnimation = makeSpringAnimation("sublayerTransform")
@@ -2566,7 +2567,17 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             }
                             springAnimation.speed = speed * Float(springAnimation.duration / duration)
                             
+                            let reverseSpringAnimation = makeSpringAnimation("sublayerTransform")
+                            reverseSpringAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
+                            reverseSpringAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                            reverseSpringAnimation.isRemovedOnCompletion = true
+                            reverseSpringAnimation.isAdditive = true
+                            reverseSpringAnimation.fillMode = kCAFillModeForwards
+                            
+                            reverseSpringAnimation.speed = speed * Float(reverseSpringAnimation.duration / duration)
+                            
                             animation = springAnimation
+                            reverseAnimation = reverseSpringAnimation
                         case let .Default(duration):
                             if let duration = duration {
                                 let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
@@ -2576,17 +2587,36 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                                 basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                                 basicAnimation.isRemovedOnCompletion = true
                                 basicAnimation.isAdditive = true
+                                
+                                let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                                reverseBasicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                                reverseBasicAnimation.duration = duration * UIView.animationDurationFactor()
+                                reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
+                                reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                                reverseBasicAnimation.isRemovedOnCompletion = true
+                                reverseBasicAnimation.isAdditive = true
+                                
                                 animation = basicAnimation
+                                reverseAnimation = reverseBasicAnimation
                             } else {
                                 let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                                 basicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: 0.33, 0.52, 0.25, 0.99)
-                                //basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseOut)
                                 basicAnimation.duration = (duration ?? 0.3) * UIView.animationDurationFactor()
                                 basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
                                 basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                                 basicAnimation.isRemovedOnCompletion = true
                                 basicAnimation.isAdditive = true
+                                
+                                let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                                reverseBasicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: 0.33, 0.52, 0.25, 0.99)
+                                reverseBasicAnimation.duration = (duration ?? 0.3) * UIView.animationDurationFactor()
+                                reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
+                                reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                                reverseBasicAnimation.isRemovedOnCompletion = true
+                                reverseBasicAnimation.isAdditive = true
+                                
                                 animation = basicAnimation
+                                reverseAnimation = reverseBasicAnimation
                             }
                     }
                     animation.completion = { _ in
@@ -2610,6 +2640,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         }
                     }
                     self.layer.add(animation, forKey: nil)
+                    if let verticalScrollIndicator = self.verticalScrollIndicator {
+                        verticalScrollIndicator.layer.add(reverseAnimation, forKey: nil)
+                    }
                 } else {
                     if useBackgroundDeallocation {
                         assertionFailure()
@@ -2969,100 +3002,86 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             var topIndexAndBoundary: (Int, CGFloat, CGFloat)?
             var bottomIndexAndBoundary: (Int, CGFloat, CGFloat)?
             for itemNode in self.itemNodes {
-                if itemNode.apparentFrame.maxY > 0.0, let index = itemNode.index {
+                if itemNode.apparentFrame.maxY > self.insets.top, let index = itemNode.index {
                     topIndexAndBoundary = (index, itemNode.apparentFrame.minY, itemNode.apparentFrame.height)
                     break
                 }
             }
             for itemNode in self.itemNodes.reversed() {
-                if itemNode.apparentFrame.minY <= self.visibleSize.height, let index = itemNode.index {
+                if itemNode.apparentFrame.minY <= self.visibleSize.height - self.insets.bottom, let index = itemNode.index {
                     bottomIndexAndBoundary = (index, itemNode.apparentFrame.maxY, itemNode.apparentFrame.height)
                     break
                 }
             }
             if let topIndexAndBoundary = topIndexAndBoundary, let bottomIndexAndBoundary = bottomIndexAndBoundary {
-                let rangeItemCount = max(1, bottomIndexAndBoundary.0 - topIndexAndBoundary.0 + 1)
-                //let visibleRangeHeight = max(0.0, bottomIndexAndBoundary.1 - topIndexAndBoundary.1)
-                //let averageRangeItemHeight = visibleRangeHeight / CGFloat(rangeItemCount)
-                let averageRangeItemHeight: CGFloat = 44.0
+                let averageRangeItemHeight: CGFloat = 44.0 //(bottomIndexAndBoundary.1 - topIndexAndBoundary.1) / CGFloat(bottomIndexAndBoundary.0 - topIndexAndBoundary.0 + 1)
                 
-                let visibleRangeHeight = CGFloat(rangeItemCount) * averageRangeItemHeight
                 let upperItemsHeight = floor(averageRangeItemHeight * CGFloat(topIndexAndBoundary.0))
-                let lowerItemsHeight = floor(averageRangeItemHeight * CGFloat(self.items.count - bottomIndexAndBoundary.0))
-                let approximateContentHeight = upperItemsHeight + visibleRangeHeight + lowerItemsHeight
+                let approximateContentHeight = CGFloat(self.items.count) * averageRangeItemHeight
                 
-                let convertedTopBoundary: CGFloat
-                if topIndexAndBoundary.1 < 0.0 {
-                    convertedTopBoundary = topIndexAndBoundary.1 * averageRangeItemHeight / topIndexAndBoundary.2
+                var convertedTopBoundary: CGFloat
+                if topIndexAndBoundary.1 < self.insets.top {
+                    convertedTopBoundary = (topIndexAndBoundary.1 - self.insets.top) * averageRangeItemHeight / topIndexAndBoundary.2
                 } else {
-                    convertedTopBoundary = topIndexAndBoundary.1
+                    convertedTopBoundary = topIndexAndBoundary.1 - self.insets.top
                 }
+                convertedTopBoundary -= upperItemsHeight
+                
+                let approximateOffset = -convertedTopBoundary
                 
                 var convertedBottomBoundary: CGFloat = 0.0
-                if bottomIndexAndBoundary.1 > self.visibleSize.height {
-                    convertedBottomBoundary = (bottomIndexAndBoundary.1 - self.visibleSize.height) * averageRangeItemHeight / bottomIndexAndBoundary.2
+                if bottomIndexAndBoundary.1 > self.visibleSize.height - self.insets.bottom {
+                    convertedBottomBoundary = ((self.visibleSize.height - self.insets.bottom) - bottomIndexAndBoundary.1) * averageRangeItemHeight / bottomIndexAndBoundary.2
+                } else {
+                    convertedBottomBoundary = (self.visibleSize.height - self.insets.bottom) - bottomIndexAndBoundary.1
                 }
-                convertedBottomBoundary += convertedTopBoundary + CGFloat(rangeItemCount) * averageRangeItemHeight
+                convertedBottomBoundary += CGFloat(bottomIndexAndBoundary.0 + 1) * averageRangeItemHeight
                 
-                let approximateFirstItemOffset = convertedTopBoundary - upperItemsHeight
-                let approximateLastItemOffset = convertedBottomBoundary
+                let approximateVisibleHeight = max(0.0, convertedBottomBoundary - approximateOffset)
                 
-                let approximateOffset = -approximateFirstItemOffset + self.insets.top
-                let approximateBottomOffset = -approximateLastItemOffset + self.insets.top
+                let approximateScrollingProgress = approximateOffset / (approximateContentHeight - approximateVisibleHeight)
+                /*#if targetEnvironment(simulator)
+                print("approximateOffset = \(approximateOffset), convertedBottomBoundary = \(convertedBottomBoundary) / \(vanillaBoundary), approximateScrollingProgress = \(approximateScrollingProgress)")
+                #endif*/
+                
                 let indicatorInsets: CGFloat = 3.0
+                let minIndicatorContentHeight: CGFloat = 12.0
+                let minIndicatorHeight: CGFloat = 6.0
                 
-                //print("convertedTopBoundary = \(convertedTopBoundary), topIndexAndBoundary.1 = \(topIndexAndBoundary.1), upperItemsHeight = \(upperItemsHeight), approximateOffset = \(approximateOffset), approximateBottomOffset = \(approximateBottomOffset)")
+                let visibleHeightWithoutIndicatorInsets = self.visibleSize.height - self.scrollIndicatorInsets.top - self.scrollIndicatorInsets.bottom - indicatorInsets * 2.0
+                let indicatorHeight: CGFloat = max(minIndicatorContentHeight, floor(visibleHeightWithoutIndicatorInsets * (self.visibleSize.height - self.insets.top - self.insets.bottom) / approximateContentHeight))
                 
-                let visibleHeightWithoutInsets = self.visibleSize.height - self.insets.top - self.insets.bottom
-                let visibleHeightWithoutIndicatorInsets = visibleHeightWithoutInsets - indicatorInsets * 2.0
+                let upperBound = self.scrollIndicatorInsets.top + indicatorInsets
+                let lowerBound = self.visibleSize.height - self.scrollIndicatorInsets.bottom - indicatorInsets - indicatorHeight
                 
-                // visibleHeightWithoutIndicatorInsets -> approximateContentHeight
-                // x -> approximateOffset
-                // x = visibleHeightWithoutIndicatorInsets * approximateOffset / approximateContentHeight
+                let indicatorOffset = ceilToScreenPixels(upperBound * (1.0 - approximateScrollingProgress) + lowerBound * approximateScrollingProgress)
                 
-                // visibleHeightWithoutIndicatorInsets -> approximateContentHeight
-                // x -> visibleHeightWithoutInsets
-                
-                let indicatorOffset = ceilToScreenPixels(visibleHeightWithoutIndicatorInsets * approximateOffset / approximateContentHeight)
-                let approximateIndicatorHeight = ceilToScreenPixels(visibleHeightWithoutIndicatorInsets * visibleHeightWithoutInsets / approximateContentHeight)
-                
-                let minHeight: CGFloat = 6.0
-                let indicatorHeight = max(minHeight, approximateIndicatorHeight)
-                
-                var indicatorFrame = CGRect(origin: CGPoint(x: self.rotated ? indicatorInsets : (self.visibleSize.width - 3.0 - indicatorInsets), y: self.scrollIndicatorInsets.top + indicatorInsets + indicatorOffset), size: CGSize(width: 3.0, height: indicatorHeight))
+                var indicatorFrame = CGRect(origin: CGPoint(x: self.rotated ? indicatorInsets : (self.visibleSize.width - 3.0 - indicatorInsets), y: indicatorOffset), size: CGSize(width: 3.0, height: indicatorHeight))
                 if indicatorFrame.minY < self.scrollIndicatorInsets.top + indicatorInsets {
                     indicatorFrame.size.height -= self.scrollIndicatorInsets.top + indicatorInsets - indicatorFrame.minY
                     indicatorFrame.origin.y = self.scrollIndicatorInsets.top + indicatorInsets
-                    indicatorFrame.size.height = max(minHeight, indicatorFrame.height)
+                    indicatorFrame.size.height = max(minIndicatorHeight, indicatorFrame.height)
                 }
-                if verticalScrollIndicator.isHidden {
-                    verticalScrollIndicator.isHidden = false
+                if indicatorFrame.maxY > self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorInsets) {
+                    indicatorFrame.size.height -= indicatorFrame.maxY - (self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorInsets))
+                    indicatorFrame.size.height = max(minIndicatorHeight, indicatorFrame.height)
+                    indicatorFrame.origin.y = self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorInsets) - indicatorFrame.height
+                }
+                
+                if indicatorHeight >= visibleHeightWithoutIndicatorInsets {
+                    verticalScrollIndicator.isHidden = true
                     verticalScrollIndicator.frame = indicatorFrame
                 } else {
-                    verticalScrollIndicator.frame = indicatorFrame
+                    if verticalScrollIndicator.isHidden {
+                        verticalScrollIndicator.isHidden = false
+                        verticalScrollIndicator.frame = indicatorFrame
+                    } else {
+                        verticalScrollIndicator.frame = indicatorFrame
+                    }
                 }
             } else {
                 verticalScrollIndicator.isHidden = true
             }
-            /*let size = self.visibleSize.height
-            let range = computeVerticalScrollRange()
-            let extent = computeVerticalScrollExtent()
-            let mOffset = computeVerticalScrollOffset()
-            
-            let thickness: CGFloat = 3.0
-            var length = round(size * extent / range)
-            var offset = round((size - length) * mOffset / (range - extent))
-            
-            let minLength = thickness * 2.0
-            if length < minLength {
-                length = minLength
-            }
-            if offset + length > size {
-                offset = size - length
-            }
-            
-            let indicatorHeight: CGFloat = max(3.0, 30.0)
-            verticalScrollIndicator.frame = CGRect(origin: CGPoint(x: self.visibleSize.width - 3.0 - indicatorInsets, y: self.insets.top + offset), size: CGSize(width: 3.0, height: length))*/
         }
     }
     
