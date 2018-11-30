@@ -97,8 +97,9 @@ public struct GridNodeTransaction {
     public let stationaryItems: GridNodeStationaryItems
     public let updateFirstIndexInSectionOffset: Int?
     public let updateOpaqueState: Any?
+    public let synchronousLoads: Bool
     
-    public init(deleteItems: [Int], insertItems: [GridNodeInsertItem], updateItems: [GridNodeUpdateItem], scrollToItem: GridNodeScrollToItem?, updateLayout: GridNodeUpdateLayout?, itemTransition: ContainedViewLayoutTransition, stationaryItems: GridNodeStationaryItems, updateFirstIndexInSectionOffset: Int?, updateOpaqueState: Any? = nil) {
+    public init(deleteItems: [Int], insertItems: [GridNodeInsertItem], updateItems: [GridNodeUpdateItem], scrollToItem: GridNodeScrollToItem?, updateLayout: GridNodeUpdateLayout?, itemTransition: ContainedViewLayoutTransition, stationaryItems: GridNodeStationaryItems, updateFirstIndexInSectionOffset: Int?, updateOpaqueState: Any? = nil, synchronousLoads: Bool = false) {
         self.deleteItems = deleteItems
         self.insertItems = insertItems
         self.updateItems = updateItems
@@ -108,6 +109,7 @@ public struct GridNodeTransaction {
         self.stationaryItems = stationaryItems
         self.updateFirstIndexInSectionOffset = updateFirstIndexInSectionOffset
         self.updateOpaqueState = updateOpaqueState
+        self.synchronousLoads = synchronousLoads
     }
 }
 
@@ -346,7 +348,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             generatedScrollToItem = nil
         }
         
-        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: updateLayoutTransition, customScrollToItem: transaction.scrollToItem != nil, itemTransition: transaction.itemTransition, updatingLayout: transaction.updateLayout != nil, completion: completion)
+        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: updateLayoutTransition, customScrollToItem: transaction.scrollToItem != nil, itemTransition: transaction.itemTransition, synchronousLoads: transaction.synchronousLoads, updatingLayout: transaction.updateLayout != nil, completion: completion)
     }
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -368,7 +370,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.applyingContentOffset {
-            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, customScrollToItem: false, itemTransition: .immediate, updatingLayout: false, completion: { _ in })
+            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, customScrollToItem: false, itemTransition: .immediate, synchronousLoads: false, updatingLayout: false, completion: { _ in })
         }
     }
     
@@ -744,7 +746,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         return lowestHeaderNode
     }
     
-    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, customScrollToItem: Bool, itemTransition: ContainedViewLayoutTransition, updatingLayout: Bool, completion: (GridNodeDisplayedItemRange) -> Void) {
+    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, customScrollToItem: Bool, itemTransition: ContainedViewLayoutTransition, synchronousLoads: Bool, updatingLayout: Bool, completion: (GridNodeDisplayedItemRange) -> Void) {
         let boundsTransition: ContainedViewLayoutTransition = updateLayoutTransition ?? .immediate
         
         var previousItemFrames: [WrappedGridItemNode: CGRect]?
@@ -806,7 +808,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     itemNode.frame = item.frame
                 }
             } else {
-                let itemNode = self.items[item.index].node(layout: presentationLayoutTransition.layout.layout)
+                let itemNode = self.items[item.index].node(layout: presentationLayoutTransition.layout.layout, synchronousLoad: synchronousLoads)
                 itemNode.frame = item.frame
                 self.addItemNode(index: item.index, itemNode: itemNode, lowestSectionNode: lowestSectionNode)
             }

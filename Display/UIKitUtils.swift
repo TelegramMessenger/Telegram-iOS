@@ -32,6 +32,9 @@ public let UIScreenScale = UIScreen.main.scale
 public func floorToScreenPixels(_ value: CGFloat) -> CGFloat {
     return floor(value * UIScreenScale) / UIScreenScale
 }
+public func ceilToScreenPixels(_ value: CGFloat) -> CGFloat {
+    return ceil(value * UIScreenScale) / UIScreenScale
+}
 
 public let UIScreenPixel = 1.0 / UIScreenScale
 
