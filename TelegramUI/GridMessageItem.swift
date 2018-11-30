@@ -403,7 +403,7 @@ final class GridMessageItemNode: GridItemNode {
                                 }
                             }
                         case .longTap:
-                            controllerInteraction.openMessageContextMenu(message, self, self.bounds)
+                            controllerInteraction.openMessageContextMenu(message, false, self, self.bounds)
                         default:
                             break
                     }

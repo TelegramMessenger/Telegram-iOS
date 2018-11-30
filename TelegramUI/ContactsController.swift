@@ -65,8 +65,7 @@ public class ContactsController: ViewController {
         self.authorizationDisposable = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let strongSelf = self {
-                strongSelf.tabBarItem.badgeValue = nil
-                //strongSelf.tabBarItem.badgeValue = status != .allowed ? "!" : nil
+                strongSelf.tabBarItem.badgeValue = status != .allowed ? "!" : nil
             }
         })
     }

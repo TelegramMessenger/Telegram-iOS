@@ -524,6 +524,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 strongSelf.iconNode = nil
                             }
                             
+                            if let streamingStatusNode = strongSelf.streamingStatusNode {
+                                streamingStatusNode.frame = streamingCacheStatusFrame
+                            }
+                            
                             if let updatedStatusSignal = updatedStatusSignal {
                                 strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
                                     displayLinkDispatcher.dispatch {

@@ -49,16 +49,19 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
         var items: [InstantPageItem] = []
         var offset = contentSize.height
         var contentSize = CGSize()
+        var rtl = rtl
         if case .empty = caption.text {
         } else {
             contentSize.height += 14.0
             offset += 14.0
             let styleStack = InstantPageTextStyleStack()
             setupStyleStack(styleStack, theme: theme, category: .caption, link: false)
-            let (_, captionItems, captionContentSize) = layoutTextItemWithString(attributedStringForRichText(caption.text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint(x: horizontalInset, y: offset), media: media, webpage: webpage)
+            let (textItem, captionItems, captionContentSize) = layoutTextItemWithString(attributedStringForRichText(caption.text, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint(x: horizontalInset, y: offset), media: media, webpage: webpage)
             contentSize.height += captionContentSize.height
             offset += captionContentSize.height
             items.append(contentsOf: captionItems)
+            
+            rtl = textItem?.containsRTL ?? rtl
         }
         
         if case .empty = caption.credit {
@@ -72,7 +75,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             }
             let styleStack = InstantPageTextStyleStack()
             setupStyleStack(styleStack, theme: theme, category: .credit, link: false)
-            let (_, captionItems, captionContentSize) = layoutTextItemWithString(attributedStringForRichText(caption.credit, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, offset: CGPoint(x: horizontalInset, y: offset), media: media, webpage: webpage)
+            let (_, captionItems, captionContentSize) = layoutTextItemWithString(attributedStringForRichText(caption.credit, styleStack: styleStack), boundingWidth: boundingWidth - horizontalInset * 2.0, alignment: rtl ? .right : .natural, offset: CGPoint(x: horizontalInset, y: offset), media: media, webpage: webpage)
             contentSize.height += captionContentSize.height
             offset += captionContentSize.height
             items.append(contentsOf: captionItems)
@@ -786,7 +789,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                 
                 let inset: CGFloat = i == articles.count - 1 ? 0.0 : 17.0
                 let lineSize = CGSize(width: boundingWidth - inset, height: UIScreenPixel)
-                let shapeItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(x: rtl ? 0.0 : inset, y: contentSize.height - lineSize.height), size: lineSize), shapeFrame: CGRect(origin: CGPoint(), size: lineSize), shape: .rect, color: theme.controlColor)
+                let shapeItem = InstantPageShapeItem(frame: CGRect(origin: CGPoint(x: rtl || item.rtl ? 0.0 : inset, y: contentSize.height - lineSize.height), size: lineSize), shapeFrame: CGRect(origin: CGPoint(), size: lineSize), shape: .rect, color: theme.controlColor)
                 items.append(shapeItem)
             }
             return InstantPageLayout(origin: CGPoint(), contentSize: contentSize, items: items)

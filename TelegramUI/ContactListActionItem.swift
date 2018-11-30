@@ -8,18 +8,21 @@ class ContactListActionItem: ListViewItem {
     let title: String
     let icon: UIImage?
     let action: () -> Void
+    let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, title: String, icon: UIImage?, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, icon: UIImage?, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.icon = icon
+        self.header = header
         self.action = action
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ContactListActionItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params)
+            let (_, _, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let (layout, apply) = node.asyncLayout()(self, params, firstWithHeader)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -38,7 +41,8 @@ class ContactListActionItem: ListViewItem {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params)
+                    let (_, _, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let (layout, apply) = makeLayout(self, params, firstWithHeader)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -55,6 +59,40 @@ class ContactListActionItem: ListViewItem {
         listView.clearHighlightAnimated(true)
         self.action()
     }
+    
+    static func mergeType(item: ContactListActionItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+        var first = false
+        var last = false
+        var firstWithHeader = false
+        if let previousItem = previousItem {
+            if let header = item.header {
+                if let previousItem = previousItem as? ContactsPeerItem {
+                    firstWithHeader = header.id != previousItem.header?.id
+                } else if let previousItem = previousItem as? ContactListActionItem {
+                    firstWithHeader = header.id != previousItem.header?.id
+                } else {
+                    firstWithHeader = true
+                }
+            }
+        } else {
+            first = true
+            firstWithHeader = item.header != nil
+        }
+        if let nextItem = nextItem {
+            if let header = item.header {
+                if let nextItem = nextItem as? ContactsPeerItem {
+                    last = header.id != nextItem.header?.id
+                } else if let nextItem = nextItem as? ContactListActionItem {
+                    last = header.id != nextItem.header?.id
+                } else {
+                    last = true
+                }
+            }
+        } else {
+            last = true
+        }
+        return (first, last, firstWithHeader)
+    }
 }
 
 private let titleFont = Font.regular(17.0)
@@ -69,6 +107,8 @@ class ContactListActionItemNode: ListViewItemNode {
     private let titleNode: TextNode
     
     private var theme: PresentationTheme?
+    
+    private var item: ContactListActionItem?
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -100,29 +140,33 @@ class ContactListActionItemNode: ListViewItemNode {
         self.addSubnode(self.titleNode)
     }
     
-    func asyncLayout() -> (_ item: ContactListActionItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ContactListActionItem, _ params: ListViewItemLayoutParams, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentTheme = self.theme
         
-        return { item, params in
+        return { item, params, firstWithHeader in
             var updatedTheme: PresentationTheme?
             
             if currentTheme !== item.theme {
                 updatedTheme = item.theme
             }
             
-            let leftInset: CGFloat = 65.0 + params.leftInset
+            var leftInset: CGFloat = 16.0 + params.leftInset
+            if item.icon != nil {
+                leftInset += 49.0
+            }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - 10.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: 48.0)
-            let insets = UIEdgeInsets()
+            let insets = UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             let separatorHeight = UIScreenPixel
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.item = item
                     strongSelf.theme = item.theme
                     
                     if let _ = updatedTheme {
@@ -206,5 +250,13 @@ class ContactListActionItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override public func header() -> ListViewItemHeader? {
+        if let item = self.item {
+            return item.header
+        } else {
+            return nil
+        }
     }
 }

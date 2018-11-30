@@ -35,12 +35,11 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
                 self.proxyNode.isHidden = !self.title.hasProxy
                 self.proxyButton.isHidden = !self.title.hasProxy
                 
+                self.buttonView.isHidden = !self.title.isPasscodeSet
                 if self.title.isPasscodeSet && !self.title.activity {
-                    self.buttonView.isHidden = false
                     self.lockView.isHidden = false
                     self.lockView.setIsLocked(self.title.isManuallyLocked, theme: self.theme, animated: !self.bounds.size.width.isZero)
                 } else {
-                    self.buttonView.isHidden = true
                     self.lockView.isHidden = true
                     self.lockView.setIsLocked(false, theme: self.theme, animated: false)
                 }

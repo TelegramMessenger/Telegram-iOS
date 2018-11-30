@@ -247,14 +247,16 @@ public final class PresentationThemeItemDisclosureActions {
     public let constructive: PresentationThemeItemDisclosureAction
     public let accent: PresentationThemeItemDisclosureAction
     public let warning: PresentationThemeItemDisclosureAction
+    public let inactive: PresentationThemeItemDisclosureAction
     
-    public init(neutral1: PresentationThemeItemDisclosureAction, neutral2: PresentationThemeItemDisclosureAction, destructive: PresentationThemeItemDisclosureAction, constructive: PresentationThemeItemDisclosureAction, accent: PresentationThemeItemDisclosureAction, warning: PresentationThemeItemDisclosureAction) {
+    public init(neutral1: PresentationThemeItemDisclosureAction, neutral2: PresentationThemeItemDisclosureAction, destructive: PresentationThemeItemDisclosureAction, constructive: PresentationThemeItemDisclosureAction, accent: PresentationThemeItemDisclosureAction, warning: PresentationThemeItemDisclosureAction, inactive: PresentationThemeItemDisclosureAction) {
         self.neutral1 = neutral1
         self.neutral2 = neutral2
         self.destructive = destructive
         self.constructive = constructive
         self.accent = accent
         self.warning = warning
+        self.inactive = inactive
     }
 }
 

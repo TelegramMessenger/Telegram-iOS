@@ -87,7 +87,8 @@ private let list = PresentationThemeList(
         destructive: PresentationThemeItemDisclosureAction(fillColor: destructiveColor, foregroundColor: .white),
         constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white),
         accent: PresentationThemeItemDisclosureAction(fillColor: accentColor, foregroundColor: .white),
-        warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x3c4e61), foregroundColor: .white)
+        warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x3c4e61), foregroundColor: .white),
+        inactive: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0x415A71), foregroundColor: .white)
     ),
     itemCheckColors: PresentationThemeCheck(
         strokeColor: UIColor(rgb: 0xDBF5FF, alpha: 0.5),

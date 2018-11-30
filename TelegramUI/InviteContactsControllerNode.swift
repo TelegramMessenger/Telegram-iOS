@@ -86,7 +86,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 interaction.activateSearch()
             })
         case let .option(_, option, theme, _):
-            return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, action: option.action)
+            return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, header: nil, action: option.action)
         case let .peer(_, id, contact, count, selection, theme, strings, nameSortOrder, nameDisplayOrder):
             let status: ContactsPeerItemStatus
             if count != 0 {

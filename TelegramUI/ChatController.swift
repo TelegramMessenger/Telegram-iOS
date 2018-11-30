@@ -417,7 +417,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, node, frame in
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame in
             guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
             }
@@ -430,7 +430,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         break
                     }
                 }
-                let _ = contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, account: strongSelf.account, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, interfaceInteraction: strongSelf.interfaceInteraction).start(next: { actions in
+                let _ = contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, account: strongSelf.account, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction).start(next: { actions in
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }

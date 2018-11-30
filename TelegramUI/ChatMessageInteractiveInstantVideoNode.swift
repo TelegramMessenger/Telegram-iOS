@@ -574,7 +574,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             self.item?.controllerInteraction.clickThroughMessage()
                         case .longTap, .doubleTap:
                             if let item = self.item, let videoNode = self.videoNode, videoNode.frame.contains(location) {
-                                item.controllerInteraction.openMessageContextMenu(item.message, self, videoNode.frame)
+                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, videoNode.frame)
                             }
                         case .hold:
                             break
@@ -610,7 +610,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     private func progressPressed() {
-        guard let item = self.item, let _ = self.telegramFile else {
+        guard let item = self.item, let file = self.telegramFile else {
             return
         }
         if let status = self.status {
@@ -624,7 +624,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                     deleteMessages(transaction: transaction, mediaBox: item.account.postbox.mediaBox, ids: [messageId])
                                 }).start()
                             } else {
-                                self.videoNode?.fetchControl(.cancel)
+                                messageMediaFileCancelInteractiveFetch(account: item.account, messageId: item.message.id, file: file)
                             }
                         case .Remote:
                             self.videoNode?.fetchControl(.fetch)
