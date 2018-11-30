@@ -49,6 +49,7 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 		apm->gain_control()->set_mode(webrtc::GainControl::Mode::kAdaptiveDigital);
 		apm->gain_control()->set_target_level_dbfs(9);
 	}
+	apm->voice_detection()->set_likelihood(webrtc::VoiceDetection::Likelihood::kVeryLowLikelihood);
 
 	audioFrame=new webrtc::AudioFrame();
 	audioFrame->samples_per_channel_=480;
@@ -119,7 +120,7 @@ void EchoCanceller::Enable(bool enabled){
 	isOn=enabled;
 }
 
-void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples){
+void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples, bool& hasVoice){
 	if(!isOn || (!enableAEC && !enableAGC && !enableNS)){
 		return;
 	}
@@ -127,12 +128,19 @@ void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples){
 	assert(numSamples==960);
 
 	memcpy(audioFrame->mutable_data(), inOut, 480*2);
-	apm->set_stream_delay_ms(delay);
+	if(enableAEC)
+    	apm->set_stream_delay_ms(delay);
 	apm->ProcessStream(audioFrame);
+	if(enableVAD)
+    	hasVoice=apm->voice_detection()->stream_has_voice();
 	memcpy(inOut, audioFrame->data(), 480*2);
 	memcpy(audioFrame->mutable_data(), inOut+480, 480*2);
-	apm->set_stream_delay_ms(delay);
+	if(enableAEC)
+    	apm->set_stream_delay_ms(delay);
 	apm->ProcessStream(audioFrame);
+	if(enableVAD){
+    	hasVoice=hasVoice || apm->voice_detection()->stream_has_voice();
+	}
 	memcpy(inOut+480, audioFrame->data(), 480*2);
 }
 
@@ -147,6 +155,11 @@ void EchoCanceller::SetAECStrength(int strength){
 #endif
 	}*/
 #endif
+}
+
+void EchoCanceller::SetVoiceDetectionEnabled(bool enabled){
+	enableVAD=enabled;
+	apm->voice_detection()->Enable(enabled);
 }
 
 AudioEffect::~AudioEffect(){

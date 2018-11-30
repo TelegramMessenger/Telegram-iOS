@@ -1159,6 +1159,9 @@ void VoIPController::UpdateAudioBitrateLimit(){
 			maxBitrate=maxAudioBitrate;
 			encoder->SetBitrate(initAudioBitrate);
 		}
+		encoder->SetVadMode(dataSavingMode || dataSavingRequestedByPeer);
+		if(echoCanceller)
+			echoCanceller->SetVoiceDetectionEnabled(dataSavingMode || dataSavingRequestedByPeer);
 	}
 }
 
@@ -1978,7 +1981,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 		DebugLoggedPacket dpkt={
 				static_cast<int32_t>(pseq),
 				GetCurrentTime()-connectionInitTime,
-				static_cast<int32_t>(packetInnerLen)
+				static_cast<int32_t>(packet.length)
 		};
 		debugLoggedPackets.push_back(dpkt);
 		if(debugLoggedPackets.size()>=2500){

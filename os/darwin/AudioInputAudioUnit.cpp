@@ -41,14 +41,13 @@ void AudioInputAudioUnit::Stop(){
 
 void AudioInputAudioUnit::HandleBufferCallback(AudioBufferList *ioData){
 	int i;
-	int j;
 	for(i=0;i<ioData->mNumberBuffers;i++){
 		AudioBuffer buf=ioData->mBuffers[i];
 #if TARGET_OS_OSX
 		assert(remainingDataSize+buf.mDataByteSize/2<10240);
 		float* src=reinterpret_cast<float*>(buf.mData);
 		int16_t* dst=reinterpret_cast<int16_t*>(remainingData+remainingDataSize);
-		for(j=0;j<buf.mDataByteSize/4;j++){
+		for(int j=0;j<buf.mDataByteSize/4;j++){
 			dst[j]=(int16_t)(src[j]*INT16_MAX);
 		}
 		remainingDataSize+=buf.mDataByteSize/2;

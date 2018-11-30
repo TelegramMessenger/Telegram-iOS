@@ -29,13 +29,15 @@ public:
 	virtual void Stop();
 	void SpeakerOutCallback(unsigned char* data, size_t len);
 	void Enable(bool enabled);
-	void ProcessInput(int16_t* inOut, size_t numSamples);
+	void ProcessInput(int16_t* inOut, size_t numSamples, bool& hasVoice);
 	void SetAECStrength(int strength);
+	void SetVoiceDetectionEnabled(bool enabled);
 
 private:
 	bool enableAEC;
 	bool enableAGC;
 	bool enableNS;
+	bool enableVAD=false;
 	bool isOn;
 #ifndef TGVOIP_NO_DSP
 	webrtc::AudioProcessing* apm=NULL;
