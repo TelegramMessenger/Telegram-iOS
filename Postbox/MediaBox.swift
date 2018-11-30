@@ -365,7 +365,6 @@ public final class MediaBox {
                 var completeSize = fileSize(paths.complete)
                 if completeSize == nil {
                     self.maybeCopiedPreFetchedResource(completePath: paths.complete, resource: resource)
-                    
                     completeSize = fileSize(paths.complete)
                 }
                 
@@ -385,6 +384,9 @@ public final class MediaBox {
                         subscriber.putCompletion()
                     }
                 } else {
+                    if attemptSynchronously, case .complete(false) = option {
+                        subscriber.putNext(MediaResourceData(path: paths.partial, offset: 0, size: fileSize(paths.partial) ?? 0, complete: false))
+                    }
                     self.dataQueue.async {
                         if let (fileContext, releaseContext) = self.fileContext(for: resource) {
                             let waitUntilAfterInitialFetch: Bool
