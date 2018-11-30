@@ -87,7 +87,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
             destructive: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xff3824), foregroundColor: .white),
             constructive: PresentationThemeItemDisclosureAction(fillColor: constructiveColor, foregroundColor: .white),
             accent: PresentationThemeItemDisclosureAction(fillColor: accentColor, foregroundColor: .white),
-            warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xff9500), foregroundColor: .white)
+            warning: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xff9500), foregroundColor: .white),
+            inactive: PresentationThemeItemDisclosureAction(fillColor: UIColor(rgb: 0xbcbcc3), foregroundColor: .white)
         ),
         itemCheckColors: PresentationThemeCheck(
             strokeColor: UIColor(rgb: 0xC7C7CC),

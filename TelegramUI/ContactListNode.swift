@@ -357,8 +357,8 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
         case let .orderedByPresence(options):
             entries.append(.search(theme, strings))
             
-            var addHeader: Bool
-            if !orderedPeers.isEmpty {
+            var addHeader = false
+            if !peers.isEmpty {
                 switch authorizationStatus {
                     case .denied:
                         entries.append(.permissionInfo(theme, strings))
@@ -369,7 +369,6 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                         entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow))
                         addHeader = true
                     default:
-                        addHeader = false
                         break
                 }
             }
@@ -512,14 +511,14 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     return entries
 }
 
-private func preparedContactListNodeTransition(account: Account, from fromEntries: [ContactListNodeEntry], to toEntries: [ContactListNodeEntry], interaction: ContactListNodeInteraction, firstTime: Bool, animated: Bool) -> ContactsListNodeTransition {
+private func preparedContactListNodeTransition(account: Account, from fromEntries: [ContactListNodeEntry], to toEntries: [ContactListNodeEntry], interaction: ContactListNodeInteraction, firstTime: Bool, isEmpty: Bool, animated: Bool) -> ContactsListNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     
-    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, firstTime: firstTime, animated: animated)
+    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, firstTime: firstTime, isEmpty: isEmpty, animated: animated)
 }
 
 private struct ContactsListNodeTransition {
@@ -527,6 +526,7 @@ private struct ContactsListNodeTransition {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let firstTime: Bool
+    let isEmpty: Bool
     let animated: Bool
 }
 
@@ -795,7 +795,7 @@ final class ContactListNode: ASDisplayNode {
                         
                         let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed)
                         let previous = previousEntries.swap(entries)
-                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: false))
+                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, animated: false))
                     }
                     
                     if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -832,6 +832,10 @@ final class ContactListNode: ASDisplayNode {
                             }
                         }
                         
+                        var isEmpty = false
+                        if (authorizationStatus == .notDetermined || authorizationStatus == .denied) && peers.isEmpty {
+                            isEmpty = true
+                        }
                         let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus)
                         let previous = previousEntries.swap(entries)
                         let animated: Bool
@@ -840,7 +844,7 @@ final class ContactListNode: ASDisplayNode {
                         } else {
                             animated = false
                         }
-                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, animated: animated))
+                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: isEmpty, animated: animated))
                     }
             
                     if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -912,19 +916,21 @@ final class ContactListNode: ASDisplayNode {
             fixSearchableListNodeScrolling(strongSelf.listNode)
         }
         
-        authorizeImpl = {
-            let _ = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { status in
-                switch status {
-                    case .notDetermined:
-                        account.telegramApplicationContext.applicationBindings.registerForNotifications()
-                    case .denied, .restricted:
-                        account.telegramApplicationContext.applicationBindings.openSettings()
-                    default:
-                        break
-                }
-            })
+        authorizeImpl = { [weak self] in
+            if let strongSelf = self {
+                let _ = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { status in
+                    switch status {
+                        case .notDetermined:
+                            DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.presentationData, present: { _, _ in }, openSettings: {}, { _ in })
+                        case .denied, .restricted:
+                            account.telegramApplicationContext.applicationBindings.openSettings()
+                        default:
+                            break
+                    }
+                })
+            }
         }
         
         openPrivacyPolicyImpl = { [weak self] in
@@ -1021,6 +1027,9 @@ final class ContactListNode: ASDisplayNode {
                         }
                     }
                 })
+                
+                self.listNode.isHidden = transition.isEmpty
+                self.authorizationNode.isHidden = !transition.isEmpty
             }
         }
     }

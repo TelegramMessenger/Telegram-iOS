@@ -203,33 +203,9 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     TGVoipLoggingFunction = loggingFunction;
 }
 
-+ (void)applyServerConfig:(NSString *)data {
-    if (data.length == 0) {
-        return;
-    }
-    NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:[data dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
-    if (dict != nil) {
-        std::vector<std::string> result;
-        char **values = (char **)malloc(sizeof(char *) * (int)dict.count * 2);
-        memset(values, 0, (int)dict.count * 2);
-        __block int index = 0;
-        [dict enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, __unused BOOL *stop) {
-            NSString *valueText = [NSString stringWithFormat:@"%@", value];
-            const char *keyText = [key UTF8String];
-            const char *valueTextValue = [valueText UTF8String];
-            values[index] = (char *)malloc(strlen(keyText) + 1);
-            values[index][strlen(keyText)] = 0;
-            memcpy(values[index], keyText, strlen(keyText));
-            values[index + 1] = (char *)malloc(strlen(valueTextValue) + 1);
-            values[index + 1][strlen(valueTextValue)] = 0;
-            memcpy(values[index + 1], valueTextValue, strlen(valueTextValue));
-            index += 2;
-        }];
-        tgvoip::ServerConfig::GetSharedInstance()->Update((const char **)values, index);
-        for (int i = 0; i < (int)dict.count * 2; i++) {
-            free(values[i]);
-        }
-        free(values);
++ (void)applyServerConfig:(NSString *)string {
+    if (string.length != 0) {
+        tgvoip::ServerConfig::GetSharedInstance()->Update(std::string(string.UTF8String));
     }
 }
 
@@ -326,11 +302,10 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
 
 - (void)stop {
     if (_controller != nil) {
-        char *buffer = (char *)malloc(_controller->GetDebugLogLength());
-        
         _controller->Stop();
-        _controller->GetDebugLog(buffer);
-        NSString *debugLog = [[NSString alloc] initWithUTF8String:buffer];
+        
+        auto debugString = _controller->GetDebugLog();
+        NSString *debugLog = [NSString stringWithUTF8String:debugString.c_str()];
         
         tgvoip::VoIPController::TrafficStats stats;
         _controller->GetStats(&stats);
