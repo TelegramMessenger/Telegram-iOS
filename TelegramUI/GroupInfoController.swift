@@ -1674,123 +1674,144 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         channelMembersPromise.set(.single([]))
     }
     
-    let previousChannelMemberCount = Atomic<Int?>(value: nil)
+    let previousChannelMembers = Atomic<[PeerId]?>(value: nil)
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
-        |> map { presentationData, state, view, combinedView, channelMembers -> (ItemListControllerState, (ItemListNodeState<GroupInfoEntry>, GroupInfoEntry.ItemGenerationArguments)) in
-            let peer = peerViewMainPeer(view)
-            
-            var globalNotificationSettings: GlobalNotificationSettings = GlobalNotificationSettings.defaultSettings
-            if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
-                    globalNotificationSettings = settings
-                }
+    |> map { presentationData, state, view, combinedView, channelMembers -> (ItemListControllerState, (ItemListNodeState<GroupInfoEntry>, GroupInfoEntry.ItemGenerationArguments)) in
+        let peer = peerViewMainPeer(view)
+        
+        var globalNotificationSettings: GlobalNotificationSettings = GlobalNotificationSettings.defaultSettings
+        if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
+            if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                globalNotificationSettings = settings
             }
-            
-            let rightNavigationButton: ItemListNavigationButton
-            var secondaryRightNavigationButton: ItemListNavigationButton?
-            if let editingState = state.editingState {
-                var doneEnabled = true
-                if let editingName = editingState.editingName, editingName.isEmpty {
+        }
+        
+        let rightNavigationButton: ItemListNavigationButton
+        var secondaryRightNavigationButton: ItemListNavigationButton?
+        if let editingState = state.editingState {
+            var doneEnabled = true
+            if let editingName = editingState.editingName, editingName.isEmpty {
+                doneEnabled = false
+            }
+            if peer is TelegramChannel {
+                if (view.cachedData as? CachedChannelData) == nil {
                     doneEnabled = false
                 }
-                if peer is TelegramChannel {
-                    if (view.cachedData as? CachedChannelData) == nil {
-                        doneEnabled = false
-                    }
-                }
-                
-                if state.savingData {
-                    rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: doneEnabled, action: {})
-                } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
-                        var updateValues: (title: String?, description: String?) = (nil, nil)
-                        updateState { state in
-                            updateValues = valuesRequiringUpdate(state: state, view: view)
-                            if updateValues.0 != nil || updateValues.1 != nil {
-                                return state.withUpdatedSavingData(true)
-                            } else {
-                                return state.withUpdatedEditingState(nil)
-                            }
-                        }
-                        
-                        let updateTitle: Signal<Void, Void>
-                        if let titleValue = updateValues.title {
-                            updateTitle = updatePeerTitle(account: account, peerId: peerId, title: titleValue)
-                                |> mapError { _ in return Void() }
-                        } else {
-                            updateTitle = .complete()
-                        }
-                        
-                        let updateDescription: Signal<Void, Void>
-                        if let descriptionValue = updateValues.description {
-                            updateDescription = updatePeerDescription(account: account, peerId: peerId, description: descriptionValue.isEmpty ? nil : descriptionValue)
-                                |> mapError { _ in return Void() }
-                        } else {
-                            updateDescription = .complete()
-                        }
-                        
-                        let signal = combineLatest(updateTitle, updateDescription)
-                        
-                        updatePeerNameDisposable.set((signal |> deliverOnMainQueue).start(error: { _ in
-                            updateState { state in
-                                return state.withUpdatedSavingData(false)
-                            }
-                        }, completed: {
-                            updateState { state in
-                                return state.withUpdatedSavingData(false).withUpdatedEditingState(nil)
-                            }
-                        }))
-                    })
-                }
+            }
+            
+            if state.savingData {
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: doneEnabled, action: {})
             } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                    if let peer = peer as? TelegramGroup {
-                        updateState { state in
-                            return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer), editingDescriptionText: ""))
-                        }
-                    } else if let channel = peer as? TelegramChannel, case .group = channel.info {
-                        var text = ""
-                        if let cachedData = view.cachedData as? CachedChannelData, let about = cachedData.about {
-                            text = about
-                        }
-                        updateState { state in
-                            return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(channel), editingDescriptionText: text))
-                        }
-                    }
-                })
-                if peer is TelegramChannel {
-                    secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
-                        updateState { state in
-                            return state.withUpdatedSearchingMembers(true)
-                        }
-                    })
-                }
-                
-            }
-            
-            var searchItem: ItemListControllerSearch?
-            if state.searchingMembers {
-                searchItem = ChannelMembersSearchItem(account: account, peerId: peerId, cancel: {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
+                    var updateValues: (title: String?, description: String?) = (nil, nil)
                     updateState { state in
-                        return state.withUpdatedSearchingMembers(false)
+                        updateValues = valuesRequiringUpdate(state: state, view: view)
+                        if updateValues.0 != nil || updateValues.1 != nil {
+                            return state.withUpdatedSavingData(true)
+                        } else {
+                            return state.withUpdatedEditingState(nil)
+                        }
                     }
-                }, openPeer: { peer, _ in
-                    if let infoController = peerInfoController(account: account, peer: peer) {
-                        arguments.pushController(infoController)
+                    
+                    let updateTitle: Signal<Void, Void>
+                    if let titleValue = updateValues.title {
+                        updateTitle = updatePeerTitle(account: account, peerId: peerId, title: titleValue)
+                            |> mapError { _ in return Void() }
+                    } else {
+                        updateTitle = .complete()
+                    }
+                    
+                    let updateDescription: Signal<Void, Void>
+                    if let descriptionValue = updateValues.description {
+                        updateDescription = updatePeerDescription(account: account, peerId: peerId, description: descriptionValue.isEmpty ? nil : descriptionValue)
+                            |> mapError { _ in return Void() }
+                    } else {
+                        updateDescription = .complete()
+                    }
+                    
+                    let signal = combineLatest(updateTitle, updateDescription)
+                    
+                    updatePeerNameDisposable.set((signal |> deliverOnMainQueue).start(error: { _ in
+                        updateState { state in
+                            return state.withUpdatedSavingData(false)
+                        }
+                    }, completed: {
+                        updateState { state in
+                            return state.withUpdatedSavingData(false).withUpdatedEditingState(nil)
+                        }
+                    }))
+                })
+            }
+        } else {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                if let peer = peer as? TelegramGroup {
+                    updateState { state in
+                        return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer), editingDescriptionText: ""))
+                    }
+                } else if let channel = peer as? TelegramChannel, case .group = channel.info {
+                    var text = ""
+                    if let cachedData = view.cachedData as? CachedChannelData, let about = cachedData.about {
+                        text = about
+                    }
+                    updateState { state in
+                        return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(channel), editingDescriptionText: text))
+                    }
+                }
+            })
+            if peer is TelegramChannel {
+                secondaryRightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                    updateState { state in
+                        return state.withUpdatedSearchingMembers(true)
                     }
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let previousCount = previousChannelMemberCount.swap(channelMembers.count) ?? 0
-            let listState = ItemListNodeState(entries: groupInfoEntries(account: account, presentationData: presentationData, view: view, channelMembers: channelMembers, globalNotificationSettings: globalNotificationSettings, state: state), style: .blocks, searchItem: searchItem, animateChanges: previousCount >= channelMembers.count)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
         }
+        
+        var searchItem: ItemListControllerSearch?
+        if state.searchingMembers {
+            searchItem = ChannelMembersSearchItem(account: account, peerId: peerId, cancel: {
+                updateState { state in
+                    return state.withUpdatedSearchingMembers(false)
+                }
+            }, openPeer: { peer, _ in
+                if let infoController = peerInfoController(account: account, peer: peer) {
+                    arguments.pushController(infoController)
+                }
+            })
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.GroupInfo_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        
+        let entries = groupInfoEntries(account: account, presentationData: presentationData, view: view, channelMembers: channelMembers, globalNotificationSettings: globalNotificationSettings, state: state)
+        var memberIds: [PeerId] = []
+        for entry in entries {
+            switch entry {
+                case let .member(member):
+                    memberIds.append(member.peerId)
+                default:
+                    break
+            }
+        }
+        
+        let previousMembers = previousChannelMembers.swap(memberIds) ?? []
+        
+        var animateChanges = previousMembers.count >= memberIds.count
+        if presentationData.disableAnimations {
+            if Set(memberIds) == Set(previousMembers) && memberIds != previousMembers {
+                animateChanges = false
+            }
+        }
+        
+        let listState = ItemListNodeState(entries: entries, style: .blocks, searchItem: searchItem, animateChanges: animateChanges)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
+    }
     
     let controller = ItemListController(account: account, state: signal)
     
