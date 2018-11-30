@@ -3541,3 +3541,36 @@ Unused sets are archived when you add more.";
 "Channel.Username.RevokeExistingUsernamesInfo" = "You can revoke the link from one of your older groups or channels, or create a private channel instead.";
 
 "InstantPage.Reference" = "Reference";
+
+"Permissions.Skip" = "Skip";
+
+"Permissions.ContactsTitle" = "Sync Your Contacts";
+"Permissions.ContactsText" = "See who's on Telegram and switch seamlessly, without having to \"add\" your friends.";
+"Permissions.ContactsAllow" = "Allow Access";
+"Permissions.ContactsAllowInSettings" = "Allow in Settings";
+
+"Permissions.NotificationsTitle" = "Turn ON Notifications";
+"Permissions.NotificationsText" = "Don't miss important messages from your friends and coworkers.";
+"Permissions.NotificationsAllow" = "Turn Notifications ON";
+"Permissions.NotificationsAllowInSettings" = "Turn ON in Settings";
+
+"Permissions.CellularDataTitle" = "Turn ON Notifications";
+"Permissions.CellularDataText" = "Don't worry, Telegram keeps network usage to a minimum. You can further control this in Settings > Data and Storage.";
+"Permissions.CellularDataAllowInSettings" = "Turn ON in Settings";
+
+"Permissions.SiriTitle" = "Turn ON Siri";
+"Permissions.SiriText" = "Use Siri to send messages and make calls.";
+"Permissions.SiriAllow" = "Turn Siri ON";
+"Permissions.SiriAllowInSettings" = "Turn ON in Settings";
+
+"Permissions.PrivacyPolicy" = "Privacy Policy";
+
+"Contacts.PermissionsTitle" = "Access to Contacts";
+"Contacts.PermissionsText" = "Please allow Telegram access to your phonebook to seamlessly find all your friends.";
+"Contacts.PermissionsAllow" = "Allow Access";
+"Contacts.PermissionsAllowInSettings" = "Allow in Settings";
+
+"Notifications.PermissionsTitle" = "Turn ON Notifications";
+"Notifications.PermissionsText" = "Don't miss important messages from your friends and coworkers.";
+"Notifications.PermissionsAllow" = "Turn Notifications ON";
+"Notifications.PermissionsAllowInSettings" = "Turn ON in Settings";
