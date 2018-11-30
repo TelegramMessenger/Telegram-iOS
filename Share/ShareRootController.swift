@@ -271,7 +271,7 @@ class ShareRootController: UIViewController {
                         }
                     }), externalShare: false)
                     shareController.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
-                    shareController.dismissed = {
+                    shareController.dismissed = { _ in
                         self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
                     }
                     
