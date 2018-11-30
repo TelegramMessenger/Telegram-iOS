@@ -40,13 +40,27 @@ private enum ChatRecordingActivity {
 public enum NavigateToMessageLocation {
     case id(MessageId)
     case index(MessageIndex)
+    case upperBound(PeerId)
     
-    var messageId: MessageId {
+    var messageId: MessageId? {
         switch self {
             case let .id(id):
                 return id
             case let .index(index):
                 return index.id
+            case .upperBound:
+                return nil
+        }
+    }
+    
+    var peerId: PeerId {
+        switch self {
+            case let .id(id):
+                return id.peerId
+            case let .index(index):
+                return index.id.peerId
+            case let .upperBound(peerId):
+                return peerId
         }
     }
 }
@@ -162,6 +176,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     private var recordingActivityValue: ChatRecordingActivity = .none
     private let recordingActivityPromise = ValuePromise<ChatRecordingActivity>(.none, ignoreRepeated: true)
     private var recordingActivityDisposable: Disposable?
+    private var acquiredRecordingActivityDisposable: Disposable?
     
     private var searchDisposable: MetaDisposable?
     
@@ -752,6 +767,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         }, openMessageShareMenu: { [weak self] id in
             if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id) {
                 let shareController = ShareController(account: strongSelf.account, subject: .messages(messages))
+                shareController.dismissed = { shared in
+                    if shared {
+                        self?.commitPurposefulAction()
+                    }
+                }
                 strongSelf.chatDisplayNode.dismissInput()
                 strongSelf.present(shareController, in: .window(.root))
             }
@@ -1376,21 +1396,19 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         })
         
         self.recordingActivityDisposable = (self.recordingActivityPromise.get()
-            |> deliverOnMainQueue).start(next: { [weak self] value in
-                if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
-                    switch value {
-                        case .voice:
-                            strongSelf.account.updateLocalInputActivity(peerId: peerId, activity: .recordingVoice, isPresent: true)
-                            strongSelf.account.updateLocalInputActivity(peerId: peerId, activity: .recordingInstantVideo, isPresent: false)
-                        case .instantVideo:
-                            strongSelf.account.updateLocalInputActivity(peerId: peerId, activity: .recordingVoice, isPresent: false)
-                            strongSelf.account.updateLocalInputActivity(peerId: peerId, activity: .recordingInstantVideo, isPresent: true)
-                        case .none:
-                            strongSelf.account.updateLocalInputActivity(peerId: peerId, activity: .recordingVoice, isPresent: false)
-                            strongSelf.account.updateLocalInputActivity(peerId: peerId, activity: .recordingInstantVideo, isPresent: false)
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
+                strongSelf.acquiredRecordingActivityDisposable?.dispose()
+                switch value {
+                    case .voice:
+                        strongSelf.acquiredRecordingActivityDisposable = strongSelf.account.acquireLocalInputActivity(peerId: peerId, activity: .recordingVoice)
+                    case .instantVideo:
+                        strongSelf.acquiredRecordingActivityDisposable = strongSelf.account.acquireLocalInputActivity(peerId: peerId, activity: .recordingInstantVideo)
+                    case .none:
+                        strongSelf.acquiredRecordingActivityDisposable = nil
                 }
-            })
+            }
+        })
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -1495,6 +1513,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         self.unpinMessageDisposable?.dispose()
         self.inputActivityDisposable?.dispose()
         self.recordingActivityDisposable?.dispose()
+        self.acquiredRecordingActivityDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
         self.searchDisposable?.dispose()
         self.applicationInForegroundDisposable?.dispose()
@@ -1933,7 +1952,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 if let messageId = strongSelf.historyNavigationStack.removeLast() {
                     strongSelf.navigateToMessage(from: nil, to: .id(messageId.id), rememberInStack: false)
                 } else {
-                    strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                    if case .known = strongSelf.chatDisplayNode.historyNode.visibleContentOffset() {
+                        strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                    } else if case let .peer(peerId) = strongSelf.chatLocation {
+                        strongSelf.navigateToMessage(messageLocation: .upperBound(peerId), animated: true)
+                    } else {
+                        strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                    }
                 }
             }
         }
@@ -2784,41 +2809,41 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 let postbox = self.account.postbox
                 let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
                 self.peerInputActivitiesDisposable = (self.account.peerInputActivities(peerId: peerId)
-                    |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
-                        var foundAllPeers = true
-                        var cachedResult: [(Peer, PeerInputActivity)] = []
-                        previousPeerCache.with { dict -> Void in
-                            for (peerId, activity) in activities {
-                                if let peer = dict[peerId] {
-                                    cachedResult.append((peer, activity))
-                                } else {
-                                    foundAllPeers = false
-                                    break
-                                }
-                            }
-                        }
-                        if foundAllPeers {
-                            return .single(cachedResult)
-                        } else {
-                            return postbox.transaction { transaction -> [(Peer, PeerInputActivity)] in
-                                var result: [(Peer, PeerInputActivity)] = []
-                                var peerCache: [PeerId: Peer] = [:]
-                                for (peerId, activity) in activities {
-                                    if let peer = transaction.getPeer(peerId) {
-                                        result.append((peer, activity))
-                                        peerCache[peerId] = peer
-                                    }
-                                }
-                                let _ = previousPeerCache.swap(peerCache)
-                                return result
+                |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
+                    var foundAllPeers = true
+                    var cachedResult: [(Peer, PeerInputActivity)] = []
+                    previousPeerCache.with { dict -> Void in
+                        for (peerId, activity) in activities {
+                            if let peer = dict[peerId] {
+                                cachedResult.append((peer, activity))
+                            } else {
+                                foundAllPeers = false
+                                break
                             }
                         }
                     }
-                    |> deliverOnMainQueue).start(next: { [weak self] activities in
-                        if let strongSelf = self {
-                            strongSelf.chatTitleView?.inputActivities = (peerId, activities)
+                    if foundAllPeers {
+                        return .single(cachedResult)
+                    } else {
+                        return postbox.transaction { transaction -> [(Peer, PeerInputActivity)] in
+                            var result: [(Peer, PeerInputActivity)] = []
+                            var peerCache: [PeerId: Peer] = [:]
+                            for (peerId, activity) in activities {
+                                if let peer = transaction.getPeer(peerId) {
+                                    result.append((peer, activity))
+                                    peerCache[peerId] = peer
+                                }
+                            }
+                            let _ = previousPeerCache.swap(peerCache)
+                            return result
                         }
-                    })
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] activities in
+                    if let strongSelf = self {
+                        strongSelf.chatTitleView?.inputActivities = (peerId, activities)
+                    }
+                })
                 
                 self.sentMessageEventsDisposable.set(self.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId).start(next: { [weak self] _ in
                     if let strongSelf = self {
@@ -4357,17 +4382,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 }
             }
             
-            if case let .peer(peerId) = self.chatLocation, messageLocation.messageId.peerId != peerId {
+            if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, messageId.peerId != peerId {
                 if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, account: self.account, chatLocation: .peer(messageLocation.messageId.peerId), messageId: messageLocation.messageId)
+                    navigateToChatController(navigationController: navigationController, account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId)
                 }
-            } else if case let .peer(peerId) = self.chatLocation, messageLocation.messageId.peerId == peerId {
+            } else if case let .peer(peerId) = self.chatLocation, messageLocation.peerId == peerId {
                 if let fromIndex = fromIndex {
                     if let _ = fromId, rememberInStack {
                         self.historyNavigationStack.add(fromIndex)
                     }
                     
-                    if let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageLocation.messageId) {
+                    if let messageId = messageLocation.messageId, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                         self.loadingMessage.set(false)
                         self.messageIndexDisposable.set(nil)
                         self.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: MessageIndex(message), animated: animated, scrollPosition: scrollPosition)
@@ -4380,6 +4405,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                                 searchLocation = .id(id)
                             case let .index(index):
                                 searchLocation = .index(index)
+                            case .upperBound:
+                                searchLocation = .index(MessageIndex.upperBound(peerId: peerId))
                         }
                         let historyView = chatHistoryViewForLocation(.InitialSearch(location: searchLocation, count: 50), account: self.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                         let signal = historyView
@@ -4455,18 +4482,19 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 }
             } else {
                 if let fromIndex = fromIndex {
-                    if let _ = fromId, rememberInStack {
-                        self.historyNavigationStack.add(fromIndex)
-                    }
-                    
-                    self.loadingMessage.set(true)
                     let searchLocation: ChatHistoryInitialSearchLocation
                     switch messageLocation {
                         case let .id(id):
                             searchLocation = .id(id)
                         case let .index(index):
                             searchLocation = .index(index)
+                        case .upperBound:
+                            return
                     }
+                    if let _ = fromId, rememberInStack {
+                        self.historyNavigationStack.add(fromIndex)
+                    }
+                    self.loadingMessage.set(true)
                     let historyView = chatHistoryViewForLocation(.InitialSearch(location: searchLocation, count: 50), account: self.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                     let signal = historyView
                         |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
@@ -4491,7 +4519,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                                 strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                                 completion?()
                             } else {
-                                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(messageLocation.messageId.peerId), messageId: messageLocation.messageId))
+                                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(messageLocation.peerId), messageId: messageLocation.messageId))
                                 completion?()
                             }
                         }

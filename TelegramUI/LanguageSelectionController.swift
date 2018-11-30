@@ -51,7 +51,7 @@ private final class LanguageAccessoryView: UIView {
             self.check.frame = CGRect(origin: CGPoint(x: floor((size.width - checkSize.width) / 2.0), y: floor((size.height - checkSize.height) / 2.0)), size: checkSize)
         }
         
-        let indicatorSize = self.indicator.measure(CGSize(width: 22.0, height: 22.0))
+        let indicatorSize = self.indicator.measure(CGSize(width: 100.0, height: 100.0))
         self.indicator.frame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
     }
     

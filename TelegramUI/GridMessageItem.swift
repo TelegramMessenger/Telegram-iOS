@@ -158,7 +158,7 @@ final class GridMessageItem: GridItem {
         self.section = GridMessageItemSection(timestamp: message.timestamp, theme: theme, strings: strings)
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = GridMessageItemNode()
         if let media = mediaForMessage(self.message) {
             node.setup(account: self.account, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)

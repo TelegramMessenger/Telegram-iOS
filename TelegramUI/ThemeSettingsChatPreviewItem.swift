@@ -26,7 +26,7 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
         self.dateTimeFormat = dateTimeFormat
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ThemeSettingsChatPreviewItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -169,7 +169,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     apply()
                 })
             } else {
-                item1.nodeConfiguredForParams(async: { $0() }, params: params, previousItem: nil, nextItem: nil, completion: { node, apply in
+                item1.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
                     node1 = node
                     apply().1()
                 })
@@ -188,7 +188,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     apply()
                 })
             } else {
-                item2.nodeConfiguredForParams(async: { $0() }, params: params, previousItem: nil, nextItem: nil, completion: { node, apply in
+                item2.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
                     node2 = node
                     apply().1()
                 })

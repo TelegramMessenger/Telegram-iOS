@@ -35,7 +35,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         self.requestLayout = requestLayout
         self.interaction = interaction
         
-        self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.freeMonoIcon, 40.0, 2.0, false))
+        self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.freeMonoIcon, 22.0, 2.0, false))
         self.activityIndicator.isHidden = true
         
         self.scrollNode = ASScrollNode()
@@ -114,7 +114,8 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         var insets = layout.insets(options: insetOptions)
         insets.bottom = max(insets.bottom, layout.safeInsets.bottom)
         
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - 40.0) / 2.0), y: insets.top + floor((layout.size.height - insets.top - insets.bottom - 40.0) / 2.0)), size: CGSize(width: 40.0, height: 40.0)))
+        let activitySize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - activitySize.width) / 2.0), y: insets.top + floor((layout.size.height - insets.top - insets.bottom - activitySize.height) / 2.0)), size: activitySize))
         
         var headerNodeTransition: ContainedViewLayoutTransition = self.headerNode.bounds.height.isZero ? .immediate : transition
         if self.previousHeaderNodeAlpha.isZero && !self.headerNode.alpha.isZero {

@@ -23,7 +23,7 @@ final class StickerPaneSearchBarPlaceholderItem: GridItem {
         self.activate = activate
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPaneSearchBarPlaceholderNode()
         node.activate = self.activate
         node.setup(theme: self.theme, strings: self.strings)

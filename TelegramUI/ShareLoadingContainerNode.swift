@@ -38,7 +38,7 @@ final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContainerNode 
     
     init(theme: PresentationTheme, forceNativeAppearance: Bool) {
         self.theme = theme
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.actionSheet.controlAccentColor, 50.0, 2.0, forceNativeAppearance))
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.actionSheet.controlAccentColor, !forceNativeAppearance ? 22.0 : 50.0, 2.0, forceNativeAppearance))
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         self.doneStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
         

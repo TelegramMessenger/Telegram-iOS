@@ -201,7 +201,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
         }
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ItemListAvatarAndNameInfoItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -305,7 +305,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         self.updatingAvatarOverlay.displayWithoutProcessing = true
         self.updatingAvatarOverlay.displaysAsynchronously = false
         
-        self.activityIndicator = ActivityIndicator(type: .custom(.white, 24.0, 1.0, false))
+        self.activityIndicator = ActivityIndicator(type: .custom(.white, 22.0, 1.0, false))
         self.activityIndicator.isHidden = true
         
         self.nameNode = TextNode()
@@ -630,7 +630,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         } else if case .editSettings = item.mode {
                             overrideImage = AvatarNodeImageOverride.editAvatarIcon
                         }
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor)
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: true)
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: avatarOriginY), size: CGSize(width: 66.0, height: 66.0))

@@ -111,7 +111,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
         }
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ChatMediaInputStickerGridItemNode()
         node.interfaceInteraction = self.interfaceInteraction
         node.inputNodeInteraction = self.inputNodeInteraction

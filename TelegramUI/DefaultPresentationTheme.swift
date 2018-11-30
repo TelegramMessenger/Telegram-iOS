@@ -101,7 +101,8 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
             primaryColor: .black,
             controlColor: UIColor(rgb: 0x96979d)
         ),
-        mediaPlaceholderColor: UIColor(rgb: 0xe4e4e4)
+        mediaPlaceholderColor: UIColor(rgb: 0xe4e4e4),
+        scrollIndicatorColor: UIColor(white: 0.0, alpha: 0.3)
     )
     
     let chatList = PresentationThemeChatList(

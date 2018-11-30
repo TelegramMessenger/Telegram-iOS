@@ -29,7 +29,7 @@ final class StickerPanePeerSpecificSetupGridItem: GridItem {
         }
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPanePeerSpecificSetupGridItemNode()
         node.setup(item: self)
         return node

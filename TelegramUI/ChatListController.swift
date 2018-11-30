@@ -410,7 +410,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(messageId.peerId), messageId: messageId)
+                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(messageId.peerId), messageId: messageId, purposefulAction: {
+                                self?.deactivateSearch(animated: false)
+                            })
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                         }
                     }
@@ -434,9 +436,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         }
                         if let navigationController = strongSelf.navigationController as? NavigationController {
                             navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.deactivateSearch(animated: false)
-                                }
+                                self?.deactivateSearch(animated: false)
                             })
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                         }

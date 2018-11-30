@@ -18,7 +18,7 @@ final class ThemeGridControllerItem: GridItem {
         self.interaction = interaction
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ThemeGridControllerItemNode()
         node.setup(account: self.account, wallpaper: self.wallpaper, interaction: self.interaction)
         return node

@@ -5,7 +5,7 @@ import AsyncDisplayKit
 final class GridHoleItem: GridItem {
     let section: GridSection? = nil
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         return GridHoleItemNode()
     }
     
