@@ -519,6 +519,10 @@ public class Window1 {
         }
     }
     
+    public func setupVolumeControlStatusBarGraphics(_ graphics: (UIImage, UIImage, UIImage)) {
+        self.volumeControlStatusBarNode.graphics = graphics
+    }
+    
     public func setForceInCallStatusBar(_ forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
         if self.forceInCallStatusBarText != forceInCallStatusBarText {
             self.forceInCallStatusBarText = forceInCallStatusBarText

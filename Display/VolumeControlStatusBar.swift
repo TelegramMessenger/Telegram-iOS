@@ -76,7 +76,22 @@ final class VolumeControlStatusBar: UIView {
 }
 
 final class VolumeControlStatusBarNode: ASDisplayNode {
+    var innerGraphics: (UIImage, UIImage, UIImage, Bool)?
+    var graphics: (UIImage, UIImage, UIImage)? = nil {
+        didSet {
+            if self.isDark {
+                self.innerGraphics = generateDarkGraphics(self.graphics)
+            } else {
+                if let graphics = self.graphics {
+                    self.innerGraphics = (graphics.0, graphics.1, graphics.2, false)
+                } else {
+                    self.innerGraphics = nil
+                }
+            }
+        }
+    }
     private let backgroundNode: ASImageNode
+    private let iconNode: ASImageNode
     private let foregroundNode: ASImageNode
     private let foregroundClippingNode: ASDisplayNode
     
@@ -88,9 +103,15 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
                 if self.isDark {
                     self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: UIColor(white: 0.6, alpha: 1.0))
                     self.foregroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: .white)
+                    
+                    self.innerGraphics = generateDarkGraphics(self.graphics)
                 } else {
-                    self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: UIColor(white: 0.6, alpha: 1.0))
+                    self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: UIColor(rgb: 0xc5c5c5))
                     self.foregroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: .black)
+                    
+                    if let graphics = self.graphics {
+                        self.innerGraphics = (graphics.0, graphics.1, graphics.2, false)
+                    }
                 }
             }
         }
@@ -102,7 +123,7 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: .gray)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: UIColor(rgb: 0xc5c5c5))
         
         self.foregroundNode = ASImageNode()
         self.foregroundNode.isLayerBacked = true
@@ -114,22 +135,49 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
         self.foregroundClippingNode.clipsToBounds = true
         self.foregroundClippingNode.addSubnode(self.foregroundNode)
         
+        self.iconNode = ASImageNode()
+        self.iconNode.isLayerBacked = true
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+        
         super.init()
         
         self.isUserInteractionEnabled = false
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.foregroundClippingNode)
+        self.addSubnode(self.iconNode)
+    }
+    
+    func generateDarkGraphics(_ graphics: (UIImage, UIImage, UIImage)?) -> (UIImage, UIImage, UIImage, Bool)? {
+        if var (offImage, halfImage, onImage) = graphics {
+            offImage = generateTintedImage(image: offImage, color: UIColor.black)!
+            halfImage = generateTintedImage(image: halfImage, color: UIColor.black)!
+            onImage = generateTintedImage(image: onImage, color: UIColor.black)!
+            return (offImage, halfImage, onImage, true)
+        } else {
+            return nil
+        }
+    }
+    
+    func updateGraphics() {
+        if self.isDark {
+            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: UIColor(white: 0.6, alpha: 1.0))
+            self.foregroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: .white)
+        } else {
+            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: UIColor(white: 0.6, alpha: 1.0))
+            self.foregroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: .black)
+        }
     }
     
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
         let barHeight: CGFloat = 4.0
-        let barWidth: CGFloat
+        var barWidth: CGFloat
         
         let statusBarHeight: CGFloat
-        let sideInset: CGFloat
+        var sideInset: CGFloat
         if let actual = layout.statusBarHeight {
             statusBarHeight = actual
         } else {
@@ -141,14 +189,26 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
             sideInset = 12.0
         }
         
+        let iconRect = CGRect(x: sideInset + 4.0, y: 14.0, width: 21.0, height: 16.0)
         if !layout.intrinsicInsets.bottom.isZero {
-            barWidth = 92.0 - sideInset * 2.0
+            if layout.size.width > 375.0 {
+                barWidth = 88.0 - sideInset * 2.0
+            } else {
+                barWidth = 80.0 - sideInset * 2.0
+            }
+            if self.graphics != nil {
+                self.iconNode.isHidden = false
+                barWidth -= iconRect.width - 8.0
+                sideInset += iconRect.width + 8.0
+            }
         } else {
+            self.iconNode.isHidden = true
             barWidth = layout.size.width - sideInset * 2.0
         }
         
         let boundingRect = CGRect(origin: CGPoint(x: sideInset, y: floor((statusBarHeight - barHeight) / 2.0)), size: CGSize(width: barWidth, height: barHeight))
         
+        transition.updateFrame(node: self.iconNode, frame: iconRect)
         transition.updateFrame(node: self.backgroundNode, frame: boundingRect)
         transition.updateFrame(node: self.foregroundNode, frame: CGRect(origin: CGPoint(), size: boundingRect.size))
         transition.updateFrame(node: self.foregroundClippingNode, frame: CGRect(origin: boundingRect.origin, size: CGSize(width: self.value * boundingRect.width, height: boundingRect.height)))
@@ -162,6 +222,16 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
             }
             self.value = toValue
             self.updateLayout(layout: layout, transition: .animated(duration: 0.25, curve: .spring))
+            
+            if let graphics = self.graphics {
+                if self.value > 0.5 {
+                    self.iconNode.image = graphics.2
+                } else if self.value > 0.0 {
+                    self.iconNode.image = graphics.1
+                } else {
+                    self.iconNode.image = graphics.0
+                }
+            }
         } else {
             self.value = toValue
         }
