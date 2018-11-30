@@ -528,7 +528,7 @@ final class AuthorizedApplicationContext {
                                 strongSelf.notificationController.view.isHidden = true
                             }
                             
-                            strongSelf.mainWindow.present(legacyController, on: .root)
+                            strongSelf.mainWindow.present(legacyController, on: .passcode)
                             
                             if !presentAnimated {
                                 controller.refreshTouchId()
