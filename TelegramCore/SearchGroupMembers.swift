@@ -17,6 +17,9 @@ private func searchLocalGroupMembers(postbox: Postbox, peerId: PeerId, query: St
         }
         
         return peers.filter { peer in
+            if peer.displayTitle.isEmpty {
+                return false
+            }
             if peer.indexName.matchesByTokens(normalizedQuery) {
                 return true
             }
@@ -32,7 +35,13 @@ public func searchGroupMembers(postbox: Postbox, network: Network, accountPeerId
     if peerId.namespace == Namespaces.Peer.CloudChannel && !query.isEmpty {
         return searchLocalGroupMembers(postbox: postbox, peerId: peerId, query: query)
         |> mapToSignal { local -> Signal<[Peer], NoError> in
-            return .single(local)
+            let localResult: Signal<[Peer], NoError>
+            if local.isEmpty {
+                localResult = .complete()
+            } else {
+                localResult = .single(local)
+            }
+            return localResult
             |> then(
                 channelMembers(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, category: .recent(.search(query)))
                 |> map { participants -> [Peer] in
@@ -40,7 +49,15 @@ public func searchGroupMembers(postbox: Postbox, network: Network, accountPeerId
                     let existingIds = Set(local.map { $0.id })
                     let filtered: [Peer]
                     if let participants = participants {
-                        filtered = participants.map({ $0.peer }).filter({ !existingIds.contains($0.id) })
+                        filtered = participants.map({ $0.peer }).filter({ peer in
+                            if existingIds.contains(peer.id) {
+                                return false
+                            }
+                            if peer.displayTitle.isEmpty {
+                                return false
+                            }
+                            return true
+                        })
                     } else {
                         filtered = []
                     }

@@ -46,7 +46,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 filter = .inputMessagesFilterEmpty
             }
         
-            remoteSearchResult = account.postbox.transaction { transaction -> (peer:Peer?, from: Peer?) in
+            remoteSearchResult = account.postbox.transaction { transaction -> (peer: Peer?, from: Peer?) in
                 if let fromId = fromId {
                     return (peer: transaction.getPeer(peerId), from: transaction.getPeer(fromId))
                 }
@@ -77,15 +77,24 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             /*remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
                 |> mapError { _ in } |> map(Optional.init)*/
         case .general:
-            remoteSearchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: limit), automaticFloodWait: false)
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
-                return .single(nil)
+            remoteSearchResult = account.postbox.transaction { transaction -> Api.InputPeer in
+                if let lowerBound = lowerBound, let peer = transaction.getPeer(lowerBound.id.peerId), let inputPeer = apiInputPeer(peer) {
+                    return inputPeer
+                } else {
+                    return .inputPeerEmpty
+                } 
+            }
+            |> mapToSignal { inputPeer in
+                account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: lowerBound?.timestamp ?? 0, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                    return .single(nil)
+                }
             }
     }
     
     let processedSearchResult = remoteSearchResult
-    |> mapToSignal { result -> Signal<([Message], [PeerId : CombinedPeerReadState], Int32), NoError> in
+    |> mapToSignal { result -> Signal<([Message], [PeerId: CombinedPeerReadState], Int32), NoError> in
         guard let result = result else {
             return .single(([], [:], 0))
         }

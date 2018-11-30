@@ -1157,6 +1157,10 @@ public class Account {
             }
         }
     }
+    
+    public func acquireLocalInputActivity(peerId: PeerId, activity: PeerInputActivity) -> Disposable {
+        return self.localInputActivityManager.acquireActivity(chatPeerId: peerId, peerId: self.peerId, activity: activity)
+    }
 }
 
 public func accountNetworkUsageStats(account: Account, reset: ResetNetworkUsageStats) -> Signal<NetworkUsageStats, NoError> {
