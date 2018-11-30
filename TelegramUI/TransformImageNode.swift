@@ -50,9 +50,8 @@ public class TransformImageNode: ASDisplayNode {
     public func setSignal(_ signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, attemptSynchronously: Bool = false, dispatchOnDisplayLink: Bool = true) {
         let argumentsPromise = self.argumentsPromise
         
-        var shouldAttemptSynchronously = attemptSynchronously
-        let result = combineLatest(signal, argumentsPromise.get())
-        |> mapToSignal { transform, arguments -> Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments), NoError> in
+        let data = combineLatest(signal, argumentsPromise.get())
+        /*|> mapToSignal { transform, arguments -> Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments), NoError> in
             let result: Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments), NoError> = .single((transform, arguments))
             if shouldAttemptSynchronously {
                 shouldAttemptSynchronously = false
@@ -61,7 +60,17 @@ public class TransformImageNode: ASDisplayNode {
                 return result
                 |> deliverOn(Queue.concurrentDefaultQueue())
             }
+        }*/
+        
+        let resultData: Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments), NoError>
+        if attemptSynchronously {
+            resultData = data
+        } else {
+            resultData = data
+            |> deliverOn(Queue.concurrentDefaultQueue())
         }
+        
+        let result = resultData
         |> mapToThrottled { transform, arguments -> Signal<((TransformImageArguments) -> DrawingContext?, TransformImageArguments, UIImage?)?, NoError> in
             return deferred {
                 if let context = transform(arguments) {
@@ -102,7 +111,7 @@ public class TransformImageNode: ASDisplayNode {
                     }
                 }
             }
-            if dispatchOnDisplayLink {
+            if dispatchOnDisplayLink && !attemptSynchronously {
                 displayLinkDispatcher.dispatch {
                     apply()
                 }

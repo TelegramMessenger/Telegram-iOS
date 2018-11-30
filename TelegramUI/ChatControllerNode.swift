@@ -260,6 +260,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.requestLayout(.animated(duration: 0.1, curve: .easeInOut))
             }
         }
+        var lastSendTimestamp = 0.0
         self.textInputPanelNode?.sendMessage = { [weak self] in
             if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
                 if textInputPanelNode.textInputNode?.isFirstResponder() ?? false {
@@ -274,6 +275,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
                     strongSelf.interfaceInteraction?.editMessage()
                 } else {
+                    let timestamp = CACurrentMediaTime()
+                    if lastSendTimestamp + 0.15 > timestamp {
+                        return
+                    }
+                    lastSendTimestamp = timestamp
+                    
                     strongSelf.updateTypingActivity(false)
                     
                     var messages: [EnqueueMessage] = []

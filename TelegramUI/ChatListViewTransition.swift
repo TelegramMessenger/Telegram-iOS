@@ -183,9 +183,21 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             }
         }
         
-        if let fromView = fromView, fromView.filteredEntries.isEmpty {
-            options.remove(.AnimateInsertion)
-            options.remove(.AnimateAlpha)
+        var fromEmptyView = false
+        if let fromView = fromView {
+            if fromView.filteredEntries.isEmpty {
+                options.remove(.AnimateInsertion)
+                options.remove(.AnimateAlpha)
+                fromEmptyView = true
+            }
+        } else {
+            fromEmptyView = true
+        }
+        
+        if fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 2 {
+            if case .SearchEntry = toView.filteredEntries[toView.filteredEntries.count - 1] {
+                scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
+            }
         }
         
         subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange))

@@ -30,4 +30,7 @@ class SearchDisplayControllerContentNode: ASDisplayNode {
     func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, Any)? {
         return nil
     }
+    
+    func scrollToTop() {
+    }
 }

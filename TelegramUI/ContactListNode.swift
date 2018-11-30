@@ -587,7 +587,7 @@ final class ContactListNode: ASDisplayNode {
         super.init()
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        //self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         
         self.selectionStateValue = selectionState
         self.selectionStatePromise.set(.single(selectionState))

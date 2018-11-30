@@ -114,6 +114,9 @@ public final class TelegramApplicationContext {
     public var isCurrent: Bool = false {
         didSet {
             self.mediaManager?.isCurrent = self.isCurrent
+            if !self.isCurrent {
+                self.callManager = nil
+            }
         }
     }
     

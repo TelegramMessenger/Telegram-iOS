@@ -78,7 +78,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
-            self?.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+            self?.chatListDisplayNode.scrollToTop()
         }
         self.scrollToTopWithTabBar = { [weak self] in
             guard let strongSelf = self else {

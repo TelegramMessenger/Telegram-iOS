@@ -53,7 +53,7 @@ func messageFileMediaResourceStatus(account: Account, file: TelegramMediaFile, m
         return status?.status
     }
     
-    if message.flags.isSending {
+    if message.flags.isSending  {
         return combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id), playbackStatus)
         |> map { resourceStatus, pendingStatus, playbackStatus -> FileMediaResourceStatus in
             let mediaStatus: FileMediaResourceMediaStatus

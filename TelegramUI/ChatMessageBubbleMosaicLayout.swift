@@ -58,7 +58,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
         }
         averageAspectRatio += aspectRatio
         
-        return MosaicItemInfo(index: index, imageSize: itemSize, aspectRatio: aspectRatio , layoutFrame: CGRect(), position: [])
+        return MosaicItemInfo(index: index, imageSize: itemSize, aspectRatio: aspectRatio, layoutFrame: CGRect(), position: [])
     }
     
     let minWidth: CGFloat = 68.0
@@ -71,7 +71,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
         if itemInfos.count == 2 {
             if proportions == "ww" && averageAspectRatio > 1.4 * maxAspectRatio && itemInfos[1].aspectRatio - itemInfos[0].aspectRatio < 0.2 {
                 let width = maxSize.width
-                let height = floorToScreenPixels(min(width / itemInfos[0].aspectRatio, min(width / itemInfos[1].aspectRatio, (maxSize.height - spacing) / 2.0)))
+                let height = floor(min(width / itemInfos[0].aspectRatio, min(width / itemInfos[1].aspectRatio, (maxSize.height - spacing) / 2.0)))
                 
                 itemInfos[0].layoutFrame = CGRect(x: 0.0, y: 0.0, width: width, height: height)
                 itemInfos[0].position = [.top, .left, .right]
@@ -80,7 +80,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                 itemInfos[1].position = [.bottom, .left, .right]
             } else if proportions == "ww" || proportions == "qq" {
                 let width = (maxSize.width - spacing) / 2.0
-                let height = floorToScreenPixels(min(width / itemInfos[0].aspectRatio, min(width / itemInfos[1].aspectRatio, maxSize.height)))
+                let height = floor(min(width / itemInfos[0].aspectRatio, min(width / itemInfos[1].aspectRatio, maxSize.height)))
                 
                 itemInfos[0].layoutFrame = CGRect(x: 0.0, y: 0.0, width: width, height: height)
                 itemInfos[0].position = [.top, .left, .bottom]
@@ -88,9 +88,9 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                 itemInfos[1].layoutFrame = CGRect(x: width + spacing, y: 0.0, width: width, height: height)
                 itemInfos[1].position = [.top, .right, .bottom]
             } else {
-                let secondWidth = floorToScreenPixels(min(0.5 * (maxSize.width - spacing), round((maxSize.width - spacing) / itemInfos[0].aspectRatio / (1.0 / itemInfos[0].aspectRatio + 1.0 / itemInfos[1].aspectRatio))))
+                let secondWidth = floor(min(0.5 * (maxSize.width - spacing), round((maxSize.width - spacing) / itemInfos[0].aspectRatio / (1.0 / itemInfos[0].aspectRatio + 1.0 / itemInfos[1].aspectRatio))))
                 let firstWidth = maxSize.width - secondWidth - spacing
-                let height = floorToScreenPixels(min(maxSize.height, round(min(firstWidth / itemInfos[0].aspectRatio, secondWidth / itemInfos[1].aspectRatio))))
+                let height = floor(min(maxSize.height, round(min(firstWidth / itemInfos[0].aspectRatio, secondWidth / itemInfos[1].aspectRatio))))
                 
                 itemInfos[0].layoutFrame = CGRect(x: 0.0, y: 0.0, width: firstWidth, height: height)
                 itemInfos[0].position = [.top, .left, .bottom]
@@ -117,7 +117,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                 itemInfos[2].position = [.right, .bottom]
             } else {
                 var width = maxSize.width
-                let firstHeight = floorToScreenPixels(min(width / itemInfos[0].aspectRatio, (maxSize.height - spacing) * 0.66))
+                let firstHeight = floor(min(width / itemInfos[0].aspectRatio, (maxSize.height - spacing) * 0.66))
                 itemInfos[0].layoutFrame = CGRect(x: 0.0, y: 0.0, width: width, height: firstHeight)
                 itemInfos[0].position = [.top, .left, .right]
                 
@@ -156,8 +156,8 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                 itemInfos[0].position = [.top, .left, .bottom]
                 
                 var w = round((maxSize.height - 2 * spacing) / (1.0 / itemInfos[1].aspectRatio + 1.0 /  itemInfos[2].aspectRatio + 1.0 / itemInfos[3].aspectRatio))
-                let h0 = floorToScreenPixels(w / itemInfos[1].aspectRatio)
-                let h1 = floorToScreenPixels(w / itemInfos[2].aspectRatio)
+                let h0 = floor(w / itemInfos[1].aspectRatio)
+                let h1 = floor(w / itemInfos[2].aspectRatio)
                 let h2 = h - h0 - h1 - 2.0 * spacing
                 w = max(minWidth, min(maxSize.width - w0 - spacing, w))
                 itemInfos[1].layoutFrame = CGRect(x: w0 + spacing, y: 0.0, width: w, height: h0)
@@ -207,8 +207,6 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
             }
             
             addAttempt([firstLine, croppedRatios.count - firstLine], [multiHeight(Array(croppedRatios[0..<firstLine])), multiHeight(Array(croppedRatios[firstLine..<croppedRatios.count]))], &attempts)
-            
-            //addAttempt(@[@(firstLine), @(croppedRatios.count - firstLine)], @[multiHeight([croppedRatios subarrayWithRange:NSMakeRange(0, firstLine)]), multiHeight([croppedRatios subarrayWithRange:NSMakeRange(firstLine, croppedRatios.count - firstLine)])])
         }
         
         for firstLine in 1 ..< croppedRatios.count - 1 {
@@ -219,8 +217,6 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                 }
                 
                 addAttempt([firstLine, secondLine, thirdLine], [multiHeight(Array(croppedRatios[0 ..< firstLine])), multiHeight(Array(croppedRatios[firstLine ..< croppedRatios.count - thirdLine])), multiHeight(Array(croppedRatios[firstLine + secondLine ..< croppedRatios.count]))], &attempts)
-                
-                //addAttempt(@[@(firstLine), @(secondLine), @(thirdLine)], @[multiHeight([croppedRatios subarrayWithRange:NSMakeRange(0, firstLine)]), multiHeight([croppedRatios subarrayWithRange:NSMakeRange(firstLine, croppedRatios.count - firstLine - thirdLine)]), multiHeight([croppedRatios subarrayWithRange:NSMakeRange(firstLine + secondLine, croppedRatios.count - firstLine - secondLine)])])
             }
         }
         
@@ -237,14 +233,12 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                         }
                         
                         addAttempt([firstLine, secondLine, thirdLine, fourthLine], [multiHeight(Array(croppedRatios[0 ..< firstLine])), multiHeight(Array(croppedRatios[firstLine ..< croppedRatios.count - thirdLine - fourthLine])), multiHeight(Array(croppedRatios[firstLine + secondLine ..< croppedRatios.count - fourthLine])), multiHeight(Array(croppedRatios[firstLine + secondLine + thirdLine ..< croppedRatios.count]))], &attempts)
-                        
-                        //addAttempt(@[@(firstLine), @(secondLine), @(thirdLine), @(fourthLine)], @[multiHeight([croppedRatios subarrayWithRange:NSMakeRange(0, firstLine)]), multiHeight([croppedRatios subarrayWithRange:NSMakeRange(firstLine, croppedRatios.count - firstLine - thirdLine - fourthLine)]), multiHeight([croppedRatios subarrayWithRange:NSMakeRange(firstLine + secondLine, croppedRatios.count - firstLine - secondLine - fourthLine)]), multiHeight([croppedRatios subarrayWithRange:NSMakeRange(firstLine + secondLine + thirdLine, croppedRatios.count - firstLine - secondLine - thirdLine)])])
                     }
                 }
             }
         }
         
-        let maxHeight = maxSize.width / 3.0 * 4.0
+        let maxHeight = floor(maxSize.width / 3.0 * 4.0)
         var optimal: MosaicLayoutAttempt? = nil
         var optimalDiff: CGFloat = 0.0
         for attempt in attempts {
@@ -252,7 +246,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
             var minLineHeight: CGFloat = .greatestFiniteMagnitude
             var maxLineHeight: CGFloat = 0.0
             for h in attempt.heights {
-                totalHeight += h
+                totalHeight += floor(h)
                 if totalHeight < minLineHeight {
                     minLineHeight = totalHeight
                 }
@@ -284,7 +278,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
         if let optimal = optimal {
             for i in 0 ..< optimal.lineCounts.count {
                 let count = optimal.lineCounts[i]
-                let lineHeight = optimal.heights[i]
+                let lineHeight = ceil(optimal.heights[i])
                 var x: CGFloat = 0.0
                 
                 var positionFlags: MosaicItemPosition = []
@@ -310,7 +304,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                     }
                     
                     let ratio = croppedRatios[index]
-                    let width = ratio * lineHeight
+                    let width = ceil(ratio * lineHeight)
                     itemInfos[index].layoutFrame = CGRect(x: x, y: y, width: width, height: lineHeight)
                     itemInfos[index].position = innerPositionFlags
                     
@@ -319,6 +313,31 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                 }
                 
                 y += lineHeight + spacing
+            }
+            
+            index = 0
+            var maxWidth: CGFloat = 0.0
+            for i in 0 ..< optimal.lineCounts.count {
+                let count = optimal.lineCounts[i]
+                for k in 0 ..< count {
+                    if k == count - 1 {
+                        maxWidth = max(maxWidth, itemInfos[index].layoutFrame.maxX)
+                    }
+                    index += 1
+                }
+            }
+            
+            index = 0
+            for i in 0 ..< optimal.lineCounts.count {
+                let count = optimal.lineCounts[i]
+                for k in 0 ..< count {
+                    if k == count - 1 {
+                        var frame = itemInfos[index].layoutFrame
+                        frame.size.width = max(frame.width, maxWidth - frame.minX)
+                        itemInfos[index].layoutFrame = frame
+                    }
+                    index += 1
+                }
             }
         }
     }

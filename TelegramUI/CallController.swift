@@ -168,15 +168,15 @@ public final class CallController: ViewController {
         }
         
         self.peerDisposable = (account.postbox.peerView(id: self.call.peerId)
-            |> deliverOnMainQueue).start(next: { [weak self] view in
-                if let strongSelf = self {
-                    if let peer = view.peers[view.peerId] {
-                        strongSelf.peer = peer
-                        strongSelf.controllerNode.updatePeer(peer: peer)
-                        strongSelf._ready.set(.single(true))
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] view in
+            if let strongSelf = self {
+                if let peer = view.peers[view.peerId] {
+                    strongSelf.peer = peer
+                    strongSelf.controllerNode.updatePeer(peer: peer)
+                    strongSelf._ready.set(.single(true))
                 }
-            })
+            }
+        })
         
         self.controllerNode.isMuted = self.isMuted
        

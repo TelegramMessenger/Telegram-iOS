@@ -3,7 +3,7 @@ import Display
 import SwiftSignalKit
 import LegacyComponents
 
-func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, theme: PresentationTheme, present: (ViewController, Any?) -> Void, completion: @escaping (UIImage) -> Void) {
+func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, theme: PresentationTheme, present: (ViewController, Any?) -> Void, openCurrent: (() -> Void)?, completion: @escaping (UIImage) -> Void) {
     let legacyController = LegacyController(presentation: .custom, theme: theme)
     legacyController.statusBar.statusBarStyle = .Ignore
     
@@ -16,13 +16,16 @@ func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, theme: P
     
     present(legacyController, nil)
     
-    let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: false, hasViewButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: signup)!
+    let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: false, hasViewButton: openCurrent != nil, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: signup)!
     let _ = holder.swap(mixin)
     mixin.didFinishWithImage = { image in
         guard let image = image else {
             return
         }
         completion(image)
+    }
+    mixin.didFinishWithView = { [weak legacyController] in
+        openCurrent?()
     }
     mixin.didDismiss = { [weak legacyController] in
         let _ = holder.swap(nil)
