@@ -20,7 +20,7 @@ final class ChatMessageEventLogPreviousMessageContentNode: ChatMessageBubbleCont
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let contentNodeLayout = self.contentNode.asyncLayout()
         
         return { item, layoutConstants, _, _, constrainedSize in
@@ -52,11 +52,11 @@ final class ChatMessageEventLogPreviousMessageContentNode: ChatMessageBubbleCont
                 return (refinedWidth, { boundingWidth in
                     let (size, apply) = finalizeLayout(boundingWidth)
                     
-                    return (size, { [weak self] animation in
+                    return (size, { [weak self] animation, synchronousLoads in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
-                            apply(animation)
+                            apply(animation, synchronousLoads)
                             
                             strongSelf.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                         }

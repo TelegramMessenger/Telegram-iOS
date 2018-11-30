@@ -82,7 +82,7 @@ final class StickerPaneSearchStickerItem: GridItem {
         }
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPaneSearchStickerItemNode()
         node.inputNodeInteraction = self.inputNodeInteraction
         node.setup(account: self.account, stickerItem: self.stickerItem)

@@ -444,6 +444,8 @@ public func settingsController(account: Account, accountManager: AccountManager)
     let updatePassportDisposable = MetaDisposable()
     actionsDisposable.add(updatePassportDisposable)
     
+    let openEditingDisposable = MetaDisposable()
+    actionsDisposable.add(openEditingDisposable)
     
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
     
@@ -561,13 +563,48 @@ public func settingsController(account: Account, accountManager: AccountManager)
         
         openFaq(resolvedUrlPromise)
     }, openEditing: {
-        let _ = (account.postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
-            return (transaction.getPeer(account.peerId), transaction.getPeerCachedData(peerId: account.peerId))
-        } |> deliverOnMainQueue).start(next: { peer, cachedData in
-            if let peer = peer as? TelegramUser, let cachedData = cachedData as? CachedUserData {
-                pushControllerImpl?(editSettingsController(account: account, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager))
+        var cancelImpl: (() -> Void)?
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            presentControllerImpl?(controller, nil)
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
             }
-        })
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        let peerKey: PostboxViewKey = .peer(peerId: account.peerId, components: [])
+        let cachedDataKey: PostboxViewKey = .cachedPeerData(peerId: account.peerId)
+        let signal = (account.postbox.combinedView(keys: [peerKey, cachedDataKey])
+        |> mapToSignal { view -> Signal<(TelegramUser, CachedUserData), NoError> in
+            guard let cachedDataView = view.views[cachedDataKey] as? CachedPeerDataView, let cachedData = cachedDataView.cachedPeerData as? CachedUserData else {
+                return .complete()
+            }
+            guard let peerView = view.views[peerKey] as? PeerView, let peer = peerView.peers[account.peerId] as? TelegramUser else {
+                return .complete()
+            }
+            return .single((peer, cachedData))
+        }
+        |> take(1))
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = {
+            openEditingDisposable.set(nil)
+        }
+        openEditingDisposable.set((signal
+        |> deliverOnMainQueue).start(next: { peer, cachedData in
+            pushControllerImpl?(editSettingsController(account: account, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager))
+        }))
     }, updateArchivedPacks: { packs in
         archivedPacks.set(.single(packs))
     }, displayCopyContextMenu: {

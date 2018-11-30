@@ -348,7 +348,7 @@ final class ChatListNode: ListView {
         
         super.init()
         
-        //self.verticalScrollIndicatorColor = UIColor(white: 0.3, alpha: 0.8)
+        self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         
         let nodeInteraction = ChatListNodeInteraction(activateSearch: { [weak self] in
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
@@ -874,6 +874,7 @@ final class ChatListNode: ListView {
             if self.keepTopItemOverscrollBackground != nil {
                 self.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color:  theme.chatList.pinnedItemBackgroundColor, direction: true)
             }
+            self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             
             self.updateState { state in
                 var state = state

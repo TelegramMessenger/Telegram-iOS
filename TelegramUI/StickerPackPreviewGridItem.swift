@@ -28,7 +28,7 @@ final class StickerPackPreviewGridItem: GridItem {
         self.interaction = interaction
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
         node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction)
         return node

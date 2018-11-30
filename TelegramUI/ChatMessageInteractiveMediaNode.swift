@@ -141,7 +141,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> Void))) {
+    func asyncLayout() -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
@@ -254,7 +254,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             drawingSize = nativeSize.aspectFilled(boundingSize)
                     }
                     
-                    var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+                    var updateImageSignal: ((Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError>)?
                     var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
                     var updatedFetchControls: FetchControls?
                     
@@ -279,9 +279,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 replaceVideoNode = true
                             }
                             if isSecretMedia {
-                                updateImageSignal = chatSecretPhoto(account: account, photoReference: .message(message: MessageReference(message), media: image))
+                                updateImageSignal = { synchronousLoad in
+                                    return chatSecretPhoto(account: account, photoReference: .message(message: MessageReference(message), media: image))
+                                }
                             } else {
-                                updateImageSignal = chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image))
+                                updateImageSignal = { synchronousLoad in
+                                    return chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad)
+                                }
                             }
                             
                             updatedFetchControls = FetchControls(fetch: { manual in
@@ -302,7 +306,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             if hasCurrentVideoNode {
                                 replaceVideoNode = true
                             }
-                            updateImageSignal = chatWebFileImage(account: account, file: image)
+                            updateImageSignal = { synchronousLoad in
+                                return chatWebFileImage(account: account, file: image)
+                            }
                             
                             updatedFetchControls = FetchControls(fetch: { _ in
                                 if let strongSelf = self {
@@ -313,12 +319,18 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             })
                         } else if let file = media as? TelegramMediaFile {
                             if isSecretMedia {
-                                updateImageSignal = chatSecretMessageVideo(account: account, videoReference: .message(message: MessageReference(message), media: file))
+                                updateImageSignal = { synchronousLoad in
+                                    return chatSecretMessageVideo(account: account, videoReference: .message(message: MessageReference(message), media: file))
+                                }
                             } else {
                                 if file.isSticker {
-                                    updateImageSignal = chatMessageSticker(account: account, file: file, small: false)
+                                    updateImageSignal = { synchronousLoad in
+                                        return chatMessageSticker(account: account, file: file, small: false)
+                                    }
                                 } else {
-                                    updateImageSignal = mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile)
+                                    updateImageSignal = { synchronousLoad in
+                                        return mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile)
+                                    }
                                 }
                             }
                             
@@ -395,7 +407,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     
                     let imageApply = imageLayout(arguments)
                     
-                    return (boundingSize, { transition in
+                    return (boundingSize, { transition, synchronousLoads in
                         if let strongSelf = self {
                             strongSelf.account = account
                             strongSelf.message = message
@@ -451,7 +463,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                             
                             if let updateImageSignal = updateImageSignal {
-                                strongSelf.imageNode.setSignal(updateImageSignal)
+                                strongSelf.imageNode.setSignal(updateImageSignal(synchronousLoads), attemptSynchronously: synchronousLoads)
                             }
                             
                             if let _ = secretBeginTimeAndTimeout {
@@ -783,12 +795,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
         return { account, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition) -> Void)))
+            var imageLayout: (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -806,8 +818,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 return (finalWidth, { boundingWidth in
                     let (finalSize, apply) = finalLayout(boundingWidth)
                     
-                    return (finalSize, { transition in
-                        apply(transition)
+                    return (finalSize, { transition, synchronousLoads in
+                        apply(transition, synchronousLoads)
                         return imageNode
                     })
                 })

@@ -48,7 +48,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let inputFieldNode: ShareInputFieldNode
     private let actionSeparatorNode: ASDisplayNode
     
-    var dismiss: (() -> Void)?
+    var dismiss: ((Bool) -> Void)?
     var cancel: (() -> Void)?
     var share: ((String, [PeerId]) -> Signal<ShareState, NoError>)?
     var shareExternal: (() -> Signal<ShareExternalState, NoError>)?
@@ -469,7 +469,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     let delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
                     Queue.mainQueue().after(delay, {
                         if let strongSelf = self {
-                            strongSelf.cancel?()
+                            strongSelf.animateOut(shared: true)
                         }
                     })
                 }
@@ -516,14 +516,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    func animateOut(completion: (() -> Void)? = nil) {
+    func animateOut(shared: Bool, completion: (() -> Void)? = nil) {
         if self.contentNode != nil {
             var dimCompleted = false
             var offsetCompleted = false
             
             let internalCompletion: () -> Void = { [weak self] in
                 if let strongSelf = self, dimCompleted && offsetCompleted {
-                    strongSelf.dismiss?()
+                    strongSelf.dismiss?(shared)
                 }
                 completion?()
             }
@@ -541,7 +541,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 internalCompletion()
             })
         } else {
-            self.dismiss?()
+            self.dismiss?(false)
             completion?()
         }
     }
@@ -596,14 +596,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                             let delay = max(0.0, (loadingTimestamp + minDelay) - CACurrentMediaTime())
                             Queue.mainQueue().after(delay, {
                                 if let strongSelf = self {
-                                    strongSelf.cancel?()
+                                    strongSelf.animateOut(shared: true)
                                 }
                             })
                         } else {
                             if reportReady {
                                 strongSelf.ready.set(.single(true))
                             }
-                            strongSelf.cancel?()
+                            strongSelf.animateOut(shared: true)
                         }
                 }
             }))
@@ -697,7 +697,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             let delay = max(0.0, (timestamp + minDelay) - CACurrentMediaTime())
             Queue.mainQueue().after(delay, {
                 if let strongSelf = self {
-                    strongSelf.cancel?()
+                    strongSelf.animateOut(shared: true)
                 }
             })
         }))

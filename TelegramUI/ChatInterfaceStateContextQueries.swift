@@ -311,15 +311,15 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
                             }
                         }
                         
-                        let participants = searchGroupMembers(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peer.id, query: query)
-                            |> map { peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                                let filteredPeers = peers
-                                var sortedPeers: [Peer] = []
-                                sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
-                                    let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
-                                    return result == .orderedAscending
-                                }))
-                                return { _ in return .mentions(sortedPeers) }
+                        let participants = searchPeerMembers(account: account, peerId: peer.id, query: query)
+                        |> map { peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                            let filteredPeers = peers
+                            var sortedPeers: [Peer] = []
+                            sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
+                                let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                                return result == .orderedAscending
+                            }))
+                            return { _ in return .mentions(sortedPeers) }
                         }
                         
                         return (inputQuery, signal |> then(participants))

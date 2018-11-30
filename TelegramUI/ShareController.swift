@@ -187,7 +187,7 @@ public final class ShareController: ViewController {
     
     private var defaultAction: ShareControllerAction?
     
-    public var dismissed: (() -> Void)?
+    public var dismissed: ((Bool) -> Void)?
     
     public init(account: Account, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false) {
         self.account = account
@@ -308,12 +308,13 @@ public final class ShareController: ViewController {
         self.displayNode = ShareControllerNode(account: self.account, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare)
-        self.controllerNode.dismiss = { [weak self] in
+        self.controllerNode.dismiss = { [weak self] shared in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            self?.dismissed?()
+            self?.dismissed?(shared)
         }
         self.controllerNode.cancel = { [weak self] in
-            self?.dismiss()
+            self?.controllerNode.view.endEditing(true)
+            self?.controllerNode.animateOut(shared: false, completion: nil)
         }
         self.controllerNode.share = { [weak self] text, peerIds in
             if let strongSelf = self {
@@ -519,7 +520,7 @@ public final class ShareController: ViewController {
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.view.endEditing(true)
-        self.controllerNode.animateOut(completion: completion)
+        self.controllerNode.animateOut(shared: false, completion: completion)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

@@ -314,7 +314,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.accessoryItem = accessoryItem
     }
     
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         var viewClassName: AnyClass = ChatMessageBubbleItemNode.self
         
         loop: for media in message.media {
@@ -356,7 +356,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { apply(.None) })
+                    return (nil, { apply(.None, synchronousLoads) })
                 })
             }
         }
@@ -413,7 +413,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
                     Queue.mainQueue().async {
                         completion(layout, {
-                            apply(animation)
+                            apply(animation, false)
                             if let nodeValue = node() as? ChatMessageItemView {
                                 nodeValue.updateSelectionState(animated: false)
                                 nodeValue.updateHighlightedState(animated: false)

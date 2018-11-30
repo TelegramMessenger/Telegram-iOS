@@ -522,6 +522,31 @@ private func doesPeerMatchFilter(peer: Peer, filter: ChatListNodePeersFilter) ->
     return enabled
 }
 
+private struct ChatListSearchMessagesResult {
+    let query: String
+    let messages: [Message]
+    let readStates: [PeerId: CombinedPeerReadState]
+    let hasMore: Bool
+    
+    func appending(_ other: ChatListSearchMessagesResult) -> ChatListSearchMessagesResult {
+        var messages: [Message] = self.messages
+        var ids = Set(self.messages.map { $0.id })
+        for message in other.messages {
+            if !ids.contains(message.id) {
+                ids.insert(message.id)
+                messages.append(message)
+            }
+        }
+        messages.sort(by: { MessageIndex($0) > MessageIndex($1) })
+        return ChatListSearchMessagesResult(query: query, messages: messages, readStates: self.readStates.merging(other.readStates, uniquingKeysWith: { left, _ in left }), hasMore: other.hasMore)
+    }
+}
+
+private struct ChatListSearchMessagesContext {
+    let result: ChatListSearchMessagesResult
+    let loadMoreIndex: MessageIndex?
+}
+
 final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let account: Account
     
@@ -569,172 +594,242 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         
         self.dimNode.backgroundColor = filter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : self.presentationData.theme.chatList.backgroundColor
 
-        
         self.backgroundColor = filter.contains(.excludeRecent) ? nil : self.presentationData.theme.chatList.backgroundColor
-
         
         self.addSubnode(self.dimNode)
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
         
+        let searchContext = Promise<ChatListSearchMessagesContext?>(nil)
+        let searchContextValue = Atomic<ChatListSearchMessagesContext?>(value: nil)
+        let updateSearchContext: ((ChatListSearchMessagesContext?) -> (ChatListSearchMessagesContext?, Bool)) -> Void = { f in
+            var shouldUpdate = false
+            let updated = searchContextValue.modify { current in
+                let (u, s) = f(current)
+                shouldUpdate = s
+                if s {
+                    return u
+                } else {
+                    return current
+                }
+            }
+            if shouldUpdate {
+                searchContext.set(.single(updated))
+            }
+        }
+        
         self.listNode.isHidden = true
+        self.listNode.visibleBottomContentOffsetChanged = { offset in
+            guard case let .known(value) = offset, value < 100.0 else {
+                return
+            }
+            updateSearchContext { previous in
+                guard let previous = previous else {
+                    return (nil, false)
+                }
+                if previous.loadMoreIndex != nil {
+                    return (previous, false)
+                }
+                guard let last = previous.result.messages.last else {
+                    return (previous, false)
+                }
+                return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: MessageIndex(last)), true)
+            }
+        }
         self.recentListNode.isHidden = filter.contains(.excludeRecent)
     
         let presentationDataPromise = self.presentationDataPromise
-        let foundItems = searchQuery.get()
-            |> mapToSignal { query -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
-                if let query = query, !query.isEmpty {
-                    let accountPeer = account.postbox.loadedPeerWithId(account.peerId)
-                    |> take(1)
-                    
-                    let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId)
-                    |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
-                        return combineLatest(local.map {account.postbox.peerView(id: $0.peerId)}) |> map { views in
-                            return (views, local)
-                        }
-                    }
-                    |> mapToSignal{ viewsAndPeers -> Signal<(peers: [RenderedPeer], unread: [PeerId : UnreadSearchBadge]), NoError> in
-                        return account.postbox.unreadMessageCountsView(items: viewsAndPeers.0.map {.peer($0.peerId)}) |> map { values in
-                            var unread:[PeerId: UnreadSearchBadge] = [:]
-                            for peerView in viewsAndPeers.0 {
-                                var isMuted: Bool = false
-                                if let nofiticationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                                    switch nofiticationSettings.muteState {
-                                    case .muted:
-                                        isMuted = true
-                                    default:
-                                        break
-                                    }
-                                }
-                                
-                                let unreadCount = values.count(for: .peer(peerView.peerId))
-                                if let unreadCount = unreadCount, unreadCount > 0 {
-                                    unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
-                                }
-                            }
-                            return (peers: viewsAndPeers.1, unread: unread)
-                        }
-                    }
-                    
-                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError>
-                    if groupId == nil {
-                        foundRemotePeers = (.single(([], [], true)) |> then(searchPeers(account: account, query: query) |> map { ($0.0, $0.1, false) }
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())))
-                    } else {
-                        foundRemotePeers = .single(([], [], false))
-                    }
-                    let location: SearchMessagesLocation
-                    if let groupId = groupId {
-                        location = .group(groupId)
-                    } else {
-                        location = .general
-                    }
-                    
-                    let foundRemoteMessages: Signal<(([Message], [PeerId : CombinedPeerReadState], Int32), Bool), NoError>
-                    if filter.contains(.doNotSearchMessages) {
-                        foundRemoteMessages = .single((([], [:], 0), false))
-                    } else {
-                        foundRemoteMessages = .single((([], [:], 0), true)) |> then(searchMessages(account: account, location: location, query: query)
-                            |> map { ($0, false) }
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
-                    }
-                    
-                    
-                    
-                    return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get())
-                        |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData -> ([ChatListSearchEntry], Bool)? in
-                            var entries: [ChatListSearchEntry] = []
-                            let isSearching = foundRemotePeers.2 || foundRemoteMessages.1
-                            var index = 0
-                            
-                            
-                            let filteredPeer:(Peer, Peer) -> Bool = { peer, accountPeer in
-                                guard !filter.contains(.excludeSavedMessages) || peer.id != accountPeer.id else { return false }
-                                guard !filter.contains(.excludeSecretChats) || peer.id.namespace != Namespaces.Peer.SecretChat else { return false }
-                                guard !filter.contains(.onlyPrivateChats) || peer.id.namespace == Namespaces.Peer.CloudUser else { return false }
-                                
-                                if filter.contains(.onlyGroups) {
-                                    var isGroup: Bool = false
-                                    if let peer = peer as? TelegramChannel, case .group = peer.info {
-                                        isGroup = true
-                                    } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
-                                        isGroup = true
-                                    }
-                                    if !isGroup {
-                                        return false
-                                    }
-                                }
-                                
-                                if filter.contains(.onlyChannels) {
-                                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                        return true
-                                    } else {
-                                        return false
-                                    }
-                                }
-                                
-                                return true
-                            }
-                            
-                            var existingPeerIds = Set<PeerId>()
-                            
-                            if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
-                                if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
-                                    existingPeerIds.insert(accountPeer.id)
-                                    entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
-                                    index += 1
-                                }
-                            }
-                            
-                            for renderedPeer in foundLocalPeers.peers {
-                                if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != account.peerId, filteredPeer(peer, accountPeer) {
-                                    if !existingPeerIds.contains(peer.id) {
-                                        existingPeerIds.insert(peer.id)
-                                        var associatedPeer: Peer?
-                                        if let associatedPeerId = peer.associatedPeerId {
-                                            associatedPeer = renderedPeer.peers[associatedPeerId]
-                                        }
-                                        entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
-                                        index += 1
-                                    }
-                                }
-                            }
-                            
-                            for peer in foundRemotePeers.0 {
-                                if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
-                                    existingPeerIds.insert(peer.peer.id)
-                                    entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
-                                    index += 1
-                                }
-                            }
-
-                            index = 0
-                            for peer in foundRemotePeers.1 {
-                                if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
-                                    existingPeerIds.insert(peer.peer.id)
-                                    entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
-                                    index += 1
-                                }
-                            }
-                            
-                            if !foundRemotePeers.2 {
-                                index = 0
-                                for message in foundRemoteMessages.0.0 {
-                                    entries.append(.message(message, foundRemoteMessages.0.1[message.id.peerId], presentationData))
-                                    index += 1
-                                }
-                            }
-                            
-                            if addContact != nil && isViablePhoneNumber(query) {
-                                entries.append(.addContact(query, presentationData.theme, presentationData.strings))
-                            }
-                            
-                            return (entries, isSearching)
-                        }
-                } else {
-                    return .single(nil)
+        let foundItems = self.searchQuery.get()
+        |> mapToSignal { query -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
+            guard let query = query, !query.isEmpty else {
+                return .single(nil)
+            }
+            
+            let accountPeer = account.postbox.loadedPeerWithId(account.peerId)
+            |> take(1)
+            
+            let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: groupId)
+            |> mapToSignal { local -> Signal<([PeerView], [RenderedPeer]), NoError> in
+                return combineLatest(local.map {account.postbox.peerView(id: $0.peerId)}) |> map { views in
+                    return (views, local)
                 }
             }
+            |> mapToSignal{ viewsAndPeers -> Signal<(peers: [RenderedPeer], unread: [PeerId : UnreadSearchBadge]), NoError> in
+                return account.postbox.unreadMessageCountsView(items: viewsAndPeers.0.map {.peer($0.peerId)}) |> map { values in
+                    var unread:[PeerId: UnreadSearchBadge] = [:]
+                    for peerView in viewsAndPeers.0 {
+                        var isMuted: Bool = false
+                        if let nofiticationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                            switch nofiticationSettings.muteState {
+                            case .muted:
+                                isMuted = true
+                            default:
+                                break
+                            }
+                        }
+                        
+                        let unreadCount = values.count(for: .peer(peerView.peerId))
+                        if let unreadCount = unreadCount, unreadCount > 0 {
+                            unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
+                        }
+                    }
+                    return (peers: viewsAndPeers.1, unread: unread)
+                }
+            }
+            
+            let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError>
+            if groupId == nil {
+                foundRemotePeers = (.single(([], [], true)) |> then(searchPeers(account: account, query: query) |> map { ($0.0, $0.1, false) }
+                |> delay(0.2, queue: Queue.concurrentDefaultQueue())))
+            } else {
+                foundRemotePeers = .single(([], [], false))
+            }
+            let location: SearchMessagesLocation
+            if let groupId = groupId {
+                location = .group(groupId)
+            } else {
+                location = .general
+            }
+            
+            updateSearchContext { _ in
+                return (nil, true)
+            }
+            let foundRemoteMessages: Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError>
+            if filter.contains(.doNotSearchMessages) {
+                foundRemoteMessages = .single((([], [:], 0), false))
+            } else {
+                let searchSignal = searchMessages(account: account, location: location, query: query, limit: 50)
+                |> map { result -> ChatListSearchMessagesResult in
+                    return ChatListSearchMessagesResult(query: query, messages: result.0.sorted(by: { MessageIndex($0) > MessageIndex($1) }), readStates: result.1, hasMore: result.2 != 0)
+                }
+                
+                let loadMore = searchContext.get()
+                |> mapToSignal { searchContext -> Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError> in
+                    if let searchContext = searchContext {
+                        if let loadMoreIndex = searchContext.loadMoreIndex {
+                            return searchMessages(account: account, location: location, query: query, lowerBound: loadMoreIndex, limit: 80)
+                            |> map { result -> ChatListSearchMessagesResult in
+                                return ChatListSearchMessagesResult(query: query, messages: result.0.sorted(by: { MessageIndex($0) > MessageIndex($1) }), readStates: result.1, hasMore: result.2 != 0)
+                            }
+                            |> mapToSignal { foundMessages -> Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError> in
+                                updateSearchContext { previous in
+                                    let updated = ChatListSearchMessagesContext(result: previous?.result.appending(foundMessages) ?? foundMessages, loadMoreIndex: nil)
+                                    return (updated, true)
+                                }
+                                return .complete()
+                            }
+                        } else {
+                            return .single(((searchContext.result.messages, searchContext.result.readStates, 0), false))
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+                
+                foundRemoteMessages = .single((([], [:], 0), true))
+                |> then(
+                    searchSignal
+                    |> map { foundMessages -> (([Message], [PeerId: CombinedPeerReadState], Int32), Bool) in
+                        updateSearchContext { _ in
+                            return (ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil), true)
+                        }
+                        return ((foundMessages.messages, foundMessages.readStates, 0), false)
+                    }
+                    |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                    |> then(loadMore)
+                )
+            }
+            
+            return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get())
+            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData -> ([ChatListSearchEntry], Bool)? in
+                var entries: [ChatListSearchEntry] = []
+                let isSearching = foundRemotePeers.2 || foundRemoteMessages.1
+                var index = 0
+                
+                let filteredPeer:(Peer, Peer) -> Bool = { peer, accountPeer in
+                    guard !filter.contains(.excludeSavedMessages) || peer.id != accountPeer.id else { return false }
+                    guard !filter.contains(.excludeSecretChats) || peer.id.namespace != Namespaces.Peer.SecretChat else { return false }
+                    guard !filter.contains(.onlyPrivateChats) || peer.id.namespace == Namespaces.Peer.CloudUser else { return false }
+                    
+                    if filter.contains(.onlyGroups) {
+                        var isGroup: Bool = false
+                        if let peer = peer as? TelegramChannel, case .group = peer.info {
+                            isGroup = true
+                        } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
+                            isGroup = true
+                        }
+                        if !isGroup {
+                            return false
+                        }
+                    }
+                    
+                    if filter.contains(.onlyChannels) {
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    
+                    return true
+                }
+                
+                var existingPeerIds = Set<PeerId>()
+                
+                if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
+                    if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
+                        existingPeerIds.insert(accountPeer.id)
+                        entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
+                        index += 1
+                    }
+                }
+                
+                for renderedPeer in foundLocalPeers.peers {
+                    if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != account.peerId, filteredPeer(peer, accountPeer) {
+                        if !existingPeerIds.contains(peer.id) {
+                            existingPeerIds.insert(peer.id)
+                            var associatedPeer: Peer?
+                            if let associatedPeerId = peer.associatedPeerId {
+                                associatedPeer = renderedPeer.peers[associatedPeerId]
+                            }
+                            entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
+                            index += 1
+                        }
+                    }
+                }
+                
+                for peer in foundRemotePeers.0 {
+                    if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
+                        existingPeerIds.insert(peer.peer.id)
+                        entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
+                        index += 1
+                    }
+                }
+
+                index = 0
+                for peer in foundRemotePeers.1 {
+                    if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
+                        existingPeerIds.insert(peer.peer.id)
+                        entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
+                        index += 1
+                    }
+                }
+                
+                if !foundRemotePeers.2 {
+                    index = 0
+                    for message in foundRemoteMessages.0.0 {
+                        entries.append(.message(message, foundRemoteMessages.0.1[message.id.peerId], presentationData))
+                        index += 1
+                    }
+                }
+                
+                if addContact != nil && isViablePhoneNumber(query) {
+                    entries.append(.addContact(query, presentationData.theme, presentationData.strings))
+                }
+                
+                return (entries, isSearching)
+            }
+        }
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
         
@@ -980,6 +1075,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             
             var options = ListViewDeleteAndInsertOptions()
             options.insert(.PreferSynchronousDrawing)
+            options.insert(.PreferSynchronousResourceLoading)
             if firstTime {
             } else {
                 //options.insert(.AnimateAlpha)

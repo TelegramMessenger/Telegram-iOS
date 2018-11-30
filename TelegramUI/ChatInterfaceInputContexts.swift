@@ -268,10 +268,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                             stickersEnabled = false
                         }
                     }
-                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
-                        if let _ = peer.botInfo {
-                            accessoryItems.append(.commands)
-                        }
+                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo {
+                        accessoryItems.append(.commands)
+                    } else if chatPresentationInterfaceState.hasBots {
+                        accessoryItems.append(.commands)
                     }
                     accessoryItems.append(.stickers(stickersEnabled))
                     if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup {

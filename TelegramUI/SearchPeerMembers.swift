@@ -15,6 +15,9 @@ func searchPeerMembers(account: Account, peerId: PeerId, query: String) -> Signa
                         if case .ready = state.loadingState {
                             let normalizedQuery = query.lowercased()
                             subscriber.putNext(state.list.compactMap { participant -> Peer? in
+                                if participant.peer.displayTitle.isEmpty {
+                                    return nil
+                                }
                                 if normalizedQuery.isEmpty {
                                     return participant.peer
                                 }
@@ -37,13 +40,19 @@ func searchPeerMembers(account: Account, peerId: PeerId, query: String) -> Signa
                     return ActionDisposable {
                         disposable.dispose()
                     }
-                } |> runOn(Queue.mainQueue())
+                }
+                |> runOn(Queue.mainQueue())
             }
             
             return Signal { subscriber in
                 let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query.isEmpty ? nil : query, updated: { state in
                     if case .ready = state.loadingState {
-                        subscriber.putNext(state.list.map { $0.peer })
+                        subscriber.putNext(state.list.compactMap { participant in
+                            if participant.peer.displayTitle.isEmpty {
+                                return nil
+                            }
+                            return participant.peer
+                        })
                     }
                 })
                 

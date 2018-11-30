@@ -230,7 +230,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: theme.controlAccentColor)
         
-        self.activityIndicator = ActivityIndicator(type: .custom(theme.controlAccentColor, 24.0, 1.5, false))
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.controlAccentColor, 22.0, 1.5, false))
         self.activityIndicator.isHidden = true
         
         self.buttonNode = HighlightableButtonNode()
@@ -278,8 +278,9 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         
         let labelSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width - 10.0), height: size.height))
         let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
+        let activitySize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         self.titleNode.frame = titleFrame
-        self.activityIndicator.frame = CGRect(origin: CGPoint(x: 14.0, y: titleFrame.minY - 0.0), size: CGSize(width: 24.0, height: 24.0))
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: 14.0, y: titleFrame.minY - 0.0), size: activitySize)
     }
     
     @objc private func buttonPressed() {

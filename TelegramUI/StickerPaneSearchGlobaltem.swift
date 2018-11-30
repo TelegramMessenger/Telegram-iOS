@@ -33,7 +33,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
         self.getItemIsPreviewed = getItemIsPreviewed
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPaneSearchGlobalItemNode()
         node.setup(item: self)
         return node

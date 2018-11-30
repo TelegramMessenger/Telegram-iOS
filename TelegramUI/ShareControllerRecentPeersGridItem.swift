@@ -21,7 +21,7 @@ final class ShareControllerRecentPeersGridItem: GridItem {
         self.controllerInteraction = controllerInteraction
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ShareControllerRecentPeersGridItemNode()
         node.controllerInteraction = self.controllerInteraction
         node.setup(account: self.account, theme: self.theme, strings: self.strings)

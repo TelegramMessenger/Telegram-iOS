@@ -195,7 +195,7 @@ class ContactsPeerItem: ListViewItem {
         }
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
             let node = ContactsPeerItemNode()
             let makeLayout = node.asyncLayout()
@@ -208,7 +208,7 @@ class ContactsPeerItem: ListViewItem {
                 completion(node, {
                     let (signal, apply) = nodeApply()
                     return (signal, {
-                        apply(false)
+                        apply(false, synchronousLoads)
                     })
                 })
             }
@@ -224,7 +224,7 @@ class ContactsPeerItem: ListViewItem {
                     let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
-                            apply().1(animation.isAnimated)
+                            apply().1(animation.isAnimated, false)
                         })
                     }
                 }
@@ -379,7 +379,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ContactsPeerItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool) -> Void)) {
+    func asyncLayout() -> (_ item: ContactsPeerItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool, Bool) -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let currentSelectionNode = self.selectionNode
@@ -564,32 +564,32 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
-                    switch item.peer {
-                        case let .peer(peer, _):
-                            if let peer = peer {
-                                var overrideImage: AvatarNodeImageOverride?
-                                if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
-                                    overrideImage = .savedMessagesIcon
-                                }
-                                strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor)
-                            }
-                        case let .deviceContact(_, contact):
-                            let letters: [String]
-                            if !contact.firstName.isEmpty && !contact.lastName.isEmpty {
-                                letters = [contact.firstName.substring(to: contact.firstName.index(after: contact.firstName.startIndex)).uppercased(), contact.lastName.substring(to: contact.lastName.index(after: contact.lastName.startIndex)).uppercased()]
-                            } else if !contact.firstName.isEmpty {
-                                letters = [contact.firstName.substring(to: contact.firstName.index(after: contact.firstName.startIndex)).uppercased()]
-                            } else if !contact.lastName.isEmpty {
-                                letters = [contact.lastName.substring(to: contact.lastName.index(after: contact.lastName.startIndex)).uppercased()]
-                            } else {
-                                letters = [" "]
-                            }
-                            strongSelf.avatarNode.setCustomLetters(letters)
-                    }
-                    
-                    return (strongSelf.avatarNode.ready, { [weak strongSelf] animated in
+                    return (.complete(), { [weak strongSelf] animated, synchronousLoads in
                         if let strongSelf = strongSelf {
                             strongSelf.layoutParams = (item, params, first, last, firstWithHeader)
+                            
+                            switch item.peer {
+                                case let .peer(peer, _):
+                                    if let peer = peer {
+                                        var overrideImage: AvatarNodeImageOverride?
+                                        if peer.id == item.account.peerId, case .generalSearch = item.peerMode {
+                                            overrideImage = .savedMessagesIcon
+                                        }
+                                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                                    }
+                                case let .deviceContact(_, contact):
+                                    let letters: [String]
+                                    if !contact.firstName.isEmpty && !contact.lastName.isEmpty {
+                                        letters = [contact.firstName[..<contact.firstName.index(after: contact.firstName.startIndex)].uppercased(), contact.lastName[..<contact.lastName.index(after: contact.lastName.startIndex)].uppercased()]
+                                    } else if !contact.firstName.isEmpty {
+                                        letters = [contact.firstName[..<contact.firstName.index(after: contact.firstName.startIndex)].uppercased()]
+                                    } else if !contact.lastName.isEmpty {
+                                        letters = [contact.lastName[..<contact.lastName.index(after: contact.lastName.startIndex)].uppercased()]
+                                    } else {
+                                        letters = [" "]
+                                    }
+                                    strongSelf.avatarNode.setCustomLetters(letters)
+                            }
                             
                             let transition: ContainedViewLayoutTransition
                             if animated {
@@ -720,7 +720,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         }
                     })
                 } else {
-                    return (nil, { _ in
+                    return (nil, { _, _ in
                     })
                 }
             })

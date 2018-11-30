@@ -20,7 +20,7 @@ final class HorizontalStickerGridItem: GridItem {
         self.interfaceInteraction = interfaceInteraction
     }
     
-    func node(layout: GridNodeLayout) -> GridItemNode {
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = HorizontalStickerGridItemNode()
         node.setup(account: self.account, item: self)
         node.interfaceInteraction = self.interfaceInteraction
