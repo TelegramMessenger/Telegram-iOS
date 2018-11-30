@@ -596,6 +596,7 @@ private enum QueuedWakeup: Int32 {
             }
         }, registerForNotifications: {
             let _ = (self.currentAuthorizedContext()
+            |> take(1)
             |> deliverOnMainQueue).start(next: { context in
                 if let context = context {
                     self.registerForNotifications(account: context.account)
