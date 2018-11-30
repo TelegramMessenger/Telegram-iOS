@@ -355,10 +355,11 @@ public final class MediaBox {
         }
     }
     
-    public func resourceData(_ resource: MediaResource, pathExtension: String? = nil, option: ResourceDataRequestOption = .complete(waitUntilFetchStatus: false)) -> Signal<MediaResourceData, NoError> {
+    public func resourceData(_ resource: MediaResource, pathExtension: String? = nil, option: ResourceDataRequestOption = .complete(waitUntilFetchStatus: false), attemptSynchronously: Bool = false) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
-            self.concurrentQueue.async {
+            
+            let begin: () -> Void = {
                 let paths = self.storePathsForId(resource.id)
                 
                 var completeSize = fileSize(paths.complete)
@@ -418,6 +419,11 @@ public final class MediaBox {
                         }
                     }
                 }
+            }
+            if attemptSynchronously {
+                begin()
+            } else {
+                self.concurrentQueue.async(begin)
             }
             
             return disposable
