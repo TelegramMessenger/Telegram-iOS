@@ -10,7 +10,7 @@ private final class NotificationsAndSoundsArguments {
     let pushController: (ViewController) -> Void
     let soundSelectionDisposable: MetaDisposable
     
-    let enableNotifications: () -> Void
+    let authorizeNotifications: () -> Void
     
     let updateMessageAlerts: (Bool) -> Void
     let updateMessagePreviews: (Bool) -> Void
@@ -39,12 +39,12 @@ private final class NotificationsAndSoundsArguments {
     
     let openAppSettings: () -> Void
     
-    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, enableNotifications: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void) {
+    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void) {
         self.account = account
         self.presentController = presentController
         self.pushController = pushController
         self.soundSelectionDisposable = soundSelectionDisposable
-        self.enableNotifications = enableNotifications
+        self.authorizeNotifications = authorizeNotifications
         self.updateMessageAlerts = updateMessageAlerts
         self.updateMessagePreviews = updateMessagePreviews
         self.updateMessageSound = updateMessageSound
@@ -432,10 +432,10 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     func item(_ arguments: NotificationsAndSoundsArguments) -> ListViewItem {
         switch self {
             case let .permissionInfo(theme, strings):
-                return NotificationPermissionInfoItem(theme: theme, strings: strings, sectionId: self.section)
+                return PermissionInfoItemListItem(theme: theme, strings: strings, subject: .notifications, sectionId: self.section)
             case let .permissionEnable(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    arguments.enableNotifications()
+                    arguments.authorizeNotifications()
                 })
             case let .messageHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -572,16 +572,16 @@ private func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound 
 private func notificationsAndSoundsEntries(authorizationStatus: AccessType, globalSettings: GlobalNotificationSettingsSet, inAppSettings: InAppNotificationSettings, exceptions: (users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode), presentationData: PresentationData) -> [NotificationsAndSoundsEntry] {
     var entries: [NotificationsAndSoundsEntry] = []
     
-//    switch authorizationStatus {
-//        case .denied:
-//            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
-//            entries.append(.permissionEnable(presentationData.theme, "Turn ON in Settings"))
-//        case .notDetermined:
-//            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
-//            entries.append(.permissionEnable(presentationData.theme, "Turn Notifications ON"))
-//        default:
-//            break
-//    }
+    switch authorizationStatus {
+        case .denied:
+            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
+            entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Permissions_NotificationsAllowInSettings))
+        case .notDetermined:
+            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
+            entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Permissions_NotificationsAllow))
+        default:
+            break
+    }
     
     entries.append(.messageHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications))
     entries.append(.messageAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.privateChats.enabled))
@@ -652,7 +652,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         presentControllerImpl?(controller, arguments)
     }, pushController: { controller in
         pushControllerImpl?(controller)
-    }, soundSelectionDisposable: MetaDisposable(), enableNotifications: {
+    }, soundSelectionDisposable: MetaDisposable(), authorizeNotifications: {
         let _ = (DeviceAccess.authorizationStatus(account: account, subject: .notifications)
         |> take(1)
         |> deliverOnMainQueue).start(next: { status in

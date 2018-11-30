@@ -3,23 +3,23 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-class NotificationPermissionInfoItem: ListViewItem, ItemListItem {
+class PermissionInfoItem: ListViewItem {
     let selectable: Bool = false
-    let sectionId: ItemListSectionId
     
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let subject: DeviceAccessSubject
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject) {
         self.theme = theme
         self.strings = strings
-        self.sectionId = sectionId
+        self.subject = subject
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
         async {
-            let node = NotificationPermissionInfoItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let node = PermissionInfoItemNode()
+            let (layout, apply) = node.asyncLayout()(self, params, nil)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -34,7 +34,49 @@ class NotificationPermissionInfoItem: ListViewItem, ItemListItem {
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         Queue.mainQueue().async {
-            if let nodeValue = node() as? NotificationPermissionInfoItemNode {
+            if let nodeValue = node() as? PermissionInfoItemNode {
+                let makeLayout = nodeValue.asyncLayout()
+                
+                async {
+                    let (layout, apply) = makeLayout(self, params, nil)
+                    Queue.mainQueue().async {
+                        completion(layout, {
+                            apply()
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+class PermissionInfoItemListItem: PermissionInfoItem, ItemListItem {
+    let sectionId: ItemListSectionId
+    
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, sectionId: ItemListSectionId) {
+        self.sectionId = sectionId
+        super.init(theme: theme, strings: strings, subject: subject)
+    }
+    
+    override func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+        async {
+            let node = PermissionInfoItemNode()
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            
+            node.contentSize = layout.contentSize
+            node.insets = layout.insets
+            
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { apply() })
+                })
+            }
+        }
+    }
+    
+    override func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        Queue.mainQueue().async {
+            if let nodeValue = node() as? PermissionInfoItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
@@ -54,7 +96,7 @@ private let titleFont = Font.semibold(17.0)
 private let textFont = Font.regular(16.0)
 private let badgeFont = Font.regular(15.0)
 
-class NotificationPermissionInfoItemNode: ListViewItemNode {
+class PermissionInfoItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -64,7 +106,7 @@ class NotificationPermissionInfoItemNode: ListViewItemNode {
     let titleNode: TextNode
     let textNode: TextNode
     
-    private var item: NotificationPermissionInfoItem?
+    private var item: PermissionInfoItem?
     
     override var canBeSelected: Bool {
         return false
@@ -103,7 +145,7 @@ class NotificationPermissionInfoItemNode: ListViewItemNode {
         self.addSubnode(self.textNode)
     }
     
-    func asyncLayout() -> (_ item: NotificationPermissionInfoItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: PermissionInfoItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors?) -> (ListViewItemNodeLayout, () -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -123,14 +165,33 @@ class NotificationPermissionInfoItemNode: ListViewItemNode {
                 updatedBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.theme.list.itemDestructiveColor)
             }
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets: UIEdgeInsets
+            if let neighbors = neighbors {
+                insets = itemListNeighborsGroupedInsets(neighbors)
+            } else {
+                insets = UIEdgeInsets()
+            }
             let separatorHeight = UIScreenPixel
             let itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
             let itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
             
+            let title: String
+            let text: String
+            switch item.subject {
+                case .contacts:
+                    title = item.strings.Contacts_PermissionsTitle
+                    text = item.strings.Contacts_PermissionsText
+                case .notifications:
+                    title = item.strings.Notifications_PermissionsTitle
+                    text = item.strings.Notifications_PermissionsText
+                default:
+                    title = ""
+                    text = ""
+            }
+            
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "!", font: badgeFont, textColor: item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: badgeDiameter, height: badgeDiameter), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Turn ON Notifications", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Don't miss important messages from your friends and coworkers.", font: textFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + textLayout.size.height + 36.0)
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
@@ -156,18 +217,24 @@ class NotificationPermissionInfoItemNode: ListViewItemNode {
                     if strongSelf.bottomStripeNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
-                    switch neighbors.top {
-                        case .sameSection(false):
-                            strongSelf.topStripeNode.isHidden = true
-                        default:
-                            strongSelf.topStripeNode.isHidden = false
+                    if let neighbors = neighbors {
+                        switch neighbors.top {
+                            case .sameSection(false):
+                                strongSelf.topStripeNode.isHidden = true
+                            default:
+                                strongSelf.topStripeNode.isHidden = false
+                        }
                     }
                     let bottomStripeInset: CGFloat
-                    switch neighbors.bottom {
-                        case .sameSection(false):
-                            bottomStripeInset = leftInset
-                        default:
-                            bottomStripeInset = 0.0
+                    if let neighbors = neighbors {
+                        switch neighbors.bottom {
+                            case .sameSection(false):
+                                bottomStripeInset = leftInset
+                            default:
+                                bottomStripeInset = 0.0
+                        }
+                    } else {
+                        bottomStripeInset = leftInset
                     }
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))

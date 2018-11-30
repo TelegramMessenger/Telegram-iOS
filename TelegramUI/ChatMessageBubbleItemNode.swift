@@ -1619,9 +1619,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
                                 var foundTapAction = false
                                 var tapMessage: Message? = item.content.firstMessage
+                                var selectAll = false
                                 loop: for contentNode in self.contentNodes {
                                     if !contentNode.frame.contains(location) {
                                         continue loop
+                                    } else if contentNode is ChatMessageTextBubbleContentNode {
+                                        selectAll = true
                                     }
                                     tapMessage = contentNode.item?.message
                                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY))
@@ -1667,7 +1670,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             }
                                         }
                                     }
-                                    item.controllerInteraction.openMessageContextMenu(tapMessage, self, subFrame)
+                                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame)
                                 }
                             }
                         default:

@@ -126,79 +126,79 @@ final class PermissionControllerNode: ASDisplayNode {
     }
     
     private func transition(state: PermissionControllerState, transition: ContainedViewLayoutTransition) {
-//        let insets = state.layout.layout.insets(options: [.statusBar])
-//        let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
-//        
-//        if state.data.state?.kind != self.contentNode?.kind {
-//            if let dataState = state.data.state {
-//                let icon: UIImage?
-//                let title: String
-//                let text: String
-//                let buttonTitle: String
-//                let hasPrivacyPolicy: Bool
-//
-//                switch dataState {
-//                    case let .contacts(status):
-//                        icon = UIImage(bundleImageName: "Settings/Permissions/Contacts")
-//                        title = self.presentationData.strings.Permissions_ContactsTitle
-//                        text = self.presentationData.strings.Permissions_ContactsText
-//                        if status == .denied {
-//                            buttonTitle = self.presentationData.strings.Permissions_ContactsAllowInSettings
-//                        } else {
-//                            buttonTitle = self.presentationData.strings.Permissions_ContactsAllow
-//                        }
-//                        hasPrivacyPolicy = true
-//                    case let .notifications(status):
-//                        icon = UIImage(bundleImageName: "Settings/Permissions/Notifications")
-//                        title = self.presentationData.strings.Permissions_NotificationsTitle
-//                        text = self.presentationData.strings.Permissions_NotificationsText
-//                        if status == .denied {
-//                            buttonTitle = self.presentationData.strings.Permissions_NotificationsAllowInSettings
-//                        } else {
-//                            buttonTitle = self.presentationData.strings.Permissions_NotificationsAllow
-//                        }
-//                        hasPrivacyPolicy = false
-//                    case let .siri(status):
-//                        icon = UIImage(bundleImageName: "Settings/Permissions/CellularData")
-//                        title = self.presentationData.strings.Permissions_SiriTitle
-//                        text = self.presentationData.strings.Permissions_SiriText
-//                        if status == .denied {
-//                            buttonTitle = self.presentationData.strings.Permissions_SiriAllowInSettings
-//                        } else {
-//                            buttonTitle = self.presentationData.strings.Permissions_SiriAllow
-//                        }
-//                        hasPrivacyPolicy = false
-//                    case .cellularData:
-//                        icon = UIImage(bundleImageName: "Settings/Permissions/CellularData")
-//                        title = self.presentationData.strings.Permissions_CellularDataTitle
-//                        text = self.presentationData.strings.Permissions_CellularDataText
-//                        buttonTitle = self.presentationData.strings.Permissions_CellularDataAllowInSettings
-//                        hasPrivacyPolicy = false
-//                }
-//
-//                let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind, icon: icon, title: title, text: text, buttonTitle: buttonTitle, buttonAction: {}, openPrivacyPolicy: hasPrivacyPolicy ? self.openPrivacyPolicy : nil)
-//                self.insertSubnode(contentNode, at: 0)
-//                contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: .immediate)
-//                contentNode.frame = contentFrame
-//                if let currentContentNode = self.contentNode {
-//                    transition.updatePosition(node: currentContentNode, position: CGPoint(x: -contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
-//                        currentContentNode?.removeFromSupernode()
-//                    })
-//                    transition.animateHorizontalOffsetAdditive(node: contentNode, offset: -contentFrame.width)
-//                } else if transition.isAnimated {
-//                    contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-//                }
-//                self.contentNode = contentNode
-//            } else if let currentContentNode = self.contentNode {
-//                transition.updateAlpha(node: currentContentNode, alpha: 0.0, completion: { [weak currentContentNode] _ in
-//                    currentContentNode?.removeFromSupernode()
-//                })
-//                self.contentNode = nil
-//            }
-//        } else if let contentNode = self.contentNode {
-//            transition.updateFrame(node: contentNode, frame: contentFrame)
-//            contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: transition)
-//        }
+        let insets = state.layout.layout.insets(options: [.statusBar])
+        let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: state.layout.layout.size.width, height: state.layout.layout.size.height))
+        
+        if state.data.state?.kind != self.contentNode?.kind {
+            if let dataState = state.data.state {
+                let icon: UIImage?
+                let title: String
+                let text: String
+                let buttonTitle: String
+                let hasPrivacyPolicy: Bool
+
+                switch dataState {
+                    case let .contacts(status):
+                        icon = UIImage(bundleImageName: "Settings/Permissions/Contacts")
+                        title = self.presentationData.strings.Permissions_ContactsTitle
+                        text = self.presentationData.strings.Permissions_ContactsText
+                        if status == .denied {
+                            buttonTitle = self.presentationData.strings.Permissions_ContactsAllowInSettings
+                        } else {
+                            buttonTitle = self.presentationData.strings.Permissions_ContactsAllow
+                        }
+                        hasPrivacyPolicy = true
+                    case let .notifications(status):
+                        icon = UIImage(bundleImageName: "Settings/Permissions/Notifications")
+                        title = self.presentationData.strings.Permissions_NotificationsTitle
+                        text = self.presentationData.strings.Permissions_NotificationsText
+                        if status == .denied {
+                            buttonTitle = self.presentationData.strings.Permissions_NotificationsAllowInSettings
+                        } else {
+                            buttonTitle = self.presentationData.strings.Permissions_NotificationsAllow
+                        }
+                        hasPrivacyPolicy = false
+                    case let .siri(status):
+                        icon = UIImage(bundleImageName: "Settings/Permissions/Siri")
+                        title = self.presentationData.strings.Permissions_SiriTitle
+                        text = self.presentationData.strings.Permissions_SiriText
+                        if status == .denied {
+                            buttonTitle = self.presentationData.strings.Permissions_SiriAllowInSettings
+                        } else {
+                            buttonTitle = self.presentationData.strings.Permissions_SiriAllow
+                        }
+                        hasPrivacyPolicy = false
+                    case .cellularData:
+                        icon = UIImage(bundleImageName: "Settings/Permissions/CellularData")
+                        title = self.presentationData.strings.Permissions_CellularDataTitle
+                        text = self.presentationData.strings.Permissions_CellularDataText
+                        buttonTitle = self.presentationData.strings.Permissions_CellularDataAllowInSettings
+                        hasPrivacyPolicy = false
+                }
+
+                let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind, icon: icon, title: title, text: text, buttonTitle: buttonTitle, buttonAction: {}, openPrivacyPolicy: hasPrivacyPolicy ? self.openPrivacyPolicy : nil)
+                self.insertSubnode(contentNode, at: 0)
+                contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: .immediate)
+                contentNode.frame = contentFrame
+                if let currentContentNode = self.contentNode {
+                    transition.updatePosition(node: currentContentNode, position: CGPoint(x: -contentFrame.size.width / 2.0, y: contentFrame.midY), completion: { [weak currentContentNode] _ in
+                        currentContentNode?.removeFromSupernode()
+                    })
+                    transition.animateHorizontalOffsetAdditive(node: contentNode, offset: -contentFrame.width)
+                } else if transition.isAnimated {
+                    contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                }
+                self.contentNode = contentNode
+            } else if let currentContentNode = self.contentNode {
+                transition.updateAlpha(node: currentContentNode, alpha: 0.0, completion: { [weak currentContentNode] _ in
+                    currentContentNode?.removeFromSupernode()
+                })
+                self.contentNode = nil
+            }
+        } else if let contentNode = self.contentNode {
+            transition.updateFrame(node: contentNode, frame: contentFrame)
+            contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: transition)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

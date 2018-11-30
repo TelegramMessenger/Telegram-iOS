@@ -132,9 +132,11 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
     tgvoip::VoIPController *_controller;
     
     OngoingCallState _state;
+    int32_t _signalBars;
 }
 
 - (void)controllerStateChanged:(int)state;
+- (void)signalBarsChanged:(int32_t)signalBars;
 
 @end
 
@@ -142,6 +144,13 @@ static void controllerStateCallback(tgvoip::VoIPController *controller, int stat
     int32_t contextId = (int32_t)((intptr_t)controller->implData);
     withContext(contextId, ^(OngoingCallThreadLocalContext *context) {
         [context controllerStateChanged:state];
+    });
+}
+
+static void signalBarsCallback(tgvoip::VoIPController *controller, int signalBars) {
+    int32_t contextId = (int32_t)((intptr_t)controller->implData);
+    withContext(contextId, ^(OngoingCallThreadLocalContext *context) {
+        [context signalBarsChanged:(int32_t)signalBars];
     });
 }
 
@@ -254,7 +263,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         callbacks.connectionStateChanged = &controllerStateCallback;
         callbacks.groupCallKeyReceived = NULL;
         callbacks.groupCallKeySent = NULL;
-        callbacks.signalBarCountChanged = NULL;
+        callbacks.signalBarCountChanged = &signalBarsCallback;
         callbacks.upgradeToGroupCallRequested = NULL;
         _controller->SetCallbacks(callbacks);
         
@@ -266,6 +275,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         tgvoip::VoIPController::crypto.aes_ctr_encrypt = &TGCallAesCtrEncrypt;
         
         _state = OngoingCallStateInitializing;
+        _signalBars = -1;
     }
     return self;
 }
@@ -368,6 +378,16 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         
         if (_stateChanged) {
             _stateChanged(callState);
+        }
+    }
+}
+
+- (void)signalBarsChanged:(int32_t)signalBars {
+    if (signalBars != _signalBars) {
+        _signalBars = signalBars;
+        
+        if (_signalBarsChanged) {
+            _signalBarsChanged(signalBars);
         }
     }
 }

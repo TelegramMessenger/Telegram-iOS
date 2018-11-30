@@ -245,6 +245,8 @@ class ContactsPeerItem: ListViewItem {
             if let header = item.header {
                 if let previousItem = previousItem as? ContactsPeerItem {
                     firstWithHeader = header.id != previousItem.header?.id
+                } else if let previousItem = previousItem as? ContactListActionItem {
+                    firstWithHeader = header.id != previousItem.header?.id
                 } else {
                     firstWithHeader = true
                 }
@@ -256,6 +258,8 @@ class ContactsPeerItem: ListViewItem {
         if let nextItem = nextItem {
             if let header = item.header {
                 if let nextItem = nextItem as? ContactsPeerItem {
+                    last = header.id != nextItem.header?.id
+                } else if let nextItem = nextItem as? ContactListActionItem {
                     last = header.id != nextItem.header?.id
                 } else {
                     last = true

@@ -176,8 +176,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, node, frame in
-            self?.openMessageContextMenu(message: message, node: node, frame: frame)
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame in
+            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
         }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
             self?.openUrl(url)
             }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message in
@@ -622,7 +622,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }))
     }
     
-    private func openMessageContextMenu(message: Message, node: ASDisplayNode, frame: CGRect) {
+    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect) {
         var actions: [ContextMenuAction] = []
             if !message.text.isEmpty {
             actions.append(ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuCopy), action: {

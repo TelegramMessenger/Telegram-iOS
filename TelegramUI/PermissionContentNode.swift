@@ -3,19 +3,22 @@ import Display
 import AsyncDisplayKit
 
 final class PermissionContentNode: ASDisplayNode {
+    private var theme: PresentationTheme
+    let kind: PermissionStateKind
+    
     private let iconNode: ASImageNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let actionButton: SolidRoundedButtonNode
     private let privacyPolicyButton: HighlightableButtonNode
     
-    var kind: PermissionStateKind
     private var title: String
     
     var buttonAction: (() -> Void)?
     var openPrivacyPolicy: (() -> Void)?
     
     init(theme: PresentationTheme, strings: PresentationStrings, kind: PermissionStateKind, icon: UIImage?, title: String, text: String, buttonTitle: String, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
+        self.theme = theme
         self.kind = kind
         
         self.buttonAction = buttonAction
@@ -42,7 +45,7 @@ final class PermissionContentNode: ASDisplayNode {
         self.actionButton = SolidRoundedButtonNode(theme: theme, height: 48.0, cornerRadius: 9.0)
         
         self.privacyPolicyButton = HighlightableButtonNode()
-        //self.privacyPolicyButton.setTitle(strings.Permissions_PrivacyPolicy, with: Font.regular(16.0), with: theme.list.itemAccentColor, for: .normal)
+        self.privacyPolicyButton.setTitle(strings.Permissions_PrivacyPolicy, with: Font.regular(16.0), with: theme.list.itemAccentColor, for: .normal)
         
         super.init()
         
@@ -74,23 +77,43 @@ final class PermissionContentNode: ASDisplayNode {
     }
     
     func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
-        let sidePadding: CGFloat = 20.0
-        //let sideButtonInset: CGFloat = 16.0
+        let sidePadding: CGFloat
+        let fontSize: CGFloat
+        if size.width > 330.0 {
+            fontSize = 24.0
+            sidePadding = 38.0
+        } else {
+            fontSize = 20.0
+            sidePadding = 20.0
+        }
+        
+        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.semibold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
+        
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let buttonHeight = self.actionButton.updateLayout(width: size.width, transition: transition)
-    
-        let titleSubtitleSpacing: CGFloat = 12.0
-
-        let textHeight = titleSize.height + titleSubtitleSpacing + textSize.height
         
-
-        let minContentHeight = textHeight
-        let contentHeight = min(215.0, max(size.height - insets.top - insets.bottom - 40.0, minContentHeight))
+        let titleSubtitleSpacing: CGFloat = 26.0
+        let buttonSpacing: CGFloat = 36.0
+        var contentHeight = titleSize.height + titleSubtitleSpacing + textSize.height + buttonHeight + buttonSpacing
+        
+        var imageSize = CGSize()
+        var imageSpacing: CGFloat = 0.0
+        if let icon = self.iconNode.image {
+            imageSpacing = 60.0
+            imageSize = icon.size
+            contentHeight += imageSize.height + imageSpacing
+        }
+        
         let contentOrigin = insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0)
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentOrigin), size: titleSize)
+        let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: iconFrame.maxY + imageSpacing), size: titleSize)
+        let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: textSize)
+        let buttonFrame = CGRect(origin: CGPoint(x: 0.0, y: textFrame.maxY + buttonSpacing), size: CGSize(width: size.width, height: buttonHeight))
+        
+        transition.updateFrame(node: self.iconNode, frame: iconFrame)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: textSize))
-        transition.updateFrame(node: self.actionButton, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: buttonHeight))
+        transition.updateFrame(node: self.textNode, frame: textFrame)
+        transition.updateFrame(node: self.actionButton, frame: buttonFrame)
     }
 }

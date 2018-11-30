@@ -149,7 +149,7 @@ func updatedChatEditInterfaceMessagetState(state: ChatPresentationInterfaceState
     return updated
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ChatMessageContextMenuAction], NoError> {
+func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ChatMessageContextMenuAction], NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
@@ -444,7 +444,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         if data.canSelect {
             actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuMore), action: {
-                interfaceInteraction.beginMessageSelection([message.id])
+                interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id])
             })))
         }
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
@@ -461,19 +461,19 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if data.messageActions.options.contains(.forward) {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, action: {
-                    interfaceInteraction.forwardMessages([message])
+                    interfaceInteraction.forwardMessages(selectAll ? messages : [message])
             })))
         }
         
         if data.messageActions.options.contains(.report) {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuReport, action: {
-                interfaceInteraction.reportMessages([message])
+                interfaceInteraction.reportMessages(selectAll ? messages : [message])
             })))
         }
         
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .destructive, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, action: {
-                interfaceInteraction.deleteMessages([message])
+                interfaceInteraction.deleteMessages(selectAll ? messages : [message])
             })))
         }
         

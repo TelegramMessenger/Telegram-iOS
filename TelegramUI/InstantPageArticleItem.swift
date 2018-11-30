@@ -66,10 +66,11 @@ final class InstantPageArticleItem: InstantPageItem {
 
 func layoutArticleItem(theme: InstantPageTheme, webPage: TelegramMediaWebpage, title: NSAttributedString, description: NSAttributedString, cover: TelegramMediaImage?, url: String, webpageId: MediaId, boundingWidth: CGFloat, rtl: Bool) -> InstantPageArticleItem {
     let inset: CGFloat = 17.0
+    let imageSpacing: CGFloat = 10.0
     var sideInset = inset
     let imageSize = CGSize(width: 44.0, height: 44.0)
     if cover != nil {
-        sideInset += imageSize.width + 10.0
+        sideInset += imageSize.width + imageSpacing
     }
     
     var availableLines: Int = 3
@@ -87,9 +88,16 @@ func layoutArticleItem(theme: InstantPageTheme, webPage: TelegramMediaWebpage, t
             hasRTL = true
         }
     }
+    var descriptionInset = inset
+    if hasRTL && cover != nil {
+        descriptionInset += imageSize.width + imageSpacing
+        for var item in titleItems {
+            item.frame = item.frame.offsetBy(dx: imageSize.width + imageSpacing, dy: 0.0)
+        }
+    }
     
     if availableLines > 0 {
-        let (descriptionTextItem, descriptionItems, descriptionSize) = layoutTextItemWithString(description, boundingWidth: boundingWidth - inset - sideInset, alignment: hasRTL ? .right : .natural, offset: CGPoint(x: inset, y: 15.0 + titleSize.height + 14.0), maxNumberOfLines: availableLines)
+        let (descriptionTextItem, descriptionItems, descriptionSize) = layoutTextItemWithString(description, boundingWidth: boundingWidth - inset - sideInset, alignment: hasRTL ? .right : .natural, offset: CGPoint(x: descriptionInset, y: 15.0 + titleSize.height + 14.0), maxNumberOfLines: availableLines)
         contentItems.append(contentsOf: descriptionItems)
         
         if let textItem = descriptionTextItem {

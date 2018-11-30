@@ -114,7 +114,7 @@ public class PeerMediaCollectionController: TelegramController {
                     }
                 }
             }, openPeerMention: { _ in
-            }, openMessageContextMenu: { [weak self] message, _, _ in
+            }, openMessageContextMenu: { [weak self] message, _, _, _ in
                 if let strongSelf = self, strongSelf.isNodeLoaded {
                     if let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
                         let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)

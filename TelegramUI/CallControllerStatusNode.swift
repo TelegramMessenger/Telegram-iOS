@@ -35,6 +35,7 @@ final class CallControllerStatusNode: ASDisplayNode {
     private let titleNode: TextNode
     private let statusNode: TextNode
     private let statusMeasureNode: TextNode
+    private let receptionNode: CallControllerReceptionNode
     
     var title: String = ""
     var status: CallControllerStatusValue = .text("") {
@@ -57,6 +58,23 @@ final class CallControllerStatusNode: ASDisplayNode {
             }
         }
     }
+    var reception: Int32? {
+        didSet {
+            if self.reception != oldValue {
+                if let reception = self.reception {
+                    self.receptionNode.reception = reception
+                    
+                    if oldValue == nil {
+                        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring)
+                        transition.updateAlpha(node: self.receptionNode, alpha: 1.0)
+                    }
+                } else if self.reception == nil, oldValue != nil {
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring)
+                    transition.updateAlpha(node: self.receptionNode, alpha: 0.0)
+                }
+            }
+        }
+    }
     
     private var statusTimer: SwiftSignalKit.Timer?
     private var validLayoutWidth: CGFloat?
@@ -66,6 +84,9 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.statusNode = TextNode()
         self.statusNode.displaysAsynchronously = false
         self.statusMeasureNode = TextNode()
+       
+        self.receptionNode = CallControllerReceptionNode()
+        self.receptionNode.alpha = 0.0
         
         super.init()
         
@@ -73,6 +94,7 @@ final class CallControllerStatusNode: ASDisplayNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.statusNode)
+        self.addSubnode(self.receptionNode)
     }
     
     deinit {
@@ -92,6 +114,7 @@ final class CallControllerStatusNode: ASDisplayNode {
             statusFont = regularStatusFont
         }
         
+        var statusOffset: CGFloat = 0.0
         let statusText: String
         let statusMeasureText: String
         switch self.status {
@@ -111,6 +134,7 @@ final class CallControllerStatusNode: ASDisplayNode {
                 }
                 statusText = format(durationString)
                 statusMeasureText = format(measureDurationString)
+                statusOffset += 8.0
         }
         
         let spacing: CGFloat = 4.0
@@ -123,8 +147,65 @@ final class CallControllerStatusNode: ASDisplayNode {
         let _ = statusMeasureApply()
         
         self.titleNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - titleLayout.size.width) / 2.0), y: 0.0), size: titleLayout.size)
-        self.statusNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - statusMeasureLayout.size.width) / 2.0), y: titleLayout.size.height + spacing), size: statusLayout.size)
+        self.statusNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - statusMeasureLayout.size.width) / 2.0) + statusOffset, y: titleLayout.size.height + spacing), size: statusLayout.size)
+        self.receptionNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX - receptionNodeSize.width, y: titleLayout.size.height + spacing + 9.0), size: receptionNodeSize)
         
         return titleLayout.size.height + spacing + statusLayout.size.height
+    }
+}
+
+
+private final class CallControllerReceptionNodeParameters: NSObject {
+    let reception: Int32
+    
+    init(reception: Int32) {
+        self.reception = reception
+    }
+}
+
+private let receptionNodeSize = CGSize(width: 24.0, height: 10.0)
+
+final class CallControllerReceptionNode : ASDisplayNode {
+    var reception: Int32 = 4 {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+    
+    override init() {
+        super.init()
+        
+        self.isOpaque = false
+        self.isLayerBacked = true
+    }
+    
+    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+        return CallControllerReceptionNodeParameters(reception: self.reception)
+    }
+    
+    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+        let context = UIGraphicsGetCurrentContext()!
+        context.setFillColor(UIColor.white.cgColor)
+        
+        if let parameters = parameters as? CallControllerReceptionNodeParameters{
+            let width: CGFloat = 3.0
+            var spacing: CGFloat = 1.5
+            if UIScreenScale > 2 {
+                spacing = 4.0 / 3.0
+            }
+            
+            for i in 0 ..< 4 {
+                let height = 4.0 + 2.0 * CGFloat(i)
+                let rect = CGRect(x: bounds.minX + CGFloat(i) * (width + spacing), y: receptionNodeSize.height - height, width: width, height: height)
+                
+                if i >= parameters.reception {
+                    context.setAlpha(0.4)
+                }
+                
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: 1.0)
+                context.addPath(path.cgPath)
+                context.fillPath()
+            }
+        }
     }
 }

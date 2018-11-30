@@ -8,6 +8,7 @@ final class SolidRoundedButtonNode: ASDisplayNode {
     private var theme: PresentationTheme
     
     private let buttonBackgroundNode: ASImageNode
+    private let buttonGlossNode: SolidRoundedButtonGlossNode
     private let buttonNode: HighlightTrackingButtonNode
     private let labelNode: ImmediateTextNode
     
@@ -37,6 +38,8 @@ final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonBackgroundNode.displaysAsynchronously = false
         self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.list.itemCheckColors.fillColor)
         
+        self.buttonGlossNode = SolidRoundedButtonGlossNode(color: theme.list.itemCheckColors.foregroundColor, cornerRadius: cornerRadius)
+        
         self.buttonNode = HighlightTrackingButtonNode()
         
         self.labelNode = ImmediateTextNode()
@@ -45,6 +48,7 @@ final class SolidRoundedButtonNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.buttonBackgroundNode)
+        self.addSubnode(self.buttonGlossNode)
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.labelNode)
         
@@ -69,6 +73,7 @@ final class SolidRoundedButtonNode: ASDisplayNode {
         let buttonSize = CGSize(width: width - inset * 2.0, height: self.buttonHeight)
         let buttonFrame = CGRect(origin: CGPoint(x: inset, y: 0.0), size: buttonSize)
         transition.updateFrame(node: self.buttonBackgroundNode, frame: buttonFrame)
+        transition.updateFrame(node: self.buttonGlossNode, frame: buttonFrame)
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
         if self.title != self.labelNode.attributedText?.string {
@@ -84,5 +89,106 @@ final class SolidRoundedButtonNode: ASDisplayNode {
     
     @objc private func buttonPressed() {
         self.pressed?()
+    }
+}
+
+private final class SolidRoundedButtonGlossNodeParameters: NSObject {
+    let gradientColors: NSArray?
+    let cornerRadius: CGFloat
+    let progress: CGFloat
+    
+    init(gradientColors: NSArray?, cornerRadius: CGFloat, progress: CGFloat) {
+        self.gradientColors = gradientColors
+        self.cornerRadius = cornerRadius
+        self.progress = progress
+    }
+}
+
+final class SolidRoundedButtonGlossNode : ASDisplayNode {
+    var color: UIColor {
+        didSet {
+            self.updateGradientColors()
+            self.setNeedsDisplay()
+        }
+    }
+    private var progress: CGFloat = 0.0
+    private var displayLink: CADisplayLink?
+    private let buttonCornerRadius: CGFloat
+    private var gradientColors: NSArray?
+    
+    init(color: UIColor, cornerRadius: CGFloat) {
+        self.color = color
+        self.buttonCornerRadius = cornerRadius
+        
+        super.init()
+        
+        self.isOpaque = false
+        self.isLayerBacked = true
+        
+        class DisplayLinkProxy: NSObject {
+            weak var target: SolidRoundedButtonGlossNode?
+            init(target: SolidRoundedButtonGlossNode) {
+                self.target = target
+            }
+            
+            @objc func displayLinkEvent() {
+                self.target?.displayLinkEvent()
+            }
+        }
+        
+        self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
+        self.displayLink?.isPaused = true
+        self.displayLink?.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+        
+        self.updateGradientColors()
+    }
+    
+    deinit {
+        self.displayLink?.invalidate()
+    }
+    
+    private func updateGradientColors() {
+        let transparentColor = self.color.withAlphaComponent(0.0).cgColor
+        self.gradientColors = [transparentColor, transparentColor, self.color.withAlphaComponent(0.12).cgColor, transparentColor, transparentColor]
+    }
+    
+    override func willEnterHierarchy() {
+        super.willEnterHierarchy()
+        self.displayLink?.isPaused = false
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        self.displayLink?.isPaused = true
+    }
+    
+    private func displayLinkEvent() {
+        var newProgress = self.progress + 0.009
+        if newProgress > 1.0 {
+            newProgress = 0.0
+        }
+        self.progress = newProgress
+        self.setNeedsDisplay()
+    }
+    
+    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+        return SolidRoundedButtonGlossNodeParameters(gradientColors: self.gradientColors, cornerRadius: self.buttonCornerRadius, progress: self.progress)
+    }
+    
+    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+        let context = UIGraphicsGetCurrentContext()!
+        
+        if let parameters = parameters as? SolidRoundedButtonGlossNodeParameters, let gradientColors = parameters.gradientColors {
+            let path = UIBezierPath(roundedRect: bounds, cornerRadius: parameters.cornerRadius)
+            context.addPath(path.cgPath)
+            context.clip()
+            
+            var locations: [CGFloat] = [0.0, 0.15, 0.5, 0.85, 1.0]
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+            
+            let x = -4.0 * bounds.size.width + 8.0 * bounds.size.width * parameters.progress
+            context.drawLinearGradient(gradient, start: CGPoint(x: x, y: 0.0), end: CGPoint(x: x + bounds.size.width, y: 0.0), options: CGGradientDrawingOptions())
+        }
     }
 }

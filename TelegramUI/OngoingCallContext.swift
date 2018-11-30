@@ -133,6 +133,11 @@ final class OngoingCallContext {
         }
     }
     
+    private let receptionPromise = Promise<Int32?>(nil)
+    var reception: Signal<Int32?, NoError> {
+        return self.receptionPromise.get()
+    }
+    
     private let audioSessionDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
     
@@ -162,6 +167,9 @@ final class OngoingCallContext {
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
+            }
+            context.signalBarsChanged = { [weak self] signalBars in
+                self?.receptionPromise.set(.single(signalBars))
             }
             context.callEnded = { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
                 let delta = NetworkUsageStatsConnectionsEntry(

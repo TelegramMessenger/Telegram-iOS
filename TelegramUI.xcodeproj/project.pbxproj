@@ -38,6 +38,7 @@
 		09619B8E21A34C0100493558 /* InstantPageScrollableNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */; };
 		09619B9521A4ABF600493558 /* InstantPageReferenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09619B9321A4ABF500493558 /* InstantPageReferenceController.swift */; };
 		09619B9621A4ABF600493558 /* InstantPageReferenceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09619B9421A4ABF600493558 /* InstantPageReferenceControllerNode.swift */; };
+		0962E65D21B1486D00245FD9 /* CallDebugNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E65C21B1486D00245FD9 /* CallDebugNode.swift */; };
 		096C98BA21787A5C00C211FF /* LegacyBridgeAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */; };
 		096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */; };
 		096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */; };
@@ -62,7 +63,7 @@
 		09B4EE4D21A7B73800847FA6 /* PermissionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4C21A7B73800847FA6 /* PermissionController.swift */; };
 		09B4EE4F21A7B75D00847FA6 /* PermissionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4E21A7B75D00847FA6 /* PermissionControllerNode.swift */; };
 		09B4EE5221A7CC3E00847FA6 /* SolidRoundedButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5121A7CC3E00847FA6 /* SolidRoundedButtonNode.swift */; };
-		09B4EE5621A8149C00847FA6 /* NotificationPermissionInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5521A8149C00847FA6 /* NotificationPermissionInfoItem.swift */; };
+		09B4EE5621A8149C00847FA6 /* PermissionInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5521A8149C00847FA6 /* PermissionInfoItem.swift */; };
 		09B4EE5E21AC626B00847FA6 /* PermissionContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5D21AC626B00847FA6 /* PermissionContentNode.swift */; };
 		09B4EE6021AD4A0E00847FA6 /* InstantPageContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE5F21AD4A0E00847FA6 /* InstantPageContentNode.swift */; };
 		09B4EE6221AD791600847FA6 /* InstantPageStoredState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE6121AD791600847FA6 /* InstantPageStoredState.swift */; };
@@ -1110,6 +1111,7 @@
 		09619B8D21A34C0100493558 /* InstantPageScrollableNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageScrollableNode.swift; sourceTree = "<group>"; };
 		09619B9321A4ABF500493558 /* InstantPageReferenceController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageReferenceController.swift; sourceTree = "<group>"; };
 		09619B9421A4ABF600493558 /* InstantPageReferenceControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageReferenceControllerNode.swift; sourceTree = "<group>"; };
+		0962E65C21B1486D00245FD9 /* CallDebugNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDebugNode.swift; sourceTree = "<group>"; };
 		096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBridgeAudio.swift; sourceTree = "<group>"; };
 		096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeAudioEncoder.m; sourceTree = "<group>"; };
 		096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
@@ -1138,7 +1140,7 @@
 		09B4EE4C21A7B73800847FA6 /* PermissionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionController.swift; sourceTree = "<group>"; };
 		09B4EE4E21A7B75D00847FA6 /* PermissionControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionControllerNode.swift; sourceTree = "<group>"; };
 		09B4EE5121A7CC3E00847FA6 /* SolidRoundedButtonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolidRoundedButtonNode.swift; sourceTree = "<group>"; };
-		09B4EE5521A8149C00847FA6 /* NotificationPermissionInfoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionInfoItem.swift; sourceTree = "<group>"; };
+		09B4EE5521A8149C00847FA6 /* PermissionInfoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionInfoItem.swift; sourceTree = "<group>"; };
 		09B4EE5D21AC626B00847FA6 /* PermissionContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionContentNode.swift; sourceTree = "<group>"; };
 		09B4EE5F21AD4A0E00847FA6 /* InstantPageContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageContentNode.swift; sourceTree = "<group>"; };
 		09B4EE6121AD791600847FA6 /* InstantPageStoredState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageStoredState.swift; sourceTree = "<group>"; };
@@ -2605,7 +2607,7 @@
 				D01B279C1E394A500022A4C0 /* NotificationsAndSounds.swift */,
 				D0A749961E3AA25200AD786E /* NotificationSoundSelection.swift */,
 				D02C81722177AC5900CD1006 /* NotificationSearchItem.swift */,
-				09B4EE5521A8149C00847FA6 /* NotificationPermissionInfoItem.swift */,
+				09B4EE5521A8149C00847FA6 /* PermissionInfoItem.swift */,
 			);
 			name = Notifications;
 			sourceTree = "<group>";
@@ -3968,6 +3970,7 @@
 				D0F0AAE51EC21B68005EE2A5 /* CallControllerButton.swift */,
 				D0ACCB191EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift */,
 				09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */,
+				0962E65C21B1486D00245FD9 /* CallDebugNode.swift */,
 			);
 			name = Call;
 			sourceTree = "<group>";
@@ -5474,6 +5477,7 @@
 				D0EC6DBC1EB9F58900EBF1C3 /* ChatMediaInputGifPane.swift in Sources */,
 				D0EC6DBD1EB9F58900EBF1C3 /* ChatMediaInputPanelEntries.swift in Sources */,
 				D0471B4F1EFD84600074D609 /* BotCheckoutPriceItem.swift in Sources */,
+				0962E65D21B1486D00245FD9 /* CallDebugNode.swift in Sources */,
 				D00ADFDB1EBA2EAF00873D2E /* OngoingCallContext.swift in Sources */,
 				D0EC6DBE1EB9F58900EBF1C3 /* ChatMediaInputGridEntries.swift in Sources */,
 				D0EC6DBF1EB9F58900EBF1C3 /* ChatMediaInputMetaSectionItemNode.swift in Sources */,
@@ -5509,7 +5513,7 @@
 				D0BCC3D2203F0A6C008126C2 /* StringForMessageTimestampStatus.swift in Sources */,
 				D0EC6DCF1EB9F58900EBF1C3 /* HorizontalStickerGridItem.swift in Sources */,
 				D0EC6DD01EB9F58900EBF1C3 /* HashtagChatInputContextPanelNode.swift in Sources */,
-				09B4EE5621A8149C00847FA6 /* NotificationPermissionInfoItem.swift in Sources */,
+				09B4EE5621A8149C00847FA6 /* PermissionInfoItem.swift in Sources */,
 				D0EC6DD11EB9F58900EBF1C3 /* HashtagChatInputPanelItem.swift in Sources */,
 				D0EC6DD21EB9F58900EBF1C3 /* MentionChatInputContextPanelNode.swift in Sources */,
 				D00701A22029F6D0006B9E34 /* TGMimeTypeMap.m in Sources */,

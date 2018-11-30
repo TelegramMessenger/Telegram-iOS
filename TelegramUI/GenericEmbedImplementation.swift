@@ -45,6 +45,12 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
         webView.loadHTMLString(html, baseURL: URL(string: "about:blank"))
         
         userContentController.addUserScript(WKUserScript(source: userScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
+        
+        if self.url.hasSuffix(".mp4") || self.url.hasSuffix(".mov") {
+            if let onPlaybackStarted = self.onPlaybackStarted {
+                onPlaybackStarted()
+            }
+        }
     }
     
     func play() {

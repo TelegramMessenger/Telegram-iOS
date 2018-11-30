@@ -10,7 +10,7 @@ public enum PresentationCallState: Equatable {
     case ringing
     case requesting(Bool)
     case connecting(Data?)
-    case active(Double, Data)
+    case active(Double, Int32?, Data)
     case terminating
     case terminated(CallSessionTerminationReason?)
 }
@@ -173,6 +173,8 @@ public final class PresentationCall {
     private var callContextState: OngoingCallContextState?
     private var ongoingContext: OngoingCallContext
     private var ongoingContextStateDisposable: Disposable?
+    private var reception: Int32?
+    private var receptionDisposable: Disposable?
     private var reportedIncomingCall = false
     
     private var sessionStateDisposable: Disposable?
@@ -236,7 +238,7 @@ public final class PresentationCall {
         self.sessionStateDisposable = (callSessionManager.callState(internalId: internalId)
         |> deliverOnMainQueue).start(next: { [weak self] sessionState in
             if let strongSelf = self {
-                strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, audioSessionControl: strongSelf.audioSessionControl)
+                strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: strongSelf.audioSessionControl)
             }
         })
         
@@ -244,9 +246,20 @@ public final class PresentationCall {
         |> deliverOnMainQueue).start(next: { [weak self] contextState in
             if let strongSelf = self {
                 if let sessionState = strongSelf.sessionState {
-                    strongSelf.updateSessionState(sessionState: sessionState, callContextState: contextState, audioSessionControl: strongSelf.audioSessionControl)
+                    strongSelf.updateSessionState(sessionState: sessionState, callContextState: contextState, reception: strongSelf.reception, audioSessionControl: strongSelf.audioSessionControl)
                 } else {
                     strongSelf.callContextState = contextState
+                }
+            }
+        })
+        
+        self.receptionDisposable = (self.ongoingContext.reception
+        |> deliverOnMainQueue).start(next: { [weak self] reception in
+            if let strongSelf = self {
+                if let sessionState = strongSelf.sessionState {
+                    strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: reception, audioSessionControl: strongSelf.audioSessionControl)
+                } else {
+                    strongSelf.reception = reception
                 }
             }
         })
@@ -255,7 +268,7 @@ public final class PresentationCall {
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     if let sessionState = strongSelf.sessionState {
-                        strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, audioSessionControl: control)
+                        strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: control)
                     } else {
                         strongSelf.audioSessionControl = control
                     }
@@ -267,7 +280,7 @@ public final class PresentationCall {
                     if let strongSelf = self {
                         strongSelf.updateIsAudioSessionActive(false)
                         if let sessionState = strongSelf.sessionState {
-                            strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, audioSessionControl: nil)
+                            strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: nil)
                         } else {
                             strongSelf.audioSessionControl = nil
                         }
@@ -342,6 +355,7 @@ public final class PresentationCall {
         self.audioSessionActiveDisposable?.dispose()
         self.sessionStateDisposable?.dispose()
         self.ongoingContextStateDisposable?.dispose()
+        self.receptionDisposable?.dispose()
         self.audioSessionDisposable?.dispose()
         
         if let dropCallKitCallTimer = self.dropCallKitCallTimer {
@@ -352,11 +366,12 @@ public final class PresentationCall {
         }
     }
     
-    private func updateSessionState(sessionState: CallSession, callContextState: OngoingCallContextState?, audioSessionControl: ManagedAudioSessionControl?) {
+    private func updateSessionState(sessionState: CallSession, callContextState: OngoingCallContextState?, reception: Int32?, audioSessionControl: ManagedAudioSessionControl?) {
         let previous = self.sessionState
         let previousControl = self.audioSessionControl
         self.sessionState = sessionState
         self.callContextState = callContextState
+        self.reception = reception
         self.audioSessionControl = audioSessionControl
         
         if previousControl != nil && audioSessionControl == nil {
@@ -429,7 +444,7 @@ public final class PresentationCall {
                                 timestamp = CFAbsoluteTimeGetCurrent()
                                 self.activeTimestamp = timestamp
                             }
-                            presentationState = .active(timestamp, keyVisualHash)
+                            presentationState = .active(timestamp, reception, keyVisualHash)
                     }
                 } else {
                     presentationState = .connecting(keyVisualHash)
