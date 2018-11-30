@@ -785,7 +785,7 @@ private enum QueuedWakeup: Int32 {
         
         if !BuildConfig.shared().hockeyAppId.isEmpty {
             BITHockeyManager.shared().configure(withIdentifier: BuildConfig.shared().hockeyAppId, delegate: self)
-            BITHockeyManager.shared().crashManager.crashManagerStatus = .autoSend
+            BITHockeyManager.shared().crashManager.crashManagerStatus = .alwaysAsk
             BITHockeyManager.shared().start()
             BITHockeyManager.shared().authenticator.authenticateInstallation()
         }
