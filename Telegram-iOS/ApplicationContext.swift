@@ -311,6 +311,7 @@ final class AuthorizedApplicationContext {
         
         self.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
         self.mainWindow.previewThemeDarkBlur = presentationData.theme.chatList.searchBarKeyboardColor == .dark
+        self.mainWindow.setupVolumeControlStatusBarGraphics(presentationData.volumeControlStatusBarIcons)
         
         self.rootController = TelegramRootController(account: account)
         
@@ -854,7 +855,7 @@ final class AuthorizedApplicationContext {
                             resolvedText = .inProgress(nil)
                         case .terminated:
                             resolvedText = .none
-                        case let .active(timestamp, _):
+                        case let .active(timestamp, _, _):
                             resolvedText = .inProgress(timestamp)
                     }
                 } else {
