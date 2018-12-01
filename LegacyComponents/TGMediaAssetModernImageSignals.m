@@ -298,6 +298,7 @@
                 
                 if (iosMajorVersion() >= 10 && [dataUTI rangeOfString:@"heic"].location != NSNotFound)
                 {
+#if !DEBUG
                     CIContext *context = [[CIContext alloc] init];
                     CIImage *image = [[CIImage alloc] initWithData:imageData];
                     NSURL *tmpURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.jpg", (int)arc4random()]]];
@@ -313,6 +314,7 @@
                         if (range.location != NSNotFound)
                             fileName = [fileName stringByReplacingCharactersInRange:range withString:@".JPG"];
                     }
+#endif
                 }
                 
                 TGMediaAssetImageData *data = [[TGMediaAssetImageData alloc] init];
