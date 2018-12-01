@@ -51,6 +51,12 @@ VRect VRle::VRleData::bbox() const
     return mBbox;
 }
 
+void VRle::VRleData::setBbox(const VRect &bbox) const
+{
+    mBboxDirty = false;
+    mBbox = bbox;
+}
+
 void VRle::VRleData::reset()
 {
     mSpans.clear();

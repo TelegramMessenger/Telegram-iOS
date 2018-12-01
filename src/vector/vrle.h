@@ -21,6 +21,7 @@ public:
                                void *userData);
     bool  empty() const;
     VRect boundingRect() const;
+    void setBoundingRect(const VRect &bbox);
     void  addSpan(const VRle::Span *span, int count);
 
     void reset();
@@ -48,6 +49,7 @@ private:
         void  addSpan(const VRle::Span *span, int count);
         void  updateBbox() const;
         VRect bbox() const;
+        void setBbox(const VRect &bbox) const;
         void  reset();
         void  translate(const VPoint &p);
         void  operator*=(int alpha);
@@ -79,6 +81,11 @@ inline void VRle::addSpan(const VRle::Span *span, int count)
 inline VRect VRle::boundingRect() const
 {
     return d->bbox();
+}
+
+inline void VRle::setBoundingRect(const VRect & bbox)
+{
+    d->setBbox(bbox);
 }
 
 inline void VRle::invert()

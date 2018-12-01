@@ -311,6 +311,11 @@ typedef struct gray_TWorker_ {
     SW_FT_Outline outline;
     SW_FT_BBox    clip_box;
 
+    int           bound_left;
+    int           bound_top;
+    int           bound_right;
+    int           bound_bottom;
+
     SW_FT_Span gray_spans[SW_FT_MAX_GRAY_SPANS];
     int        num_gray_spans;
 
@@ -361,6 +366,11 @@ static void gray_init_cells(RAS_ARG_ void* buffer, long byte_size)
     ras.area = 0;
     ras.cover = 0;
     ras.invalid = 1;
+
+    ras.bound_left = INT_MAX;
+    ras.bound_top = INT_MAX;
+    ras.bound_right = INT_MIN;
+    ras.bound_bottom = INT_MIN;
 }
 
 /*************************************************************************/
@@ -906,6 +916,12 @@ static void gray_hline(RAS_ARG_ TCoord x, TCoord y, TPos area, TCoord acount)
         SW_FT_Span* span;
         int         count;
 
+        // update bounding box.
+        if (x < ras.bound_left) ras.bound_left = x;
+        if (y < ras.bound_top) ras.bound_top = y;
+        if (y > ras.bound_bottom) ras.bound_bottom = y;
+        if (x + acount > ras.bound_right) ras.bound_right = x + acount;
+
         /* see whether we can add this span to the current list */
         count = ras.num_gray_spans;
         span = ras.gray_spans + count - 1;
@@ -1396,7 +1412,11 @@ static int gray_raster_render(gray_PRaster               raster,
     ras.render_span = (SW_FT_Raster_Span_Func)params->gray_spans;
     ras.render_span_data = params->user;
 
-    return gray_convert_glyph(RAS_VAR);
+    gray_convert_glyph(RAS_VAR);
+    params->bbox_cb(ras.bound_left, ras.bound_top,
+                    ras.bound_right - ras.bound_left,
+                    ras.bound_bottom - ras.bound_top + 1, params->user);
+    return 1;
 }
 
 /**** RASTER OBJECT CREATION: In stand-alone mode, we simply use *****/

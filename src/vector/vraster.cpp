@@ -237,6 +237,12 @@ static void rleGenerationCb(int count, const SW_FT_Span *spans, void *user)
     rle->addSpan(rleSpan, count);
 }
 
+static void bboxCb(int x, int y, int w, int h, void *user)
+{
+    VRle *      rle = (VRle *)user;
+    rle->setBoundingRect({x, y, w, h});
+}
+
 struct RleTask {
     std::promise<VRle> sender;
     VPath              path;
@@ -258,6 +264,7 @@ void RleTask::render(FTOutline &outRef)
 
     params.flags = SW_FT_RASTER_FLAG_DIRECT | SW_FT_RASTER_FLAG_AA;
     params.gray_spans = &rleGenerationCb;
+    params.bbox_cb = &bboxCb;
     params.user = &rle;
     params.source = &outRef.ft;
 
@@ -271,8 +278,6 @@ void RleTask::render(FTOutline &outRef)
     }
     // compute rle
     sw_ft_grays_raster.raster_render(nullptr, &params);
-    // update bounding box.
-    rle.boundingRect();
 }
 
 VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)

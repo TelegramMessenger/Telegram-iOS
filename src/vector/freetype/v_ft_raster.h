@@ -285,6 +285,10 @@ typedef struct  SW_FT_Outline_
                   const SW_FT_Span*  spans,
                   void*           user );
 
+ typedef void
+ (*SW_FT_BboxFunc)( int x, int y, int w, int h,
+                    void*  user);
+
 #define SW_FT_Raster_Span_Func  SW_FT_SpanFunc
 
 
@@ -396,6 +400,7 @@ typedef struct  SW_FT_Outline_
     const void*             source;
     int                     flags;
     SW_FT_SpanFunc          gray_spans;
+    SW_FT_BboxFunc          bbox_cb;
     void*                   user;
     SW_FT_BBox              clip_box;
 
