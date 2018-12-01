@@ -283,8 +283,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     return chatSecretPhoto(account: account, photoReference: .message(message: MessageReference(message), media: image))
                                 }
                             } else {
+                                let tinyThumbnailData: TinyThumbnailData?
+                                if GlobalExperimentalSettings.enableTinyThumbnails {
+                                    tinyThumbnailData = parseTinyThumbnail(message.text)
+                                } else {
+                                    tinyThumbnailData = nil
+                                }
                                 updateImageSignal = { synchronousLoad in
-                                    return chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad)
+                                    return chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, tinyThumbnailData: tinyThumbnailData)
                                 }
                             }
                             

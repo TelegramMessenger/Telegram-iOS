@@ -50,7 +50,19 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
                             let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
                             UIGraphicsEndImageContext()
                             
-                            if let scaledImage = scaledImage, let data = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                            if let scaledImage = scaledImage, let data = UIImageJPEGRepresentation(scaledImage, 0.8) {
+                                if #available(iOSApplicationExtension 11.0, *) {
+                                    #if DEBUG
+                                    if false, let heicData = compressImage(scaledImage, quality: 0.8) {
+                                        //compressTinyThumbnail(scaledImage)
+                                        print("data \(data.count), heicData \(heicData.count)")
+                                        subscriber.putNext(.dataPart(resourceOffset: 0, data: heicData, range: 0 ..< heicData.count, complete: true))
+                                        subscriber.putCompletion()
+                                        return
+                                    }
+                                    #endif
+                                }
+                                
                                 subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
                                 subscriber.putCompletion()
                             } else {
