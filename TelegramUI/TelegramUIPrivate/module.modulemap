@@ -31,4 +31,6 @@ module TelegramUIPrivateModule {
     header "../TGBridgeAudioDecoder.h"
     header "../TGBridgeAudioEncoder.h"
     header "../ID3Artwork.h"
+    private header "../../third-party/libjpeg-turbo/turbojpeg.h"
+    private header "../../third-party/libjpeg-turbo/jpeglib.h"
 }

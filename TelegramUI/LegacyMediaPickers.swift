@@ -270,6 +270,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                             #if DEBUG
                                                 if #available(iOSApplicationExtension 11.0, *) {
                                                     if false, let heicData = compressImage(scaledImage, quality: 0.65) {
+                                                        print("scaledImageData \(scaledImageData.count), heicData \(heicData.count)")
                                                         var randomId: Int64 = 0
                                                         arc4random_buf(&randomId, 8)
                                                         let _ = try? heicData.write(to: URL(fileURLWithPath: tempFilePath + ".heic"))
@@ -292,7 +293,15 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                             if let timer = item.timer, timer > 0 && timer <= 60 {
                                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                             }
-                                            messages.append(.message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
+                                            
+                                            var text = caption ?? ""
+                                            if text.isEmpty && GlobalExperimentalSettings.enableTinyThumbnails {
+                                                if let tinyThumbnail = compressTinyThumbnail(scaledImage) {
+                                                    text = serializeTinyThumbnail(tinyThumbnail)
+                                                }
+                                            }
+                                            
+                                            messages.append(.message(text: text, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
                                         }
                                     }
                                 case let .asset(asset):

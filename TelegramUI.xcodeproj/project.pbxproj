@@ -192,6 +192,7 @@
 		D0430B021FF4584100A35ADD /* WebControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0430B011FF4584100A35ADD /* WebControllerNode.swift */; };
 		D044A0F320BDA05800326FAC /* ThrottledValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044A0F220BDA05800326FAC /* ThrottledValue.swift */; };
 		D044A0FB20BDC40C00326FAC /* CachedChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */; };
+		D045549A21B2F173007A6DD9 /* libturbojpeg.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D045549921B2F173007A6DD9 /* libturbojpeg.a */; };
 		D046142E2004DB3700EC0EF2 /* LiveLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D046142D2004DB3700EC0EF2 /* LiveLocationManager.swift */; };
 		D04614372005094E00EC0EF2 /* DeviceLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04614362005094E00EC0EF2 /* DeviceLocationManager.swift */; };
 		D0461439200514F000EC0EF2 /* LiveLocationSummaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0461438200514F000EC0EF2 /* LiveLocationSummaryManager.swift */; };
@@ -1387,6 +1388,7 @@
 		D0430B011FF4584100A35ADD /* WebControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebControllerNode.swift; sourceTree = "<group>"; };
 		D044A0F220BDA05800326FAC /* ThrottledValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThrottledValue.swift; sourceTree = "<group>"; };
 		D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedChannelAdmins.swift; sourceTree = "<group>"; };
+		D045549921B2F173007A6DD9 /* libturbojpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libturbojpeg.a; path = "third-party/libjpeg-turbo/libturbojpeg.a"; sourceTree = "<group>"; };
 		D046142D2004DB3700EC0EF2 /* LiveLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLocationManager.swift; sourceTree = "<group>"; };
 		D04614362005094E00EC0EF2 /* DeviceLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceLocationManager.swift; sourceTree = "<group>"; };
 		D0461438200514F000EC0EF2 /* LiveLocationSummaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLocationSummaryManager.swift; sourceTree = "<group>"; };
@@ -2244,6 +2246,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D045549A21B2F173007A6DD9 /* libturbojpeg.a in Frameworks */,
 				091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */,
 				D0C45E9F213FFAFD00988156 /* Lottie.framework in Frameworks */,
 				D00ACA4B20222C280045D427 /* libtgvoip.framework in Frameworks */,
@@ -3262,6 +3265,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D045549921B2F173007A6DD9 /* libturbojpeg.a */,
 				D0C45E9E213FFAFD00988156 /* Lottie.framework */,
 				D02DADBE2138D76F00116225 /* Vision.framework */,
 				D00ACA4C20222C280045D427 /* libtgvoip.framework */,
@@ -5963,6 +5967,7 @@
 					"$(PROJECT_DIR)/third-party/opus/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -6154,6 +6159,7 @@
 					"$(PROJECT_DIR)/third-party/opus/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -6265,6 +6271,7 @@
 					"$(PROJECT_DIR)/third-party/opus/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -6384,6 +6391,7 @@
 					"$(PROJECT_DIR)/third-party/opus/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -6493,6 +6501,7 @@
 					"$(PROJECT_DIR)/third-party/opus/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -6533,6 +6542,7 @@
 					"$(PROJECT_DIR)/third-party/opus/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -6571,6 +6581,7 @@
 					"$(PROJECT_DIR)/third-party/opus/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -6608,6 +6619,7 @@
 					"$(PROJECT_DIR)/third-party/opus/lib",
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
