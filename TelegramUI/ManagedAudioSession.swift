@@ -3,10 +3,10 @@ import SwiftSignalKit
 import AVFoundation
 import UIKit
 
-enum ManagedAudioSessionType {
+enum ManagedAudioSessionType: Equatable {
     case play
     case playWithPossiblePortOverride
-    case record
+    case record(speaker: Bool)
     case voiceCall
 }
 
@@ -544,7 +544,17 @@ public final class ManagedAudioSession {
     private func applyNoneDelayed() {
         self.deactivateTimer?.invalidate()
         
-        if self.currentTypeAndOutputMode?.0 == .voiceCall || self.currentTypeAndOutputMode?.0 == .record {
+        var immediately = false
+        if let mode = self.currentTypeAndOutputMode?.0 {
+            switch mode {
+                case .voiceCall, .record:
+                    immediately = true
+                default:
+                    break
+            }
+        }
+        
+        if immediately {
             self.applyNone()
         } else {
             let deactivateTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
@@ -696,22 +706,22 @@ public final class ManagedAudioSession {
                 }
         }
         if resetToBuiltin {
-            try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
             switch type {
                 case .voiceCall, .playWithPossiblePortOverride, .record:
+                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
                         for route in routes {
                             if route.portType == AVAudioSessionPortBuiltInMic {
-                                if type == .record && self.isHeadsetPluggedInValue {
+                                if case .record = type, self.isHeadsetPluggedInValue {
                                 } else {
                                     let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
                                 }
                                 break
                             }
                         }
-                }
+                    }
                 default:
-                    break
+                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
             }
         }
     }

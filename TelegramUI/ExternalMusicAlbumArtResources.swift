@@ -52,7 +52,7 @@ public class ExternalMusicAlbumArtResource: TelegramMediaResource {
         return ExternalMusicAlbumArtResourceId(title: self.title, performer: self.performer, isThumbnail: self.isThumbnail)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? ExternalMusicAlbumArtResource {
             return self.title == to.title && self.performer == to.performer && self.isThumbnail == to.isThumbnail
         } else {

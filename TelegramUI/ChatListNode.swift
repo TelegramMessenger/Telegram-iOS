@@ -336,6 +336,11 @@ final class ChatListNode: ListView {
     var isEmptyUpdated: ((Bool) -> Void)?
     private var wasEmpty: Bool?
     
+    private let currentRemovingPeerId = Atomic<PeerId?>(value: nil)
+    func setCurrentRemovingPeerId(_ peerId: PeerId?) {
+        let _ = self.currentRemovingPeerId.swap(peerId)
+    }
+    
     init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.account = account
         self.controlsHistoryPreload = controlsHistoryPreload
@@ -431,13 +436,14 @@ final class ChatListNode: ListView {
         let viewProcessingQueue = self.viewProcessingQueue
         
         let chatListViewUpdate = self.chatListLocation.get()
-            |> distinctUntilChanged
-            |> mapToSignal { location in
-                return chatListViewForLocation(groupId: groupId, location: location, account: account)
-            }
+        |> distinctUntilChanged
+        |> mapToSignal { location in
+            return chatListViewForLocation(groupId: groupId, location: location, account: account)
+        }
         
         let previousState = Atomic<ChatListNodeState>(value: self.currentState)
         let previousView = Atomic<ChatListNodeView?>(value: nil)
+        let currentRemovingPeerId = self.currentRemovingPeerId
         
         let savedMessagesPeer: Signal<Peer?, NoError>
         if case let .peers(filter) = mode, filter == [.onlyWriteable] {
@@ -453,39 +459,38 @@ final class ChatListNode: ListView {
             let entries = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, mode: mode).filter { entry in
                 switch entry {
                 case let .PeerEntry(_, _, _, _, _, _, peer, _, _, _, _, _, _):
-                    //ChatListNodePeersFilter
                     switch mode {
-                    case .chatList:
-                        return true
-                    case let .peers(filter):
-                        guard !filter.contains(.excludeSavedMessages) || peer.peerId != currentPeerId else { return false }
-                        guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
-                        guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
+                        case .chatList:
+                            return true
+                        case let .peers(filter):
+                            guard !filter.contains(.excludeSavedMessages) || peer.peerId != currentPeerId else { return false }
+                            guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
+                            guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
 
-                        if filter.contains(.onlyGroups) {
-                            var isGroup: Bool = false
-                            if let peer = peer.chatMainPeer as? TelegramChannel, case .group = peer.info {
-                                isGroup = true
-                            } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup {
-                                isGroup = true
+                            if filter.contains(.onlyGroups) {
+                                var isGroup: Bool = false
+                                if let peer = peer.chatMainPeer as? TelegramChannel, case .group = peer.info {
+                                    isGroup = true
+                                } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup {
+                                    isGroup = true
+                                }
+                                if !isGroup {
+                                    return false
+                                }
                             }
-                            if !isGroup {
-                                return false
+                            
+                            if filter.contains(.onlyChannels) {
+                                if let peer = peer.chatMainPeer as? TelegramChannel, case .broadcast = peer.info {
+                                    return true
+                                } else {
+                                    return false
+                                }
                             }
+                            
+                            return true
                         }
-                        
-                        if filter.contains(.onlyChannels) {
-                            if let peer = peer.chatMainPeer as? TelegramChannel, case .broadcast = peer.info {
-                                return true
-                            } else {
-                                return false
-                            }
-                        }
-                        
+                    default:
                         return true
-                    }
-                default:
-                    return true
                 }
             }
             
@@ -533,25 +538,35 @@ final class ChatListNode: ListView {
                 }
             }
             
+            let removingPeerId = currentRemovingPeerId.with { $0 }
+            
             var disableAnimations = state.presentationData.disableAnimations
             if previousState.editing != state.editing {
                 disableAnimations = false
             } else {
                 var previousPinnedCount = 0
                 var updatedPinnedCount = 0
+                var didIncludeRemovingPeerId = false
                 if let previous = previousView {
                     for entry in previous.filteredEntries {
                         if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _) = entry {
                             if index.pinningIndex != nil {
                                 previousPinnedCount += 1
                             }
+                            if index.messageIndex.id.peerId == removingPeerId {
+                                didIncludeRemovingPeerId = true
+                            }
                         }
                     }
                 }
+                var doesIncludeRemovingPeerId = false
                 for entry in processedView.filteredEntries {
                     if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _) = entry {
                         if index.pinningIndex != nil {
                             updatedPinnedCount += 1
+                        }
+                        if index.messageIndex.id.peerId == removingPeerId {
+                            doesIncludeRemovingPeerId = true
                         }
                     }
                 }
@@ -561,11 +576,19 @@ final class ChatListNode: ListView {
                 if previousState.selectedPeerIds != state.selectedPeerIds {
                     disableAnimations = false
                 }
+                if !doesIncludeRemovingPeerId, didIncludeRemovingPeerId {
+                    disableAnimations = false
+                }
             }
             
-            return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, disableAnimations: disableAnimations, account: account, scrollPosition: updatedScrollPosition)
-                |> map({ mappedChatListNodeViewListTransition(account: account, nodeInteraction: nodeInteraction, peerGroupId: groupId, mode: mode, transition: $0) })
-                |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
+            var searchMode = false
+            if case .chatList = mode {
+                searchMode = true
+            }
+            
+            return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, disableAnimations: disableAnimations, account: account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
+            |> map({ mappedChatListNodeViewListTransition(account: account, nodeInteraction: nodeInteraction, peerGroupId: groupId, mode: mode, transition: $0) })
+            |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
         
         let appliedTransition = chatListNodeViewTransition |> deliverOnMainQueue |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in

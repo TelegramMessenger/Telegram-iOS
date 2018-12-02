@@ -450,6 +450,13 @@ public final class MediaManager: NSObject {
                             strongSelf.voiceMediaPlayer = voiceMediaPlayer
                             voiceMediaPlayer.playedToEnd = { [weak voiceMediaPlayer] in
                                 if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
+                                    voiceMediaPlayer.stop()
+                                    strongSelf.voiceMediaPlayer = nil
+                                }
+                            }
+                            voiceMediaPlayer.cancelled = { [weak voiceMediaPlayer] in
+                                if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
+                                    voiceMediaPlayer.stop()
                                     strongSelf.voiceMediaPlayer = nil
                                 }
                             }
@@ -461,7 +468,14 @@ public final class MediaManager: NSObject {
                         strongSelf.musicMediaPlayer?.stop()
                         strongSelf.voiceMediaPlayer?.control(.playback(.pause))
                         if let playlist = playlist {
-                            strongSelf.musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false)
+                            let musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false)
+                            strongSelf.musicMediaPlayer = musicMediaPlayer
+                            musicMediaPlayer.cancelled = { [weak musicMediaPlayer] in
+                                if let strongSelf = self, let musicMediaPlayer = musicMediaPlayer, musicMediaPlayer === strongSelf.musicMediaPlayer {
+                                    musicMediaPlayer.stop()
+                                    strongSelf.musicMediaPlayer = nil
+                                }
+                            }
                             strongSelf.musicMediaPlayer?.control(.playback(.play))
                         } else {
                             strongSelf.musicMediaPlayer = nil

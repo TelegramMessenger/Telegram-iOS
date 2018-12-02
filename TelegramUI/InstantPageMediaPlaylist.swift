@@ -135,6 +135,8 @@ final class InstantPageMediaPlaylist: SharedMediaPlaylist {
         return InstantPagePlaylistLocation(webpageId: self.webPage.webpageId)
     }
     
+    var currentItemDisappeared: (() -> Void)?
+    
     private var currentItem: InstantPageMedia?
     private var playedToEnd: Bool = false
     private var order: MusicPlaybackSettingsOrder = .regular

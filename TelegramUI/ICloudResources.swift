@@ -42,7 +42,7 @@ public class ICloudFileResource: TelegramMediaResource {
         return ICloudFileResourceId(urlData: self.urlData)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? ICloudFileResource {
             if self.urlData != to.urlData {
                 return false

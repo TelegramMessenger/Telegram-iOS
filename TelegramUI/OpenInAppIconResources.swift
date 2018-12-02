@@ -42,7 +42,7 @@ public class OpenInAppIconResource: TelegramMediaResource {
         return OpenInAppIconResourceId(appStoreId: self.appStoreId)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? OpenInAppIconResource {
             return self.appStoreId == to.appStoreId
         } else {

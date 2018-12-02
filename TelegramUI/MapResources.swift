@@ -58,7 +58,7 @@ public class MapSnapshotMediaResource: TelegramMediaResource {
         return MapSnapshotMediaResourceId(latitude: self.latitude, longitude: self.longitude, width: self.width, height: self.height)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? MapSnapshotMediaResource {
             return self.latitude == to.latitude && self.longitude == to.longitude && self.width == to.width && self.height == to.height
         } else {

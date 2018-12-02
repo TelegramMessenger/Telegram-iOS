@@ -47,7 +47,7 @@ public class SecureIdLocalImageResource: TelegramMediaResource {
         return SecureIdLocalImageResourceId(id: self.localId)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? SecureIdLocalImageResource {
             return self.localId == to.localId && self.source.isEqual(to:to.source)
         } else {

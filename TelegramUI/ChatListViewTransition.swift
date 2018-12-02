@@ -44,7 +44,7 @@ enum ChatListNodeViewScrollPosition {
     case index(index: ChatListIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
 }
 
-func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toView: ChatListNodeView, reason: ChatListNodeViewTransitionReason, disableAnimations: Bool, account: Account, scrollPosition: ChatListNodeViewScrollPosition?) -> Signal<ChatListNodeViewTransition, NoError> {
+func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toView: ChatListNodeView, reason: ChatListNodeViewTransitionReason, disableAnimations: Bool, account: Account, scrollPosition: ChatListNodeViewScrollPosition?, searchMode: Bool) -> Signal<ChatListNodeViewTransition, NoError> {
     return Signal { subscriber in
         let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
         
@@ -194,7 +194,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             fromEmptyView = true
         }
         
-        if fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 2 {
+        if !searchMode && fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 2 {
             if case .SearchEntry = toView.filteredEntries[toView.filteredEntries.count - 1] {
                 scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
             }

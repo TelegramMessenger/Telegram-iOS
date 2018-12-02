@@ -154,6 +154,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     private var audioRecorderValue: ManagedAudioRecorder?
     private var audioRecorder = Promise<ManagedAudioRecorder?>()
     private var audioRecorderDisposable: Disposable?
+    private var audioRecorderStatusDisposable: Disposable?
     
     private var videoRecorderValue: InstantVideoController?
     private var tempVideoRecorderValue: InstantVideoController?
@@ -207,6 +208,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     private let chatAdditionalDataDisposable = MetaDisposable()
     
     private var beginMediaRecordingRequestId: Int = 0
+    private var lockMediaRecordingRequestId: Int?
     
     var purposefulAction: (() -> Void)?
     
@@ -1319,7 +1321,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 }
             })
         
-        self.audioRecorderDisposable = (self.audioRecorder.get() |> deliverOnMainQueue).start(next: { [weak self] audioRecorder in
+        self.audioRecorderDisposable = (self.audioRecorder.get()
+        |> deliverOnMainQueue).start(next: { [weak self] audioRecorder in
             if let strongSelf = self {
                 if strongSelf.audioRecorderValue !== audioRecorder {
                     strongSelf.audioRecorderValue = audioRecorder
@@ -1329,7 +1332,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                         $0.updatedInputTextPanelState { panelState in
                             if let audioRecorder = audioRecorder {
                                 if panelState.mediaRecordingState == nil {
-                                    return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorder, isLocked: false))
+                                    return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorder, isLocked: strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId))
                                 }
                             } else {
                                 return panelState.withUpdatedMediaRecordingState(nil)
@@ -1337,12 +1340,21 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             return panelState
                         }
                     })
+                    strongSelf.audioRecorderStatusDisposable?.dispose()
                     
                     if let audioRecorder = audioRecorder {
                         if !audioRecorder.beginWithTone {
                             strongSelf.recorderFeedback?.impact(.light)
                         }
                         audioRecorder.start()
+                        strongSelf.audioRecorderStatusDisposable = (audioRecorder.recordingState
+                        |> deliverOnMainQueue).start(next: { value in
+                            if case .stopped = value {
+                                self?.stopMediaRecorder()
+                            }
+                        })
+                    } else {
+                        strongSelf.audioRecorderStatusDisposable = nil
                     }
                 }
             }
@@ -1386,6 +1398,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                             }
                         }
                         strongSelf.present(videoRecorder, in: .window(.root))
+                        
+                        if strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId {
+                            videoRecorder.lockVideo()
+                        }
                     }
                     
                     if let previousVideoRecorderValue = previousVideoRecorderValue {
@@ -1513,6 +1529,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         }
         self.urlPreviewQueryState?.1.dispose()
         self.audioRecorderDisposable?.dispose()
+        self.audioRecorderStatusDisposable?.dispose()
         self.videoRecorderDisposable?.dispose()
         self.buttonKeyboardMessageDisposable?.dispose()
         self.cachedDataDisposable?.dispose()
@@ -2449,9 +2466,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 return
             }
             strongSelf.beginMediaRecordingRequestId += 1
-            self?.stopMediaRecorder()
+            strongSelf.lockMediaRecordingRequestId = nil
+            strongSelf.stopMediaRecorder()
         }, lockMediaRecording: { [weak self] in
-            self?.lockMediaRecorder()
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.lockMediaRecordingRequestId = strongSelf.beginMediaRecordingRequestId
+            strongSelf.lockMediaRecorder()
         }, deleteRecordedMedia: { [weak self] in
             self?.deleteMediaRecording()
         }, sendRecordedMedia: { [weak self] in

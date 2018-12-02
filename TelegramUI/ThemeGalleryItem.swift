@@ -95,12 +95,12 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
                                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                                 
-                                let convertedRepresentations: [(TelegramMediaImageRepresentation, MediaResourceReference)] = representations.map({ ($0, .wallpaper(resource: $0.resource)) })
+                                let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
                                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations), dispatchOnDisplayLink: false)
                                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                                 
-                                if let largestIndex = convertedRepresentations.index(where: { $0.0 == largestSize }) {
-                                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: convertedRepresentations[largestIndex].1).start())
+                                if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
+                                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: convertedRepresentations[largestIndex].reference).start())
                                 }
                             } else {
                                 self._ready.set(.single(Void()))

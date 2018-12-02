@@ -132,7 +132,7 @@ public final class VideoLibraryMediaResource: TelegramMediaResource {
         return VideoLibraryMediaResourceId(localIdentifier: self.localIdentifier, adjustmentsDigest: adjustmentsDigest)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? VideoLibraryMediaResource {
             return self.localIdentifier == to.localIdentifier && self.conversion == to.conversion
         } else {
@@ -196,7 +196,7 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
         return LocalFileVideoMediaResourceId(randomId: self.randomId)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileVideoMediaResource {
             return self.randomId == to.randomId && self.path == to.path && self.adjustments == to.adjustments
         } else {
@@ -253,7 +253,7 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
         return PhotoLibraryMediaResourceId(localIdentifier: self.localIdentifier, resourceId: self.uniqueId)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? PhotoLibraryMediaResource {
             return self.localIdentifier == to.localIdentifier && self.uniqueId == to.uniqueId
         } else {
@@ -309,7 +309,7 @@ public final class LocalFileGifMediaResource: TelegramMediaResource {
         return LocalFileGifMediaResourceId(randomId: self.randomId)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileGifMediaResource {
             return self.randomId == to.randomId && self.path == to.path
         } else {

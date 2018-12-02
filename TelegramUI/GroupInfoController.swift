@@ -1088,7 +1088,11 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             if case .creator = group.role, state.editingState != nil {
                 entries.append(.convertToSupergroup(presentationData.theme, presentationData.strings.GroupInfo_ConvertToSupergroup))
             }
-            entries.append(.leave(presentationData.theme, presentationData.strings.GroupInfo_DeleteAndExit))
+            if case .creator = group.role {
+                entries.append(.leave(presentationData.theme, presentationData.strings.GroupInfo_DeleteAndExit))
+            } else {
+                entries.append(.leave(presentationData.theme, presentationData.strings.Group_LeaveGroup))
+            }
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel {
         if case .member = channel.participationStatus, let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount <= 200 {
@@ -1192,7 +1196,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 
             })
             hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
-                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
+                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first?.representation
                 updateHiddenAvatarImpl?()
             }))
             presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in

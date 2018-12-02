@@ -1110,18 +1110,19 @@ func chatSecretPhoto(account: Account, photoReference: ImageMediaReference) -> S
     }
 }
 
-private func avatarGalleryThumbnailDatas(postbox: Postbox, representations: [(TelegramMediaImageRepresentation, MediaResourceReference)], fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
-    if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.0 })), let largestRepresentation = imageRepresentationLargerThan(representations.map({ $0.0 }), size: fullRepresentationSize), let smallestIndex = representations.index(where: { $0.0 == smallestRepresentation }), let largestIndex = representations.index(where: { $0.0 == largestRepresentation }) {
-        
+private func avatarGalleryThumbnailDatas(postbox: Postbox, representations: [ImageRepresentationWithReference], fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
+    if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = imageRepresentationLargerThan(representations.map({ $0.representation }), size: fullRepresentationSize), let smallestIndex = representations.index(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.index(where: { $0.representation == largestRepresentation }) {
         let maybeFullSize = postbox.mediaBox.resourceData(largestRepresentation.resource)
         
-        let signal = maybeFullSize |> take(1) |> mapToSignal { maybeData -> Signal<(Data?, Data?, Bool), NoError> in
+        let signal = maybeFullSize
+        |> take(1)
+        |> mapToSignal { maybeData -> Signal<(Data?, Data?, Bool), NoError> in
             if maybeData.complete {
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single((nil, loadedData, true))
             } else {
-                let fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: representations[smallestIndex].1, statsCategory: .image)
-                let fetchedFullSize = fetchedMediaResource(postbox: postbox, reference: representations[largestIndex].1, statsCategory: .image)
+                let fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: representations[smallestIndex].reference, statsCategory: .image)
+                let fetchedFullSize = fetchedMediaResource(postbox: postbox, reference: representations[largestIndex].reference, statsCategory: .image)
                 
                 let thumbnail = Signal<Data?, NoError> { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
@@ -1177,7 +1178,7 @@ private func avatarGalleryThumbnailDatas(postbox: Postbox, representations: [(Te
     }
 }
 
-func avatarGalleryThumbnailPhoto(account: Account, representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+func avatarGalleryThumbnailPhoto(account: Account, representations: [ImageRepresentationWithReference]) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = avatarGalleryThumbnailDatas(postbox: account.postbox, representations: representations, fullRepresentationSize: CGSize(width: 127.0, height: 127.0), autoFetchFullSize: true)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -2129,8 +2130,8 @@ func instantPageImageFile(account: Account, fileReference: FileMediaReference, f
     }
 }
 
-private func avatarGalleryPhotoDatas(account: Account, representations: [(TelegramMediaImageRepresentation, MediaResourceReference)], autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
-    if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.0 })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.0 })), let smallestIndex = representations.index(where: { $0.0 == smallestRepresentation }), let largestIndex = representations.index(where: { $0.0 == largestRepresentation }) {
+private func avatarGalleryPhotoDatas(account: Account, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
+    if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.index(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.index(where: { $0.representation == largestRepresentation }) {
         let maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
         
         let signal = maybeFullSize
@@ -2140,8 +2141,8 @@ private func avatarGalleryPhotoDatas(account: Account, representations: [(Telegr
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single((nil, loadedData, true))
             } else {
-                let fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: representations[smallestIndex].1)
-                let fetchedFullSize = fetchedMediaResource(postbox: account.postbox, reference: representations[largestIndex].1)
+                let fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: representations[smallestIndex].reference)
+                let fetchedFullSize = fetchedMediaResource(postbox: account.postbox, reference: representations[largestIndex].reference)
                 
                 let thumbnail = Signal<Data?, NoError> { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
@@ -2191,7 +2192,7 @@ private func avatarGalleryPhotoDatas(account: Account, representations: [(Telegr
     }
 }
 
-func chatAvatarGalleryPhoto(account: Account, representations: [(TelegramMediaImageRepresentation, MediaResourceReference)], autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = avatarGalleryPhotoDatas(account: account, representations: representations, autoFetchFullSize: autoFetchFullSize)
     
     return signal

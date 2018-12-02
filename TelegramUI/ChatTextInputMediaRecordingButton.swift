@@ -350,7 +350,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     func micButtonInteractionCancelled(_ velocity: CGPoint) {
         //print("\(CFAbsoluteTimeGetCurrent()) cancelled")
         self.modeTimeoutTimer?.invalidate()
-        self.endRecording(false)
+        self.stopRecording()
     }
     
     func micButtonInteractionCompleted(_ velocity: CGPoint) {

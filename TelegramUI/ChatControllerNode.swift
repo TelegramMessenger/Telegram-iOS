@@ -92,6 +92,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var overlayContextPanelNode: ChatInputContextPanelNode?
     
     private var inputNode: ChatInputNode?
+    private var disappearingNode: ChatInputNode?
     
     private var textInputPanelNode: ChatTextInputPanelNode?
     private var inputMediaNode: ChatMediaInputNode?
@@ -1222,7 +1223,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             })
         }
         
+        if let disappearingNode = self.disappearingNode {
+            let targetY: CGFloat
+            if cleanInsets.bottom.isLess(than: insets.bottom) {
+                targetY = layout.size.height - insets.bottom
+            } else {
+                targetY = layout.size.height
+            }
+            transition.updateFrame(node: disappearingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: targetY), size: CGSize(width: layout.size.width, height: max(insets.bottom, disappearingNode.bounds.size.height))))
+        }
         if let dismissedInputNode = dismissedInputNode {
+            self.disappearingNode = dismissedInputNode
             let targetY: CGFloat
             if cleanInsets.bottom.isLess(than: insets.bottom) {
                 targetY = layout.size.height - insets.bottom
@@ -1230,8 +1241,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 targetY = layout.size.height
             }
             transition.updateFrame(node: dismissedInputNode, frame: CGRect(origin: CGPoint(x: 0.0, y: targetY), size: CGSize(width: layout.size.width, height: max(insets.bottom, dismissedInputNode.bounds.size.height))), force: true, completion: { [weak self, weak dismissedInputNode] completed in
-                if completed, let dismissedInputNode = dismissedInputNode {
+                if let dismissedInputNode = dismissedInputNode {
                     if let strongSelf = self {
+                        if strongSelf.disappearingNode === dismissedInputNode {
+                            strongSelf.disappearingNode = nil
+                        }
                         if strongSelf.inputNode !== dismissedInputNode {
                             dismissedInputNode.alpha = 0.0
                             dismissedInputNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak dismissedInputNode] completed in

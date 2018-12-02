@@ -360,11 +360,15 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         return self.messagesLocation
     }
     
+    var currentItemDisappeared: (() -> Void)?
+    
     private let navigationDisposable = MetaDisposable()
     
     private var playbackStack = PlaybackStack()
     
     private var currentItem: (current: Message, around: [Message])?
+    private var currentlyObservedMessageId: MessageId?
+    private let currentlyObservedMessageDisposable = MetaDisposable()
     private var loadingItem: Bool = false
     private var playedToEnd: Bool = false
     private var order: MusicPlaybackSettingsOrder = .regular
@@ -400,6 +404,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     
     deinit {
         self.navigationDisposable.dispose()
+        self.currentlyObservedMessageDisposable.dispose()
     }
     
     func control(_ action: SharedMediaPlaylistControlAction) {
@@ -481,6 +486,27 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
             }
         }
         self.stateValue.set(.single(SharedMediaPlaylistState(loading: self.loadingItem, playedToEnd: self.playedToEnd, item: item, nextItem: nextItem, previousItem: previousItem, order: self.order, looping: self.looping)))
+        if item?.message.id != self.currentlyObservedMessageId {
+            self.currentlyObservedMessageId = item?.message.id
+            if let id = item?.message.id {
+                let key: PostboxViewKey = .messages(Set([id]))
+                self.currentlyObservedMessageDisposable.set((self.postbox.combinedView(keys: [key])
+                |> filter { views in
+                    if let view = views.views[key] as? MessagesView {
+                        if !view.messages.isEmpty {
+                            return false
+                        }
+                    }
+                    return true
+                }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    self?.currentItemDisappeared?()
+                }))
+            } else {
+                self.currentlyObservedMessageDisposable.set(nil)
+            }
+        }
     }
     
     private func loadItem(anchor: PeerMessagesMediaPlaylistLoadAnchor, navigation: PeerMessagesMediaPlaylistNavigation) {

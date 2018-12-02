@@ -497,7 +497,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
                     
                 })
                 hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
-                    avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
+                    avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first?.representation
                     updateHiddenAvatarImpl?()
                 }))
                 presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in

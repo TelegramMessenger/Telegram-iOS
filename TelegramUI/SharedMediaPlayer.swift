@@ -189,11 +189,12 @@ protocol SharedMediaPlaylistLocation {
     func isEqual(to: SharedMediaPlaylistLocation) -> Bool
 }
 
-protocol SharedMediaPlaylist {
+protocol SharedMediaPlaylist: class {
     var id: SharedMediaPlaylistId { get }
     var location: SharedMediaPlaylistLocation { get }
     var state: Signal<SharedMediaPlaylistState, NoError> { get }
     var looping: MusicPlaybackSettingsLooping { get }
+    var currentItemDisappeared: (() -> Void)? { get set }
         
     func control(_ action: SharedMediaPlaylistControlAction)
     func setOrder(_ order: MusicPlaybackSettingsOrder)
@@ -405,6 +406,7 @@ final class SharedMediaPlayer {
     private let markItemAsPlayedDisposable = MetaDisposable()
     
     var playedToEnd: (() -> Void)?
+    var cancelled: (() -> Void)?
     
     private var inForegroundDisposable: Disposable?
     
@@ -425,6 +427,10 @@ final class SharedMediaPlayer {
         
         if controlPlaybackWithProximity {
             self.forceAudioToSpeaker = !DeviceProximityManager.shared().currentValue()
+        }
+        
+        playlist.currentItemDisappeared = { [weak self] in
+            self?.cancelled?()
         }
         
         self.stateDisposable = (playlist.state
