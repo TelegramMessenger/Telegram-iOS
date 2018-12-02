@@ -148,7 +148,9 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 	if (_captureSession != nil)
 		return;
 	
-	_captureSession = [[AVCaptureSession alloc] init];	
+	_captureSession = [[AVCaptureSession alloc] init];
+    _captureSession.automaticallyConfiguresApplicationAudioSession = false;
+    _captureSession.usesApplicationAudioSession = true;
 
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(captureSessionNotification:) name:nil object:_captureSession];
 	_applicationWillEnterForegroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillEnterForegroundNotification object:[[LegacyComponentsGlobals provider] applicationInstance] queue:nil usingBlock:^(__unused NSNotification *note)
@@ -169,7 +171,6 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 		[_captureSession addOutput:_audioOutput];
 
 	_audioConnection = [_audioOutput connectionWithMediaType:AVMediaTypeAudio];
-
 
     NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
     AVCaptureDevice *videoDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];

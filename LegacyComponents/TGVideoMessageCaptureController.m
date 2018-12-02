@@ -533,10 +533,10 @@ typedef enum
 {
     [super dismiss];
     
-    [self _endAudioSession];
-    
     [[[LegacyComponentsGlobals provider] applicationInstance] setIdleTimerDisabled:false];
     [self stopCapture];
+    
+    [self _endAudioSession];
     
     if (_autorotationWasEnabled)
         [TGViewController enableAutorotation];
