@@ -31,6 +31,8 @@ public protocol MediaResource {
     var size: Int? { get }
     var streamable: Bool { get }
     var headerSize: Int32 { get }
+    
+    func isEqual(to: MediaResource) -> Bool
 }
 
 public extension MediaResource {
