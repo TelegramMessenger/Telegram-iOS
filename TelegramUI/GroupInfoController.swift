@@ -1096,7 +1096,11 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel {
         if case .member = channel.participationStatus, let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount <= 200 {
-            entries.append(.leave(presentationData.theme, presentationData.strings.GroupInfo_DeleteAndExit))
+            if channel.flags.contains(.isCreator) {
+                entries.append(.leave(presentationData.theme, presentationData.strings.GroupInfo_DeleteAndExit))
+            } else {
+                entries.append(.leave(presentationData.theme, presentationData.strings.Group_LeaveGroup))
+            }
         }
     }
     
