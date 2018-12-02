@@ -283,7 +283,6 @@ private enum MultipartFetchSource {
                 switch location {
                     case let .generic(_, location):
                         if let parsedLocation = location(fileReference) {
-                            
                             return download.request(Api.functions.upload.getFile(location: parsedLocation, offset: offset, limit: Int32(updatedLength)), tag: tag)
                             |> mapError { error -> MultipartFetchDownloadError in
                                 if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {

@@ -452,7 +452,7 @@ extension StoreMessage {
                             if let file = mediaValue as? TelegramMediaFile, let duration = file.duration {
                                 updatedExpirationTimer = max(updatedExpirationTimer, duration)
                             }
-                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: updatedExpirationTimer, countdownBeginTime: nil))
                             
                             consumableContent = (true, false)
                         }
