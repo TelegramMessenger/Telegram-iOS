@@ -400,6 +400,7 @@
 "ConversationProfile.UsersTooMuchError" = "Sorry, this group is full. You cannot add any more members here.";
 
 "ConversationProfile.LeaveDeleteAndExit" = "Delete and Exit";
+"Group.LeaveGroup" = "Leave Group";
 
 "Conversation.Megabytes" = "%.1f MB";
 "Conversation.Kilobytes" = "%d KB";
@@ -2600,6 +2601,7 @@ Unused sets are archived when you add more.";
 
 "SecretImage.NotViewedYet" = "%@ hasn't opened this photo yet";
 "SecretVideo.NotViewedYet" = "%@ hasn't played this video yet";
+"SecretGIF.NotViewedYet" = "%@ hasn't played this GIF yet";
 
 "UserInfo.About.Placeholder" = "Bio";
 
