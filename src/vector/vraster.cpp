@@ -238,18 +238,16 @@ static void rleGenerationCb(int count, const SW_FT_Span *spans, void *user)
 }
 
 struct RleTask {
-    RleTask() { receiver = sender.get_future(); }
     std::promise<VRle> sender;
-    std::future<VRle>  receiver;
-    bool               stroke;
     VPath              path;
     VRle               rle;
-    FillRule           fillRule;
-    CapStyle           cap;
-    JoinStyle          join;
     float              width;
     float              meterLimit;
     VRect              clip;
+    FillRule           fillRule;
+    CapStyle           cap;
+    JoinStyle          join;
+    bool               stroke;
     VRle               operator()(FTOutline &outRef, SW_FT_Stroker &stroker);
     void               render(FTOutline &outRef);
 };
@@ -363,7 +361,7 @@ public:
 
     std::future<VRle> async(RleTask *task)
     {
-        auto receiver = std::move(task->receiver);
+        auto receiver = std::move(task->sender.get_future());
         auto i = _index++;
 
         for (unsigned n = 0; n != _count; ++n) {
