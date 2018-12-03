@@ -50,8 +50,10 @@ final class GalleryFooterNode: ASDisplayNode {
             if let removeCurrentFooterContentNode = removeCurrentFooterContentNode {
                 let contentTransition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
                 footerContentNode.animateIn(fromHeight: removeCurrentFooterContentNode.bounds.height, previousContentNode: removeCurrentFooterContentNode, transition: contentTransition)
-                removeCurrentFooterContentNode.animateOut(toHeight: backgroundHeight, nextContentNode: footerContentNode, transition: contentTransition, completion: { [weak removeCurrentFooterContentNode] in
-                    removeCurrentFooterContentNode?.removeFromSupernode()
+                removeCurrentFooterContentNode.animateOut(toHeight: backgroundHeight, nextContentNode: footerContentNode, transition: contentTransition, completion: { [weak self, weak removeCurrentFooterContentNode] in
+                    if let strongSelf = self, let removeCurrentFooterContentNode = removeCurrentFooterContentNode, removeCurrentFooterContentNode !== strongSelf.currentFooterContentNode {
+                        removeCurrentFooterContentNode.removeFromSupernode()
+                    }
                 })
                 contentTransition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight), size: CGSize(width: layout.size.width, height: backgroundHeight)))
             } else {
