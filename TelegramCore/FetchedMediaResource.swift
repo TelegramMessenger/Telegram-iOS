@@ -47,7 +47,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
     }
     
     public init(_ message: Message) {
-        if let peer = message.peers[message.id.peerId], let inputPeer = PeerReference(peer) {
+        if message.id.namespace != Namespaces.Message.Local, let peer = message.peers[message.id.peerId], let inputPeer = PeerReference(peer) {
             self.content = .message(peer: inputPeer, id: message.id, timestamp: message.timestamp, incoming: message.flags.contains(.Incoming), secret: message.containsSecretMedia)
         } else {
             self.content = .none
@@ -422,7 +422,7 @@ public enum MediaReference<T: Media> {
 public typealias FileMediaReference = MediaReference<TelegramMediaFile>
 public typealias ImageMediaReference = MediaReference<TelegramMediaImage>
 
-public enum MediaResourceReference {
+public enum MediaResourceReference: Equatable {
     case media(media: AnyMediaReference, resource: MediaResource)
     case standalone(resource: MediaResource)
     case avatar(peer: PeerReference, resource: MediaResource)
@@ -441,6 +441,41 @@ public enum MediaResourceReference {
                 return resource
             case let .wallpaper(resource):
                 return resource
+        }
+    }
+    
+    public static func ==(lhs: MediaResourceReference, rhs: MediaResourceReference) -> Bool {
+        switch lhs {
+            case let .media(lhsMedia, lhsResource):
+                if case let .media(rhsMedia, rhsResource) = rhs, lhsMedia == rhsMedia, lhsResource.isEqual(to: rhsResource) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .standalone(lhsResource):
+                if case let .standalone(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .avatar(lhsPeer, lhsResource):
+                if case let .avatar(rhsPeer, rhsResource) = rhs, lhsPeer == rhsPeer, lhsResource.isEqual(to: rhsResource) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .messageAuthorAvatar(lhsMessage, lhsResource):
+                if case let .messageAuthorAvatar(rhsMessage, rhsResource) = rhs, lhsMessage == rhsMessage, lhsResource.isEqual(to: rhsResource) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .wallpaper(lhsResource):
+                if case let .wallpaper(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -832,18 +867,27 @@ final class MediaReferenceRevalidationContext {
 func revalidateMediaResourceReference(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo, resource: MediaResource) -> Signal<Data, RevalidateMediaReferenceError> {
     var updatedReference = info.reference
     if case let .media(media, resource) = updatedReference {
-        if case let .message(message, mediaValue) = media, case .none = message.content {
-            if let file = mediaValue as? TelegramMediaFile, file.isSticker {
-                var stickerPackReference: StickerPackReference?
-                for attribute in file.attributes {
-                    if case let .Sticker(sticker) = attribute {
-                        if let packReference = sticker.packReference {
-                            stickerPackReference = packReference
+        if case let .message(_, mediaValue) = media {
+            if let file = mediaValue as? TelegramMediaFile {
+                if let partialReference = file.partialReference {
+                    updatedReference = partialReference.mediaReference(media.media).resourceReference(resource)
+                }
+                if file.isSticker {
+                    var stickerPackReference: StickerPackReference?
+                    for attribute in file.attributes {
+                        if case let .Sticker(sticker) = attribute {
+                            if let packReference = sticker.packReference {
+                                stickerPackReference = packReference
+                            }
                         }
                     }
+                    if let stickerPackReference = stickerPackReference {
+                        updatedReference = .media(media: .stickerPack(stickerPack: stickerPackReference, media: mediaValue), resource: resource)
+                    }
                 }
-                if let stickerPackReference = stickerPackReference {
-                    updatedReference = .media(media: .stickerPack(stickerPack: stickerPackReference, media: mediaValue), resource: resource)
+            } else if let image = mediaValue as? TelegramMediaImage {
+                if let partialReference = image.partialReference {
+                    updatedReference = partialReference.mediaReference(media.media).resourceReference(resource)
                 }
             }
         }

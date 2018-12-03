@@ -270,6 +270,8 @@
 		D0448CA31E291B14005A61A7 /* FetchSecretFileResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */; };
 		D0448CA51E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */; };
 		D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */; };
+		D04554A621B43440007A6DD9 /* CancelAccountReset.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04554A521B43440007A6DD9 /* CancelAccountReset.swift */; };
+		D04554A721B43440007A6DD9 /* CancelAccountReset.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04554A521B43440007A6DD9 /* CancelAccountReset.swift */; };
 		D0458C881E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */; };
 		D0458C891E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */; };
 		D0467D0B20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0467D0A20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift */; };
@@ -927,6 +929,7 @@
 		D0448C9E1E27F5EB005A61A7 /* Random.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Random.swift; sourceTree = "<group>"; };
 		D0448CA11E291B14005A61A7 /* FetchSecretFileResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchSecretFileResource.swift; sourceTree = "<group>"; };
 		D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceApiUtils.swift; sourceTree = "<group>"; };
+		D04554A521B43440007A6DD9 /* CancelAccountReset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelAccountReset.swift; sourceTree = "<group>"; };
 		D0458C871E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OutgoingContentInfoMessageAttribute.swift; sourceTree = "<group>"; };
 		D0467D0A20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizeMarkAllUnseenPersonalMessagesOperation.swift; sourceTree = "<group>"; };
 		D0467D1420D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift; sourceTree = "<group>"; };
@@ -1649,6 +1652,7 @@
 				9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */,
 				D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */,
 				D08984F12114B97400918162 /* ClearCloudDrafts.swift */,
+				D04554A521B43440007A6DD9 /* CancelAccountReset.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -2317,6 +2321,7 @@
 				D0561DE31E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */,
 				D0DF0C8A1D819C7E008AEB01 /* JoinChannel.swift in Sources */,
 				D051DB14215EC5A300F30F92 /* AppChangelogState.swift in Sources */,
+				D04554A621B43440007A6DD9 /* CancelAccountReset.swift in Sources */,
 				D04CAA5A1E83310D0047E51F /* MD5.swift in Sources */,
 				D0E817492010E7E300B82BBB /* ChannelAdminEventLogContext.swift in Sources */,
 				D05452071E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */,
@@ -2634,6 +2639,7 @@
 				D08CAA881ED81DD40000FDA8 /* LocalizationInfo.swift in Sources */,
 				D099D74A1EEF418D00A3128C /* HistoryViewChannelStateValidation.swift in Sources */,
 				D0AF32231FAC95C20097362B /* StandaloneUploadedMedia.swift in Sources */,
+				D04554A721B43440007A6DD9 /* CancelAccountReset.swift in Sources */,
 				D001F3EC1E128A1C007A8C60 /* Holes.swift in Sources */,
 				D0B4189B1D7E0580004562A4 /* TelegramMediaWebpage.swift in Sources */,
 				D00C7CE11E3785710080C3D5 /* MarkMessageContentAsConsumedInteractively.swift in Sources */,

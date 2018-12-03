@@ -102,7 +102,7 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
         }
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? CloudFileMediaResource {
             return self.datacenterId == to.datacenterId && self.volumeId == to.volumeId && self.localId == to.localId && self.secret == to.secret && self.size == to.size && self.fileReference == to.fileReference
         } else {
@@ -200,7 +200,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource, TelegramMul
         }
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? CloudDocumentMediaResource {
             return self.datacenterId == to.datacenterId && self.fileId == to.fileId && self.accessHash == to.accessHash && self.size == to.size && self.fileReference == to.fileReference
         } else {
@@ -260,7 +260,7 @@ public class LocalFileMediaResource: TelegramMediaResource {
         return LocalFileMediaResourceId(fileId: self.fileId)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileMediaResource {
             return self.fileId == to.fileId && self.size == to.size
         } else {
@@ -324,7 +324,7 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
         return LocalFileReferenceMediaResourceId(randomId: self.randomId)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileReferenceMediaResource {
             return self.localFilePath == to.localFilePath && self.randomId == to.randomId && self.size == to.size && self.isUniquelyReferencedTemporaryFile == to.isUniquelyReferencedTemporaryFile
         } else {
@@ -384,7 +384,7 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
         return HttpReferenceMediaResourceId(url: self.url)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? HttpReferenceMediaResource {
             return to.url == self.url
         } else {
@@ -446,7 +446,7 @@ public final class WebFileReferenceMediaResource: TelegramMediaResource {
         return WebFileReferenceMediaResourceId(url: self.url, accessHash: accessHash, size: self.size)
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? WebFileReferenceMediaResource {
             return to.url == self.url && to.size == self.size && to.accessHash == self.accessHash
         } else {
@@ -528,7 +528,7 @@ public struct SecretFileMediaResource: TelegramCloudMediaResource, TelegramMulti
         return SecretFileMediaResourceId(fileId: self.fileId, datacenterId: Int32(self.datacenterId))
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? SecretFileMediaResource {
             if self.fileId != to.fileId {
                 return false
@@ -583,7 +583,7 @@ public final class EmptyMediaResource: TelegramMediaResource {
         return EmptyMediaResourceId()
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         return to is EmptyMediaResource
     }
 }

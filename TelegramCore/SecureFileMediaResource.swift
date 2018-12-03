@@ -66,7 +66,7 @@ public class SecureFileMediaResource: TelegramCloudMediaResource, TelegramMultip
         encoder.encodeBytes(MemoryBuffer(data: self.file.encryptedSecret), forKey: "s")
     }
     
-    public func isEqual(to: TelegramMediaResource) -> Bool {
+    public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? SecureFileMediaResource {
             return self.file == to.file
         } else {

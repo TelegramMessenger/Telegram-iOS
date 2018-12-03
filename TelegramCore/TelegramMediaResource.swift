@@ -6,5 +6,4 @@ import Foundation
 #endif
 
 public protocol TelegramMediaResource: MediaResource, PostboxCoding {
-    func isEqual(to: TelegramMediaResource) -> Bool
 }
