@@ -734,7 +734,23 @@
         __block MTTransportScheme *schemeWithEarliestFailure = nil;
         __block int32_t earliestFailure = INT32_MAX;
         
+        int32_t timestamp = (int32_t)CFAbsoluteTimeGetCurrent();
+        __block bool scanIpv6 = true;
+        for (MTTransportScheme *scheme in schemes) {
+            if (scheme.address.isIpv6) {
+                [self _withTransportSchemeStatsForDatacenterId:datacenterId transportScheme:scheme process:^MTTransportSchemeStats *(MTTransportSchemeStats *current) {
+                    if (current.lastResponseTimestamp > timestamp - 60 * 60) {
+                        scanIpv6 = true;
+                    }
+                    return current;
+                }];
+            }
+        }
+        
         for (MTTransportScheme *scheme in schemes.reverseObjectEnumerator) {
+            if (scheme.address.isIpv6 && !scanIpv6) {
+                continue;
+            }
             [self _withTransportSchemeStatsForDatacenterId:datacenterId transportScheme:scheme process:^MTTransportSchemeStats *(MTTransportSchemeStats *current) {
                 if (schemeWithEarliestFailure == nil) {
                     schemeWithEarliestFailure = scheme;
