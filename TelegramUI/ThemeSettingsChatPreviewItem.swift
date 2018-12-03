@@ -26,7 +26,7 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
         self.dateTimeFormat = dateTimeFormat
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ThemeSettingsChatPreviewItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -36,13 +36,13 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { apply() })
+                    return (nil, { _ in apply() })
                 })
             }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ThemeSettingsChatPreviewItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -50,7 +50,7 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
                 async {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
-                        completion(layout, {
+                        completion(layout, { _ in
                             apply()
                         })
                     }
@@ -166,12 +166,12 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     current.insets = layout.insets
                     current.frame = nodeFrame
                     
-                    apply()
+                    apply(ListViewItemApply(isOnScreen: true))
                 })
             } else {
                 item1.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
                     node1 = node
-                    apply().1()
+                    apply().1(ListViewItemApply(isOnScreen: true))
                 })
             }
             
@@ -185,12 +185,12 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     current.insets = layout.insets
                     current.frame = nodeFrame
                     
-                    apply()
+                    apply(ListViewItemApply(isOnScreen: true))
                 })
             } else {
                 item2.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
                     node2 = node
-                    apply().1()
+                    apply().1(ListViewItemApply(isOnScreen: true))
                 })
             }
             

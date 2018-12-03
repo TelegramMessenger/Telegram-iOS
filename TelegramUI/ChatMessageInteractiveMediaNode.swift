@@ -439,6 +439,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 var statusFrame = statusNode.frame
                                 statusFrame.origin.x = floor(imageFrame.midX - statusFrame.width / 2.0)
                                 statusFrame.origin.y = floor(imageFrame.midY - statusFrame.height / 2.0)
+                                statusNode.frame = statusFrame
                             }
                             
                             if let replaceVideoNode = replaceVideoNode {

@@ -21,7 +21,7 @@ final class ChatBotInfoItem: ListViewItem {
         self.presentationData = presentationData
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = {
             let node = ChatBotInfoItemNode()
             
@@ -33,7 +33,7 @@ final class ChatBotInfoItem: ListViewItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { apply(.None) })
+                    return (nil, { _ in apply(.None) })
                 })
             }
         }
@@ -46,7 +46,7 @@ final class ChatBotInfoItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatBotInfoItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
@@ -54,7 +54,7 @@ final class ChatBotInfoItem: ListViewItem {
                 async {
                     let (layout, apply) = nodeLayout(self, params)
                     Queue.mainQueue().async {
-                        completion(layout, {
+                        completion(layout, { _ in
                             apply(animation)
                         })
                     }

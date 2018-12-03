@@ -38,7 +38,7 @@ private enum ChangePhoneNumberCodeTag: ItemListItemTag {
 }
 
 private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
-    case codeEntry(PresentationTheme, String)
+    case codeEntry(PresentationTheme, String, String)
     case codeInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -56,8 +56,8 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChangePhoneNumberCodeEntry, rhs: ChangePhoneNumberCodeEntry) -> Bool {
         switch lhs {
-            case let .codeEntry(lhsTheme, lhsText):
-                if case let .codeEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .codeEntry(lhsTheme, lhsTitle, lhsText):
+                if case let .codeEntry(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -77,8 +77,8 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
     
     func item(_ arguments: ChangePhoneNumberCodeControllerArguments) -> ListViewItem {
         switch self {
-            case let .codeEntry(theme, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "Code", textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .codeEntry(theme, title, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
@@ -129,7 +129,7 @@ private struct ChangePhoneNumberCodeControllerState: Equatable {
 private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?, strings: PresentationStrings, theme: AuthorizationTheme) -> [ChangePhoneNumberCodeEntry] {
     var entries: [ChangePhoneNumberCodeEntry] = []
     
-    entries.append(.codeEntry(presentationData.theme, state.codeText))
+    entries.append(.codeEntry(presentationData.theme, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
     var text = authorizationCurrentOptionText(codeData.type, strings: presentationData.strings, primaryColor: presentationData.theme.list.itemPrimaryTextColor, accentColor: presentationData.theme.list.itemAccentColor).string
     if let nextType = codeData.nextType {
         text += "\n\n" + authorizationNextOptionText(currentType: codeData.type, nextType: nextType, timeout: timeout, strings: presentationData.strings, primaryColor: .black, accentColor: .black).0.string
@@ -194,7 +194,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
     }
     
     var dismissImpl: (() -> Void)?
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -264,7 +264,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
                     return $0.withUpdatedChecking(false)
                 }
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "You have changed your phone number to \(formatPhoneNumber(phoneNumber)).", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
                 dismissImpl?()
             }))
         }

@@ -1425,9 +1425,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 switch item {
                     case let .stickers(enabled):
                         if enabled {
-                        self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                                return (.media(mode: .other, expanded: nil), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
-                            })
+                            self.interfaceInteraction?.openStickers()
                         } else {
                             self.interfaceInteraction?.displayRestrictedInfo(.stickers)
                         }

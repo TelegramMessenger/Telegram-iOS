@@ -48,6 +48,7 @@ final class ChatRecentActionsController: TelegramController {
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { _ in
         }, updateInputModeAndDismissedButtonKeyboardMessageId: { _ in
+        }, openStickers: {
         }, editMessage: {
         }, beginMessageSearch: { _, _ in
         }, dismissMessageSearch: {

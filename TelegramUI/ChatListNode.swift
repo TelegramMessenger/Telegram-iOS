@@ -582,7 +582,7 @@ final class ChatListNode: ListView {
             }
             
             var searchMode = false
-            if case .chatList = mode {
+            if case .peers = mode {
                 searchMode = true
             }
             

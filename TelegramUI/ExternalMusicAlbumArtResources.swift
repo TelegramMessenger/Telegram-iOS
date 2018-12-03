@@ -61,7 +61,7 @@ public class ExternalMusicAlbumArtResource: TelegramMediaResource {
     }
 }
 
-private func urlEncodedStringFromString(_ string: String) -> String {
+func urlEncodedStringFromString(_ string: String) -> String {
     var nsString: NSString = string as NSString
     if let value = nsString.replacingPercentEscapes(using: String.Encoding.utf8.rawValue) {
         nsString = value as NSString

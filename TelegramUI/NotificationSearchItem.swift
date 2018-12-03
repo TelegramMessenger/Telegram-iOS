@@ -30,7 +30,7 @@ class NotificationSearchItem: ListViewItem, ItemListItem {
         self.activate = activate
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = NotificationSearchItemNode()
             node.placeholder = self.placeholder
@@ -44,7 +44,7 @@ class NotificationSearchItem: ListViewItem, ItemListItem {
             node.activate = self.activate
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, {
+                    return (nil, { _ in
                         apply(false)
                     })
                 })
@@ -52,14 +52,14 @@ class NotificationSearchItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? NotificationSearchItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
                     let (nodeLayout, apply) = layout(self, params)
                     Queue.mainQueue().async {
-                        completion(nodeLayout, {
+                        completion(nodeLayout, { _ in
                             apply(animation.isAnimated)
                         })
                     }

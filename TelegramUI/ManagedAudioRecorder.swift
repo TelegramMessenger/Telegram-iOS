@@ -161,9 +161,10 @@ final class ManagedAudioRecorderContext {
     
     private let audioUnit = Atomic<AudioUnit?>(value: nil)
     
-    private var waveformSamples = Data()
-    private var waveformPeak: Int16 = 0
-    private var waveformPeakCount: Int = 0
+    private var compressedWaveformSamples = Data()
+    private var currentPeak: Int64 = 0
+    private var currentPeakCount: Int = 0
+    private var peakCompressionFactor: Int = 1
     
     private var micLevelPeak: Int16 = 0
     private var micLevelPeakCount: Int = 0
@@ -527,8 +528,6 @@ final class ManagedAudioRecorderContext {
                 self.audioBuffer.append(currentEncoderPacket.assumingMemoryBound(to: UInt8.self), count: currentEncoderPacketSize)
                 break
             } else {
-                let previousBytesWritten = self.oggWriter.encodedBytes()
-                
                 self.processWaveformPreview(samples: currentEncoderPacket.assumingMemoryBound(to: Int16.self), count: currentEncoderPacketSize / 2)
                 
                 self.oggWriter.writeFrame(currentEncoderPacket.assumingMemoryBound(to: UInt8.self), frameByteCount: UInt(currentEncoderPacketSize))
@@ -538,16 +537,6 @@ final class ManagedAudioRecorderContext {
                     self.recordingStateUpdateTimestamp = timestamp
                     self.recordingState.set(.recording(duration: oggWriter.encodedDuration(), durationMediaTimestamp: timestamp))
                 }
-                
-                /*NSUInteger currentBytesWritten = [_oggWriter encodedBytes];
-                if (currentBytesWritten != previousBytesWritten)
-                {
-                    [ActionStageInstance() dispatchOnStageQueue:^
-                        {
-                        TGLiveUploadActor *actor = (TGLiveUploadActor *)[ActionStageInstance() executingActorWithPath:_liveUploadPath];
-                        [actor updateSize:currentBytesWritten];
-                        }];
-                }*/
             }
         }
     }
@@ -562,19 +551,28 @@ final class ManagedAudioRecorderContext {
                     sample = -sample
                 }
             }
-            if self.waveformPeak < sample {
-                self.waveformPeak = sample
-            }
-            self.waveformPeakCount += 1
             
-            if self.waveformPeakCount >= 100 {
-                self.waveformSamples.count += 2
-                var waveformPeak = self.waveformPeak
-                withUnsafeBytes(of: &waveformPeak, { bytes -> Void in
-                    self.waveformSamples.append(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: 2)
+            self.currentPeak = max(Int64(sample), self.currentPeak)
+            self.currentPeakCount += 1
+            if self.currentPeakCount == self.peakCompressionFactor {
+                var compressedPeak = self.currentPeak//Int16(Float(self.currentPeak) / Float(self.peakCompressionFactor))
+                withUnsafeBytes(of: &compressedPeak, { buffer in
+                    self.compressedWaveformSamples.append(buffer.bindMemory(to: UInt8.self))
                 })
-                self.waveformPeak = 0
-                self.waveformPeakCount = 0
+                self.currentPeak = 0
+                self.currentPeakCount = 0
+                
+                let compressedSampleCount = self.compressedWaveformSamples.count / 2
+                if compressedSampleCount == 200 {
+                    self.compressedWaveformSamples.withUnsafeMutableBytes { (compressedSamples: UnsafeMutablePointer<Int16>) -> Void in
+                        for i in 0 ..< 100 {
+                            let maxSample = Int64(max(compressedSamples[i * 2 + 0], compressedSamples[i * 2 + 1]))
+                            compressedSamples[i] = Int16(maxSample)
+                        }
+                    }
+                    self.compressedWaveformSamples.count = 100 * 2
+                    self.peakCompressionFactor *= 2
+                }
             }
             
             if self.micLevelPeak < sample {
@@ -601,8 +599,8 @@ final class ManagedAudioRecorderContext {
             memset(scaledSamples, 0, 100 * 2);
             var waveform: Data?
             
-            let count = self.waveformSamples.count / 2
-            self.waveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
+            let count = self.compressedWaveformSamples.count / 2
+            self.compressedWaveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
                 for i in 0 ..< count {
                     let sample = samples[i]
                     let index = i * 100 / count
@@ -618,7 +616,7 @@ final class ManagedAudioRecorderContext {
                     if peak < sample {
                         peak = sample
                     }
-                    sumSamples += Int64(peak)
+                    sumSamples += Int64(sample)
                 }
                 var calculatedPeak: UInt16 = 0
                 calculatedPeak = UInt16((Double(sumSamples) * 1.8 / 100.0))
@@ -629,12 +627,12 @@ final class ManagedAudioRecorderContext {
                 
                 for i in 0 ..< 100 {
                     let sample: UInt16 = UInt16(Int64(scaledSamples[i]))
-                    if sample > calculatedPeak {
-                        scaledSamples[i] = Int16(calculatedPeak)
-                    }
+                    let minPeak = min(Int64(sample), Int64(calculatedPeak))
+                    let resultPeak = minPeak * 31 / Int64(calculatedPeak)
+                    scaledSamples[i] = Int16(clamping: min(31, resultPeak))
                 }
                 
-                let resultWaveform = AudioWaveform(samples: Data(bytes: scaledSamplesMemory, count: 100 * 2), peak: Int32(calculatedPeak))
+                let resultWaveform = AudioWaveform(samples: Data(bytes: scaledSamplesMemory, count: 100 * 2), peak: 31)
                 let bitstream = resultWaveform.makeBitstream()
                 waveform = AudioWaveform(bitstream: bitstream, bitsPerSample: 5).makeBitstream()
             }

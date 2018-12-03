@@ -193,6 +193,7 @@
 		D044A0F320BDA05800326FAC /* ThrottledValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044A0F220BDA05800326FAC /* ThrottledValue.swift */; };
 		D044A0FB20BDC40C00326FAC /* CachedChannelAdmins.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */; };
 		D045549A21B2F173007A6DD9 /* libturbojpeg.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D045549921B2F173007A6DD9 /* libturbojpeg.a */; };
+		D04554A421B42982007A6DD9 /* ConfirmPhoneNumberController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04554A321B42982007A6DD9 /* ConfirmPhoneNumberController.swift */; };
 		D046142E2004DB3700EC0EF2 /* LiveLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D046142D2004DB3700EC0EF2 /* LiveLocationManager.swift */; };
 		D04614372005094E00EC0EF2 /* DeviceLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04614362005094E00EC0EF2 /* DeviceLocationManager.swift */; };
 		D0461439200514F000EC0EF2 /* LiveLocationSummaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0461438200514F000EC0EF2 /* LiveLocationSummaryManager.swift */; };
@@ -1389,6 +1390,7 @@
 		D044A0F220BDA05800326FAC /* ThrottledValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThrottledValue.swift; sourceTree = "<group>"; };
 		D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedChannelAdmins.swift; sourceTree = "<group>"; };
 		D045549921B2F173007A6DD9 /* libturbojpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libturbojpeg.a; path = "third-party/libjpeg-turbo/libturbojpeg.a"; sourceTree = "<group>"; };
+		D04554A321B42982007A6DD9 /* ConfirmPhoneNumberController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmPhoneNumberController.swift; sourceTree = "<group>"; };
 		D046142D2004DB3700EC0EF2 /* LiveLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLocationManager.swift; sourceTree = "<group>"; };
 		D04614362005094E00EC0EF2 /* DeviceLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceLocationManager.swift; sourceTree = "<group>"; };
 		D0461438200514F000EC0EF2 /* LiveLocationSummaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLocationSummaryManager.swift; sourceTree = "<group>"; };
@@ -4628,6 +4630,7 @@
 				D0760B231E9D015D00F1F3C4 /* PasscodeOptionsController.swift */,
 				D0CE6F6F213EEE5000BCD44B /* CreatePasswordController.swift */,
 				D0B3AC7F2142E2E900CD1374 /* ResetPasswordController.swift */,
+				D04554A321B42982007A6DD9 /* ConfirmPhoneNumberController.swift */,
 				D05D8B792195E00C0064586F /* Setup Two Step Verification */,
 			);
 			name = "Privacy and Security";
@@ -5617,6 +5620,7 @@
 				D0EC6E071EB9F58900EBF1C3 /* ChatExternalFileGalleryItem.swift in Sources */,
 				D0EC6E081EB9F58900EBF1C3 /* ChatImageGalleryItem.swift in Sources */,
 				D048EA891F4F297500188713 /* InstantPageSettingsFontFamilyItemNode.swift in Sources */,
+				D04554A421B42982007A6DD9 /* ConfirmPhoneNumberController.swift in Sources */,
 				D0EC6E0A1EB9F58900EBF1C3 /* ChatVideoGalleryItemScrubberView.swift in Sources */,
 				D0EC6E0B1EB9F58900EBF1C3 /* ZoomableContentGalleryItemNode.swift in Sources */,
 				D07ABBA5202A14BC003671DE /* LegacyImagePicker.swift in Sources */,

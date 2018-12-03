@@ -134,6 +134,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
 
 final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
+    private var currentSize: CGSize?
     private let imageNode: TransformImageNode
     
     private let stickerFetchedDisposable = MetaDisposable()
@@ -167,31 +168,35 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     }
     
     func setup(account: Account, stickerItem: StickerPackItem) {
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
-            if let dimensions = stickerItem.file.dimensions {
-                self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
-                
-                self.currentState = (account, stickerItem, dimensions)
-                self.setNeedsLayout()
-            }
-        }
-        
         //self.updateSelectionState(animated: false)
         //self.updateHiddenMedia()
     }
     
-    override func layout() {
-        super.layout()
+    override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
+        guard let item = item as? ChatMediaInputStickerGridItem else {
+            return
+        }
+        if self.currentState == nil || self.currentState!.0 !== item.account || self.currentState!.1 != item.stickerItem {
+            if let dimensions = item.stickerItem.file.dimensions {
+                self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: true, synchronousLoad: synchronousLoads && isVisible))
+                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: chatMessageStickerResource(file: item.stickerItem.file, small: true)).start())
+                
+                self.currentState = (item.account, item.stickerItem, dimensions)
+                self.setNeedsLayout()
+            }
+        }
         
-        let bounds = self.bounds
-        let sideSize: CGFloat = min(75.0 - 10.0, bounds.width)
-        let boundingSize = CGSize(width: sideSize, height: sideSize)
-        
-        if let (_, _, mediaDimensions) = self.currentState {
-            let imageSize = mediaDimensions.aspectFitted(boundingSize)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+        if self.currentSize != size {
+            self.currentSize = size
+            
+            let sideSize: CGFloat = min(75.0 - 10.0, size.width)
+            let boundingSize = CGSize(width: sideSize, height: sideSize)
+            
+            if let (_, _, mediaDimensions) = self.currentState {
+                let imageSize = mediaDimensions.aspectFitted(boundingSize)
+                self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+                self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+            }
         }
     }
     

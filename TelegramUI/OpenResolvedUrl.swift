@@ -20,7 +20,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     }
 }
 
-func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)? = nil, present: (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)? = nil, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     switch resolvedUrl {
         case let .externalUrl(url):
@@ -105,6 +105,63 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
                     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                     present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.AuthCode_Alert(formattedConfirmationCode(code)).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }
+            }
+        case let .cancelAccountReset(phone, hash):
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            present(controller, nil)
+            let _ = (requestCancelAccountResetData(network: account.network, hash: hash)
+            |> deliverOnMainQueue).start(next: { [weak controller] data in
+                controller?.dismiss()
+                present(confirmPhoneNumberCodeController(account: account, phoneNumber: phone, codeData: data), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }, error: { [weak controller] error in
+                controller?.dismiss()
+                
+                let text: String
+                switch error {
+                    case .limitExceeded:
+                        text = presentationData.strings.Login_CodeFloodError
+                    case .generic:
+                        text = presentationData.strings.Login_UnknownError
+                }
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            })
+            dismissInput()
+        case let .share(url, text):
+            let controller = PeerSelectionController(account: account)
+            controller.peerSelected = { [weak controller] peerId in
+                if let strongController = controller {
+                    strongController.dismiss()
+                    
+                    let textInputState: ChatTextInputState
+                    if let text = text, !text.isEmpty {
+                        let urlString = NSMutableAttributedString(string: "\(text)\n")
+                        let textString = NSAttributedString(string: "\(text)")
+                        let selectionRange: Range<Int> = urlString.length ..< (urlString.length + textString.length)
+                        urlString.append(textString)
+                        textInputState = ChatTextInputState(inputText: urlString, selectionRange: selectionRange)
+                    } else {
+                        textInputState = ChatTextInputState(inputText: NSAttributedString(string: "\(url)"))
+                    }
+                    
+                    let _ = (account.postbox.transaction({ transaction -> Void in
+                        transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
+                            if let currentState = currentState as? ChatInterfaceState {
+                                return currentState.withUpdatedComposeInputState(textInputState)
+                            } else {
+                                return ChatInterfaceState().withUpdatedComposeInputState(textInputState)
+                            }
+                        })
+                    })
+                    |> deliverOnMainQueue).start(completed: {
+                        navigationController?.pushViewController(ChatController(account: account, chatLocation: .peer(peerId), messageId: nil))
+                    })
+                }
+            }
+            if let navigationController = navigationController {
+                account.telegramApplicationContext.applicationBindings.dismissNativeController()
+                (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
             }
     }
 }

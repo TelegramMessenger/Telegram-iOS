@@ -26,7 +26,7 @@ class ChatListRecentPeersListItem: ListViewItem {
         self.header = nil
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListRecentPeersListItemNode()
             let makeLayout = node.asyncLayout()
@@ -38,15 +38,15 @@ class ChatListRecentPeersListItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatListRecentPeersListItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
                     let (nodeLayout, apply) = layout(self, params, nextItem != nil)
                     Queue.mainQueue().async {
-                        completion(nodeLayout, {
-                            apply().1()
+                        completion(nodeLayout, { info in
+                            apply().1(info)
                         })
                     }
                 }
@@ -87,7 +87,7 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatListRecentPeersListItem, _ params: ListViewItemLayoutParams, _ last: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, () -> Void)) {
+    func asyncLayout() -> (_ item: ChatListRecentPeersListItem, _ params: ListViewItemLayoutParams, _ last: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) {
         let currentItem = self.item
         
         return { [weak self] item, params, last in
@@ -99,7 +99,7 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                     updatedTheme = item.theme
                 }
                 
-                return (nil, {
+                return (nil, { _ in
                     if let strongSelf = self {
                         strongSelf.item = item
                         

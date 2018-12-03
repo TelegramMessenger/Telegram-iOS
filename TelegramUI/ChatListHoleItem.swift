@@ -16,7 +16,7 @@ class ChatListHoleItem: ListViewItem {
         self.theme = theme
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListHoleItemNode()
             node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
@@ -24,13 +24,13 @@ class ChatListHoleItem: ListViewItem {
             node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, {})
+                    return (nil, { _ in })
                 })
             }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is ChatListHoleItemNode)
             if let nodeValue = node() as? ChatListHoleItemNode {
@@ -42,7 +42,7 @@ class ChatListHoleItem: ListViewItem {
                     
                     let (nodeLayout, apply) = layout(self, params, first, last)
                     Queue.mainQueue().async {
-                        completion(nodeLayout, {
+                        completion(nodeLayout, { _ in
                             apply()
                             if let nodeValue = node() as? ChatListHoleItemNode {
                                 nodeValue.updateBackgroundAndSeparatorsLayout()

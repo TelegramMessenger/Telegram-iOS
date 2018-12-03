@@ -2188,6 +2188,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     return $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({ $0.withUpdatedMessageActionsState({ $0.withUpdatedClosedButtonKeyboardMessageId(updatedClosedButtonKeyboardMessageId) }) })
                 })
             }
+        }, openStickers: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatDisplayNode.openStickers()
         }, editMessage: { [weak self] in
             if let strongSelf = self, let editMessage = strongSelf.presentationInterfaceState.interfaceState.editMessage {
                 var disableUrlPreview = false
@@ -4224,7 +4229,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
     
     private func sendMediaRecording() {
         if let recordedMediaPreview = self.presentationInterfaceState.recordedMediaPreview {
-            let waveformBuffer = MemoryBuffer(data: recordedMediaPreview.waveform.samples)
+            let waveformBuffer = MemoryBuffer(data: recordedMediaPreview.waveform.makeBitstream())
             
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
