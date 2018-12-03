@@ -30,7 +30,7 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             for i in 0 ..< updatedAttributes.count {
                 if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
-                    if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
+                    if attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0 {
                         updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
                         updateMessage = true
                         
