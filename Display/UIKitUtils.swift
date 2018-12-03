@@ -132,6 +132,11 @@ public extension CGSize {
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
+    public func aspectFittedOrSmaller(_ size: CGSize) -> CGSize {
+        let scale = min(1.0, min(size.width / max(1.0, self.width), size.height / max(1.0, self.height)))
+        return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
+    }
+    
     public func aspectFittedWithOverflow(_ size: CGSize, leeway: CGFloat) -> CGSize {
         let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         var result = CGSize(width: floor(self.width * scale), height: floor(self.height * scale))

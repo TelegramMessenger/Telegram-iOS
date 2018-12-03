@@ -996,7 +996,7 @@ public class Window1 {
     }
     
     public func forEachViewController(_ f: (ViewController) -> Bool) {
-        for controller in self.presentationContext.controllers {
+        for (controller, _) in self.presentationContext.controllers {
             if !f(controller) {
                 break
             }

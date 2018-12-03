@@ -805,6 +805,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         
         let lowestSectionNode: ASDisplayNode? = self.lowestSectionNode()
         
+        let bounds = self.bounds
         var existingItemIndices = Set<Int>()
         for item in presentationLayoutTransition.layout.items {
             existingItemIndices.insert(item.index)
@@ -813,10 +814,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 if itemNode.frame != item.frame {
                     itemNode.frame = item.frame
                 }
+                itemNode.updateLayout(item: self.items[item.index], size: item.frame.size, isVisible: bounds.intersects(item.frame), synchronousLoads: synchronousLoads)
             } else {
                 let itemNode = self.items[item.index].node(layout: presentationLayoutTransition.layout.layout, synchronousLoad: synchronousLoads)
                 itemNode.frame = item.frame
                 self.addItemNode(index: item.index, itemNode: itemNode, lowestSectionNode: lowestSectionNode)
+                itemNode.updateLayout(item: self.items[item.index], size: item.frame.size, isVisible: bounds.intersects(item.frame), synchronousLoads: synchronousLoads)
             }
         }
         
