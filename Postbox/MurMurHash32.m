@@ -89,6 +89,10 @@ int32_t murMurHash32(void *bytes, int length)
     return result;
 }
 
+int32_t murMurHash32Data(NSData *data) {
+    return murMurHash32((void *)data.bytes, (int)data.length);
+}
+
 int32_t murMurHashString32(const char *s)
 {
     int32_t result = 0;
