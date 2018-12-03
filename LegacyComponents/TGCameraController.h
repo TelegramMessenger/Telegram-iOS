@@ -49,7 +49,7 @@ typedef enum {
 
 @property (nonatomic, copy) CGRect(^beginTransitionOut)(void);
 @property (nonatomic, copy) void(^finishedTransitionOut)(void);
-@property (nonatomic, copy) void(^customPresentOverlayController)(TGOverlayController *);
+@property (nonatomic, copy) void(^customPresentOverlayController)(TGOverlayController *(^)(id<LegacyComponentsContext>));
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia intent:(TGCameraControllerIntent)intent;

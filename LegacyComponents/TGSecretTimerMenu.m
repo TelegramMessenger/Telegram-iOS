@@ -13,6 +13,7 @@
 + (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context dark:(bool)dark description:(NSString *)description values:(NSArray *)values value:(NSNumber *)value completed:(void (^)(NSNumber *))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
 {
     TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:context dark:dark];
+    controller.forceFullScreen = true;
     controller.dismissesByOutsideTap = true;
     controller.hasSwipeGesture = true;
     controller.narrowInLandscape = true;
