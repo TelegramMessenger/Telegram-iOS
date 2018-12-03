@@ -51,7 +51,7 @@ public struct GridNodeScrollToItem {
 }
 
 public enum GridNodeLayoutType: Equatable {
-    case fixed(itemSize: CGSize, lineSpacing: CGFloat)
+    case fixed(itemSize: CGSize, fillWidth: Bool?, lineSpacing: CGFloat, itemSpacing: CGFloat?)
     case balanced(idealHeight: CGFloat)
 }
 
@@ -203,7 +203,7 @@ private struct WrappedGridItemNode: Hashable {
 }
 
 open class GridNode: GridNodeScroller, UIScrollViewDelegate {
-    private var gridLayout = GridNodeLayout(size: CGSize(), insets: UIEdgeInsets(), preloadSize: 0.0, type: .fixed(itemSize: CGSize(), lineSpacing: 0.0))
+    private var gridLayout = GridNodeLayout(size: CGSize(), insets: UIEdgeInsets(), preloadSize: 0.0, type: .fixed(itemSize: CGSize(), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil))
     private var firstIndexInSectionOffset: Int = 0
     public private(set) var items: [GridItem] = []
     private var itemNodes: [Int: GridItemNode] = [:]
@@ -400,7 +400,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             var sections: [GridNodePresentationSection] = []
             
             switch gridLayout.type {
-                case let .fixed(defaultItemSize, lineSpacing):
+                case let .fixed(defaultItemSize, fillWidth, lineSpacing, defaultItemSpacing):
                     let itemInsets = gridLayout.insets
                     
                     let effectiveWidth = gridLayout.size.width - itemInsets.left - itemInsets.right
@@ -409,10 +409,11 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     let itemsInRowWidth = CGFloat(itemsInRow) * defaultItemSize.width
                     let remainingWidth = max(0.0, effectiveWidth - itemsInRowWidth)
                     
-                    let itemSpacing = floorToScreenPixels(remainingWidth / CGFloat(itemsInRow + 1))
+                    let itemSpacing = defaultItemSpacing ?? floorToScreenPixels(remainingWidth / CGFloat(itemsInRow + 1))
+                    let initialSpacing: CGFloat = (fillWidth ?? false) ? 0.0 : itemSpacing
                     
                     var incrementedCurrentRow = false
-                    var nextItemOrigin = CGPoint(x: itemInsets.left + itemSpacing, y: 0.0)
+                    var nextItemOrigin = CGPoint(x: itemInsets.left + initialSpacing, y: 0.0)
                     var index = 0
                     var previousSection: GridSection?
                     for item in self.items {
@@ -454,6 +455,11 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                             let itemsInRow = max(1, Int(effectiveWidth) / Int(itemSize.width))
                             let normalizedIndexOffset = self.firstIndexInSectionOffset % itemsInRow
                             nextItemOrigin.x += (itemSize.width + itemSpacing) * CGFloat(normalizedIndexOffset)
+                        } else if let fillWidth = fillWidth, fillWidth {
+                            let nextItemOriginX = nextItemOrigin.x + itemSize.width + itemSpacing
+                            if nextItemOriginX + itemSize.width > gridLayout.size.width && remainingWidth > 0.0 {
+                                itemSize.width += remainingWidth
+                            }
                         }
                         
                         if !incrementedCurrentRow {
@@ -466,7 +472,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         
                         nextItemOrigin.x += itemSize.width + itemSpacing
                         if nextItemOrigin.x + itemSize.width > gridLayout.size.width {
-                            nextItemOrigin.x = itemSpacing + itemInsets.left
+                            nextItemOrigin.x = initialSpacing + itemInsets.left
                             nextItemOrigin.y += itemSize.height + lineSpacing
                             incrementedCurrentRow = false
                         }
