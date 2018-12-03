@@ -14,4 +14,7 @@ open class GridItemNode: ASDisplayNode {
             super.frame = value
         }
     }
+    
+    open func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
+    }
 }

@@ -1165,7 +1165,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         DispatchQueue.global().async(execute: f)
     }
     
-    private func nodeForItem(synchronous: Bool, synchronousLoads: Bool, item: ListViewItem, previousNode: QueueLocalObject<ListViewItemNode>?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, params: ListViewItemLayoutParams, updateAnimation: ListViewItemUpdateAnimation, completion: @escaping (QueueLocalObject<ListViewItemNode>, ListViewItemNodeLayout, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    private func nodeForItem(synchronous: Bool, synchronousLoads: Bool, item: ListViewItem, previousNode: QueueLocalObject<ListViewItemNode>?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, params: ListViewItemLayoutParams, updateAnimation: ListViewItemUpdateAnimation, completion: @escaping (QueueLocalObject<ListViewItemNode>, ListViewItemNodeLayout, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         if let previousNode = previousNode {
             item.updateNode(async: { f in
                 if synchronous {
@@ -1180,29 +1180,29 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 if Thread.isMainThread {
                     if synchronous {
                         completion(previousNode, layout, {
-                            return (nil, {
+                            return (nil, { info in
                                 assert(Queue.mainQueue().isCurrent())
                                 previousNode.with({ $0.index = index })
-                                apply()
+                                apply(info)
                             })
                         })
                     } else {
                         self.async {
                             completion(previousNode, layout, {
-                                return (nil, {
+                                return (nil, { info in
                                     assert(Queue.mainQueue().isCurrent())
                                     previousNode.with({ $0.index = index })
-                                    apply()
+                                    apply(info)
                                 })
                             })
                         }
                     }
                 } else {
                     completion(previousNode, layout, {
-                        return (nil, {
+                        return (nil, { info in
                             assert(Queue.mainQueue().isCurrent())
                             previousNode.with({ $0.index = index })
-                            apply()
+                            apply(info)
                         })
                     })
                 }
@@ -1759,7 +1759,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
-    private func insertNodeAtIndex(animated: Bool, animateAlpha: Bool, forceAnimateInsertion: Bool, previousFrame: CGRect?, nodeIndex: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, () -> Void), timestamp: Double, listInsets: UIEdgeInsets) {
+    private func insertNodeAtIndex(animated: Bool, animateAlpha: Bool, forceAnimateInsertion: Bool, previousFrame: CGRect?, nodeIndex: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void), timestamp: Double, listInsets: UIEdgeInsets, visibleBounds: CGRect) {
         let insertionOrigin = self.referencePointForInsertionAtIndex(nodeIndex)
         
         let nodeOrigin: CGPoint
@@ -1782,7 +1782,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         if let accessoryItemNode = node.accessoryItemNode {
             node.layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
         }
-        apply().1()
+        apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(nodeFrame)))
         self.itemNodes.insert(node, at: nodeIndex)
         
         var offsetHeight = node.apparentHeight
@@ -2025,6 +2025,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         let lowestNodeToInsertBelow = self.lowestNodeToInsertBelow()
         var hadInserts = false
         
+        let visibleBounds = CGRect(origin: CGPoint(), size: self.visibleSize)
+        
         for operation in operations {
             switch operation {
                 case let .InsertNode(index, offsetDirection, nodeAnimated, nodeObject, layout, apply):
@@ -2045,7 +2047,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         updatedPreviousFrame = nil
                     }
                     
-                    self.insertNodeAtIndex(animated: nodeAnimated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp, listInsets: listInsets)
+                    self.insertNodeAtIndex(animated: nodeAnimated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp, listInsets: listInsets, visibleBounds: visibleBounds)
                     hadInserts = true
                     if let _ = updatedPreviousFrame {
                         if let itemNode = self.reorderNode?.itemNode, itemNode.supernode == self {
@@ -2093,10 +2095,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     if let height = height, let previousLayout = previousLayout {
                         if takenPreviousNodes.contains(referenceNode) {
                             let tempNode = ListViewTempItemNode(layerBacked: true)
-                            self.insertNodeAtIndex(animated: false, animateAlpha: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: tempNode, layout: ListViewItemNodeLayout(contentSize: CGSize(width: self.visibleSize.width, height: height), insets: UIEdgeInsets()), apply: { return (nil, {}) }, timestamp: timestamp, listInsets: listInsets)
+                            self.insertNodeAtIndex(animated: false, animateAlpha: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: tempNode, layout: ListViewItemNodeLayout(contentSize: CGSize(width: self.visibleSize.width, height: height), insets: UIEdgeInsets()), apply: { return (nil, { _ in }) }, timestamp: timestamp, listInsets: listInsets, visibleBounds: visibleBounds)
                         } else {
                             referenceNode.index = nil
-                            self.insertNodeAtIndex(animated: false, animateAlpha: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: referenceNode, layout: previousLayout, apply: { return (nil, {}) }, timestamp: timestamp, listInsets: listInsets)
+                            self.insertNodeAtIndex(animated: false, animateAlpha: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: referenceNode, layout: previousLayout, apply: { return (nil, { _ in }) }, timestamp: timestamp, listInsets: listInsets, visibleBounds: visibleBounds)
                             if let verticalScrollIndicator = self.verticalScrollIndicator {
                                 self.insertSubnode(referenceNode, belowSubnode: verticalScrollIndicator)
                             } else {
@@ -2151,10 +2153,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     
                     node.contentSize = layout.contentSize
                     node.insets = layout.insets
-                    apply().1()
                     
                     let updatedApparentHeight = node.bounds.size.height
                     let updatedInsets = node.insets
+                    
+                    var apparentFrame = node.apparentFrame
+                    apparentFrame.size.height = updatedApparentHeight
+                    
+                    apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(apparentFrame)))
                     
                     var offsetRanges = OffsetRanges()
                     
