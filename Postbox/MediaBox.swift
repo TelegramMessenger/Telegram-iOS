@@ -341,6 +341,9 @@ public final class MediaBox {
     public func completedResourcePath(_ resource: MediaResource, pathExtension: String? = nil) -> String? {
         let paths = self.storePathsForId(resource.id)
         if let _ = fileSize(paths.complete) {
+            self.timeBasedCleanup.touch(paths: [
+                paths.complete
+            ])
             if let pathExtension = pathExtension {
                 let symlinkPath = paths.complete + ".\(pathExtension)"
                 if fileSize(symlinkPath) == nil {
