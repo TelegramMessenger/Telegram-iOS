@@ -632,10 +632,11 @@ public final class MediaBox {
         }
     }
     
-    public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, complete: Bool, fetch: Bool = true) -> Signal<MediaResourceData, NoError> {
+    public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, complete: Bool, fetch: Bool = true, attemptSynchronously: Bool = false) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
-            self.concurrentQueue.async {
+            
+            let begin: () -> Void = {
                 let path = self.cachedRepresentationPathForId(resource.id, representation: representation)
                 if let size = fileSize(path) {
                     self.timeBasedCleanup.touch(paths: [
@@ -644,6 +645,9 @@ public final class MediaBox {
                     subscriber.putNext(MediaResourceData(path: path, offset: 0, size: size, complete: true))
                     subscriber.putCompletion()
                 } else if fetch {
+                    if attemptSynchronously && complete {
+                        subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
+                    }
                     self.dataQueue.async {
                         let key = CachedMediaResourceRepresentationKey(resourceId: resource.id, representation: representation)
                         let context: CachedMediaResourceRepresentationContext
@@ -725,6 +729,11 @@ public final class MediaBox {
                     subscriber.putNext(MediaResourceData(path: path, offset: 0, size: 0, complete: false))
                     subscriber.putCompletion()
                 }
+            }
+            if attemptSynchronously {
+                begin()
+            } else {
+                self.concurrentQueue.async(begin)
             }
             return ActionDisposable {
                 disposable.dispose()
