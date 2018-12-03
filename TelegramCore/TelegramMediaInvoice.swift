@@ -64,7 +64,7 @@ public final class TelegramMediaInvoice: Media {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.title, forKey: "t")
         encoder.encodeString(self.description, forKey: "d")
-        encoder.encodeString(self.currency, forKey: "nc")
+        encoder.encodeString(self.currency, forKey: "c")
         encoder.encodeInt64(self.totalAmount, forKey: "ta")
         encoder.encodeString(self.startParam, forKey: "sp")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
