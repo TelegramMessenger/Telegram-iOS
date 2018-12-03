@@ -923,7 +923,7 @@ final class ContactListNode: ASDisplayNode {
                 |> deliverOnMainQueue).start(next: { status in
                     switch status {
                         case .notDetermined:
-                            DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.presentationData, present: { _, _ in }, openSettings: {}, { _ in })
+                            DeviceAccess.authorizeAccess(to: .contacts)
                         case .denied, .restricted:
                             account.telegramApplicationContext.applicationBindings.openSettings()
                         default:

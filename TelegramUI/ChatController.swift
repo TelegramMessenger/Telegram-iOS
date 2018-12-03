@@ -1888,8 +1888,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             }
         }
         
-        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] animated, f in
-            self?.updateChatPresentationInterfaceState(animated: animated,  interactive: true, { $0.updatedInterfaceState(f) })
+        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] animated, saveInterfaceState, f in
+            self?.updateChatPresentationInterfaceState(animated: animated, interactive: true, saveInterfaceState: saveInterfaceState, { $0.updatedInterfaceState(f) })
         }
         
         self.chatDisplayNode.requestUpdateInterfaceState = { [weak self] transition, interactive, f in
@@ -3077,11 +3077,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         self.mediaRecordingModeTooltipController?.dismiss()
     }
     
-    private func saveInterfaceState() {
+    private func saveInterfaceState(includeScrollState: Bool = true) {
         if case let .peer(peerId) = self.chatLocation {
             let timestamp = Int32(Date().timeIntervalSince1970)
-            let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
-            let interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp).withUpdatedHistoryScrollState(scrollState)
+            var interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
+            if includeScrollState {
+                let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
+                interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
+            }
             let _ = updatePeerChatInterfaceState(account: account, peerId: peerId, state: interfaceState).start()
         }
     }
@@ -3121,11 +3124,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         })
     }
     
-    func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
-        self.updateChatPresentationInterfaceState(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate, interactive: interactive, f)
+    func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
+        self.updateChatPresentationInterfaceState(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate, interactive: interactive, saveInterfaceState: saveInterfaceState, f)
     }
     
-    func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, interactive: Bool, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
+    func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
         var temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
         
         if self.presentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup != temporaryChatPresentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup {
@@ -3395,6 +3398,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 self.deferScreenEdgeGestures = [.top]
             case .inline:
                 self.statusBar.statusBarStyle = .Ignore
+        }
+        
+        if saveInterfaceState {
+            self.saveInterfaceState(includeScrollState: false)
         }
     }
     
@@ -5495,9 +5502,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         
         var inputShortcuts: [KeyShortcut]
         if self.chatDisplayNode.isInputViewFocused {
-            inputShortcuts = [KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {
-                
-            })]
+            inputShortcuts = [KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {})]
         } else {
             inputShortcuts = [KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in
                 if let strongSelf = self {

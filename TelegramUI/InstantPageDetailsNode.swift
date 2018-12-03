@@ -30,7 +30,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     var requestLayoutUpdate: ((Bool) -> Void)?
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
@@ -59,7 +59,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: self.expanded)
         self.separatorNode = ASDisplayNode()
         
-        self.contentNode = InstantPageContentNode(account: account, strings: strings, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, openPeer: openPeer, openUrl: openUrl)
+        self.contentNode = InstantPageContentNode(account: account, strings: strings, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl)
         
         super.init()
         

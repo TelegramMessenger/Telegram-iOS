@@ -11,6 +11,7 @@ final class InstantPageContentNode : ASDisplayNode {
     private let theme: InstantPageTheme
     
     private let openMedia: (InstantPageMedia) -> Void
+    private let longPressMedia: (InstantPageMedia) -> Void
     private let openPeer: (PeerId) -> Void
     private let openUrl: (InstantPageUrlItem) -> Void
     
@@ -33,12 +34,13 @@ final class InstantPageContentNode : ASDisplayNode {
     
     private var previousVisibleBounds: CGRect?
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.account = account
         self.strings = strings
         self.theme = theme
         
         self.openMedia = openMedia
+        self.longPressMedia = longPressMedia
         self.openPeer = openPeer
         self.openUrl = openUrl
         
@@ -180,6 +182,8 @@ final class InstantPageContentNode : ASDisplayNode {
                     let detailsIndex = detailsIndex
                     if let newNode = item.node(account: self.account, strings: self.strings, theme: theme, openMedia: { [weak self] media in
                         self?.openMedia(media)
+                        }, longPressMedia: { [weak self] media in
+                            self?.longPressMedia(media)
                         }, openPeer: { [weak self] peerId in
                             self?.openPeer(peerId)
                         }, openUrl: { [weak self] url in

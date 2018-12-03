@@ -105,9 +105,15 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
             let sideInset: CGFloat = leftInset + 8.0
             let topInset: CGFloat = 0.0
             let bottomInset: CGFloat = 0.0
-            let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            var textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            
+            var x = sideInset
+            if let hasRTL = self.textNode.cachedLayout?.hasRTL, hasRTL {
+                x = width - rightInset - 8.0 - textSize.width
+            }
+            
             panelHeight += textSize.height + topInset + bottomInset
-            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize))
+            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: x, y: topInset), size: textSize))
         }
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))

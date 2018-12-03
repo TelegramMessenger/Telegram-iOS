@@ -658,6 +658,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         |> deliverOnMainQueue).start(next: { status in
             switch status {
                 case .notDetermined:
+                    DeviceAccess.authorizeAccess(to: .notifications)
                     account.telegramApplicationContext.applicationBindings.registerForNotifications()
                 case .denied, .restricted:
                     account.telegramApplicationContext.applicationBindings.openSettings()

@@ -195,9 +195,11 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
     return ChatHistoryGridViewTransition(historyView: transition.historyView, topOffsetWithinMonth: topOffsetWithinMonth, deleteItems: transition.deleteItems.map { $0.index }, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.insertEntries, theme: presentationData.theme.theme, strings: presentationData.strings), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.updateEntries, theme: presentationData.theme.theme, strings: presentationData.strings), scrollToItem: mappedScrollToItem, stationaryItems: stationaryItems)
 }
 
-private func itemSizeForContainerLayout(size: CGSize) -> CGSize {
-    let side = floor(size.width / 4.0)
-    return CGSize(width: side, height: side)
+private func gridNodeLayoutForContainerLayout(size: CGSize) -> GridNodeLayoutType {
+    let side = floorToScreenPixels((size.width - 3.0) / 4.0)
+    //let side = floor(size.width / 4.0)
+    //return CGSize(width: side, height: side)
+    return .fixed(itemSize: CGSize(width: side, height: side), fillWidth: true, lineSpacing: 1.0, itemSpacing: 1.0)
 }
 
 public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
@@ -493,7 +495,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                 
                 var updateLayout: GridNodeUpdateLayout?
                 if let updateSizeAndInsets = updateSizeAndInsets {
-                    updateLayout = GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: .fixed(itemSize: CGSize(width: 200.0, height: 200.0), lineSpacing: 0.0)), transition: .immediate)
+                    updateLayout = GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: .fixed(itemSize: CGSize(width: 200.0, height: 200.0), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: .immediate)
                 }
                 
                 self.transaction(GridNodeTransaction(deleteItems: mappedTransition.deleteItems, insertItems: mappedTransition.insertItems, updateItems: mappedTransition.updateItems, scrollToItem: mappedTransition.scrollToItem, updateLayout: updateLayout, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: mappedTransition.topOffsetWithinMonth), completion: completion)
@@ -504,7 +506,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
     }
     
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets) {
-        self.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: .fixed(itemSize: itemSizeForContainerLayout(size: updateSizeAndInsets.size), lineSpacing: 0.0)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, type: gridNodeLayoutForContainerLayout(size: updateSizeAndInsets.size)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true
