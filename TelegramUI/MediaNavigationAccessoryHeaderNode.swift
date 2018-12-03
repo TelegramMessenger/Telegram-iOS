@@ -269,7 +269,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         
         var titleSideInset: CGFloat = 80.0
         if !self.rateButton.isHidden {
-            titleSideInset += 46.0
+            titleSideInset += 52.0
         }
         
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

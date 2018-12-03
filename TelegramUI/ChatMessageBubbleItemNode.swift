@@ -365,7 +365,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             }
             
             var needShareButton = false
-            if item.message.id.peerId == item.account.peerId {
+            if item.message.flags.contains(.Failed) {
+                needShareButton = false
+            } else if item.message.id.peerId == item.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let _ = attribute as? SourceReferenceMessageAttribute {
                         needShareButton = true

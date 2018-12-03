@@ -9,6 +9,7 @@ private final class ChannelVisibilityControllerArguments {
     
     let updateCurrentType: (CurrentChannelType) -> Void
     let updatePublicLinkText: (String?, String) -> Void
+    let scrollToPublicLinkText: () -> Void
     let displayPrivateLinkMenu: (String) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let revokePeerId: (PeerId) -> Void
@@ -16,10 +17,11 @@ private final class ChannelVisibilityControllerArguments {
     let revokePrivateLink: () -> Void
     let sharePrivateLink: () -> Void
     
-    init(account: Account, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyPrivateLink: @escaping () -> Void, revokePrivateLink: @escaping () -> Void, sharePrivateLink: @escaping () -> Void) {
+    init(account: Account, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, displayPrivateLinkMenu: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyPrivateLink: @escaping () -> Void, revokePrivateLink: @escaping () -> Void, sharePrivateLink: @escaping () -> Void) {
         self.account = account
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
+        self.scrollToPublicLinkText = scrollToPublicLinkText
         self.displayPrivateLinkMenu = displayPrivateLinkMenu
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.revokePeerId = revokePeerId
@@ -35,8 +37,17 @@ private enum ChannelVisibilitySection: Int32 {
     case linkActions
 }
 
-private enum ChannelVisibilityEntryTag {
+private enum ChannelVisibilityEntryTag: ItemListItemTag {
+    case publicLink
     case privateLink
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? ChannelVisibilityEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 private enum ChannelVisibilityEntry: ItemListNodeEntry {
@@ -252,10 +263,11 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     }
                 }, tag: ChannelVisibilityEntryTag.privateLink)
             case let .editablePublicLink(theme, currentText):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: "", sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: "", tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
+                }, receivedFocus: {
+                    arguments.scrollToPublicLinkText()
                 }, action: {
-                    
                 })
             case let .privateLinkInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
@@ -650,6 +662,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     var dismissImpl: (() -> Void)?
     var nextImpl: (() -> Void)?
     var displayPrivateLinkMenuImpl: ((String) -> Void)?
+    var scrollToPublicLinkTextImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -697,6 +710,8 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                     }
                 }))
         }
+    }, scrollToPublicLinkText: {
+        scrollToPublicLinkTextImpl?()
     }, displayPrivateLinkMenu: { text in
         displayPrivateLinkMenuImpl?(text)
     }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -940,6 +955,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     
     let controller = ItemListController(account: account, state: signal)
     dismissImpl = { [weak controller] in
+        controller?.view.endEditing(true)
         controller?.dismiss()
     }
     nextImpl = { [weak controller] in
@@ -1004,6 +1020,27 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                         return nil
                     }
                 }))
+            }
+        }
+    }
+    scrollToPublicLinkTextImpl = { [weak controller] in
+        DispatchQueue.main.async {
+            if let strongController = controller {
+                var resultItemNode: ListViewItemNode?
+                let _ = strongController.frameForItemNode({ itemNode in
+                    if let itemNode = itemNode as? ItemListSingleLineInputItemNode {
+                        if let tag = itemNode.tag as? ChannelVisibilityEntryTag {
+                            if tag == .publicLink {
+                                resultItemNode = itemNode
+                                return true
+                            }
+                        }
+                    }
+                    return false
+                })
+                if let resultItemNode = resultItemNode {
+                    strongController.ensureItemNodeVisible(resultItemNode)
+                }
             }
         }
     }

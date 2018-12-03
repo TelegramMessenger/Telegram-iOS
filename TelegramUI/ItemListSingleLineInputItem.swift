@@ -24,9 +24,10 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let action: () -> Void
     let textUpdated: (String) -> Void
     let processPaste: ((String) -> String)?
+    let receivedFocus: (() -> Void)?
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, processPaste: ((String) -> String)? = nil, receivedFocus: (() -> Void)? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.text = text
@@ -39,6 +40,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.textUpdated = textUpdated
         self.processPaste = processPaste
+        self.receivedFocus = receivedFocus
         self.action = action
     }
     
@@ -364,5 +366,9 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     @objc internal func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         self.item?.action()
         return false
+    }
+    
+    @objc internal func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.item?.receivedFocus?()
     }
 }

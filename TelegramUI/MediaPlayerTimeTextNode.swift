@@ -55,7 +55,11 @@ final class MediaPlayerTimeTextNode: ASDisplayNode {
     var alignment: NSTextAlignment = .left
     var mode: MediaPlayerTimeTextNodeMode = .normal
     private let textColor: UIColor
-    var defaultDuration: Double?
+    var defaultDuration: Double? {
+        didSet {
+            self.updateTimestamp()
+        }
+    }
     
     private var updateTimer: SwiftSignalKit.Timer?
     

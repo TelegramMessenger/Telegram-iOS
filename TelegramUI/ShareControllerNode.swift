@@ -702,4 +702,47 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             })
         }))
     }
+    
+    func transitionToProgressWithValue(signal: Signal<Float?, NoError>) {
+        self.inputFieldNode.deactivateInput()
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
+        transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
+        transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
+        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
+        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
+        
+        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+        
+        let timestamp = CACurrentMediaTime()
+        var wasDone = false
+        let doneImpl: (Bool) -> Void = { [weak self] shouldDelay in
+            let minDelay: Double = shouldDelay ? 0.9 : 0.6
+            let delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
+            Queue.mainQueue().after(delay, {
+                if let strongSelf = self {
+                    strongSelf.animateOut(shared: true)
+                }
+            })
+        }
+        self.shareDisposable.set((signal
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                return
+            }
+            if let status = status {
+                contentNode.state = .progress(status)
+            } else {
+                
+            }
+        }, completed: { [weak self] in
+            guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                return
+            }
+            contentNode.state = .done
+            if !wasDone {
+                wasDone = true
+                doneImpl(true)
+            }
+        }))
+    }
 }

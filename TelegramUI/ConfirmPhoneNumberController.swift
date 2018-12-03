@@ -324,6 +324,7 @@ func confirmPhoneNumberCodeController(account: Account, phoneNumber: String, cod
         }
     }
     dismissImpl = { [weak controller] in
+        controller?.view.endEditing(true)
         controller?.dismiss()
     }
     

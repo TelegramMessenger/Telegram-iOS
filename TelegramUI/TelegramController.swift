@@ -71,6 +71,7 @@ public class TelegramController: ViewController {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    private var playlistPreloadDisposable: Disposable?
     
     override public var navigationHeight: CGFloat {
         var height = super.navigationHeight
@@ -223,6 +224,7 @@ public class TelegramController: ViewController {
         self.mediaStatusDisposable?.dispose()
         self.locationBroadcastDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
+        self.playlistPreloadDisposable?.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -478,15 +480,77 @@ public class TelegramController: ViewController {
                     }
                 }
                 mediaAccessoryPanel.tapAction = { [weak self] in
-                    if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController, let (state, order, type) = strongSelf.playlistStateAndType {
-                        if let id = state.id as? PeerMessagesMediaPlaylistItemId {
-                            if type == .music {
-                                let controller = OverlayPlayerController(account: strongSelf.account, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController) 
-                                strongSelf.displayNode.view.window?.endEditing(true)
-                                strongSelf.present(controller, in: .window(.root))
-                            } else {
-                                navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(id.messageId.peerId), messageId: id.messageId)
+                    guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController, let (state, order, type) = strongSelf.playlistStateAndType else {
+                        return
+                    }
+                    if let id = state.id as? PeerMessagesMediaPlaylistItemId {
+                        if type == .music {
+                            let historyView = chatHistoryViewForLocation(.InitialSearch(location: .id(id.messageId), count: 60), account: strongSelf.account, chatLocation: .peer(id.messageId.peerId), fixedCombinedReadStates: nil, tagMask: MessageTags.music, additionalData: [])
+                            let signal = historyView
+                            |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
+                                switch historyView {
+                                    case .Loading:
+                                        return .single((nil, true))
+                                    case let .HistoryView(view, _, _, _, _):
+                                        for entry in view.entries {
+                                            if case let .MessageEntry(message, _, _, _) = entry {
+                                                if message.id == id.messageId {
+                                                    return .single((MessageIndex(message), false))
+                                                }
+                                            }
+                                        }
+                                        return .single((nil, false))
+                                }
                             }
+                            |> take(until: { index in
+                                return SignalTakeAction(passthrough: true, complete: !index.1)
+                            })
+                            
+                            var cancelImpl: (() -> Void)?
+                            let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                            let progressSignal = Signal<Never, NoError> { subscriber in
+                                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                                    cancelImpl?()
+                                }))
+                                self?.present(controller, in: .window(.root))
+                                return ActionDisposable { [weak controller] in
+                                    Queue.mainQueue().async() {
+                                        controller?.dismiss()
+                                    }
+                                }
+                            }
+                            |> runOn(Queue.mainQueue())
+                            |> delay(0.15, queue: Queue.mainQueue())
+                            let progressDisposable = MetaDisposable()
+                            var progressStarted = false
+                            strongSelf.playlistPreloadDisposable?.dispose()
+                            strongSelf.playlistPreloadDisposable = (signal
+                            |> afterDisposed {
+                                Queue.mainQueue().async {
+                                    progressDisposable.dispose()
+                                }
+                            }
+                            |> deliverOnMainQueue).start(next: { index in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                if let _ = index.0 {
+                                    let controller = OverlayPlayerController(account: strongSelf.account, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
+                                    strongSelf.displayNode.view.window?.endEditing(true)
+                                    strongSelf.present(controller, in: .window(.root))
+                                } else if index.1 {
+                                    if !progressStarted {
+                                        progressStarted = true
+                                        progressDisposable.set(progressSignal.start())
+                                    }
+                                }
+                            }, completed: {
+                            })
+                            cancelImpl = {
+                                self?.playlistPreloadDisposable?.dispose()
+                            }
+                        } else {
+                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(id.messageId.peerId), messageId: id.messageId)
                         }
                     }
                 }
