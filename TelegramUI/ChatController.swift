@@ -82,7 +82,7 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
-public final class ChatController: TelegramController, KeyShortcutResponder, UIDropInteractionDelegate {
+public final class ChatController: TelegramController, KeyShortcutResponder, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     weak var parentController: ViewController?
@@ -1550,6 +1550,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         self.screenCaptureEventsDisposable?.dispose()
         self.chatAdditionalDataDisposable.dispose()
         self.shareStatusDisposable?.dispose()
+        self.account.telegramApplicationContext.mediaManager?.galleryHiddenMediaManager.removeTarget(self)
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -2939,6 +2940,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         self.chatDisplayNode.interfaceInteraction = interfaceInteraction
         
         if let mediaManager = self.account.telegramApplicationContext.mediaManager {
+            mediaManager.galleryHiddenMediaManager.addTarget(self)
             self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
                 if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                     var messageIdAndMedia: [MessageId: [Media]] = [:]
@@ -5622,5 +5624,26 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         ]
         
         return inputShortcuts + otherShortcuts
+    }
+    
+    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> UIView?)? {
+        var selectedNode: (ASDisplayNode, () -> UIView?)?
+        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                    selectedNode = result
+                }
+            }
+        }
+        if let (node, get) = selectedNode {
+            return ({ [weak self] view in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
+            }, node, get)
+        } else {
+            return nil
+        }
     }
 }
