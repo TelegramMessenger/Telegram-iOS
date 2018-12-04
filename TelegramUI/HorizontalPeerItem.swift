@@ -36,7 +36,7 @@ final class HorizontalPeerItem: ListViewItem {
         self.unreadBadge = unreadBadge
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = HorizontalPeerItemNode()
             
@@ -47,7 +47,7 @@ final class HorizontalPeerItem: ListViewItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, {
+                    return (nil, { _ in
                         apply(false)
                     })
                 })
@@ -55,7 +55,7 @@ final class HorizontalPeerItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is HorizontalPeerItemNode)
             if let nodeValue = node() as? HorizontalPeerItemNode {
@@ -63,7 +63,7 @@ final class HorizontalPeerItem: ListViewItem {
                 async {
                     let (nodeLayout, apply) = layout(self, params)
                     Queue.mainQueue().async {
-                        completion(nodeLayout, {
+                        completion(nodeLayout, { _ in
                             apply(animation.isAnimated)
                         })
                     }

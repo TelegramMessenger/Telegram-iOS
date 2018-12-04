@@ -840,7 +840,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
             let galleryController = AvatarGalleryController(account: account, peer: peer, remoteEntries: cachedAvatarEntries.with { $0 }, replaceRootController: { controller, ready in
             })
             hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
-                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
+                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first?.representation
                 updateHiddenAvatarImpl?()
             }))
             presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in

@@ -44,7 +44,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         self.disposable.dispose()
     }
     
-    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         let emptySize = self.emptyNode.updateLayout(size)
         transition.updateFrame(node: self.emptyNode, frame: CGRect(origin: CGPoint(x: floor(size.width - emptySize.width) / 2.0, y: topInset + floor(size.height - topInset - emptySize.height) / 2.0), size: emptySize))

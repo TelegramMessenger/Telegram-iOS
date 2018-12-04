@@ -5,39 +5,20 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private enum PeerAvatarImageGalleryThumbnailContent: Equatable {
-    case avatar(PeerReference, [TelegramMediaImageRepresentation])
-    case standaloneImage([TelegramMediaImageRepresentation])
-    
-    var representations: [TelegramMediaImageRepresentation] {
-        switch self {
-            case let .avatar(_, representations):
-                return representations
-            case let .standaloneImage(representations):
-                return representations
-        }
-    }
-}
-
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
     let peer: Peer
-    let content: PeerAvatarImageGalleryThumbnailContent
+    let content: [ImageRepresentationWithReference]
     
-    init(account: Account, peer: Peer, content: PeerAvatarImageGalleryThumbnailContent) {
+    init(account: Account, peer: Peer, content: [ImageRepresentationWithReference]) {
         self.account = account
         self.peer = peer
         self.content = content
     }
     
     var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
-        if let representation = largestImageRepresentation(self.content.representations) {
-            switch self.content {
-                case let .avatar(peer, representations):
-                    return (avatarGalleryThumbnailPhoto(account: self.account, representations: representations.map({ ($0, .avatar(peer: peer, resource: $0.resource)) })), representation.dimensions)
-                case let .standaloneImage(representations):
-                    return (avatarGalleryThumbnailPhoto(account: self.account, representations: representations.map({ ($0, .standalone(resource: $0.resource)) })), representation.dimensions)
-            }
+        if let representation = largestImageRepresentation(self.content.map({ $0.representation })) {
+            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content), representation.dimensions)
         } else {
             return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
         }
@@ -92,16 +73,12 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        let content: PeerAvatarImageGalleryThumbnailContent
+        let content: [ImageRepresentationWithReference]
         switch self.entry {
             case let .topImage(representations, _):
-                if let peerReference = PeerReference(self.peer) {
-                    content = .avatar(peerReference, representations)
-                } else {
-                    return nil
-                }
-            case let .image(image, _, _, _):
-                content = .standaloneImage(image.representations)
+                content = representations
+            case let .image(_, representations, _, _, _):
+                content = representations
         }
         
         return (0, PeerAvatarImageGalleryThumbnailItem(account: self.account, peer: self.peer, content: content))
@@ -182,73 +159,65 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.footerContentNode.setEntry(entry)
             
-            if let largestSize = largestImageRepresentation(entry.representations) {
+            if let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]
+                let representations: [ImageRepresentationWithReference]
                 switch entry {
                     case let .topImage(topRepresentations, _):
-                        if let peerReference = PeerReference(self.peer) {
-                            representations = topRepresentations.map { representation in
-                                return (representation, .avatar(peer: peerReference, resource: representation.resource))
-                            }
-                        } else {
-                            representations = []
-                        }
-                    case let .image(image, _, _, _):
-                        representations = image.representations.map { representation in
-                            return (representation, .standalone(resource: representation.resource))
-                        }
+                        representations = topRepresentations
+                    case let .image(_, imageRepresentations, _, _, _):
+                        representations = imageRepresentations
                 }
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: representations), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                if let largestIndex = representations.index(where: { $0.0 == largestSize }) {
-                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: representations[largestIndex].1).start())
+                if let largestIndex = representations.index(where: { $0.representation == largestSize }) {
+                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: representations[largestIndex].reference).start())
                 }
                 
                 self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(largestSize.resource)
-                    |> deliverOnMainQueue).start(next: { [weak self] status in
-                        if let strongSelf = self {
-                            let previousStatus = strongSelf.status
-                            strongSelf.status = status
-                            switch status {
-                                case .Remote:
-                                    strongSelf.statusNode.isHidden = false
-                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                                    strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                                case let .Fetching(isActive, progress):
-                                    strongSelf.statusNode.isHidden = false
-                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                                    var actualProgress = progress
-                                    if isActive {
-                                        actualProgress = max(actualProgress, 0.027)
-                                    }
-                                    strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
-                                case .Local:
-                                    if let previousStatus = previousStatus, case .Fetching = previousStatus {
-                                        strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
-                                            if let strongSelf = self {
-                                                strongSelf.statusNode.alpha = 0.0
-                                                strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-                                                strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-                                                    if let strongSelf = self {
-                                                        strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-                                                    }
-                                                })
-                                            }
-                                        })
-                                    } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
-                                        strongSelf.statusNode.alpha = 0.0
-                                        strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-                                        strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-                                            if let strongSelf = self {
-                                                strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-                                            }
-                                        })
-                                    }
-                            }
+                |> deliverOnMainQueue).start(next: { [weak self] status in
+                    if let strongSelf = self {
+                        let previousStatus = strongSelf.status
+                        strongSelf.status = status
+                        switch status {
+                            case .Remote:
+                                strongSelf.statusNode.isHidden = false
+                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                                strongSelf.statusNode.transitionToState(.download(.white), completion: {})
+                            case let .Fetching(isActive, progress):
+                                strongSelf.statusNode.isHidden = false
+                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
+                                var actualProgress = progress
+                                if isActive {
+                                    actualProgress = max(actualProgress, 0.027)
+                                }
+                                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
+                            case .Local:
+                                if let previousStatus = previousStatus, case .Fetching = previousStatus {
+                                    strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
+                                        if let strongSelf = self {
+                                            strongSelf.statusNode.alpha = 0.0
+                                            strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                                            strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                                if let strongSelf = self {
+                                                    strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                                }
+                                            })
+                                        }
+                                    })
+                                } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
+                                    strongSelf.statusNode.alpha = 0.0
+                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = false
+                                    strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                        if let strongSelf = self {
+                                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                                        }
+                                    })
+                                }
                         }
-                    }))
+                    }
+                }))
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -359,29 +328,21 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     @objc func statusPressed() {
-        if let entry = self.entry, let largestSize = largestImageRepresentation(entry.representations), let status = self.status {
+        if let entry = self.entry, let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })), let status = self.status {
             switch status {
                 case .Fetching:
                     self.account.postbox.mediaBox.cancelInteractiveResourceFetch(largestSize.resource)
                 case .Remote:
-                    let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)]
+                    let representations: [ImageRepresentationWithReference]
                     switch entry {
                         case let .topImage(topRepresentations, _):
-                            if let peerReference = PeerReference(self.peer) {
-                                representations = topRepresentations.map { representation in
-                                    return (representation, .avatar(peer: peerReference, resource: representation.resource))
-                                }
-                            } else {
-                                representations = []
-                            }
-                        case let .image(image, _, _, _):
-                            representations = image.representations.map { representation in
-                                return (representation, .standalone(resource: representation.resource))
-                            }
+                            representations = topRepresentations
+                        case let .image(_, imageRepresentations, _, _, _):
+                            representations = imageRepresentations
                     }
                     
-                    if let largestIndex = representations.index(where: { $0.0 == largestSize }) {
-                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: representations[largestIndex].1).start())
+                    if let largestIndex = representations.index(where: { $0.representation == largestSize }) {
+                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: representations[largestIndex].reference).start())
                     }
                 default:
                     break

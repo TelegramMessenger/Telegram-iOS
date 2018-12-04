@@ -444,7 +444,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                     hasPhotos = true
                 }
                 
-                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false)!
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.didFinishWithImage = { image in
                     if let image = image {
@@ -457,12 +457,12 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                             }
                             updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource) |> deliverOnMainQueue).start(next: { result in
                                 switch result {
-                                case .complete:
-                                    updateState {
-                                        $0.withUpdatedUpdatingAvatar(nil)
-                                    }
-                                case .progress:
-                                    break
+                                    case .complete:
+                                        updateState {
+                                            $0.withUpdatedUpdatingAvatar(nil)
+                                        }
+                                    case .progress:
+                                        break
                                 }
                             }))
                         }
@@ -487,6 +487,27 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                             break
                         }
                     }))
+                }
+                mixin.didFinishWithView = {
+                    let _ = currentAvatarMixin.swap(nil)
+                    
+                    let _ = (account.postbox.loadedPeerWithId(account.peerId)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { peer in
+                        if peer.smallProfileImage != nil {
+                            let galleryController = AvatarGalleryController(account: account, peer: peer, replaceRootController: { controller, ready in
+                            })
+                            /*hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
+                                avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first
+                                updateHiddenAvatarImpl?()
+                            }))*/
+                            presentControllerImpl?(galleryController, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
+                                return nil
+                            }))
+                        } else {
+                            changeProfilePhotoImpl?()
+                        }
+                    })
                 }
                 mixin.didDismiss = { [weak legacyController] in
                     let _ = currentAvatarMixin.swap(nil)

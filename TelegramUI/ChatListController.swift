@@ -78,7 +78,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
-            self?.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+            self?.chatListDisplayNode.scrollToTop()
         }
         self.scrollToTopWithTabBar = { [weak self] in
             guard let strongSelf = self else {
@@ -328,7 +328,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             actionSheet?.dismissAnimated()
                             
                             if let strongSelf = self {
-                                let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start()
+                                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                                let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start(completed: {
+                                    self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                                })
                             }
                         }))
                         
@@ -337,7 +340,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                 actionSheet?.dismissAnimated()
                                 
                                 if let strongSelf = self {
-                                    let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start()
+                                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                                    let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start(completed: {
+                                        self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                                    })
                                     let _ = requestUpdatePeerIsBlocked(account: strongSelf.account, peerId: peer.id, isBlocked: true).start()
                                 }
                             }))

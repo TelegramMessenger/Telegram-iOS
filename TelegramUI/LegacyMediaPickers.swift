@@ -263,13 +263,14 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
                                     let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
-                                    let scaledSize = image.size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
+                                    let scaledSize = image.size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
                                     if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
                                         if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6) {
                                             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
                                             #if DEBUG
                                                 if #available(iOSApplicationExtension 11.0, *) {
                                                     if false, let heicData = compressImage(scaledImage, quality: 0.65) {
+                                                        print("scaledImageData \(scaledImageData.count), heicData \(heicData.count)")
                                                         var randomId: Int64 = 0
                                                         arc4random_buf(&randomId, 8)
                                                         let _ = try? heicData.write(to: URL(fileURLWithPath: tempFilePath + ".heic"))
@@ -292,14 +293,22 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                             if let timer = item.timer, timer > 0 && timer <= 60 {
                                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                             }
-                                            messages.append(.message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
+                                            
+                                            var text = caption ?? ""
+                                            if text.isEmpty && GlobalExperimentalSettings.enableTinyThumbnails {
+                                                if let tinyThumbnail = compressTinyThumbnail(scaledImage) {
+                                                    text = serializeTinyThumbnail(tinyThumbnail)
+                                                }
+                                            }
+                                            
+                                            messages.append(.message(text: text, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
                                         }
                                     }
                                 case let .asset(asset):
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
                                     let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
-                                    let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
+                                    let scaledSize = size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
                                     let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64())
                                     representations.append(TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource))
                                     

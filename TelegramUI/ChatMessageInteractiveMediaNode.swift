@@ -283,8 +283,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     return chatSecretPhoto(account: account, photoReference: .message(message: MessageReference(message), media: image))
                                 }
                             } else {
+                                let tinyThumbnailData: TinyThumbnailData?
+                                if GlobalExperimentalSettings.enableTinyThumbnails {
+                                    tinyThumbnailData = parseTinyThumbnail(message.text)
+                                } else {
+                                    tinyThumbnailData = nil
+                                }
                                 updateImageSignal = { synchronousLoad in
-                                    return chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad)
+                                    return chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, tinyThumbnailData: tinyThumbnailData)
                                 }
                             }
                             
@@ -429,7 +435,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             strongSelf.currentImageArguments = arguments
                             imageApply()
                             
-                            strongSelf.statusNode?.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
+                            if let statusNode = strongSelf.statusNode {
+                                var statusFrame = statusNode.frame
+                                statusFrame.origin.x = floor(imageFrame.midX - statusFrame.width / 2.0)
+                                statusFrame.origin.y = floor(imageFrame.midY - statusFrame.height / 2.0)
+                                statusNode.frame = statusFrame
+                            }
                             
                             if let replaceVideoNode = replaceVideoNode {
                                 if let videoNode = strongSelf.videoNode {
@@ -581,8 +592,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if progressRequired {
             if self.statusNode == nil {
                 let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.bubble.mediaOverlayControlBackgroundColor)
-                statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: radialStatusSize, height: radialStatusSize))
-                statusNode.position = self.imageNode.position
+                let imagePosition = self.imageNode.position
+                statusNode.frame = CGRect(origin: CGPoint(x: floor(imagePosition.x - radialStatusSize / 2.0), y: floor(imagePosition.y - radialStatusSize / 2.0)), size: CGSize(width: radialStatusSize, height: radialStatusSize))
                 self.statusNode = statusNode
                 self.addSubnode(statusNode)
             }

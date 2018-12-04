@@ -18,21 +18,21 @@ class ChatHoleItem: ListViewItem {
         //self.header = ChatMessageDateHeader(timestamp: index.timestamp, theme: theme, strings: strings)
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatHoleItemNode()
             node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, {})
+                    return (nil, { _ in })
                 })
             }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: node().insets), {
+            completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: node().insets), { _ in
             })
         }
     }

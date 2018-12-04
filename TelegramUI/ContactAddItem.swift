@@ -24,7 +24,7 @@ class ContactsAddItem: ListViewItem {
         self.header = header
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ContactsAddItemNode()
             let makeLayout = node.asyncLayout()
@@ -34,12 +34,12 @@ class ContactsAddItem: ListViewItem {
             node.insets = nodeLayout.insets
 
             completion(node, {
-                return (nil, { nodeApply(false) })
+                return (nil, { _ in nodeApply(false) })
             })
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ContactsAddItemNode {
                 let layout = nodeValue.asyncLayout()
@@ -47,7 +47,7 @@ class ContactsAddItem: ListViewItem {
                     let (first, last, firstWithHeader) = ContactsAddItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
                     let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader)
                     Queue.mainQueue().async {
-                        completion(nodeLayout, {
+                        completion(nodeLayout, { _ in
                             apply(animation.isAnimated)
                         })
                     }

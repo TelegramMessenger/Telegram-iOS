@@ -68,7 +68,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
             presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: true, theme: defaultPresentationTheme, present: { c, a in
                 self?.view.endEditing(true)
                 self?.present(c, in: .window(.root), with: a)
-            }, completion: { image in
+            }, openCurrent: nil, completion: { image in
                 self?.controllerNode.currentPhoto = image
             })
         })

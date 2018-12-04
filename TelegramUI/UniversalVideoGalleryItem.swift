@@ -426,7 +426,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     strongSelf.fetchStatus = fetchStatus
                     
                     if !item.hideControls {
-                        strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused || value == nil) && !fetching
+                        strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused) && !fetching
                     }
                     
                     if isAnimated || disablePlayerControls {

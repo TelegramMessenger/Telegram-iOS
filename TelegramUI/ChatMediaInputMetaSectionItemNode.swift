@@ -27,7 +27,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         self.theme = theme
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatMediaInputMetaSectionItemNode()
             node.contentSize = CGSize(width: 41.0, height: 41.0)
@@ -39,7 +39,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
             node.updateAppearanceTransition(transition: .immediate)
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, {
+                    return (nil, { _ in
                         
                     })
                 })
@@ -47,9 +47,9 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: node().insets), {
+            completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: node().insets), { _ in
                 (node() as? ChatMediaInputMetaSectionItemNode)?.setItem(item: self)
                 (node() as? ChatMediaInputMetaSectionItemNode)?.updateTheme(theme: self.theme)
             })

@@ -27,7 +27,7 @@ public enum ShareControllerSubject {
     case text(String)
     case quote(text: String, url: String)
     case messages([Message])
-    case image([TelegramMediaImageRepresentation])
+    case image([ImageRepresentationWithReference])
     case media(AnyMediaReference)
     case mapMedia(TelegramMediaMap)
     case fromExternal(([PeerId], String) -> Signal<ShareControllerExternalStatus, NoError>)
@@ -220,7 +220,7 @@ public final class ShareController: ViewController {
             case let .image(representations):
                 if case .saveToCameraRoll = preferredAction {
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
-                        self?.saveToCameraRoll(image: representations)
+                        self?.saveToCameraRoll(representations: representations)
                     })
                 }
             case let .media(mediaReference):
@@ -358,7 +358,7 @@ public final class ShareController: ViewController {
                             if !text.isEmpty {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
-                            messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations, reference: nil, partialReference: nil)), replyToMessageId: nil, localGroupingKey: nil))
+                            messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), reference: nil, partialReference: nil)), replyToMessageId: nil, localGroupingKey: nil))
                             let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
@@ -421,7 +421,7 @@ public final class ShareController: ViewController {
                     case let .quote(text, url):
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "\"\(text)\"\n\n\(url)", mediaReference: nil))
                     case let .image(representations):
-                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations, reference: nil, partialReference: nil)
+                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), reference: nil, partialReference: nil)
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "", mediaReference: .standalone(media: media)))
                     case let .media(mediaReference):
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "", mediaReference: mediaReference))
@@ -543,8 +543,8 @@ public final class ShareController: ViewController {
         }
     }
     
-    private func saveToCameraRoll(image: [TelegramMediaImageRepresentation]) {
-        let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image, reference: nil, partialReference: nil)
+    private func saveToCameraRoll(representations: [ImageRepresentationWithReference]) {
+        let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), reference: nil, partialReference: nil)
         self.controllerNode.transitionToProgress(signal: TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: self.account.postbox, mediaReference: .standalone(media: media)))
     }
     

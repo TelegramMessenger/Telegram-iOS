@@ -103,6 +103,12 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     private var disposable: Disposable?
     private var isActivated = false
     
+    private let _ready = Promise<Void>()
+    private var didSetReady = false
+    var ready: Signal<Void, NoError> {
+        return self._ready.get()
+    }
+    
     var scrollingInitiated: (() -> Void)?
     
     init(account: Account, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
@@ -189,11 +195,18 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             return preparedTransition(from: previous ?? [], to: entries, account: account, theme: presentationData.theme, strings: presentationData.strings, interaction: interaction, initial: previous == nil)
         }
         |> deliverOnMainQueue).start(next: { [weak self] transition in
-            self?.enqueueTransition(transition)
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.enqueueTransition(transition)
+            if !strongSelf.didSetReady {
+                strongSelf.didSetReady = true
+                strongSelf._ready.set(.single(Void()))
+            }
         })
     }
     
-    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, bottomInset)
         
@@ -224,7 +237,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     }
     
     private func enqueueTransition(_ transition: TrendingPaneTransition) {
-        enqueuedTransitions.append(transition)
+        self.enqueuedTransitions.append(transition)
         
         if self.validLayout != nil {
             while !self.enqueuedTransitions.isEmpty {
@@ -245,8 +258,9 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             
             var options = ListViewDeleteAndInsertOptions()
             if transition.initial {
-                //options.insert(.Synchronous)
-                //options.insert(.LowLatency)
+                options.insert(.Synchronous)
+                options.insert(.LowLatency)
+                options.insert(.PreferSynchronousResourceLoading)
             } else {
                 options.insert(.AnimateInsertion)
             }

@@ -151,7 +151,7 @@ final class CallControllerNode: ASDisplayNode {
         if !arePeersEqual(self.peer, peer) {
             self.peer = peer
             if let peerReference = PeerReference(peer), !peer.profileImageRepresentations.isEmpty {
-                let representations: [(TelegramMediaImageRepresentation, MediaResourceReference)] = peer.profileImageRepresentations.map({ ($0, .avatar(peer: peerReference, resource: $0.resource)) })
+                let representations: [ImageRepresentationWithReference] = peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: .avatar(peer: peerReference, resource: $0.resource)) })
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
                 self.dimNode.isHidden = false
             } else {

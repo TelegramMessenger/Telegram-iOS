@@ -40,6 +40,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case keepChatNavigationStack(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
     case reimport(PresentationTheme)
+    case sendTthumb(PresentationTheme)
+    case previewTthumb(PresentationTheme)
+    case animatedStickers(PresentationTheme)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -54,7 +57,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport:
+            case .clearTips, .reimport, .sendTthumb, .previewTthumb, .animatedStickers:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -87,8 +90,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 10
             case .reimport:
                 return 11
-            case .versionInfo:
+            case .sendTthumb:
                 return 12
+            case .previewTthumb:
+                return 13
+            case .animatedStickers:
+                return 14
+            case .versionInfo:
+                return 15
         }
     }
     
@@ -205,6 +214,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         exit(0)
                     }
                 })
+            case let .sendTthumb(theme):
+                return ItemListSwitchItem(theme: theme, title: "Send TThumb", value: GlobalExperimentalSettings.enableTinyThumbnails, sectionId: self.section, style: .blocks, updated: { value in
+                    GlobalExperimentalSettings.enableTinyThumbnails = value
+                })
+            case let .previewTthumb(theme):
+                return ItemListSwitchItem(theme: theme, title: "Preview TThumb", value: GlobalExperimentalSettings.forceTinyThumbnailsPreview, sectionId: self.section, style: .blocks, updated: { value in
+                    GlobalExperimentalSettings.forceTinyThumbnailsPreview = value
+                })
+            case let .animatedStickers(theme):
+                return ItemListSwitchItem(theme: theme, title: "Animated Stickers", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
+                    GlobalExperimentalSettings.animatedStickers = value
+                })
             case let .versionInfo(theme):
                 let bundle = Bundle.main
                 let bundleId = bundle.bundleIdentifier ?? ""
@@ -235,6 +256,9 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     if hasLegacyAppData {
         entries.append(.reimport(presentationData.theme))
     }
+    entries.append(.sendTthumb(presentationData.theme))
+    entries.append(.previewTthumb(presentationData.theme))
+    entries.append(.animatedStickers(presentationData.theme))
     entries.append(.versionInfo(presentationData.theme))
     
     return entries

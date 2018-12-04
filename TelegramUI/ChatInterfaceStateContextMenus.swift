@@ -563,9 +563,12 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                                 banPeer = nil
                             }
                         }
-                        if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
-                            optionsMap[id]!.insert(.forward)
+                        if !message.containsSecretMedia && !isAction {
+                            if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                                optionsMap[id]!.insert(.forward)
+                            }
                         }
+                        
                         if !message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.deleteGlobally)
                         } else {

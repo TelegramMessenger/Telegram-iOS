@@ -261,38 +261,65 @@ public final class PresentationCallManager {
             return .alreadyInProgress(call.peerId)
         }
         if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings?.0) {
-            let (presentationData, present, openSettings) = self.getDeviceAccessData()
-            
-            let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
-                DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
-                    present(c, a)
-                }, openSettings: {
-                    openSettings()
-                }, { value in
-                    subscriber.putNext(value)
-                    subscriber.putCompletion()
-                })
-                return EmptyDisposable
-            }
-            |> runOn(Queue.mainQueue())
-            let postbox = self.account.postbox
-            self.startCallDisposable.set((accessEnabledSignal
-            |> mapToSignal { accessEnabled -> Signal<Peer?, NoError> in
-                if !accessEnabled {
-                    return .single(nil)
-                }
-                return postbox.loadedPeerWithId(peerId)
-                |> take(1)
-                |> map(Optional.init)
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
-                guard let strongSelf = self, let peer = peer else {
+            let begin: () -> Void = { [weak self] in
+                guard let strongSelf = self else {
                     return
                 }
-                strongSelf.callKitIntegration?.startCall(peerId: peerId, displayTitle: peer.displayTitle)
-            }))
+                let (presentationData, present, openSettings) = strongSelf.getDeviceAccessData()
+                
+                let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
+                    DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+                        present(c, a)
+                    }, openSettings: {
+                        openSettings()
+                    }, { value in
+                        subscriber.putNext(value)
+                        subscriber.putCompletion()
+                    })
+                    return EmptyDisposable
+                }
+                |> runOn(Queue.mainQueue())
+                let postbox = strongSelf.account.postbox
+                strongSelf.startCallDisposable.set((accessEnabledSignal
+                |> mapToSignal { accessEnabled -> Signal<Peer?, NoError> in
+                    if !accessEnabled {
+                        return .single(nil)
+                    }
+                    return postbox.loadedPeerWithId(peerId)
+                    |> take(1)
+                    |> map(Optional.init)
+                }
+                |> deliverOnMainQueue).start(next: { peer in
+                    guard let strongSelf = self, let peer = peer else {
+                        return
+                    }
+                    strongSelf.callKitIntegration?.startCall(peerId: peerId, displayTitle: peer.displayTitle)
+                }))
+            }
+            if let currentCall = self.currentCall {
+                self.callKitIntegration?.dropCall(uuid: currentCall.internalId)
+                self.startCallDisposable.set((currentCall.hangUp()
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
+            } else {
+                begin()
+            }
         } else {
-            let _ = self.startCall(peerId: peerId).start()
+            let begin: () -> Void = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                let _ = strongSelf.startCall(peerId: peerId).start()
+            }
+            if let currentCall = self.currentCall {
+                self.startCallDisposable.set((currentCall.hangUp()
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
+            } else {
+                begin()
+            }
         }
         return .requested
     }

@@ -187,10 +187,10 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                                             navigationController?.pushViewController(infoController)
                                         }
                                     })
-                            case .chat:
+                            case let .chat(_, messageId):
                                 if let navigationController = navigationController {
                                     navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                    navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+                                    navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), messageId: messageId)
                                 }
                             case let .withBotStartPayload(payload):
                                 if let navigationController = navigationController {
@@ -296,40 +296,11 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                         }
                     }
                     if let shareUrl = shareUrl {
-                        let controller = PeerSelectionController(account: account)
-                        controller.peerSelected = { [weak controller] peerId in
-                            if let strongController = controller {
-                                strongController.dismiss()
-                                
-                                let textInputState: ChatTextInputState
-                                if let shareText = shareText, !shareText.isEmpty {
-                                    let urlString = NSMutableAttributedString(string: "\(shareUrl)\n")
-                                    let textString = NSAttributedString(string: "\(shareText)")
-                                    let selectionRange: Range<Int> = urlString.length ..< (urlString.length + textString.length)
-                                    urlString.append(textString)
-                                    textInputState = ChatTextInputState(inputText: urlString, selectionRange: selectionRange)
-                                } else {
-                                    textInputState = ChatTextInputState(inputText: NSAttributedString(string: "\(shareUrl)"))
-                                }
-                                
-                                let _ = (account.postbox.transaction({ transaction -> Void in
-                                    transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                                        if let currentState = currentState as? ChatInterfaceState {
-                                            return currentState.withUpdatedComposeInputState(textInputState)
-                                        } else {
-                                            return ChatInterfaceState().withUpdatedComposeInputState(textInputState)
-                                        }
-                                    })
-                                })
-                                |> deliverOnMainQueue).start(completed: {
-                                    navigationController?.pushViewController(ChatController(account: account, chatLocation: .peer(peerId), messageId: nil))
-                                })
-                            }
+                        var resultUrl = "https://t.me/share/url?url=\(urlEncodedStringFromString(shareUrl))"
+                        if let shareText = shareText {
+                            resultUrl += "&text=\(urlEncodedStringFromString(shareText))"
                         }
-                        if let navigationController = navigationController {
-                            account.telegramApplicationContext.applicationBindings.dismissNativeController()
-                            (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
-                        }
+                        convertedUrl = resultUrl
                     }
                 }
             } else if parsedUrl.host == "socks" || parsedUrl.host == "proxy" {
@@ -481,6 +452,25 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                     }
                     if let code = code {
                         convertedUrl = "https://t.me/login/\(code)"
+                    }
+                }
+            } else if parsedUrl.host == "confirmphone" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var phone: String?
+                    var hash: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "phone" {
+                                    phone = value
+                                } else if queryItem.name == "hash" {
+                                    hash = value
+                                }
+                            }
+                        }
+                    }
+                    if let phone = phone, let hash = hash {
+                        convertedUrl = "https://t.me/confirmphone?phone=\(phone)&hash=\(hash)"
                     }
                 }
             }

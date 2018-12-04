@@ -153,6 +153,11 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
     
     private let searchDisposable = MetaDisposable()
     
+    private let _ready = Promise<Void>()
+    var ready: Signal<Void, NoError> {
+        return self._ready.get()
+    }
+    
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, cancel: @escaping () -> Void) {
         self.account = account
         self.theme = theme
@@ -218,21 +223,21 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         }, install: { [weak self] info in
             if let strongSelf = self {
                 let _ = (loadedStickerPack(postbox: strongSelf.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        switch result {
-                            case let .result(info, items, installed):
-                                if installed {
-                                    return .complete()
-                                } else {
-                                    return addStickerPackInteractively(postbox: strongSelf.account.postbox, info: info, items: items)
-                                }
-                            case .fetching:
-                                break
-                            case .none:
-                                break
-                        }
-                        return .complete()
-                    }).start()
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    switch result {
+                        case let .result(info, items, installed):
+                            if installed {
+                                return .complete()
+                            } else {
+                                return addStickerPackInteractively(postbox: strongSelf.account.postbox, info: info, items: items)
+                            }
+                        case .fetching:
+                            break
+                        case .none:
+                            break
+                    }
+                    return .complete()
+                }).start()
             }
         }, sendSticker: { [weak self] file in
             if let strongSelf = self {
@@ -363,6 +368,9 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                 }
             }))
         }
+        
+        self._ready.set(self.trendingPane.ready)
+        self.trendingPane.activate()
     }
     
     deinit {
@@ -392,7 +400,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0 + bottomInset, right: 0.0), preloadSize: 300.0, type: .fixed(itemSize: CGSize(width: 75.0, height: 75.0), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         transition.updateFrame(node: self.trendingPane, frame: contentFrame)
-        self.trendingPane.updateLayout(size: contentFrame.size, topInset: 0.0, bottomInset: bottomInset, isExpanded: false, transition: transition)
+        self.trendingPane.updateLayout(size: contentFrame.size, topInset: 0.0, bottomInset: bottomInset, isExpanded: false, isVisible: true, transition: transition)
         
         transition.updateFrame(node: self.gridNode, frame: contentFrame)
         if firstLayout {

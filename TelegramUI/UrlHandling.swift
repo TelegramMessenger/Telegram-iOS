@@ -18,6 +18,8 @@ enum ParsedInternalUrl {
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case internalInstantView(url: String)
     case confirmationCode(Int)
+    case cancelAccountReset(phone: String, hash: String)
+    case share(url: String, text: String?)
 }
 
 private enum ParsedUrl {
@@ -37,6 +39,8 @@ enum ResolvedUrl {
     case join(String)
     case localization(String)
     case confirmationCode(Int)
+    case cancelAccountReset(phone: String, hash: String)
+    case share(url: String, text: String?)
 }
 
 func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -103,6 +107,21 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         if let code = code, let codeValue = Int(code) {
                             return .confirmationCode(codeValue)
                         }
+                    } else if peerName == "confirmphone" {
+                        var phone: String?
+                        var hash: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "phone" {
+                                    phone = value
+                                } else if queryItem.name == "hash" {
+                                    hash = value
+                                }
+                            }
+                        }
+                        if let phone = phone, let hash = hash {
+                            return .cancelAccountReset(phone: phone, hash: hash)
+                        }
                     } else {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -129,6 +148,25 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     if let code = Int(pathComponents[1]) {
                         return .confirmationCode(code)
                     }
+                } else if pathComponents[0] == "share" && pathComponents[1] == "url" {
+                    if let queryItems = components.queryItems {
+                        var url: String?
+                        var text: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "url" {
+                                    url = value
+                                } else if queryItem.name == "text" {
+                                    text = value
+                                }
+                            }
+                        }
+                        
+                        if let url = url {
+                            return .share(url: url, text: text)
+                        }
+                    }
+                    return nil
                 } else if let value = Int(pathComponents[1]) {
                     return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
@@ -191,6 +229,10 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             |> map(Optional.init)
         case let .confirmationCode(code):
             return .single(.confirmationCode(code))
+        case let .cancelAccountReset(phone, hash):
+            return .single(.cancelAccountReset(phone: phone, hash: hash))
+        case let .share(url, text):
+            return .single(.share(url: url, text: text))
     }
 }
 
@@ -289,19 +331,3 @@ func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolvedUrl,
         }
     }
 }
-
-/*private final class SafariLegacyPresentedController: LegacyPresentedController, SFSafariViewControllerDelegate {
-    @available(iOSApplicationExtension 9.0, *)
-    init(legacyController: SFSafariViewController) {
-        super.init(legacyController: legacyController, presentation: .custom)
-    }
-    
-    required init(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    @available(iOSApplicationExtension 9.0, *)
-    func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
-        self.dismiss()
-    }
-}*/

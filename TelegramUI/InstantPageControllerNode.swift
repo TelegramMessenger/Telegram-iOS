@@ -874,8 +874,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let _ = saveToCameraRoll(applicationContext: strongSelf.account.telegramApplicationContext, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in
-            if let strongSelf = self, let image = media.media as? TelegramMediaImage {
-                strongSelf.present(ShareController(account: strongSelf.account, subject: .image(image.representations)), nil)
+            if let strongSelf = self, let webPage = strongSelf.webPage, let image = media.media as? TelegramMediaImage {
+                strongSelf.present(ShareController(account: strongSelf.account, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) }))), nil)
             }
         })], catchTapsOutside: true)
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in

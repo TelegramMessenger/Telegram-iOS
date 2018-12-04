@@ -702,7 +702,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         var subject: ShareControllerSubject = ShareControllerSubject.messages(messages)
                         for m in messages[0].media {
                             if let image = m as? TelegramMediaImage {
-                                subject = .image(image.representations)
+                                subject = .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(messages[0]), media: m), resource: $0.resource)) }))
                             } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                                 if content.embedType == "iframe" {
                                     let item = OpenInItem.url(url: content.url)

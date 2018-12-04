@@ -38,6 +38,8 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
                                     strongSelf.timestamp = duration
                                 case let .recording(duration, _):
                                     strongSelf.timestamp = duration
+                                case .stopped:
+                                    break
                             }
                         }
                     }))

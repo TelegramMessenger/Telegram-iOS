@@ -6,16 +6,26 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
 
-enum AvatarGalleryEntry: Equatable {
-    case topImage([TelegramMediaImageRepresentation], GalleryItemIndexData?)
-    case image(TelegramMediaImage, Peer, Int32, GalleryItemIndexData?)
+public struct ImageRepresentationWithReference: Equatable {
+    public let representation: TelegramMediaImageRepresentation
+    public let reference: MediaResourceReference
     
-    var representations: [TelegramMediaImageRepresentation] {
+    public init(representation: TelegramMediaImageRepresentation, reference: MediaResourceReference) {
+        self.representation = representation
+        self.reference = reference
+    }
+}
+
+enum AvatarGalleryEntry: Equatable {
+    case topImage([ImageRepresentationWithReference], GalleryItemIndexData?)
+    case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], Peer, Int32, GalleryItemIndexData?)
+    
+    var representations: [ImageRepresentationWithReference] {
         switch self {
             case let .topImage(representations, _):
                 return representations
-            case let .image(image, _, _, _):
-                return image.representations
+            case let .image(_, representations, _, _, _):
+                return representations
         }
     }
     
@@ -23,7 +33,7 @@ enum AvatarGalleryEntry: Equatable {
         switch self {
             case let .topImage(_, indexData):
                 return indexData
-            case let .image(_, _, _, indexData):
+            case let .image(_, _, _, _, indexData):
                 return indexData
         }
     }
@@ -36,8 +46,8 @@ enum AvatarGalleryEntry: Equatable {
                 } else {
                     return false
                 }
-            case let .image(lhsImage, lhsPeer, lhsDate, lhsIndexData):
-                if case let .image(rhsImage, rhsPeer, rhsDate, rhsIndexData) = rhs, lhsImage.isEqual(to: rhsImage), arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsIndexData == rhsIndexData {
+            case let .image(lhsImageReference, lhsRepresentations, lhsPeer, lhsDate, lhsIndexData):
+                if case let .image(rhsImageReference, rhsRepresentations, rhsPeer, rhsDate, rhsIndexData) = rhs, lhsImageReference == rhsImageReference, lhsRepresentations == rhsRepresentations, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsIndexData == rhsIndexData {
                     return true
                 } else {
                     return false
@@ -58,12 +68,8 @@ final class AvatarGalleryControllerPresentationArguments {
 
 private func initialAvatarGalleryEntries(peer: Peer) -> [AvatarGalleryEntry]{
     var initialEntries: [AvatarGalleryEntry] = []
-    if let user = peer as? TelegramUser, !user.photo.isEmpty {
-        initialEntries.append(.topImage(user.photo, nil))
-    } else if let group = peer as? TelegramGroup {
-        initialEntries.append(.topImage(group.photo, nil))
-    } else if let channel = peer as? TelegramChannel {
-        initialEntries.append(.topImage(channel.photo, nil))
+    if !peer.profileImageRepresentations.isEmpty, let peerReference = PeerReference(peer) {
+        initialEntries.append(.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), nil))
     }
     return initialEntries
 }
@@ -79,10 +85,9 @@ func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[Avatar
             for photo in photos {
                 let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                 if result.isEmpty, let first = initialEntries.first {
-                    let image = TelegramMediaImage(imageId: photo.image.imageId, representations: first.representations, reference: photo.reference, partialReference: nil)
-                    result.append(.image(image, peer, photo.date, indexData))
+                    result.append(.image(photo.image.reference, first.representations, peer, photo.date, indexData))
                 } else {
-                    result.append(.image(photo.image, peer, photo.date, indexData))
+                    result.append(.image(photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), peer, photo.date, indexData))
                 }
                 index += 1
             }
@@ -387,8 +392,8 @@ class AvatarGalleryController: ViewController {
         switch entry {
             case .topImage:
                 break
-            case let .image(image, _, _, _):
-                if let reference = image.reference {
+            case let .image(reference, _, _, _, _):
+                if let reference = reference {
                     let _ = removeAccountPhoto(network: self.account.network, reference: reference).start()
                 }
                 if entry == self.entries.first {

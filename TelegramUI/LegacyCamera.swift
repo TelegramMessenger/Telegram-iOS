@@ -26,8 +26,8 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     
     if #available(iOSApplicationExtension 11.0, *) {
     } else {
-        controller.customPresentOverlayController = { [weak legacyController] overlayController in
-            guard let legacyController = legacyController, let overlayController = overlayController else {
+        controller.customPresentOverlayController = { [weak legacyController] generateController in
+            guard let legacyController = legacyController, let generateController = generateController else {
                 return
             }
             
@@ -35,6 +35,9 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
             let overlayLegacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
             overlayLegacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
             overlayLegacyController.statusBar.statusBarStyle = .Hide
+            
+            let overlayController = generateController(overlayLegacyController.context)!
+            
             overlayLegacyController.bind(controller: overlayController)
             overlayController.customDismissSelf = { [weak overlayLegacyController] in
                 overlayLegacyController?.dismiss()

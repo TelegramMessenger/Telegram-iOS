@@ -586,7 +586,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         self.presentationDataPromise = Promise(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
         
         self.recentListNode = ListView()
+        self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.listNode = ListView()
+        self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         
         self.statePromise = ValuePromise(self.stateValue, ignoreRepeated: true)
         
@@ -1015,6 +1017,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     
     private func updateTheme(theme: PresentationTheme) {
         self.backgroundColor = theme.chatList.backgroundColor
+        self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
+        self.listNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
     }
     
     private func updateState(_ f: (ChatListSearchContainerNodeState) -> ChatListSearchContainerNodeState) {
@@ -1186,6 +1190,14 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             if let itemNode = itemNode as? ChatListRecentPeersListItemNode {
                 itemNode.removePeer(peerId)
             }
+        }
+    }
+    
+    override func scrollToTop() {
+        if !self.listNode.isHidden {
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        } else {
+            self.recentListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         }
     }
 }

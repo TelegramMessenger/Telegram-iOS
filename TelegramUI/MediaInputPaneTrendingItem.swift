@@ -26,7 +26,7 @@ class MediaInputPaneTrendingItem: ListViewItem {
         self.unread = unread
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = MediaInputPaneTrendingItemNode()
             let (layout, apply) = node.asyncLayout()(self, params)
@@ -36,13 +36,13 @@ class MediaInputPaneTrendingItem: ListViewItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { apply() })
+                    return (nil, { info in apply(synchronousLoads && info.isOnScreen) })
                 })
             }
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? MediaInputPaneTrendingItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -50,8 +50,8 @@ class MediaInputPaneTrendingItem: ListViewItem {
                 async {
                     let (layout, apply) = makeLayout(self, params)
                     Queue.mainQueue().async {
-                        completion(layout, {
-                            apply()
+                        completion(layout, { _ in
+                            apply(false)
                         })
                     }
                 }
@@ -168,7 +168,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func asyncLayout() -> (_ item: MediaInputPaneTrendingItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: MediaInputPaneTrendingItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeInstallLayout = TextNode.asyncLayout(self.installTextNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
@@ -201,7 +201,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                 topItems.removeSubrange(5 ..< topItems.count)
             }
             
-            return (layout, { [weak self] in
+            return (layout, { [weak self] synchronousLoads in
                 if let strongSelf = self {
                     if item.topItems.count < Int(item.info.count) && item.topItems.count < 5 && strongSelf.item?.info.id != item.info.id {
                         strongSelf.preloadDisposable.set(preloadedFeaturedStickerSet(network: item.account.network, postbox: item.account.postbox, id: item.info.id).start())
@@ -267,7 +267,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                         }
                         if file.fileId != node.file?.fileId {
                             node.file = file
-                            node.setSignal(chatMessageSticker(account: item.account, file: file, small: true))
+                            node.setSignal(chatMessageSticker(account: item.account, file: file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
                             node.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: true)).start())
                         }
                         if let dimensions = file.dimensions {

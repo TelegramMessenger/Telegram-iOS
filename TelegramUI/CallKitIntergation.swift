@@ -4,9 +4,9 @@ import AVFoundation
 import Postbox
 import SwiftSignalKit
 
+private var sharedProviderDelegate: AnyObject?
+
 public final class CallKitIntegration {
-    private let providerDelegate: AnyObject
-    
     public static var isAvailable: Bool {
         #if targetEnvironment(simulator)
         return false
@@ -34,7 +34,10 @@ public final class CallKitIntegration {
         #else
         
         if #available(iOSApplicationExtension 10.0, *) {
-            self.providerDelegate = CallKitProviderDelegate(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged)
+            if sharedProviderDelegate == nil {
+                sharedProviderDelegate = CallKitProviderDelegate()
+            }
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged)
         } else {
             return nil
         }
@@ -43,31 +46,31 @@ public final class CallKitIntegration {
     
     func startCall(peerId: PeerId, displayTitle: String) {
         if #available(iOSApplicationExtension 10.0, *) {
-            (self.providerDelegate as! CallKitProviderDelegate).startCall(peerId: peerId, displayTitle: displayTitle)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(peerId: peerId, displayTitle: displayTitle)
         }
     }
     
     func answerCall(uuid: UUID) {
         if #available(iOSApplicationExtension 10.0, *) {
-            (self.providerDelegate as! CallKitProviderDelegate).answerCall(uuid: uuid)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.answerCall(uuid: uuid)
         }
     }
     
     func dropCall(uuid: UUID) {
         if #available(iOSApplicationExtension 10.0, *) {
-            (self.providerDelegate as! CallKitProviderDelegate).dropCall(uuid: uuid)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.dropCall(uuid: uuid)
         }
     }
     
     func reportIncomingCall(uuid: UUID, handle: String, displayTitle: String, completion: ((NSError?) -> Void)?) {
         if #available(iOSApplicationExtension 10.0, *) {
-            (self.providerDelegate as! CallKitProviderDelegate).reportIncomingCall(uuid: uuid, handle: handle, displayTitle: displayTitle, completion: completion)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, handle: handle, displayTitle: displayTitle, completion: completion)
         }
     }
     
     func reportOutgoingCallConnected(uuid: UUID, at date: Date) {
         if #available(iOSApplicationExtension 10.0, *) {
-            (self.providerDelegate as! CallKitProviderDelegate).reportOutgoingCallConnected(uuid: uuid, at: date)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportOutgoingCallConnected(uuid: uuid, at: date)
         }
     }
 }
@@ -77,29 +80,31 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private let provider: CXProvider
     private let callController = CXCallController()
     
-    private let startCall: (UUID, String) -> Signal<Bool, NoError>
-    private let answerCall: (UUID) -> Void
-    private let endCall: (UUID) -> Signal<Bool, NoError>
-    private let setCallMuted: (UUID, Bool) -> Void
-    private let audioSessionActivationChanged: (Bool) -> Void
+    private var startCall: ((UUID, String) -> Signal<Bool, NoError>)?
+    private var answerCall: ((UUID) -> Void)?
+    private var endCall: ((UUID) -> Signal<Bool, NoError>)?
+    private var setCallMuted: ((UUID, Bool) -> Void)?
+    private var audioSessionActivationChanged: ((Bool) -> Void)?
     
     private let disposableSet = DisposableSet()
     
-    fileprivate let audioSessionActivePromise: ValuePromise<Bool>
+    fileprivate var audioSessionActivePromise: ValuePromise<Bool>?
     
-    init(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    override init() {
+        self.provider = CXProvider(configuration: CallKitProviderDelegate.providerConfiguration)
+        
+        super.init()
+        
+        self.provider.setDelegate(self, queue: nil)
+    }
+    
+    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         self.audioSessionActivePromise = audioSessionActivePromise
         self.startCall = startCall
         self.answerCall = answerCall
         self.endCall = endCall
         self.setCallMuted = setCallMuted
         self.audioSessionActivationChanged = audioSessionActivationChanged
-        
-        self.provider = CXProvider(configuration: CallKitProviderDelegate.providerConfiguration)
-        
-        super.init()
-        
-        self.provider.setDelegate(self, queue: nil)
     }
     
     static var providerConfiguration: CXProviderConfiguration {
@@ -184,19 +189,16 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func providerDidReset(_ provider: CXProvider) {
-        /*stopAudio()
-        
-        for call in callManager.calls {
-            call.end()
-        }
-        
-        callManager.removeAllCalls()*/
     }
     
     func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
+        guard let startCall = self.startCall else {
+            action.fail()
+            return
+        }
         let disposable = MetaDisposable()
         self.disposableSet.add(disposable)
-        disposable.set((self.startCall(action.callUUID, action.handle.value)
+        disposable.set((startCall(action.callUUID, action.handle.value)
         |> deliverOnMainQueue
         |> afterDisposed { [weak self, weak disposable] in
             if let strongSelf = self, let disposable = disposable {
@@ -212,42 +214,53 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
-        self.answerCall(action.callUUID)
-        
+        guard let answerCall = self.answerCall else {
+            action.fail()
+            return
+        }
+        answerCall(action.callUUID)
         action.fulfill()
     }
     
     func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
+        guard let endCall = self.endCall else {
+            action.fail()
+            return
+        }
         let disposable = MetaDisposable()
         self.disposableSet.add(disposable)
-        disposable.set((self.endCall(action.callUUID)
-            |> deliverOnMainQueue
-            |> afterDisposed { [weak self, weak disposable] in
-                if let strongSelf = self, let disposable = disposable {
-                    strongSelf.disposableSet.remove(disposable)
-                }
-            }).start(next: { result in
-                if result {
-                    action.fulfill(withDateEnded: Date())
-                } else {
-                    action.fail()
-                }
-            }))
+        disposable.set((endCall(action.callUUID)
+        |> deliverOnMainQueue
+        |> afterDisposed { [weak self, weak disposable] in
+            if let strongSelf = self, let disposable = disposable {
+                strongSelf.disposableSet.remove(disposable)
+            }
+        }).start(next: { result in
+            if result {
+                action.fulfill(withDateEnded: Date())
+            } else {
+                action.fail()
+            }
+        }))
     }
     
     func provider(_ provider: CXProvider, perform action: CXSetMutedCallAction) {
-        self.setCallMuted(action.uuid, action.isMuted)
+        guard let setCallMuted = self.setCallMuted else {
+            action.fail()
+            return
+        }
+        setCallMuted(action.uuid, action.isMuted)
         action.fulfill()
     }
     
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
-        self.audioSessionActivationChanged(true)
-        self.audioSessionActivePromise.set(true)
+        self.audioSessionActivationChanged?(true)
+        self.audioSessionActivePromise?.set(true)
     }
     
     func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
-        self.audioSessionActivationChanged(false)
-        self.audioSessionActivePromise.set(false)
+        self.audioSessionActivationChanged?(false)
+        self.audioSessionActivePromise?.set(false)
     }
 }
 

@@ -53,7 +53,7 @@ private enum LanguageListEntry: Comparable, Identifiable {
                     openSearch()
                 })
             case let .localization(_, info, type, selected, activity, revealed, editing):
-                return LocalizationListItem(theme: theme, strings: strings, id: info.languageCode, title: info.title, subtitle: info.localizedTitle, checked: selected, activity: activity, editing: LocalizationListItemEditing(editable: !searchMode && !info.isOfficial, editing: editing, revealed: revealed, reorderable: false), sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
+                return LocalizationListItem(theme: theme, strings: strings, id: info.languageCode, title: info.title, subtitle: info.localizedTitle, checked: selected, activity: activity, editing: LocalizationListItemEditing(editable: !selected && !searchMode && !info.isOfficial, editing: editing, revealed: !selected && revealed, reorderable: false), sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
                     selectLocalization(info)
                 }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem)
         }

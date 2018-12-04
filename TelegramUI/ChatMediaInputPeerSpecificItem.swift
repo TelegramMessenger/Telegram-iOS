@@ -26,7 +26,7 @@ final class ChatMediaInputPeerSpecificItem: ListViewItem {
         self.theme = theme
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, () -> Void)) -> Void) {
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatMediaInputPeerSpecificItemNode()
             node.contentSize = boundingSize
@@ -34,7 +34,7 @@ final class ChatMediaInputPeerSpecificItem: ListViewItem {
             node.inputNodeInteraction = self.inputNodeInteraction
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, {
+                    return (nil, { _ in
                         node.updateItem(account: self.account, peer: self.peer, collectionId: self.collectionId, theme: self.theme)
                         node.updateAppearanceTransition(transition: .immediate)
                     })
@@ -43,9 +43,9 @@ final class ChatMediaInputPeerSpecificItem: ListViewItem {
         }
     }
     
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), {
+            completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), { _ in
                 (node() as? ChatMediaInputPeerSpecificItemNode)?.updateItem(account: self.account, peer: self.peer, collectionId: self.collectionId, theme: self.theme)
             })
         }

@@ -46,6 +46,7 @@ public enum AccessType {
     case allowed
     case denied
     case restricted
+    case unreachable
 }
 
 private let cachedMediaLibraryAccessStatus = Atomic<Bool?>(value: nil)
@@ -55,8 +56,6 @@ public final class DeviceAccess {
     static var contacts: Signal<Bool?, NoError> {
         return self.contactsPromise.get()
     }
-    
-    private static let notificationsPromise = Promise<AccessType?>(nil)
     
     public static func isMicrophoneAccessAuthorized() -> Bool? {
         return AVAudioSession.sharedInstance().recordPermission() == .granted
@@ -70,7 +69,11 @@ public final class DeviceAccess {
                         UNUserNotificationCenter.current().getNotificationSettings(completionHandler: { settings in
                             switch settings.authorizationStatus {
                                 case .authorized:
-                                    subscriber.putNext(.allowed)
+                                    if settings.alertSetting == .disabled || settings.soundSetting == .disabled || settings.badgeSetting == .disabled || settings.notificationCenterSetting == .disabled || settings.lockScreenSetting == .disabled {
+                                        subscriber.putNext(.unreachable)
+                                    } else {
+                                        subscriber.putNext(.allowed)
+                                    }
                                 case .denied:
                                     subscriber.putNext(.denied)
                                 case .notDetermined:
@@ -158,7 +161,7 @@ public final class DeviceAccess {
         }
     }
     
-    public static func authorizeAccess(to subject: DeviceAccessSubject, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
+    public static func authorizeAccess(to subject: DeviceAccessSubject, account: Account? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
             switch subject {
                 case .camera:
                     let status = PGCamera.cameraAuthorizationStatus()
@@ -340,6 +343,12 @@ public final class DeviceAccess {
                             }
                         }
                     })
+                case .notifications:
+                    if let account = account {
+                        account.telegramApplicationContext.applicationBindings.registerForNotifications({ result in
+                            completion(result)
+                        })
+                    }
                 default:
                     break
             }

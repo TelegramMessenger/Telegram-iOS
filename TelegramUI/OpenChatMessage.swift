@@ -29,7 +29,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
             switch action.action {
             case let .photoUpdated(image):
                 if let peer = messageMainPeer(message), let image = image {
-                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image, peer, message.timestamp, nil)])
+                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer, message.timestamp, nil)])
                     let galleryController = AvatarGalleryController(account: account, peer: peer, remoteEntries: promise, replaceRootController: { controller, ready in
                         
                     })

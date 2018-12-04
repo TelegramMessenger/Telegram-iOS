@@ -161,9 +161,10 @@ final class ManagedAudioRecorderContext {
     
     private let audioUnit = Atomic<AudioUnit?>(value: nil)
     
-    private var waveformSamples = Data()
-    private var waveformPeak: Int16 = 0
-    private var waveformPeakCount: Int = 0
+    private var compressedWaveformSamples = Data()
+    private var currentPeak: Int64 = 0
+    private var currentPeakCount: Int = 0
+    private var peakCompressionFactor: Int = 1
     
     private var micLevelPeak: Int16 = 0
     private var micLevelPeakCount: Int = 0
@@ -175,9 +176,9 @@ final class ManagedAudioRecorderContext {
     private var hasAudioSession = false
     private var audioSessionDisposable: Disposable?
     
-    private var tonePlayer: TonePlayer?
-    //private var toneRenderer: MediaPlayerAudioRenderer?
-    //private var toneRendererAudioSession: MediaPlayerAudioSessionCustomControl?
+    //private var tonePlayer: TonePlayer?
+    private var toneRenderer: MediaPlayerAudioRenderer?
+    private var toneRendererAudioSession: MediaPlayerAudioSessionCustomControl?
     private var toneRendererAudioSessionActivated = false
     
     private var processSamples = false
@@ -200,7 +201,7 @@ final class ManagedAudioRecorderContext {
         self.dataItem = TGDataItem()
         self.oggWriter = TGOggOpusWriter()
         
-        /*if false, let toneData = audioRecordingToneData {
+        if beginWithTone, let toneData = audioRecordingToneData {
             self.processSamples = false
             let toneRenderer = MediaPlayerAudioRenderer(audioSession: .custom({ [weak self] control in
                 queue.async {
@@ -286,9 +287,9 @@ final class ManagedAudioRecorderContext {
             toneTimer.start()
         } else {
             self.processSamples = true
-        }*/
+        }
         
-        if beginWithTone, let beginToneData = beginToneData {
+        /*if beginWithTone, let beginToneData = beginToneData {
             self.tonePlayer = TonePlayer()
             self.tonePlayer?.play(data: beginToneData, completed: { [weak self] in
                 queue.async {
@@ -307,7 +308,7 @@ final class ManagedAudioRecorderContext {
             })
         } else {
             self.processSamples = true
-        }
+        }*/
         
         addAudioRecorderContext(self.id, self)
         addAudioUnitHolder(self.id, queue, self.audioUnit)
@@ -331,7 +332,7 @@ final class ManagedAudioRecorderContext {
         
         self.audioSessionDisposable?.dispose()
         
-        //self.toneRenderer?.stop()
+        self.toneRenderer?.stop()
         self.toneTimer?.invalidate()
     }
     
@@ -396,7 +397,7 @@ final class ManagedAudioRecorderContext {
         
         if self.audioSessionDisposable == nil {
             let queue = self.queue
-            self.audioSessionDisposable = self.mediaManager.audioSession.push(audioSessionType: .record, activate: { [weak self] state in
+            self.audioSessionDisposable = self.mediaManager.audioSession.push(audioSessionType: .record(speaker: self.beginWithTone), activate: { [weak self] state in
                 queue.async {
                     if let strongSelf = self, !strongSelf.paused {
                         strongSelf.hasAudioSession = true
@@ -409,6 +410,7 @@ final class ManagedAudioRecorderContext {
                         if let strongSelf = self {
                             strongSelf.hasAudioSession = false
                             strongSelf.stop()
+                            strongSelf.recordingState.set(.stopped)
                             subscriber.putCompletion()
                         }
                     }
@@ -420,12 +422,13 @@ final class ManagedAudioRecorderContext {
     }
     
     func audioSessionAcquired(headset: Bool) {
-        if let tonePlayer = self.tonePlayer, headset || self.beginWithTone {
+        if let toneRenderer = self.toneRenderer, headset || self.beginWithTone {
             self.beganWithTone(true)
             if !self.toneRendererAudioSessionActivated {
                 self.toneRendererAudioSessionActivated = true
-                tonePlayer.start()
+                self.toneRendererAudioSession?.activate()
             }
+            toneRenderer.setRate(1.0)
         } else {
             self.processSamples = true
             self.beganWithTone(false)
@@ -463,9 +466,9 @@ final class ManagedAudioRecorderContext {
             }
         }
         
-        if let tonePlayer = self.tonePlayer, self.toneRendererAudioSessionActivated {
+        if let toneRenderer = self.toneRenderer, self.toneRendererAudioSessionActivated {
             self.toneRendererAudioSessionActivated = false
-            tonePlayer.stop()
+            toneRenderer.stop()
         }
         
         let audioSessionDisposable = self.audioSessionDisposable
@@ -525,8 +528,6 @@ final class ManagedAudioRecorderContext {
                 self.audioBuffer.append(currentEncoderPacket.assumingMemoryBound(to: UInt8.self), count: currentEncoderPacketSize)
                 break
             } else {
-                let previousBytesWritten = self.oggWriter.encodedBytes()
-                
                 self.processWaveformPreview(samples: currentEncoderPacket.assumingMemoryBound(to: Int16.self), count: currentEncoderPacketSize / 2)
                 
                 self.oggWriter.writeFrame(currentEncoderPacket.assumingMemoryBound(to: UInt8.self), frameByteCount: UInt(currentEncoderPacketSize))
@@ -536,16 +537,6 @@ final class ManagedAudioRecorderContext {
                     self.recordingStateUpdateTimestamp = timestamp
                     self.recordingState.set(.recording(duration: oggWriter.encodedDuration(), durationMediaTimestamp: timestamp))
                 }
-                
-                /*NSUInteger currentBytesWritten = [_oggWriter encodedBytes];
-                if (currentBytesWritten != previousBytesWritten)
-                {
-                    [ActionStageInstance() dispatchOnStageQueue:^
-                        {
-                        TGLiveUploadActor *actor = (TGLiveUploadActor *)[ActionStageInstance() executingActorWithPath:_liveUploadPath];
-                        [actor updateSize:currentBytesWritten];
-                        }];
-                }*/
             }
         }
     }
@@ -560,19 +551,28 @@ final class ManagedAudioRecorderContext {
                     sample = -sample
                 }
             }
-            if self.waveformPeak < sample {
-                self.waveformPeak = sample
-            }
-            self.waveformPeakCount += 1
             
-            if self.waveformPeakCount >= 100 {
-                self.waveformSamples.count += 2
-                var waveformPeak = self.waveformPeak
-                withUnsafeBytes(of: &waveformPeak, { bytes -> Void in
-                    self.waveformSamples.append(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: 2)
+            self.currentPeak = max(Int64(sample), self.currentPeak)
+            self.currentPeakCount += 1
+            if self.currentPeakCount == self.peakCompressionFactor {
+                var compressedPeak = self.currentPeak//Int16(Float(self.currentPeak) / Float(self.peakCompressionFactor))
+                withUnsafeBytes(of: &compressedPeak, { buffer in
+                    self.compressedWaveformSamples.append(buffer.bindMemory(to: UInt8.self))
                 })
-                self.waveformPeak = 0
-                self.waveformPeakCount = 0
+                self.currentPeak = 0
+                self.currentPeakCount = 0
+                
+                let compressedSampleCount = self.compressedWaveformSamples.count / 2
+                if compressedSampleCount == 200 {
+                    self.compressedWaveformSamples.withUnsafeMutableBytes { (compressedSamples: UnsafeMutablePointer<Int16>) -> Void in
+                        for i in 0 ..< 100 {
+                            let maxSample = Int64(max(compressedSamples[i * 2 + 0], compressedSamples[i * 2 + 1]))
+                            compressedSamples[i] = Int16(maxSample)
+                        }
+                    }
+                    self.compressedWaveformSamples.count = 100 * 2
+                    self.peakCompressionFactor *= 2
+                }
             }
             
             if self.micLevelPeak < sample {
@@ -599,8 +599,8 @@ final class ManagedAudioRecorderContext {
             memset(scaledSamples, 0, 100 * 2);
             var waveform: Data?
             
-            let count = self.waveformSamples.count / 2
-            self.waveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
+            let count = self.compressedWaveformSamples.count / 2
+            self.compressedWaveformSamples.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
                 for i in 0 ..< count {
                     let sample = samples[i]
                     let index = i * 100 / count
@@ -616,7 +616,7 @@ final class ManagedAudioRecorderContext {
                     if peak < sample {
                         peak = sample
                     }
-                    sumSamples += Int64(peak)
+                    sumSamples += Int64(sample)
                 }
                 var calculatedPeak: UInt16 = 0
                 calculatedPeak = UInt16((Double(sumSamples) * 1.8 / 100.0))
@@ -627,12 +627,12 @@ final class ManagedAudioRecorderContext {
                 
                 for i in 0 ..< 100 {
                     let sample: UInt16 = UInt16(Int64(scaledSamples[i]))
-                    if sample > calculatedPeak {
-                        scaledSamples[i] = Int16(calculatedPeak)
-                    }
+                    let minPeak = min(Int64(sample), Int64(calculatedPeak))
+                    let resultPeak = minPeak * 31 / Int64(calculatedPeak)
+                    scaledSamples[i] = Int16(clamping: min(31, resultPeak))
                 }
                 
-                let resultWaveform = AudioWaveform(samples: Data(bytes: scaledSamplesMemory, count: 100 * 2), peak: Int32(calculatedPeak))
+                let resultWaveform = AudioWaveform(samples: Data(bytes: scaledSamplesMemory, count: 100 * 2), peak: 31)
                 let bitstream = resultWaveform.makeBitstream()
                 waveform = AudioWaveform(bitstream: bitstream, bitsPerSample: 5).makeBitstream()
             }
@@ -647,23 +647,7 @@ final class ManagedAudioRecorderContext {
 enum AudioRecordingState: Equatable {
     case paused(duration: Double)
     case recording(duration: Double, durationMediaTimestamp: Double)
-    
-    static func ==(lhs: AudioRecordingState, rhs: AudioRecordingState) -> Bool {
-        switch lhs {
-            case let .paused(duration):
-                if case .paused(duration) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .recording(duration, durationMediaTimestamp):
-                if case .recording(duration, durationMediaTimestamp) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
+    case stopped
 }
 
 final class ManagedAudioRecorder {

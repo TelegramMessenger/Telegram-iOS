@@ -197,4 +197,12 @@ class ChatListControllerNode: ASDisplayNode {
             self.searchDisplayController = nil
         }
     }
+    
+    func scrollToTop() {
+        if let searchDisplayController = self.searchDisplayController {
+            searchDisplayController.contentNode.scrollToTop()
+        } else {
+            self.chatListNode.scrollToPosition(.top)
+        }
+    }
 }

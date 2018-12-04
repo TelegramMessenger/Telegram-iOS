@@ -258,7 +258,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             |> map { status in
                                 switch status.mediaStatus {
                                     case let .fetchStatus(fetchStatus):
-                                        if !voice {
+                                        if !voice && !message.flags.isSending {
                                             return FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus)
                                         } else {
                                             return FileMediaResourceStatus(mediaStatus: .fetchStatus(fetchStatus), fetchStatus: status.fetchStatus)
@@ -623,7 +623,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let state: RadialStatusNodeState
         var streamingState: RadialStatusNodeState = .none
         
-        if isAudio && !isVoice {
+        let isSending = message.flags.isSending
+        
+        if isAudio && !isVoice && !isSending {
             let streamingStatusForegroundColor: UIColor = incoming ? bubbleTheme.incomingAccentControlColor : bubbleTheme.outgoingAccentControlColor
             let streamingStatusBackgroundColor: UIColor = incoming ? bubbleTheme.incomingMediaInactiveControlColor : bubbleTheme.outgoingMediaInactiveControlColor
             switch resourceStatus.fetchStatus {
