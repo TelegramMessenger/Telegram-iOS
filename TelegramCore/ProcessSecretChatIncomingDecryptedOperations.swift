@@ -110,6 +110,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transactio
                 if let operation = entry.contents as? SecretChatIncomingDecryptedOperation {
                     do {
                         var message: StoreMessage?
+                        var contentParsingError = false
                         var resources: [(MediaResource, Data)] = []
                         var serviceAction: SecretChatServiceAction?
                         
@@ -147,7 +148,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transactio
                                     }
                                     serviceAction = SecretChatServiceAction(apiMessage)
                                 } else {
-                                    throw MessageParsingError.contentParsingError
+                                    contentParsingError = true
                                 }
                         }
                         
@@ -288,6 +289,8 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transactio
                             }
                             let _ = transaction.addMessages([message], location: .Random)
                             addedMessages.append(message)
+                        } else if contentParsingError {
+                            Logger.shared.log("SecretChat", "Couldn't parse secret message content")
                         }
                     } catch let error {
                         if let error = error as? MessageParsingError {

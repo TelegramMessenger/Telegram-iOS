@@ -80,6 +80,8 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                             }
                         case .left:
                             updatedInclusion = .never
+                        case .kicked where channel.creationDate == 0:
+                            updatedInclusion = .never
                         default:
                             if currentInclusion == .notSpecified {
                                 updatedInclusion = .never
