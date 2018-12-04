@@ -69,6 +69,7 @@ public:
    virtual void updateStaticProperty();
    virtual void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource);
    bool hasMatte() { if (mLayerData->mMatteType == MatteType::None) return false; return true; }
+   MatteType matteType() const { return mLayerData->mMatteType;}
    bool visible() const;
    virtual void buildLayerNode();
    LOTLayerNode * layerNode() const {return mLayerCNode.get();}

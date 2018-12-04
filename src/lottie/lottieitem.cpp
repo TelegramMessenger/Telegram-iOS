@@ -217,7 +217,6 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle
         for (auto &i : mDrawableList) {
             matteRle = matteRle + i->rle();
         }
-
         if (!inheritMatte.empty())
             matteRle = matteRle & inheritMatte;
     } else {
@@ -246,7 +245,7 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle
         if (rle.empty()) continue;
 
         if (!matteRle.empty()) {
-            if (mLayerData->mMatteType == MatteType::AlphaInv) {
+            if (matteType() == MatteType::AlphaInv) {
                 rle = rle - matteRle;
             } else {
                 rle = rle & matteRle;
@@ -425,6 +424,10 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
         matteSource->renderList(mDrawableList);
         for (auto &i : mDrawableList) {
             matteRle = matteRle + i->rle();
+        }
+
+        if (matteType() == MatteType::AlphaInv ) {
+            matteRle = VRle::toRle(painter->clipBoundingRect()) - matteRle;
         }
 
         if (!inheritMatte.empty())
