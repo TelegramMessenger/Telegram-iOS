@@ -314,6 +314,8 @@ VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
 
     render(outRef);
 
+    path = VPath();
+
     return std::move(rle);
 }
 
@@ -333,16 +335,20 @@ class RleTaskScheduler {
         SW_FT_Stroker_New(&stroker);
 
         // Task Loop
+        RleTask task;
         while (true) {
-            RleTask *task = nullptr;
+            bool success = false;
 
             for (unsigned n = 0; n != _count * 32; ++n) {
-                if (_q[(i + n) % _count].try_pop(task)) break;
+                if (_q[(i + n) % _count].try_pop(task)) {
+                    success = true;
+                    break;
+                }
             }
-            if (!task && !_q[i].pop(task)) break;
 
-            task->sender.set_value((*task)(outlineRef, stroker));
-            delete task;
+            if (!success && !_q[i].pop(task)) break;
+
+            task.sender.set_value((task)(outlineRef, stroker));
         }
 
         // cleanup
@@ -364,16 +370,16 @@ public:
         for (auto &e : _threads) e.join();
     }
 
-    std::future<VRle> async(RleTask *task)
+    std::future<VRle> async(RleTask &&task)
     {
-        auto receiver = std::move(task->sender.get_future());
+        auto receiver = std::move(task.sender.get_future());
         auto i = _index++;
 
         for (unsigned n = 0; n != _count; ++n) {
-            if (_q[(i + n) % _count].try_push(task)) return receiver;
+            if (_q[(i + n) % _count].try_push(std::move(task))) return receiver;
         }
 
-        _q[i % _count].push(task);
+        _q[i % _count].push(std::move(task));
 
         return receiver;
     }
@@ -381,27 +387,27 @@ public:
     std::future<VRle> strokeRle(VPath &&path, VRle &&rle, CapStyle cap, JoinStyle join,
                                 float width, float meterLimit, const VRect &clip)
     {
-        RleTask *task = new RleTask();
-        task->stroke = true;
-        task->path = std::move(path);
-        task->rle = std::move(rle);
-        task->cap = cap;
-        task->join = join;
-        task->width = width;
-        task->meterLimit = meterLimit;
-        task->clip = clip;
-        return async(task);
+        RleTask task;
+        task.stroke = true;
+        task.path = std::move(path);
+        task.rle = std::move(rle);
+        task.cap = cap;
+        task.join = join;
+        task.width = width;
+        task.meterLimit = meterLimit;
+        task.clip = clip;
+        return async(std::move(task));
     }
 
     std::future<VRle> fillRle(VPath &&path, VRle &&rle, FillRule fillRule, const VRect &clip)
     {
-        RleTask *task = new RleTask();
-        task->path = std::move(path);
-        task->rle = std::move(rle);
-        task->fillRule = fillRule;
-        task->clip = clip;
-        task->stroke = false;
-        return async(task);
+        RleTask task;
+        task.path = std::move(path);
+        task.rle = std::move(rle);
+        task.fillRule = fillRule;
+        task.clip = clip;
+        task.stroke = false;
+        return async(std::move(task));
     }
 };
 

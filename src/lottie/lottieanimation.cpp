@@ -114,17 +114,19 @@ class RenderTaskScheduler {
 
     void run(unsigned i)
     {
+        RenderTask task;
         while (true) {
-            RenderTask *task = nullptr;
-
+            bool success = false;
             for (unsigned n = 0; n != _count * 32; ++n) {
-                if (_q[(i + n) % _count].try_pop(task)) break;
+                if (_q[(i + n) % _count].try_pop(task)) {
+                    success = true;
+                    break;
+                }
             }
-            if (!task && !_q[i].pop(task)) break;
+            if (!success && !_q[i].pop(task)) break;
 
-            auto result = task->playerImpl->render(task->frameNo, task->surface);
-            task->sender.set_value(result);
-            delete task;
+            auto result = task.playerImpl->render(task.frameNo, task.surface);
+            task.sender.set_value(result);
         }
     }
 
@@ -143,16 +145,16 @@ public:
         for (auto &e : _threads) e.join();
     }
 
-    std::future<Surface> async(RenderTask *task)
+    std::future<Surface> async(RenderTask &&task)
     {
-        auto receiver = std::move(task->receiver);
+        auto receiver = std::move(task.receiver);
         auto i = _index++;
 
         for (unsigned n = 0; n != _count; ++n) {
-            if (_q[(i + n) % _count].try_push(task)) return receiver;
+            if (_q[(i + n) % _count].try_push(std::move(task))) return receiver;
         }
 
-        _q[i % _count].push(task);
+        _q[i % _count].push(std::move(task));
 
         return receiver;
     }
@@ -160,11 +162,11 @@ public:
     std::future<Surface> render(AnimationImpl *impl, size_t frameNo,
                              Surface &&surface)
     {
-        RenderTask *task = new RenderTask();
-        task->playerImpl = impl;
-        task->frameNo = frameNo;
-        task->surface = std::move(surface);
-        return async(task);
+        RenderTask task;
+        task.playerImpl = impl;
+        task.frameNo = frameNo;
+        task.surface = std::move(surface);
+        return async(std::move(task));
     }
 };
 static RenderTaskScheduler render_scheduler;
