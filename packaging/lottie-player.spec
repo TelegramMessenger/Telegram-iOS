@@ -2,7 +2,7 @@ Name:       lottie-player
 Summary:    lottie player library
 Version:    0.0.1
 Release:    1
-Group:      System/Libraries
+Group:      UI Framework/Services
 License:    Apache-2.0
 URL:        http://www.tizen.org/
 Source0:    %{name}-%{version}.tar.gz
@@ -68,6 +68,3 @@ cp %{_builddir}/%{buildsubdir}/LICENSE %{buildroot}/%{_datadir}/license/%{name}
 %{_libdir}/liblottie-player.so
 %{_libdir}/cmake/lottie-player/*.cmake
 %{_libdir}/pkgconfig/lottie-player.pc
-
-
-
