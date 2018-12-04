@@ -1193,15 +1193,6 @@ void LOTDrawable::sync()
         mCNode->mStroke.meterLimit = mStroke.meterLimit;
         mCNode->mStroke.enable = 1;
 
-        switch (mFillRule) {
-        case FillRule::EvenOdd:
-            mCNode->mFillRule = LOTFillRule::FillEvenOdd;
-            break;
-        default:
-            mCNode->mFillRule = LOTFillRule::FillWinding;
-            break;
-        }
-
         switch (mStroke.cap) {
         case CapStyle::Flat:
             mCNode->mStroke.cap = LOTCapStyle::CapFlat;
@@ -1237,6 +1228,15 @@ void LOTDrawable::sync()
 
     } else {
         mCNode->mStroke.enable = 0;
+    }
+
+    switch (mFillRule) {
+    case FillRule::EvenOdd:
+        mCNode->mFillRule = LOTFillRule::FillEvenOdd;
+        break;
+    default:
+        mCNode->mFillRule = LOTFillRule::FillWinding;
+        break;
     }
 
     switch (mBrush.type()) {
