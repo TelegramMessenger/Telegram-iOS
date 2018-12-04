@@ -219,6 +219,11 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         var sectionOffset: CGFloat = 0.0
         if primaryNavigationBarHeight.isZero {
             sectionOffset = -sectionsHeight - navigationBarHeightDelta
+        } else {
+            //layout.statusBarHeight ?? 0.0
+            if navigationBarHeightAndPrimaryHeight.0 > navigationBarHeightAndPrimaryHeight.1 {
+                sectionOffset += 1.0
+            }
         }
         transition.updateFrame(node: self.sectionsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + sectionOffset), size: CGSize(width: layout.size.width, height: sectionsHeight)))
         

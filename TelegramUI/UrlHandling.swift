@@ -213,7 +213,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                         }
                     }
                 } else {
-                    return nil
+                    return .peer(nil, .info)
                 }
             }
         case let .stickerPack(name):

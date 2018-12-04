@@ -603,7 +603,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                                     }
                             }
                         }
-                    } else if let _ = peer as? TelegramUser {
+                    } else if let user = peer as? TelegramUser {
                         if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
                             optionsMap[id]!.insert(.forward)
                         }
@@ -612,6 +612,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             if !message.flags.contains(.Incoming) || limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
                                 optionsMap[id]!.insert(.deleteGlobally)
                             }
+                        }
+                        if user.botInfo != nil {
+                            optionsMap[id]!.insert(.report)
                         }
                     } else if let _ = peer as? TelegramSecretChat {
                         var isNonRemovableServiceAction = false

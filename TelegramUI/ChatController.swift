@@ -82,7 +82,7 @@ private func isTopmostChatController(_ controller: ChatController) -> Bool {
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
 
-public final class ChatController: TelegramController, KeyShortcutResponder, UIDropInteractionDelegate {
+public final class ChatController: TelegramController, KeyShortcutResponder, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     weak var parentController: ViewController?
@@ -1550,6 +1550,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         self.screenCaptureEventsDisposable?.dispose()
         self.chatAdditionalDataDisposable.dispose()
         self.shareStatusDisposable?.dispose()
+        self.account.telegramApplicationContext.mediaManager?.galleryHiddenMediaManager.removeTarget(self)
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -2089,7 +2090,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                     |> deliverOnMainQueue).start(next: { actions in
                         if let strongSelf = self, !actions.options.isEmpty {
                             if let banAuthor = actions.banAuthor {
-                                strongSelf.presentBanMessageOptions(author: banAuthor, messageIds: messageIds, options: actions.options)
+                                strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
                             } else {
                                 strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options)
                             }
@@ -2116,7 +2117,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                 |> deliverOnMainQueue).start(next: { actions in
                     if let strongSelf = self, !actions.options.isEmpty {
                         if let banAuthor = actions.banAuthor {
-                            strongSelf.presentBanMessageOptions(author: banAuthor, messageIds: messageIds, options: actions.options)
+                            strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
                         } else {
                             var isAction = false
                             if messages.count == 1 {
@@ -2939,6 +2940,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         self.chatDisplayNode.interfaceInteraction = interfaceInteraction
         
         if let mediaManager = self.account.telegramApplicationContext.mediaManager {
+            mediaManager.galleryHiddenMediaManager.addTarget(self)
             self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
                 if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                     var messageIdAndMedia: [MessageId: [Media]] = [:]
@@ -4432,7 +4434,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
             
             if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, messageId.peerId != peerId {
                 if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId)
+                    navigateToChatController(navigationController: navigationController, account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId, keepStack: .always)
                 }
             } else if case let .peer(peerId) = self.chatLocation, messageLocation.peerId == peerId {
                 if let fromIndex = fromIndex {
@@ -5298,7 +5300,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         }))
     }
     
-    private func presentBanMessageOptions(author: Peer, messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions) {
+    private func presentBanMessageOptions(accountPeerId: PeerId, author: Peer, messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions) {
         if case let .peer(peerId) = self.chatLocation {
             self.navigationActionDisposable.set((fetchChannelParticipant(account: self.account, peerId: peerId, participantId: author.id)
             |> deliverOnMainQueue).start(next: { [weak self] participant in
@@ -5310,7 +5312,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
                                 canBan = false
                             case let .member(_, _, adminInfo, _):
                                 if let adminInfo = adminInfo, !adminInfo.rights.flags.isEmpty {
-                                    canBan = false
+                                    if adminInfo.promotedBy != accountPeerId {
+                                        canBan = false
+                                    }
                                 }
                         }
                     }
@@ -5627,5 +5631,26 @@ public final class ChatController: TelegramController, KeyShortcutResponder, UID
         ]
         
         return inputShortcuts + otherShortcuts
+    }
+    
+    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> UIView?)? {
+        var selectedNode: (ASDisplayNode, () -> UIView?)?
+        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                    selectedNode = result
+                }
+            }
+        }
+        if let (node, get) = selectedNode {
+            return ({ [weak self] view in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
+            }, node, get)
+        } else {
+            return nil
+        }
     }
 }

@@ -141,6 +141,31 @@ enum AVFrameSideDataType {
      * metadata key entry "name".
      */
     AV_FRAME_DATA_ICC_PROFILE,
+
+#if FF_API_FRAME_QP
+    /**
+     * Implementation-specific description of the format of AV_FRAME_QP_TABLE_DATA.
+     * The contents of this side data are undocumented and internal; use
+     * av_frame_set_qp_table() and av_frame_get_qp_table() to access this in a
+     * meaningful way instead.
+     */
+    AV_FRAME_DATA_QP_TABLE_PROPERTIES,
+
+    /**
+     * Raw QP table data. Its format is described by
+     * AV_FRAME_DATA_QP_TABLE_PROPERTIES. Use av_frame_set_qp_table() and
+     * av_frame_get_qp_table() to access this instead.
+     */
+    AV_FRAME_DATA_QP_TABLE_DATA,
+#endif
+
+    /**
+     * Timecode which conforms to SMPTE ST 12-1. The data is an array of 4 uint32_t
+     * where the first uint32_t describes how many (1-3) of the other timecodes are used.
+     * The timecode format is described in the av_timecode_get_smpte_from_framenum()
+     * function in libavutil/timecode.c.
+     */
+    AV_FRAME_DATA_S12M_TIMECODE,
 };
 
 enum AVActiveFormatDescription {
@@ -529,6 +554,7 @@ typedef struct AVFrame {
     attribute_deprecated
     int qscale_type;
 
+    attribute_deprecated
     AVBufferRef *qp_table_buf;
 #endif
     /**
@@ -563,39 +589,77 @@ typedef struct AVFrame {
     /**
      * @}
      */
+
+    /**
+     * AVBufferRef for internal use by a single libav* library.
+     * Must not be used to transfer data between libraries.
+     * Has to be NULL when ownership of the frame leaves the respective library.
+     *
+     * Code outside the FFmpeg libs should never check or change the contents of the buffer ref.
+     *
+     * FFmpeg calls av_buffer_unref() on it when the frame is unreferenced.
+     * av_frame_copy_props() calls create a new reference with av_buffer_ref()
+     * for the target frame's private_ref field.
+     */
+    AVBufferRef *private_ref;
 } AVFrame;
 
+#if FF_API_FRAME_GET_SET
 /**
  * Accessors for some AVFrame fields. These used to be provided for ABI
  * compatibility, and do not need to be used anymore.
  */
+attribute_deprecated
 int64_t av_frame_get_best_effort_timestamp(const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_best_effort_timestamp(AVFrame *frame, int64_t val);
+attribute_deprecated
 int64_t av_frame_get_pkt_duration         (const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_pkt_duration         (AVFrame *frame, int64_t val);
+attribute_deprecated
 int64_t av_frame_get_pkt_pos              (const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_pkt_pos              (AVFrame *frame, int64_t val);
+attribute_deprecated
 int64_t av_frame_get_channel_layout       (const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_channel_layout       (AVFrame *frame, int64_t val);
+attribute_deprecated
 int     av_frame_get_channels             (const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_channels             (AVFrame *frame, int     val);
+attribute_deprecated
 int     av_frame_get_sample_rate          (const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_sample_rate          (AVFrame *frame, int     val);
+attribute_deprecated
 AVDictionary *av_frame_get_metadata       (const AVFrame *frame);
+attribute_deprecated
 void          av_frame_set_metadata       (AVFrame *frame, AVDictionary *val);
+attribute_deprecated
 int     av_frame_get_decode_error_flags   (const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_decode_error_flags   (AVFrame *frame, int     val);
+attribute_deprecated
 int     av_frame_get_pkt_size(const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_pkt_size(AVFrame *frame, int val);
-AVDictionary **avpriv_frame_get_metadatap(AVFrame *frame);
 #if FF_API_FRAME_QP
+attribute_deprecated
 int8_t *av_frame_get_qp_table(AVFrame *f, int *stride, int *type);
+attribute_deprecated
 int av_frame_set_qp_table(AVFrame *f, AVBufferRef *buf, int stride, int type);
 #endif
+attribute_deprecated
 enum AVColorSpace av_frame_get_colorspace(const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_colorspace(AVFrame *frame, enum AVColorSpace val);
+attribute_deprecated
 enum AVColorRange av_frame_get_color_range(const AVFrame *frame);
+attribute_deprecated
 void    av_frame_set_color_range(AVFrame *frame, enum AVColorRange val);
+#endif
 
 /**
  * Get the name of a colorspace.
@@ -761,6 +825,22 @@ AVBufferRef *av_frame_get_plane_buffer(AVFrame *frame, int plane);
 AVFrameSideData *av_frame_new_side_data(AVFrame *frame,
                                         enum AVFrameSideDataType type,
                                         int size);
+
+/**
+ * Add a new side data to a frame from an existing AVBufferRef
+ *
+ * @param frame a frame to which the side data should be added
+ * @param type  the type of the added side data
+ * @param buf   an AVBufferRef to add as side data. The ownership of
+ *              the reference is transferred to the frame.
+ *
+ * @return newly added side data on success, NULL on error. On failure
+ *         the frame is unchanged and the AVBufferRef remains owned by
+ *         the caller.
+ */
+AVFrameSideData *av_frame_new_side_data_from_buf(AVFrame *frame,
+                                                 enum AVFrameSideDataType type,
+                                                 AVBufferRef *buf);
 
 /**
  * @return a pointer to the side data of a given type on success, NULL if there

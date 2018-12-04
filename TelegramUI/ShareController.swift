@@ -531,7 +531,7 @@ public final class ShareController: ViewController {
     
     private func saveToCameraRoll(messages: [Message]) {
         let postbox = self.account.postbox
-        let signals: [Signal<Void, NoError>] = messages.compactMap { message -> Signal<Void, NoError>? in
+        let signals: [Signal<Float, NoError>] = messages.compactMap { message -> Signal<Float, NoError>? in
             if let media = message.media.first {
                 return TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: postbox, mediaReference: .message(message: MessageReference(message), media: media))
             } else {
@@ -539,16 +539,25 @@ public final class ShareController: ViewController {
             }
         }
         if !signals.isEmpty {
-            self.controllerNode.transitionToProgress(signal: combineLatest(signals) |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() })
+            let total = combineLatest(signals)
+            |> map { values -> Float? in
+                var total: Float = 0.0
+                for value in values {
+                    total += value
+                }
+                total /= Float(values.count)
+                return total
+            }
+            self.controllerNode.transitionToProgressWithValue(signal: total)
         }
     }
     
     private func saveToCameraRoll(representations: [ImageRepresentationWithReference]) {
         let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), reference: nil, partialReference: nil)
-        self.controllerNode.transitionToProgress(signal: TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: self.account.postbox, mediaReference: .standalone(media: media)))
+        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: self.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init))
     }
     
     private func saveToCameraRoll(mediaReference: AnyMediaReference) {
-        self.controllerNode.transitionToProgress(signal: TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: self.account.postbox, mediaReference: mediaReference))
+        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: self.account.postbox, mediaReference: mediaReference) |> map(Optional.init))
     }
 }

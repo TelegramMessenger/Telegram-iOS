@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import AsyncDisplayKit
 
 enum GalleryHiddenMediaId: Hashable {
     case chat(MessageId, Media)
@@ -40,12 +41,26 @@ private final class GalleryHiddenMediaContext {
     }
 }
 
+protocol GalleryHiddenMediaTarget: class {
+    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> UIView?)?
+}
+
+private final class GalleryHiddenMediaTargetHolder {
+    weak var target: GalleryHiddenMediaTarget?
+    
+    init(target: GalleryHiddenMediaTarget?) {
+        self.target = target
+    }
+}
+
 final class GalleryHiddenMediaManager {
     private var nextId: Int32 = 0
     private var contexts: [GalleryHiddenMediaId: GalleryHiddenMediaContext] = [:]
     
     private var sourcesDisposables = Bag<Disposable>()
     private var subscribers = Bag<(Set<GalleryHiddenMediaId>) -> Void>()
+    
+    private var targets: [GalleryHiddenMediaTargetHolder] = []
     
     func hiddenIds() -> Signal<Set<GalleryHiddenMediaId>, NoError> {
         return Signal { [weak self] subscriber in
@@ -117,6 +132,32 @@ final class GalleryHiddenMediaManager {
             self.sourcesDisposables.remove(index)
             disposable.dispose()
         }
+    }
+    
+    func addTarget(_ target: GalleryHiddenMediaTarget) {
+        self.targets.append(GalleryHiddenMediaTargetHolder(target: target))
+    }
+    
+    func removeTarget(_ target: GalleryHiddenMediaTarget) {
+        for i in (0 ..< self.targets.count).reversed() {
+            let holderTarget = self.targets[i].target
+            if holderTarget == nil || holderTarget === target {
+                self.targets.remove(at: i)
+            }
+        }
+    }
+    
+    func findTarget(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> UIView?)? {
+        for i in (0 ..< self.targets.count).reversed() {
+            if let holderTarget = self.targets[i].target {
+                if let result = holderTarget.getTransitionInfo(messageId: messageId, media: media) {
+                    return result
+                }
+            } else {
+                self.targets.remove(at: i)
+            }
+        }
+        return nil
     }
     
     private func addHiddenMedia(id: GalleryHiddenMediaId) -> Int32 {

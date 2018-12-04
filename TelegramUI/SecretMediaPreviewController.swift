@@ -272,12 +272,12 @@ public final class SecretMediaPreviewController: ViewController {
                         
                         if let file = media as? TelegramMediaFile {
                             if file.isAnimated {
-                                strongSelf.title = strongSelf.presentationData.strings.Message_Animation
+                                strongSelf.title = strongSelf.presentationData.strings.SecretGif_Title
                             } else {
-                                strongSelf.title = strongSelf.presentationData.strings.Message_Video
+                                strongSelf.title = strongSelf.presentationData.strings.SecretVideo_Title
                             }
                         } else {
-                            strongSelf.title = strongSelf.presentationData.strings.Message_Photo
+                            strongSelf.title = strongSelf.presentationData.strings.SecretImage_Title
                         }
                         
                         if let beginTimeAndTimeout = beginTimeAndTimeout {

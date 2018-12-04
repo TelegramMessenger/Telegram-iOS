@@ -1280,7 +1280,6 @@ func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaReference
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
-            assertNotOnMainThread()
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             let drawingRect = arguments.drawingRect

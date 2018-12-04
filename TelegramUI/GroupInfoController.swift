@@ -1088,11 +1088,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             if case .creator = group.role, state.editingState != nil {
                 entries.append(.convertToSupergroup(presentationData.theme, presentationData.strings.GroupInfo_ConvertToSupergroup))
             }
-            if case .creator = group.role {
-                entries.append(.leave(presentationData.theme, presentationData.strings.GroupInfo_DeleteAndExit))
-            } else {
-                entries.append(.leave(presentationData.theme, presentationData.strings.Group_LeaveGroup))
-            }
+            entries.append(.leave(presentationData.theme, presentationData.strings.Group_LeaveGroup))
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel {
         if case .member = channel.participationStatus, let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount <= 200 {
@@ -1635,7 +1631,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         if peerId.namespace == Namespaces.Peer.CloudGroup {
             items.append(ActionSheetTextItem(title: presentationData.strings.GroupInfo_DeleteAndExitConfirmation))
         }
-        items.append(ActionSheetButtonItem(title: presentationData.strings.DialogList_DeleteConversationConfirmation, color: .destructive, action: {
+        items.append(ActionSheetButtonItem(title: presentationData.strings.Group_LeaveGroup, color: .destructive, action: {
             dismissAction()
             let _ = (removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false)
                 |> deliverOnMainQueue).start(completed: {

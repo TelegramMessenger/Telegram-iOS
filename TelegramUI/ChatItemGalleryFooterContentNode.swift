@@ -463,6 +463,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             let topInset: CGFloat = 8.0
             let bottomInset: CGFloat = 2.0
             panelHeight += 34.0 + topInset + bottomInset
+            if self.textNode.isHidden {
+                panelHeight += 8.0
+            }
             
             scrubberView.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset + textFrame.maxY), size: CGSize(width: width - sideInset * 2.0, height: 34.0))
         }

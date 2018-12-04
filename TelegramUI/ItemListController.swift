@@ -461,4 +461,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
             }
         }
     }
+    
+    func ensureItemNodeVisible(_ itemNode: ListViewItemNode) {
+        (self.displayNode as! ItemListControllerNode<Entry>).listNode.ensureItemNodeVisible(itemNode)
+    }
 }

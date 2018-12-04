@@ -474,14 +474,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
 }
 
 private struct DeviceContactInfoEditingState: Equatable {
-    let editingName: ItemListAvatarAndNameInfoItemName?
-    
-    static func ==(lhs: DeviceContactInfoEditingState, rhs: DeviceContactInfoEditingState) -> Bool {
-        if lhs.editingName != rhs.editingName {
-            return false
-        }
-        return true
-    }
+    var editingName: ItemListAvatarAndNameInfoItemName?
 }
 
 private struct EditingPhoneNumber: Equatable {
@@ -663,7 +656,7 @@ public enum DeviceContactInfoSubject {
                 return peer
             case let .filter(peer, _, _, _):
                 return peer
-            case let .create(peer, _, _):
+            case let .create(_, _, _):
                 return nil
         }
     }
@@ -740,7 +733,6 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
     
     var addToExistingImpl: (() -> Void)?
     var openChatImpl: ((PeerId) -> Void)?
-    var pushControllerImpl: ((ViewController) -> Void)?
     var replaceControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var openUrlImpl: ((String) -> Void)?
@@ -926,90 +918,106 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
     
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), contactData)
-        |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState<DeviceContactInfoEntry>, DeviceContactInfoEntry.ItemGenerationArguments)) in
-            var leftNavigationButton: ItemListNavigationButton?
-            switch subject {
-                case .vcard:
-                    break
-                case .filter, .create:
-                    leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                        dismissImpl?(true)
-                        cancelled?()
-                    })
-            }
-            
-            var rightNavigationButton: ItemListNavigationButton?
-            if case let .filter(_, _, _, completion) = subject {
-                let filteredData = filteredContactData(contactData: peerAndContactData.2, excludedComponents: state.excludedComponents)
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.ShareMenu_Send), style: .bold, enabled: !filteredData.basicData.phoneNumbers.isEmpty, action: {
-                    completion(peerAndContactData.0, filteredData)
+    |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState<DeviceContactInfoEntry>, DeviceContactInfoEntry.ItemGenerationArguments)) in
+        var leftNavigationButton: ItemListNavigationButton?
+        switch subject {
+            case .vcard:
+                break
+            case .filter, .create:
+                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                     dismissImpl?(true)
+                    cancelled?()
                 })
-            } else if case let .create(_, _, completion) = subject {
-                let filteredData = filteredContactData(contactData: peerAndContactData.2, excludedComponents: state.excludedComponents)
-                var filteredPhoneNumbers: [DeviceContactPhoneNumberData] = []
-                for phoneNumber in state.phoneNumbers {
-                    if !phoneNumber.value.isEmpty && phoneNumber.value != "+" {
-                        filteredPhoneNumbers.append(DeviceContactPhoneNumberData(label: phoneNumber.label, value: phoneNumber.value))
-                    }
+        }
+        
+        var rightNavigationButton: ItemListNavigationButton?
+        if state.savingData {
+            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+        } else if case let .filter(_, _, _, completion) = subject {
+            let filteredData = filteredContactData(contactData: peerAndContactData.2, excludedComponents: state.excludedComponents)
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.ShareMenu_Send), style: .bold, enabled: !filteredData.basicData.phoneNumbers.isEmpty, action: {
+                completion(peerAndContactData.0, filteredData)
+                dismissImpl?(true)
+            })
+        } else if case let .create(_, _, completion) = subject {
+            let filteredData = filteredContactData(contactData: peerAndContactData.2, excludedComponents: state.excludedComponents)
+            var filteredPhoneNumbers: [DeviceContactPhoneNumberData] = []
+            for phoneNumber in state.phoneNumbers {
+                if !phoneNumber.value.isEmpty && phoneNumber.value != "+" {
+                    filteredPhoneNumbers.append(DeviceContactPhoneNumberData(label: phoneNumber.label, value: phoneNumber.value))
                 }
-                var composedContactData: DeviceContactExtendedData?
-                if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
-                    composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: filteredData.urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: filteredData.instantMessagingProfiles)
-                }
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: !filteredPhoneNumbers.isEmpty && composedContactData != nil, action: {
-                    if let composedContactData = composedContactData {
-                        let _ = (account.telegramApplicationContext.contactDataManager.createContactWithData(composedContactData)
-                        |> deliverOnMainQueue).start(next: { contactIdAndData in
-                            completed?()
-                            dismissImpl?(true)
-                        })
+            }
+            var composedContactData: DeviceContactExtendedData?
+            if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
+                composedContactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: filteredPhoneNumbers), middleName: filteredData.middleName, prefix: filteredData.prefix, suffix: filteredData.suffix, organization: filteredData.organization, jobTitle: filteredData.jobTitle, department: filteredData.department, emailAddresses: filteredData.emailAddresses, urls: filteredData.urls, addresses: filteredData.addresses, birthdayDate: filteredData.birthdayDate, socialProfiles: filteredData.socialProfiles, instantMessagingProfiles: filteredData.instantMessagingProfiles)
+            }
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: !filteredPhoneNumbers.isEmpty && composedContactData != nil, action: {
+                if let composedContactData = composedContactData {
+                    updateState { state in
+                        var state = state
+                        state.savingData = true
+                        return state
                     }
-                })
-            }
-            
-            var editingPhones = false
-            var selecting = false
-            switch subject {
-                case .vcard:
-                    break
-                case .filter:
-                    selecting = true
-                case .create:
-                    selecting = true
-                    editingPhones = true
-            }
-            if case .filter = subject {
-                selecting = true
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
-            
-            let editingPhoneIds = Set<Int64>(state.phoneNumbers.map({ $0.id }))
-            let previousPhoneIds = previousEditingPhoneIds.swap(editingPhoneIds)
-            let insertedPhoneIds = editingPhoneIds.subtracting(previousPhoneIds ?? Set())
-            var insertedPhoneId: Int64?
-            if insertedPhoneIds.count == 1, let id = insertedPhoneIds.first {
-                for phoneNumber in state.phoneNumbers {
-                    if phoneNumber.id == id {
-                        if phoneNumber.value.isEmpty || phoneNumber.value == "+" {
-                            insertedPhoneId = id
+                    let _ = (account.telegramApplicationContext.contactDataManager.createContactWithData(composedContactData)
+                    |> deliverOnMainQueue).start(next: { contactIdAndData in
+                        updateState { state in
+                            var state = state
+                            state.savingData = false
+                            return state
                         }
-                        break
+                        if let contactIdAndData = contactIdAndData {
+                            //completion(nil, contactIdAndData.0, contactIdAndData.1)
+                        }
+                        completed?()
+                        dismissImpl?(true)
+                    })
+                }
+            })
+        }
+        
+        var editingPhones = false
+        var selecting = false
+        switch subject {
+            case .vcard:
+                break
+            case .filter:
+                selecting = true
+            case .create:
+                selecting = true
+                editingPhones = true
+        }
+        if case .filter = subject {
+            selecting = true
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.UserInfo_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
+        
+        let editingPhoneIds = Set<Int64>(state.phoneNumbers.map({ $0.id }))
+        let previousPhoneIds = previousEditingPhoneIds.swap(editingPhoneIds)
+        let insertedPhoneIds = editingPhoneIds.subtracting(previousPhoneIds ?? Set())
+        var insertedPhoneId: Int64?
+        if insertedPhoneIds.count == 1, let id = insertedPhoneIds.first {
+            for phoneNumber in state.phoneNumbers {
+                if phoneNumber.id == id {
+                    if phoneNumber.value.isEmpty || phoneNumber.value == "+" {
+                        insertedPhoneId = id
                     }
+                    break
                 }
             }
-            
-            var focusItemTag: ItemListItemTag?
-            if let insertedPhoneId = insertedPhoneId {
-                focusItemTag = DeviceContactInfoEntryTag.editingPhone(insertedPhoneId)
-            }
-            
-            let listState = ItemListNodeState(entries: deviceContactInfoEntries(account: account, presentationData: presentationData, peer: peerAndContactData.0, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: .plain, focusItemTag: focusItemTag)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        }
+        
+        var focusItemTag: ItemListItemTag?
+        if let insertedPhoneId = insertedPhoneId {
+            focusItemTag = DeviceContactInfoEntryTag.editingPhone(insertedPhoneId)
+        }
+        
+        let listState = ItemListNodeState(entries: deviceContactInfoEntries(account: account, presentationData: presentationData, peer: peerAndContactData.0, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: .plain, focusItemTag: focusItemTag)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = DeviceContactInfoController(account: account, state: signal)
@@ -1025,9 +1033,6 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
         if let navigationController = (controller?.navigationController as? NavigationController) {
             navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
         }
-    }
-    pushControllerImpl = { [weak controller] value in
-        (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceTopController(value, animated: true)

@@ -33,18 +33,18 @@ private final class MediaPlayerScrubbingNodeButton: ASDisplayNode {
     }
     
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        var location = recognizer.location(in: self.view)
+        location.x -= self.bounds.minX
         switch recognizer.state {
             case .began:
-                self.scrubbingStartLocation = recognizer.location(in: self.view)
+                self.scrubbingStartLocation = location
                 self.beginScrubbing?()
             case .changed:
-                let location = recognizer.location(in: self.view)
                 if let scrubbingStartLocation = self.scrubbingStartLocation {
                     let delta = location.x - scrubbingStartLocation.x
                     self.updateScrubbing?(delta / self.bounds.size.width)
                 }
             case .ended, .cancelled:
-                let location = recognizer.location(in: self.view)
                 if let scrubbingStartLocation = self.scrubbingStartLocation {
                     self.scrubbingStartLocation = nil
                     let delta = location.x - scrubbingStartLocation.x
@@ -59,11 +59,18 @@ private final class MediaPlayerScrubbingNodeButton: ASDisplayNode {
 
 private final class MediaPlayerScrubbingForegroundNode: ASDisplayNode {
     var onEnterHierarchy: (() -> Void)?
+    var onExitHierarchy: (() -> Void)?
     
     override func willEnterHierarchy() {
         super.willEnterHierarchy()
         
         self.onEnterHierarchy?()
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.onExitHierarchy?()
     }
 }
 
@@ -171,6 +178,9 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
 final class MediaPlayerScrubbingNode: ASDisplayNode {
     private var contentNodes: MediaPlayerScrubbingNodeContentNodes
     
+    private var displayLink: CADisplayLink?
+    private var isInHierarchyValue: Bool = false
+    
     private var playbackStatusValue: MediaPlayerPlaybackStatus?
     private var scrubbingBeginTimestamp: Double?
     private var scrubbingTimestampValue: Double?
@@ -206,7 +216,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 if let value = value, value.seekId == self.ignoreSeekId {
                 } else {
                     self._statusValue = value
-                    self.updateProgress()
+                    self.updateProgressAnimations()
                     
                     let playbackStatus = value?.status
                     if self.playbackStatusValue != playbackStatus {
@@ -250,70 +260,70 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
     
     private static func contentNodesFromContent(_ content: MediaPlayerScrubbingNodeContent, enableScrubbing: Bool) -> MediaPlayerScrubbingNodeContentNodes {
         switch content {
-        case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor):
-            let backgroundNode = ASImageNode()
-            backgroundNode.isLayerBacked = true
-            backgroundNode.displaysAsynchronously = false
-            backgroundNode.displayWithoutProcessing = true
-            
-            let bufferingNode = MediaPlayerScrubbingBufferingNode(color: foregroundColor.withAlphaComponent(0.5), lineCap: lineCap, lineHeight: lineHeight)
-            
-            let foregroundContentNode = ASImageNode()
-            foregroundContentNode.isLayerBacked = true
-            foregroundContentNode.displaysAsynchronously = false
-            foregroundContentNode.displayWithoutProcessing = true
-            
-            switch lineCap {
-            case .round:
-                backgroundNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: backgroundColor)
-                foregroundContentNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: foregroundColor)
-            case .square:
-                backgroundNode.backgroundColor = backgroundColor
-                foregroundContentNode.backgroundColor = foregroundColor
-            }
-            
-            let foregroundNode = MediaPlayerScrubbingForegroundNode()
-            foregroundNode.isLayerBacked = true
-            foregroundNode.clipsToBounds = true
-            
-            var handleNodeImpl: ASImageNode?
-            var handleNodeContainerImpl: MediaPlayerScrubbingNodeButton?
-            
-            switch scrubberHandle {
-            case .none:
-                break
-            case .line:
-                let handleNode = ASImageNode()
-                handleNode.image = generateHandleBackground(color: foregroundColor)
-                handleNode.isLayerBacked = true
-                handleNodeImpl = handleNode
+            case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor):
+                let backgroundNode = ASImageNode()
+                backgroundNode.isLayerBacked = true
+                backgroundNode.displaysAsynchronously = false
+                backgroundNode.displayWithoutProcessing = true
+                
+                let bufferingNode = MediaPlayerScrubbingBufferingNode(color: foregroundColor.withAlphaComponent(0.5), lineCap: lineCap, lineHeight: lineHeight)
+                
+                let foregroundContentNode = ASImageNode()
+                foregroundContentNode.isLayerBacked = true
+                foregroundContentNode.displaysAsynchronously = false
+                foregroundContentNode.displayWithoutProcessing = true
+                
+                switch lineCap {
+                    case .round:
+                        backgroundNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: backgroundColor)
+                        foregroundContentNode.image = generateStretchableFilledCircleImage(diameter: lineHeight, color: foregroundColor)
+                    case .square:
+                        backgroundNode.backgroundColor = backgroundColor
+                        foregroundContentNode.backgroundColor = foregroundColor
+                }
+                
+                let foregroundNode = MediaPlayerScrubbingForegroundNode()
+                foregroundNode.isLayerBacked = true
+                foregroundNode.clipsToBounds = true
+                
+                var handleNodeImpl: ASImageNode?
+                var handleNodeContainerImpl: MediaPlayerScrubbingNodeButton?
+                
+                switch scrubberHandle {
+                    case .none:
+                        break
+                    case .line:
+                        let handleNode = ASImageNode()
+                        handleNode.image = generateHandleBackground(color: foregroundColor)
+                        handleNode.isLayerBacked = true
+                        handleNodeImpl = handleNode
+                        
+                        let handleNodeContainer = MediaPlayerScrubbingNodeButton()
+                        handleNodeContainer.addSubnode(handleNode)
+                        handleNodeContainerImpl = handleNodeContainer
+                    case .circle:
+                        let handleNode = ASImageNode()
+                        handleNode.image = generateFilledCircleImage(diameter: lineHeight + 4.0, color: foregroundColor)
+                        handleNode.isLayerBacked = true
+                        handleNodeImpl = handleNode
+                        
+                        let handleNodeContainer = MediaPlayerScrubbingNodeButton()
+                        handleNodeContainer.addSubnode(handleNode)
+                        handleNodeContainerImpl = handleNodeContainer
+                }
+                
+                handleNodeContainerImpl?.isUserInteractionEnabled = enableScrubbing
+                
+                return .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handle: scrubberHandle, handleNode: handleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
+            case let .custom(backgroundNode, foregroundContentNode):
+                let foregroundNode = MediaPlayerScrubbingForegroundNode()
+                foregroundNode.isLayerBacked = true
+                foregroundNode.clipsToBounds = true
                 
                 let handleNodeContainer = MediaPlayerScrubbingNodeButton()
-                handleNodeContainer.addSubnode(handleNode)
-                handleNodeContainerImpl = handleNodeContainer
-            case .circle:
-                let handleNode = ASImageNode()
-                handleNode.image = generateFilledCircleImage(diameter: lineHeight + 4.0, color: foregroundColor)
-                handleNode.isLayerBacked = true
-                handleNodeImpl = handleNode
+                handleNodeContainer.isUserInteractionEnabled = enableScrubbing
                 
-                let handleNodeContainer = MediaPlayerScrubbingNodeButton()
-                handleNodeContainer.addSubnode(handleNode)
-                handleNodeContainerImpl = handleNodeContainer
-            }
-            
-            handleNodeContainerImpl?.isUserInteractionEnabled = enableScrubbing
-            
-            return .standard(StandardMediaPlayerScrubbingNodeContentNode(lineHeight: lineHeight, lineCap: lineCap, backgroundNode: backgroundNode, bufferingNode: bufferingNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handle: scrubberHandle, handleNode: handleNodeImpl, handleNodeContainer: handleNodeContainerImpl))
-        case let .custom(backgroundNode, foregroundContentNode):
-            let foregroundNode = MediaPlayerScrubbingForegroundNode()
-            foregroundNode.isLayerBacked = true
-            foregroundNode.clipsToBounds = true
-            
-            let handleNodeContainer = MediaPlayerScrubbingNodeButton()
-            handleNodeContainer.isUserInteractionEnabled = enableScrubbing
-            
-            return .custom(CustomMediaPlayerScrubbingNodeContentNode(backgroundNode: backgroundNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNodeContainer: handleNodeContainer))
+                return .custom(CustomMediaPlayerScrubbingNodeContentNode(backgroundNode: backgroundNode, foregroundContentNode: foregroundContentNode, foregroundNode: foregroundNode, handleNodeContainer: handleNodeContainer))
         }
     }
     
@@ -368,7 +378,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                             strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
                             strongSelf.scrubbingTimestampValue = statusValue.timestamp
                             strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
-                            strongSelf.updateProgress()
+                            strongSelf.updateProgressAnimations()
                         }
                     }
                 }
@@ -377,7 +387,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                         if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
                             strongSelf.scrubbingTimestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
                             strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
-                            strongSelf.updateProgress()
+                            strongSelf.updateProgressAnimations()
                         }
                     }
                 }
@@ -398,13 +408,18 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                             }
                             strongSelf.seek?(scrubbingTimestampValue)
                         }
-                        strongSelf.updateProgress()
+                        strongSelf.updateProgressAnimations()
                     }
                 }
             }
             
             node.foregroundNode.onEnterHierarchy = { [weak self] in
-                self?.updateProgress()
+                self?.isInHierarchyValue = true
+                self?.updateProgressAnimations()
+            }
+            node.foregroundNode.onExitHierarchy = { [weak self] in
+                self?.isInHierarchyValue = false
+                self?.updateProgressAnimations()
             }
         case let .custom(node):
             self.addSubnode(node.backgroundNode)
@@ -418,7 +433,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                         if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
                             strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
                             strongSelf.scrubbingTimestampValue = statusValue.timestamp
-                            strongSelf.updateProgress()
+                            strongSelf.updateProgressAnimations()
                         }
                     }
                 }
@@ -426,7 +441,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                     if let strongSelf = self {
                         if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
                             strongSelf.scrubbingTimestampValue = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
-                            strongSelf.updateProgress()
+                            strongSelf.updateProgressAnimations()
                         }
                     }
                 }
@@ -438,13 +453,18 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                         if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
                             strongSelf.seek?(scrubbingTimestampValue)
                         }
-                        strongSelf.updateProgress()
+                        strongSelf.updateProgressAnimations()
                     }
                 }
             }
             
             node.foregroundNode.onEnterHierarchy = { [weak self] in
-                self?.updateProgress()
+                self?.isInHierarchyValue = true
+                self?.updateProgressAnimations()
+            }
+            node.foregroundNode.onExitHierarchy = { [weak self] in
+                self?.isInHierarchyValue = false
+                self?.updateProgressAnimations()
             }
         }
     }
@@ -454,10 +474,11 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         
         self.setupContentNodes()
         
-        self.updateProgress()
+        self.updateProgressAnimations()
     }
     
     deinit {
+        self.displayLink?.invalidate()
         self.statusDisposable?.dispose()
         self.bufferingStatusDisposable?.dispose()
     }
@@ -465,7 +486,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
     override var frame: CGRect {
         didSet {
             if self.frame.size != oldValue.size {
-                self.updateProgress()
+                self.updateProgressAnimations()
             }
         }
     }
@@ -489,32 +510,76 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
     }
     
-    private func preparedAnimation(keyPath: String, from: NSValue, to: NSValue, duration: Double, beginTime: Double?, offset: Double, speed: Float, repeatForever: Bool = false) -> CAAnimation {
-        let animation = CABasicAnimation(keyPath: keyPath)
-        animation.fromValue = from
-        animation.toValue = to
-        animation.duration = duration
-        animation.fillMode = kCAFillModeBoth
-        animation.speed = speed
-        animation.timeOffset = offset
-        animation.isAdditive = false
-        if let beginTime = beginTime {
-            animation.beginTime = beginTime
+    private func updateProgressAnimations() {
+        self.updateProgress()
+        
+        let needsAnimation: Bool
+        
+        if !self.isInHierarchyValue {
+            needsAnimation = false
+        } else if let _ = scrubbingTimestampValue {
+            needsAnimation = false
+        } else if let statusValue = self.statusValue {
+            if case .buffering(true, _) = statusValue.status {
+                needsAnimation = false
+            } else if Double(0.0).isLess(than: statusValue.duration) {
+                needsAnimation = true
+            } else {
+                needsAnimation = false
+            }
+        } else {
+            needsAnimation = false
         }
-        return animation
+        
+        if needsAnimation {
+            if self.displayLink == nil {
+                class DisplayLinkProxy: NSObject {
+                    var f: () -> Void
+                    init(_ f: @escaping () -> Void) {
+                        self.f = f
+                    }
+                    
+                    @objc func displayLinkEvent() {
+                        self.f()
+                    }
+                }
+                let displayLink = CADisplayLink(target: DisplayLinkProxy({ [weak self] in
+                    self?.updateProgress()
+                }), selector: #selector(DisplayLinkProxy.displayLinkEvent))
+                displayLink.add(to: .main, forMode: .commonModes)
+                self.displayLink = displayLink
+            }
+            self.displayLink?.isPaused = false
+        } else {
+            self.displayLink?.isPaused = true
+        }
     }
     
     private func updateProgress() {
         let bounds = self.bounds
         
+        var isPlaying = false
+        var timestampAndDuration: (timestamp: Double, duration: Double)?
+        if let statusValue = self.statusValue {
+            switch statusValue.status {
+                case .playing:
+                    isPlaying = true
+                default:
+                    break
+            }
+            if case .buffering(true, _) = statusValue.status {
+                //initialBuffering = true
+            } else if Double(0.0).isLess(than: statusValue.duration) {
+                if let scrubbingTimestampValue = self.scrubbingTimestampValue {
+                    timestampAndDuration = (max(0.0, min(scrubbingTimestampValue, statusValue.duration)), statusValue.duration)
+                } else {
+                    timestampAndDuration = (statusValue.timestamp, statusValue.duration)
+                }
+            }
+        }
+        
         switch self.contentNodes {
             case let .standard(node):
-                node.foregroundNode.layer.removeAnimation(forKey: "playback-bounds")
-                node.foregroundNode.layer.removeAnimation(forKey: "playback-position")
-                if let handleNodeContainer = node.handleNodeContainer {
-                    handleNodeContainer.layer.removeAnimation(forKey: "playback-bounds")
-                }
-                
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((bounds.size.height - node.lineHeight) / 2.0)), size: CGSize(width: bounds.size.width, height: node.lineHeight))
                 node.backgroundNode.frame = backgroundFrame
                 node.foregroundContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
@@ -524,107 +589,47 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 
                 if let handleNode = node.handleNode {
                     var handleSize: CGSize = CGSize(width: 2.0, height: bounds.size.height)
-                    
                     if case .circle = node.handle, let handleNode = handleNode as? ASImageNode, let image = handleNode.image {
                         handleSize = image.size
                     }
                     handleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((bounds.size.height - handleSize.height) / 2.0)), size: handleSize)
-                    handleNode.layer.removeAnimation(forKey: "playback-position")
                 }
                 
                 if let handleNodeContainer = node.handleNodeContainer {
                     handleNodeContainer.frame = bounds
                 }
                 
-                var initialBuffering = false
-                var timestampAndDuration: (timestamp: Double, duration: Double)?
-                if let statusValue = self.statusValue {
-                    if case .buffering(true, _) = statusValue.status {
-                        initialBuffering = true
-                    } else if Double(0.0).isLess(than: statusValue.duration) {
-                        if let scrubbingTimestampValue = self.scrubbingTimestampValue {
-                            timestampAndDuration = (max(0.0, min(scrubbingTimestampValue, statusValue.duration)), statusValue.duration)
-                        } else {
-                            timestampAndDuration = (statusValue.timestamp, statusValue.duration)
-                        }
-                    }
-                }
-                
                 if let (timestamp, duration) = timestampAndDuration {
-                    let progress = CGFloat(timestamp / duration)
-                    if let _ = scrubbingTimestampValue {
-                        let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
-                        let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
-                        
-                        let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
-                        let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
-                        
-                        node.foregroundNode.frame = toRect
-                        node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
-                        node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-position")
+                    if let scrubbingTimestampValue = scrubbingTimestampValue {
+                        var progress = CGFloat(scrubbingTimestampValue / duration)
+                        if progress.isNaN || !progress.isFinite {
+                            progress = 0.0
+                        }
+                        progress = min(1.0, progress)
+                        node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
                         
                         if let handleNodeContainer = node.handleNodeContainer {
-                            let fromBounds = bounds
-                            let toBounds = bounds.offsetBy(dx: -bounds.size.width, dy: 0.0)
-                            
+                            handleNodeContainer.bounds = bounds.offsetBy(dx: -floorToScreenPixels(bounds.size.width * progress), dy: 0.0)
                             handleNodeContainer.isHidden = false
-                            handleNodeContainer.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
                         }
-                        
-                        if let handleNode = node.handleNode {
-                            let fromPosition = handleNode.position
-                            let toPosition = CGPoint(x: fromPosition.x - 1.0, y: fromPosition.y)
-                            handleNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: fromPosition), to: NSValue(cgPoint: toPosition), duration: duration / Double(bounds.size.width), beginTime: nil, offset: timestamp, speed: 0.0, repeatForever: true), forKey: "playback-position")
-                        }
-                    } else if let statusValue = self.statusValue, !progress.isNaN && progress.isFinite {
-                        if statusValue.generationTimestamp.isZero {
-                            let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
-                            let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
-                            
-                            let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
-                            let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
-                            
-                            node.foregroundNode.frame = toRect
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-position")
-                            
-                            if let handleNodeContainer = node.handleNodeContainer {
-                                let fromBounds = bounds
-                                let toBounds = bounds.offsetBy(dx: -bounds.size.width, dy: 0.0)
-                                
-                                handleNodeContainer.isHidden = false
-                                handleNodeContainer.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
-                            }
-                            
-                            if let handleNode = node.handleNode {
-                                let fromPosition = handleNode.position
-                                let toPosition = CGPoint(x: fromPosition.x - 1.0, y: fromPosition.y)
-                                handleNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: fromPosition), to: NSValue(cgPoint: toPosition), duration: duration / Double(bounds.size.width), beginTime: nil, offset: timestamp, speed: 0.0, repeatForever: true), forKey: "playback-position")
-                            }
+                    } else if let statusValue = self.statusValue {
+                        let actualTimestamp: Double
+                        if statusValue.generationTimestamp.isZero || !isPlaying {
+                            actualTimestamp = timestamp
                         } else {
-                            let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
-                            let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
-                            
-                            let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
-                            let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
-                            
-                            node.foregroundNode.frame = toRect
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-bounds")
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-position")
-                            
-                            if let handleNodeContainer = node.handleNodeContainer {
-                                let fromBounds = bounds
-                                let toBounds = bounds.offsetBy(dx: -bounds.size.width, dy: 0.0)
-                                
-                                handleNodeContainer.isHidden = false
-                                handleNodeContainer.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: statusValue.duration, beginTime: statusValue.generationTimestamp, offset: statusValue.timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-bounds")
-                            }
-                            
-                            if let handleNode = node.handleNode {
-                                let fromPosition = handleNode.position
-                                let toPosition = CGPoint(x: fromPosition.x - 1.0, y: fromPosition.y)
-                                handleNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: fromPosition), to: NSValue(cgPoint: toPosition), duration: duration / Double(bounds.size.width), beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0, repeatForever: true), forKey: "playback-position")
-                            }
+                            let currentTimestamp = CACurrentMediaTime()
+                            actualTimestamp = timestamp + (currentTimestamp - statusValue.generationTimestamp) * statusValue.baseRate
+                        }
+                        var progress = CGFloat(actualTimestamp / duration)
+                        if progress.isNaN || !progress.isFinite {
+                            progress = 0.0
+                        }
+                        progress = min(1.0, progress)
+                        node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
+                        
+                        if let handleNodeContainer = node.handleNodeContainer {
+                            handleNodeContainer.bounds = bounds.offsetBy(dx: -floorToScreenPixels(bounds.size.width * progress), dy: 0.0)
+                            handleNodeContainer.isHidden = false
                         }
                     } else {
                         node.handleNodeContainer?.isHidden = true
@@ -634,19 +639,10 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                     node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
                     node.handleNodeContainer?.isHidden = true
                 }
-            
-                if initialBuffering {
-                    
-                } else {
-                    
-                }
             case let .custom(node):
                 if let handleNodeContainer = node.handleNodeContainer {
                     handleNodeContainer.frame = bounds
                 }
-                
-                node.foregroundNode.layer.removeAnimation(forKey: "playback-bounds")
-                node.foregroundNode.layer.removeAnimation(forKey: "playback-position")
                 
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: bounds.size.width, height: bounds.size.height))
                 node.backgroundNode.frame = backgroundFrame
@@ -664,39 +660,27 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                 }
                 
                 if let (timestamp, duration) = timestampAndDuration {
-                    let progress = CGFloat(timestamp / duration)
-                    if let _ = scrubbingTimestampValue {
-                        let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
-                        let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
-                        
-                        let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
-                        let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
-                        
-                        node.foregroundNode.frame = toRect
-                        node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
-                        node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-position")
-                    } else if let statusValue = self.statusValue, !progress.isNaN && progress.isFinite {
-                        if statusValue.generationTimestamp.isZero {
-                            let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
-                            let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
-                            
-                            let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
-                            let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
-                            
-                            node.foregroundNode.frame = toRect
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-bounds")
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: nil, offset: timestamp, speed: 0.0), forKey: "playback-position")
-                        } else {
-                            let fromRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
-                            let toRect = CGRect(origin: backgroundFrame.origin, size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
-                            
-                            let fromBounds = CGRect(origin: CGPoint(), size: fromRect.size)
-                            let toBounds = CGRect(origin: CGPoint(), size: toRect.size)
-                            
-                            node.foregroundNode.frame = toRect
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "bounds", from: NSValue(cgRect: fromBounds), to: NSValue(cgRect: toBounds), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-bounds")
-                            node.foregroundNode.layer.add(self.preparedAnimation(keyPath: "position", from: NSValue(cgPoint: CGPoint(x: fromRect.midX, y: fromRect.midY)), to: NSValue(cgPoint: CGPoint(x: toRect.midX, y: toRect.midY)), duration: duration, beginTime: statusValue.generationTimestamp, offset: timestamp, speed: statusValue.status == .playing ? Float(statusValue.baseRate) : 0.0), forKey: "playback-position")
+                    if let scrubbingTimestampValue = scrubbingTimestampValue {
+                        var progress = CGFloat(scrubbingTimestampValue / duration)
+                        if progress.isNaN || !progress.isFinite {
+                            progress = 0.0
                         }
+                        progress = min(1.0, progress)
+                        node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
+                    } else if let statusValue = self.statusValue {
+                        let actualTimestamp: Double
+                        if statusValue.generationTimestamp.isZero || !isPlaying {
+                            actualTimestamp = timestamp
+                        } else {
+                            let currentTimestamp = CACurrentMediaTime()
+                            actualTimestamp = timestamp + (currentTimestamp - statusValue.generationTimestamp) * statusValue.baseRate
+                        }
+                        var progress = CGFloat(actualTimestamp / duration)
+                        if progress.isNaN || !progress.isFinite {
+                            progress = 0.0
+                        }
+                        progress = min(1.0, progress)
+                        node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: floorToScreenPixels(progress * backgroundFrame.size.width), height: backgroundFrame.size.height))
                     } else {
                         node.foregroundNode.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 0.0, height: backgroundFrame.size.height))
                     }

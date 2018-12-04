@@ -837,7 +837,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         
                         baseNavigationController?.view.endEditing(true)
                         
-                        (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { _, _ in
+                        (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { id, media in
                             if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
                                 return GalleryTransitionArguments(transitionNode: (overlayNode, { [weak overlayNode] in
                                     return overlayNode?.view.snapshotContentTree()
@@ -845,6 +845,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     overlaySupernode?.view.addSubview(view)
                                     overlayNode?.canAttachContent = false
                                 })
+                            } else if let info = account.telegramApplicationContext.mediaManager?.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
+                                return GalleryTransitionArguments(transitionNode: (info.1, info.2), addToTransitionSurface: info.0)
                             }
                             return nil
                         }))
