@@ -342,9 +342,11 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
             var interfaceAnimationCompleted = false
             var contentAnimationCompleted = true
             
+            self.scrollView.isScrollEnabled = false
             let completion = { [weak self] in
                 if interfaceAnimationCompleted && contentAnimationCompleted {
                     if let dismiss = self?.dismiss {
+                        self?.scrollView.isScrollEnabled = true
                         dismiss()
                     }
                 }
