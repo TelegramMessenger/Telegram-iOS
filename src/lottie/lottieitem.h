@@ -84,6 +84,7 @@ protected:
    VRle maskRle(const VRect &clipRect);
    bool hasMask() const {return !mMasks.empty();}
 protected:
+   std::vector<LOTMask>                        mMasksCNode;
    std::unique_ptr<LOTLayerNode>               mLayerCNode;
    std::vector<VDrawable *>                    mDrawableList;
    std::vector<std::unique_ptr<LOTMaskItem>>   mMasks;
@@ -161,6 +162,7 @@ public:
     float                    mCombinedAlpha;
     VMatrix                  mCombinedMatrix;
     VPath                    mLocalPath;
+    VPath                    mFinalPath;
     std::future<VRle>        mRleTask;
     VRle                     mRle;
 };

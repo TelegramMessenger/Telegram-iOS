@@ -151,10 +151,13 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
     opacity = opacity * parentAlpha;
     mCombinedAlpha = opacity;
 
-    VPath path = mLocalPath;
-    path.transform(parentMatrix);
+    mFinalPath.reset();
+    mFinalPath.addPath(mLocalPath);
+    mFinalPath.transform(parentMatrix);
 
-    mRleTask = VRaster::generateFillInfo(std::move(path), std::move(mRle));
+    VPath tmp = mFinalPath;
+
+    mRleTask = VRaster::generateFillInfo(std::move(tmp), std::move(mRle));
     mRle = VRle();
 }
 
@@ -204,7 +207,38 @@ void LOTLayerItem::buildLayerNode()
         }
     }
     if (hasMask()) {
-        //TODO populate mask property
+        mMasksCNode.clear();
+        for (const auto &mask : mMasks) {
+            LOTMask cNode;
+            const std::vector<VPath::Element> &elm = mask->mFinalPath.elements();
+            const std::vector<VPointF> &       pts = mask->mFinalPath.points();
+            const float *ptPtr = reinterpret_cast<const float *>(pts.data());
+            const char * elmPtr = reinterpret_cast<const char *>(elm.data());
+            cNode.mPath.ptPtr = ptPtr;
+            cNode.mPath.ptCount = pts.size();
+            cNode.mPath.elmPtr = elmPtr;
+            cNode.mPath.elmCount = elm.size();
+            switch (mask->maskMode()) {
+            case LOTMaskData::Mode::Add:
+                cNode.mMode = MaskModeAdd;
+                break;
+            case LOTMaskData::Mode::Substarct:
+                cNode.mMode = MaskModeSubstract;
+                break;
+            case LOTMaskData::Mode::Intersect:
+                cNode.mMode = MaskModeIntersect;
+                break;
+            case LOTMaskData::Mode::Difference:
+                cNode.mMode = MaskModeDifference;
+                break;
+            default:
+                cNode.mMode = MaskModeAdd;
+                break;
+            }
+            mMasksCNode.push_back(std::move(cNode));
+        }
+        mLayerCNode->mMaskList.ptr = mMasksCNode.data();
+        mLayerCNode->mMaskList.size = mMasksCNode.size();
     }
 }
 
