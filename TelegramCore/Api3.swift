@@ -3956,24 +3956,6 @@ extension Api {
                     })
                 }
             
-                static func saveAppLog(events: [Api.InputAppEvent]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1862465352)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(events.count))
-                    for item in events {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription(name: "help.saveAppLog", parameters: [("events", events)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
                 static func getInviteText() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.InviteText>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1295590211)
@@ -4138,6 +4120,38 @@ extension Api {
                         var result: Api.help.PassportConfig?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.help.PassportConfig
+                        }
+                        return result
+                    })
+                }
+            
+                static func getAppConfig() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.JSONValue>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1735311088)
+                    
+                    return (FunctionDescription(name: "help.getAppConfig", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.JSONValue? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.JSONValue?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.JSONValue
+                        }
+                        return result
+                    })
+                }
+            
+                static func saveAppLog(events: [Api.InputAppEvent]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1862465352)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(events.count))
+                    for item in events {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "help.saveAppLog", parameters: [("events", events)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

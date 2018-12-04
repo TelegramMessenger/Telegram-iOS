@@ -8,6 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		09028386218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */; };
+		0962E66721B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */; };
+		0962E66921B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */; };
+		0962E66B21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66A21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift */; };
+		0962E66D21B5C56F00245FD9 /* JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66C21B5C56F00245FD9 /* JSON.swift */; };
+		0962E66F21B6147600245FD9 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66E21B6147600245FD9 /* AppConfiguration.swift */; };
+		0962E67521B6437600245FD9 /* SplitTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67421B6437600245FD9 /* SplitTest.swift */; };
 		9F06831021A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */; };
 		9F06831121A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */; };
 		9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
@@ -776,6 +782,12 @@
 
 /* Begin PBXFileReference section */
 		09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedVoipConfigurationUpdates.swift; sourceTree = "<group>"; };
+		0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppConfigurationUpdates.swift; sourceTree = "<group>"; };
+		0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizeAppLogEventsOperation.swift; sourceTree = "<group>"; };
+		0962E66A21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeAppLogEventsOperations.swift; sourceTree = "<group>"; };
+		0962E66C21B5C56F00245FD9 /* JSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSON.swift; sourceTree = "<group>"; };
+		0962E66E21B6147600245FD9 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		0962E67421B6437600245FD9 /* SplitTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitTest.swift; sourceTree = "<group>"; };
 		9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationExceptionsList.swift; sourceTree = "<group>"; };
 		9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentWebSessions.swift; sourceTree = "<group>"; };
 		C205FEA71EB3B75900455808 /* ExportMessageLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExportMessageLink.swift; sourceTree = "<group>"; };
@@ -1242,6 +1254,7 @@
 				D0FA08BA2046B37900DD23FC /* ContentPrivacySettings.swift */,
 				D026099D20C695AF006C34AC /* Wallpapers.swift */,
 				D051DB13215EC5A300F30F92 /* AppChangelogState.swift */,
+				0962E66E21B6147600245FD9 /* AppConfiguration.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -1340,6 +1353,8 @@
 				D0F8C39F2017AF2700236FC5 /* GlobalTelegramCoreConfiguration.swift */,
 				D0E412E9206AD18E00BEE4A2 /* DecryptedResourceData.swift */,
 				C28D3CEF20D3DA900027F4D6 /* DeepLinkInfo.swift */,
+				0962E66C21B5C56F00245FD9 /* JSON.swift */,
+				0962E67421B6437600245FD9 /* SplitTest.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1501,6 +1516,9 @@
 				09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */,
 				D0529D2321A4123400D7C3C4 /* SynchronizeRecentlyUsedMediaOperations.swift */,
 				D0529D2621A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift */,
+				0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */,
+				0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */,
+				0962E66A21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -2145,6 +2163,7 @@
 				D00C7CCF1E3628180080C3D5 /* UpdateCachedChannelParticipants.swift in Sources */,
 				D03B0CB91D62233400955575 /* Either.swift in Sources */,
 				D0D748021E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */,
+				0962E66D21B5C56F00245FD9 /* JSON.swift in Sources */,
 				D03B0CBD1D62234300955575 /* Regex.swift in Sources */,
 				D00BDA191EE593D600C64C5E /* TelegramChannelAdminRights.swift in Sources */,
 				D0B843B91DA7FF30005F29E1 /* NBMetadataCoreTest.m in Sources */,
@@ -2254,12 +2273,14 @@
 				D00422D321677F4500719B67 /* ManagedAccountPresence.swift in Sources */,
 				D03B0D0A1D62255C00955575 /* Holes.swift in Sources */,
 				D05464972073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */,
+				0962E67521B6437600245FD9 /* SplitTest.swift in Sources */,
 				D0B843CB1DA7FF30005F29E1 /* NBPhoneNumberUtil.m in Sources */,
 				D03B0D5E1D631A6900955575 /* Network.swift in Sources */,
 				D0B8438E1DA7D296005F29E1 /* CachedGroupParticipants.swift in Sources */,
 				D0B843BD1DA7FF30005F29E1 /* NBMetadataHelper.m in Sources */,
 				D03B0CF51D62250800955575 /* TelegramMediaContact.swift in Sources */,
 				D03B0CFB1D62250800955575 /* TelegramMediaWebpage.swift in Sources */,
+				0962E66B21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift in Sources */,
 				D09A2FEB1D7CDC320018FB72 /* PeerAccessRestrictionInfo.swift in Sources */,
 				D0E35A101DE49E1C00BC6096 /* OutgoingMessageWithChatContextResult.swift in Sources */,
 				D0E23DDA1E806F7700B9B6D2 /* ManagedSynchronizeMarkFeaturedStickerPacksAsSeenOperations.swift in Sources */,
@@ -2267,6 +2288,7 @@
 				D0BE303A20619EE800FBE6D8 /* SecureIdForm.swift in Sources */,
 				D0448C991E268F9A005A61A7 /* SecretApiLayer46.swift in Sources */,
 				D03DC9131F82F89D001D584C /* RegularChatState.swift in Sources */,
+				0962E66721B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift in Sources */,
 				D0613FCF1E60520700202CDB /* ChannelMembers.swift in Sources */,
 				D0B2F7742052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift in Sources */,
 				C2366C891E4F40480097CCFF /* SupportPeerId.swift in Sources */,
@@ -2404,6 +2426,7 @@
 				D0CA3F84207391560042D2B6 /* SecureIdPadding.swift in Sources */,
 				D0FA8BB61E223C16001E855B /* SecretApiLayer8.swift in Sources */,
 				D0B843C71DA7FF30005F29E1 /* NBPhoneNumberDefines.m in Sources */,
+				0962E66921B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift in Sources */,
 				D049EAF51E44DF3300A2CD3A /* AccountState.swift in Sources */,
 				C28725421EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */,
 				D03B0D5D1D631A6900955575 /* MultipartFetch.swift in Sources */,
@@ -2472,6 +2495,7 @@
 				D03B0D081D62255C00955575 /* ChannelState.swift in Sources */,
 				D08984F521187ECA00918162 /* NetworkType.swift in Sources */,
 				C251D7431E65E50500283EDE /* StickerSetInstallation.swift in Sources */,
+				0962E66F21B6147600245FD9 /* AppConfiguration.swift in Sources */,
 				D07047BA1F3DF75500F6A8D4 /* ConsumePersonalMessageAction.swift in Sources */,
 				D07E413F208A769D00FCA8F0 /* ProxyServersStatuses.swift in Sources */,
 				D0C0B58D1ED9DC5A000F4D2C /* SynchronizeLocalizationUpdatesOperation.swift in Sources */,

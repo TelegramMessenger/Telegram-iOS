@@ -51,6 +51,12 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-614138572] = { return Api.account.TmpPassword.parse_tmpPassword($0) }
     dict[-2103600678] = { return Api.SecureRequiredType.parse_secureRequiredType($0) }
     dict[41187252] = { return Api.SecureRequiredType.parse_secureRequiredTypeOneOf($0) }
+    dict[1064139624] = { return Api.JSONValue.parse_jsonNull($0) }
+    dict[-952869270] = { return Api.JSONValue.parse_jsonBool($0) }
+    dict[736157604] = { return Api.JSONValue.parse_jsonNumber($0) }
+    dict[-1222740358] = { return Api.JSONValue.parse_jsonString($0) }
+    dict[-146520221] = { return Api.JSONValue.parse_jsonArray($0) }
+    dict[-1715350371] = { return Api.JSONValue.parse_jsonObject($0) }
     dict[590459437] = { return Api.Photo.parse_photoEmpty($0) }
     dict[-1673036328] = { return Api.Photo.parse_photo($0) }
     dict[-1683826688] = { return Api.Chat.parse_chatEmpty($0) }
@@ -526,6 +532,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1471006352] = { return Api.PhoneCallDiscardReason.parse_phoneCallDiscardReasonHangup($0) }
     dict[-84416311] = { return Api.PhoneCallDiscardReason.parse_phoneCallDiscardReasonBusy($0) }
     dict[-1910892683] = { return Api.NearestDc.parse_nearestDc($0) }
+    dict[-1059185703] = { return Api.JSONObjectValue.parse_jsonObjectValue($0) }
     dict[-1916114267] = { return Api.photos.Photos.parse_photos($0) }
     dict[352657236] = { return Api.photos.Photos.parse_photosSlice($0) }
     dict[2010127419] = { return Api.contacts.ImportedContacts.parse_importedContacts($0) }
@@ -662,7 +669,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1788705589] = { return Api.updates.ChannelDifference.parse_channelDifferenceTooLong($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
-    dict[1996904104] = { return Api.InputAppEvent.parse_inputAppEvent($0) }
+    dict[488313413] = { return Api.InputAppEvent.parse_inputAppEvent($0) }
     dict[-1148011883] = { return Api.MessageEntity.parse_messageEntityUnknown($0) }
     dict[-100378723] = { return Api.MessageEntity.parse_messageEntityMention($0) }
     dict[1868782349] = { return Api.MessageEntity.parse_messageEntityHashtag($0) }
@@ -777,6 +784,8 @@ struct Api {
             case let _1 as Api.account.TmpPassword:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureRequiredType:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.JSONValue:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Photo:
                 _1.serialize(buffer, boxed)
@@ -1111,6 +1120,8 @@ struct Api {
             case let _1 as Api.PhoneCallDiscardReason:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.NearestDc:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.JSONObjectValue:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.photos.Photos:
                 _1.serialize(buffer, boxed)

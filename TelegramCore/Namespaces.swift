@@ -126,6 +126,7 @@ public struct OperationLogTags {
     static let SynchronizeGroupedPeers = PeerOperationLogTag(value: 15)
     static let SynchronizeMarkAllUnseenPersonalMessages = PeerOperationLogTag(value: 16)
     static let SynchronizeRecentlyUsedStickers = PeerOperationLogTag(value: 17)
+    static let SynchronizeAppLogEvents = PeerOperationLogTag(value: 18)
 }
 
 public extension PeerSummaryCounterTags {
@@ -148,6 +149,7 @@ private enum PreferencesKeyValues: Int32 {
     case voipConfiguration = 11
     case appChangelogState = 12
     case localizationListState = 13
+    case appConfiguration = 14
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -232,6 +234,12 @@ public struct PreferencesKeys {
     public static let localizationListState: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.localizationListState.rawValue)
+        return key
+    }()
+    
+    public static let appConfiguration: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.appConfiguration.rawValue)
         return key
     }()
 }

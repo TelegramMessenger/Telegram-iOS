@@ -93,9 +93,9 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
                     }
                     return .complete()
                 })
-                    |> then(postbox.transaction { transaction -> Void in
-                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: entry.tagLocalIndex)
-                    })
+                |> then(postbox.transaction { transaction -> Void in
+                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: entry.tagLocalIndex)
+                })
                 
                 disposable.set((signal |> delay(2.0, queue: Queue.concurrentDefaultQueue())).start())
             }

@@ -68,26 +68,26 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                         |> mapError {_ in return UploadPeerPhotoError.generic}
                                         |> mapToSignal { photo -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
                                             
-                                            let representations:[TelegramMediaImageRepresentation]
+                                            let representations: [TelegramMediaImageRepresentation]
                                             switch photo {
                                             case let .photo(photo: apiPhoto, users: _):
                                                 switch apiPhoto {
-                                                case .photoEmpty:
-                                                    representations = []
-                                                case let .photo(photo):
-                                                    var sizes = photo.sizes
-                                                    if sizes.count == 3 {
-                                                        sizes.remove(at: 1)
-                                                    }
-                                                    representations = telegramMediaImageRepresentationsFromApiSizes(sizes)
-                                                    if let resource = result.resource as? LocalFileReferenceMediaResource {
-                                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
-                                                            for representation in representations {
-                                                                postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
+                                                    case .photoEmpty:
+                                                        representations = []
+                                                    case let .photo(photo):
+                                                        var sizes = photo.sizes
+                                                        if sizes.count == 3 {
+                                                            sizes.remove(at: 1)
+                                                        }
+                                                        representations = telegramMediaImageRepresentationsFromApiSizes(sizes)
+                                                        if let resource = result.resource as? LocalFileReferenceMediaResource {
+                                                            if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
+                                                                for representation in representations {
+                                                                    postbox.mediaBox.storeResourceData(representation.resource.id, data: data)
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                   
+                                                    
                                                 }
                                             }
                                             return postbox.transaction { transaction -> (UpdatePeerPhotoStatus, MediaResource?) in
