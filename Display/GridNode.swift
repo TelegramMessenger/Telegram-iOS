@@ -413,7 +413,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     let initialSpacing: CGFloat = (fillWidth ?? false) ? 0.0 : itemSpacing
                     
                     var incrementedCurrentRow = false
-                    var nextItemOrigin = CGPoint(x: itemInsets.left + initialSpacing, y: 0.0)
+                    var nextItemOrigin = CGPoint(x: initialSpacing + itemInsets.left, y: 0.0)
                     var index = 0
                     var previousSection: GridSection?
                     for item in self.items {
@@ -429,7 +429,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         
                         if !keepSection {
                             if incrementedCurrentRow {
-                                nextItemOrigin.x = itemSpacing + itemInsets.left
+                                nextItemOrigin.x = initialSpacing + itemInsets.left
                                 nextItemOrigin.y += itemSize.height + lineSpacing
                                 incrementedCurrentRow = false
                             }
