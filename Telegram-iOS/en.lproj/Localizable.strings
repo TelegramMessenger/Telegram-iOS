@@ -2590,6 +2590,7 @@ Unused sets are archived when you add more.";
 
 "SecretImage.Title" = "Disappearing Photo";
 "SecretVideo.Title" = "Disappearing Video";
+"SecretGif.Title" = "Disappearing GIF";
 "SecretTimer.ImageDescription" = "If you set a timer, the photo will self-destruct after it was viewed.";
 "SecretTimer.VideoDescription" = "If you set a timer, the video will self-destruct after it was viewed.";
 
