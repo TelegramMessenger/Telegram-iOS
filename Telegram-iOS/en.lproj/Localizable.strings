@@ -3546,24 +3546,25 @@ Unused sets are archived when you add more.";
 
 "Permissions.Skip" = "Skip";
 
-"Permissions.ContactsTitle" = "Sync Your Contacts";
-"Permissions.ContactsText" = "See who's on Telegram and switch seamlessly, without having to \"add\" your friends.";
-"Permissions.ContactsAllow" = "Allow Access";
-"Permissions.ContactsAllowInSettings" = "Allow in Settings";
+"Permissions.ContactsTitle.v0" = "Sync Your Contacts";
+"Permissions.ContactsText.v0" = "See who's on Telegram and switch seamlessly, without having to \"add\" your friends.";
+"Permissions.ContactsAllow.v0" = "Allow Access";
+"Permissions.ContactsAllowInSettings.v0" = "Allow in Settings";
 
-"Permissions.NotificationsTitle" = "Turn ON Notifications";
-"Permissions.NotificationsText" = "Don't miss important messages from your friends and coworkers.";
-"Permissions.NotificationsAllow" = "Turn Notifications ON";
-"Permissions.NotificationsAllowInSettings" = "Turn ON in Settings";
+"Permissions.NotificationsTitle.v0" = "Turn ON Notifications";
+"Permissions.NotificationsText.v0" = "Don't miss important messages from your friends and coworkers.";
+"Permissions.NotificationsUnreachableText.v0" = "Check that both Alert and Sound are enabled in Settings.";
+"Permissions.NotificationsAllow.v0" = "Turn Notifications ON";
+"Permissions.NotificationsAllowInSettings.v0" = "Turn ON in Settings";
 
-"Permissions.CellularDataTitle" = "Turn ON Notifications";
-"Permissions.CellularDataText" = "Don't worry, Telegram keeps network usage to a minimum. You can further control this in Settings > Data and Storage.";
-"Permissions.CellularDataAllowInSettings" = "Turn ON in Settings";
+"Permissions.CellularDataTitle.v0" = "Turn ON Notifications";
+"Permissions.CellularDataText.v0" = "Don't worry, Telegram keeps network usage to a minimum. You can further control this in Settings > Data and Storage.";
+"Permissions.CellularDataAllowInSettings.v0" = "Turn ON in Settings";
 
-"Permissions.SiriTitle" = "Turn ON Siri";
-"Permissions.SiriText" = "Use Siri to send messages and make calls.";
-"Permissions.SiriAllow" = "Turn Siri ON";
-"Permissions.SiriAllowInSettings" = "Turn ON in Settings";
+"Permissions.SiriTitle.v0" = "Turn ON Siri";
+"Permissions.SiriText.v0" = "Use Siri to send messages and make calls.";
+"Permissions.SiriAllow.v0" = "Turn Siri ON";
+"Permissions.SiriAllowInSettings.v0" = "Turn ON in Settings";
 
 "Permissions.PrivacyPolicy" = "Privacy Policy";
 
@@ -3574,5 +3575,6 @@ Unused sets are archived when you add more.";
 
 "Notifications.PermissionsTitle" = "Turn ON Notifications";
 "Notifications.PermissionsText" = "Don't miss important messages from your friends and coworkers.";
+"Notifications.PermissionsUnreachableText" = "Check that both Alert and Sound are enabled in Settings.";
 "Notifications.PermissionsAllow" = "Turn Notifications ON";
 "Notifications.PermissionsAllowInSettings" = "Turn ON in Settings";

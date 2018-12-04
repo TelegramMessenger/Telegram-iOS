@@ -183,8 +183,9 @@ final class AuthorizedApplicationContext {
     private let inAppNotificationSettingsDisposable = MetaDisposable()
     private let notificationMessagesDisposable = MetaDisposable()
     private let termsOfServiceUpdatesDisposable = MetaDisposable()
-    private let proccedTOSBotDisposable = MetaDisposable()
-    private var watchNavigateToMessageDisposable = MetaDisposable()
+    private let termsOfServiceProceedToBotDisposable = MetaDisposable()
+    private let watchNavigateToMessageDisposable = MetaDisposable()
+    private let permissionsDisposable = MetaDisposable()
     
     private var inAppNotificationSettings: InAppNotificationSettings?
     
@@ -195,7 +196,7 @@ final class AuthorizedApplicationContext {
     private let callState = Promise<PresentationCallState?>(nil)
     
     private var currentTermsOfServiceUpdate: TermsOfServiceUpdate?
-    private var currentTermsOfServiceUpdateController: TermsOfServiceController?
+    private var currentPermissionsController: PermissionController?
     
     private let unlockedStatePromise = Promise<Bool>()
     var unlockedState: Signal<Bool, NoError> {
@@ -743,17 +744,11 @@ final class AuthorizedApplicationContext {
         
         self.termsOfServiceUpdatesDisposable.set((account.stateManager.termsOfServiceUpdate
         |> deliverOnMainQueue).start(next: { [weak self] termsOfServiceUpdate in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            if strongSelf.currentTermsOfServiceUpdate == termsOfServiceUpdate {
+            guard let strongSelf = self, strongSelf.currentTermsOfServiceUpdate != termsOfServiceUpdate else {
                 return
             }
             
             strongSelf.currentTermsOfServiceUpdate = termsOfServiceUpdate
-            strongSelf.currentTermsOfServiceUpdateController?.dismiss()
-            strongSelf.currentTermsOfServiceUpdateController = nil
             if let termsOfServiceUpdate = termsOfServiceUpdate {
                 let presentationData = strongSelf.applicationContext.currentPresentationData.with { $0 }
                 var acceptImpl: ((String?) -> Void)?
@@ -777,7 +772,7 @@ final class AuthorizedApplicationContext {
                     |> deliverOnMainQueue).start(completed: {
                         controller?.dismiss()
                         if let botName = botName {
-                            self?.proccedTOSBotDisposable.set((resolvePeerByName(account: account, name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
+                            self?.termsOfServiceProceedToBotDisposable.set((resolvePeerByName(account: account, name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
                                 if let peerId = peerId {
                                     self?.rootController.pushViewController(ChatController(account: account, chatLocation: .peer(peerId), messageId: nil))
                                 }
@@ -799,6 +794,98 @@ final class AuthorizedApplicationContext {
                 }
                 
                 (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
+            }
+        }))
+        
+        let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
+        self.permissionsDisposable.set((combineLatest(requiredPermissions(account: account), permissionUISplitTest(postbox: account.postbox), permissionsPosition.get())
+        |> deliverOnMainQueue).start(next: { [weak self] contactsAndNotifications, splitTest, position in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let config = splitTest.configuration
+            var states: [(PermissionState, Bool)] = []
+            var i: Int = 0
+            for subject in config.order {
+                if i < position {
+                    i += 1
+                    continue
+                }
+                var modal = false
+                switch subject {
+                    case .contacts:
+                        if case .modal = config.contacts {
+                            modal = true
+                        }
+                        if case .requestable = contactsAndNotifications.0.status {
+                            states.append((contactsAndNotifications.0, modal))
+                        }
+                    case .notifications:
+                        if case .modal = config.notifications {
+                            modal = true
+                        }
+                        if case .requestable = contactsAndNotifications.1.status {
+                            states.append((contactsAndNotifications.1, modal))
+                        }
+                    default:
+                        break
+                }
+                i += 1
+            }
+            
+            if let (state, modal) = states.first {
+                if modal {
+                    if let controller = strongSelf.currentPermissionsController {
+                        controller.setState(state, animated: true)
+                        controller.proceed = {
+                            permissionsPosition.set(position + 1)
+                        }
+                    } else {
+                        let controller = PermissionController(account: account, splitTest: splitTest)
+                        strongSelf.currentPermissionsController = controller
+                        controller.setState(state, animated: false)
+                        controller.proceed = {
+                            permissionsPosition.set(position + 1)
+                        }
+                        dispatch_after_delay(0.15, DispatchQueue.main, {
+                            (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments.init(presentationAnimation: .modalSheet))
+                        })
+                    }
+                } else {
+                    switch state {
+                        case .contacts:
+                            splitTest.addEvent(.ContactsRequest)
+                            DeviceAccess.authorizeAccess(to: .contacts) { result in
+                                if result {
+                                    splitTest.addEvent(.ContactsAllowed)
+                                } else {
+                                    splitTest.addEvent(.ContactsDenied)
+                                }
+                                permissionsPosition.set(position + 1)
+                            }
+                        case .notifications:
+                            splitTest.addEvent(.NotificationsRequest)
+                            DeviceAccess.authorizeAccess(to: .notifications) { result in
+                                if result {
+                                    splitTest.addEvent(.NotificationsAllowed)
+                                } else {
+                                    splitTest.addEvent(.NotificationsDenied)
+                                }
+                                permissionsPosition.set(position + 1)
+                        }
+                        default:
+                            break
+                    }
+                }
+            } else {
+                if let controller = strongSelf.currentPermissionsController {
+                    controller.dismiss(completion: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.currentPermissionsController = nil
+                        }
+                    })
+                }
             }
         }))
         
@@ -1017,8 +1104,9 @@ final class AuthorizedApplicationContext {
         self.currentCallStatusTextTimer?.invalidate()
         self.presentationDataDisposable?.dispose()
         self.enablePostboxTransactionsDiposable?.dispose()
-        self.proccedTOSBotDisposable.dispose()
+        self.termsOfServiceProceedToBotDisposable.dispose()
         self.watchNavigateToMessageDisposable.dispose()
+        self.permissionsDisposable.dispose()
     }
     
     func openChatWithPeerId(peerId: PeerId, messageId: MessageId? = nil) {

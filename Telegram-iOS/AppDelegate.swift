@@ -594,7 +594,7 @@ private enum QueuedWakeup: Int32 {
             if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appStoreId)") {
                 UIApplication.shared.openURL(url)
             }
-        }, registerForNotifications: {
+        }, registerForNotifications: { completion in
             let _ = (self.currentAuthorizedContext()
             |> take(1)
             |> deliverOnMainQueue).start(next: { context in
