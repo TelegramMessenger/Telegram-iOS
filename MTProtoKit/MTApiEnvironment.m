@@ -238,8 +238,11 @@ NSString *suffix = @"";
         _appVersion = versionString;
         
         _systemLangCode = [[NSLocale preferredLanguages] objectAtIndex:0];
-        
-        _langPack = @"ios";
+    #if TARGET_OS_OSX
+        _langPack = @"macos";
+    #else
+         _langPack = @"ios";
+    #endif
         _langPackCode = @"";
         
         [self _updateApiInitializationHash];
