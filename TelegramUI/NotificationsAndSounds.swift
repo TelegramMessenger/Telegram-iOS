@@ -79,7 +79,7 @@ private enum NotificationsAndSoundsSection: Int32 {
 }
 
 private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
-    case permissionInfo(PresentationTheme, PresentationStrings)
+    case permissionInfo(PresentationTheme, PresentationStrings, AccessType)
     case permissionEnable(PresentationTheme, String)
     
     case messageHeader(PresentationTheme, String)
@@ -218,8 +218,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     
     static func ==(lhs: NotificationsAndSoundsEntry, rhs: NotificationsAndSoundsEntry) -> Bool {
         switch lhs {
-            case let .permissionInfo(lhsTheme, lhsStrings):
-                if case let .permissionInfo(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+            case let .permissionInfo(lhsTheme, lhsStrings, lhsAccessType):
+                if case let .permissionInfo(rhsTheme, rhsStrings, rhsAccessType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsAccessType == rhsAccessType {
                     return true
                 } else {
                     return false
@@ -431,8 +431,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     
     func item(_ arguments: NotificationsAndSoundsArguments) -> ListViewItem {
         switch self {
-            case let .permissionInfo(theme, strings):
-                return PermissionInfoItemListItem(theme: theme, strings: strings, subject: .notifications, sectionId: self.section)
+            case let .permissionInfo(theme, strings, type):
+                return PermissionInfoItemListItem(theme: theme, strings: strings, subject: .notifications, type: type, sectionId: self.section)
             case let .permissionEnable(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.authorizeNotifications()
@@ -573,12 +573,12 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, glob
     var entries: [NotificationsAndSoundsEntry] = []
     
     switch authorizationStatus {
-        case .denied:
-            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
-            entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Permissions_NotificationsAllowInSettings))
+        case .denied, .unreachable:
+            entries.append(.permissionInfo(presentationData.theme, presentationData.strings, authorizationStatus))
+            entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Permissions_NotificationsAllowInSettings_v0))
         case .notDetermined:
-            entries.append(.permissionInfo(presentationData.theme, presentationData.strings))
-            entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Permissions_NotificationsAllow))
+            entries.append(.permissionInfo(presentationData.theme, presentationData.strings, authorizationStatus))
+            entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Permissions_NotificationsAllow_v0))
         default:
             break
     }
@@ -658,8 +658,8 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         |> deliverOnMainQueue).start(next: { status in
             switch status {
                 case .notDetermined:
-                    account.telegramApplicationContext.applicationBindings.registerForNotifications()
-                case .denied, .restricted:
+                    DeviceAccess.authorizeAccess(to: .notifications)
+                case .denied, .restricted, .unreachable:
                     account.telegramApplicationContext.applicationBindings.openSettings()
                 default:
                     break

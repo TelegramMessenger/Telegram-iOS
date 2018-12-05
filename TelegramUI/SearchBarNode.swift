@@ -127,8 +127,8 @@ final class SearchBarNodeTheme {
         self.keyboard = keyboard
     }
     
-    init(theme: PresentationTheme) {
-        self.background = theme.rootController.activeNavigationSearchBar.backgroundColor
+    init(theme: PresentationTheme, active: Bool = true) {
+        self.background = active ? theme.rootController.activeNavigationSearchBar.backgroundColor : theme.rootController.navigationBar.backgroundColor
         self.separator = theme.rootController.navigationBar.separatorColor
         self.inputFill = theme.rootController.activeNavigationSearchBar.inputFillColor
         self.placeholder = theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor

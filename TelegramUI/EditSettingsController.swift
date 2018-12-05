@@ -457,12 +457,12 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                             }
                             updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource) |> deliverOnMainQueue).start(next: { result in
                                 switch result {
-                                case .complete:
-                                    updateState {
-                                        $0.withUpdatedUpdatingAvatar(nil)
-                                    }
-                                case .progress:
-                                    break
+                                    case .complete:
+                                        updateState {
+                                            $0.withUpdatedUpdatingAvatar(nil)
+                                        }
+                                    case .progress:
+                                        break
                                 }
                             }))
                         }

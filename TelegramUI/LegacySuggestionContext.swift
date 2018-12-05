@@ -2,14 +2,16 @@ import Foundation
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+
+import TelegramUIPrivateModule
 import LegacyComponents
 
 func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSuggestionContext {
     let context = TGSuggestionContext()
-    context.userListSignal = { mention in
+    context.userListSignal = { query in
         return SSignal { subscriber in
-            if let mention = mention {
-                let normalizedQuery = mention.lowercased()
+            if let query = query {
+                let normalizedQuery = query.lowercased()
                 let disposable = peerParticipants(postbox: account.postbox, id: peerId).start(next: { peers in
                     let filteredPeers = peers.filter { peer in
                         if peer.indexName.matchesByTokens(normalizedQuery) {
@@ -52,6 +54,38 @@ func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSuggestionCo
                 subscriber?.putCompletion()
                 return nil
             }
+        }
+    }
+    context.hashtagListSignal = { query in
+        return SSignal { subscriber in
+            let disposable = (recentlyUsedHashtags(postbox: account.postbox) |> map { hashtags -> [String] in
+                let normalizedQuery = query?.lowercased()
+                var result: [String] = []
+                if let normalizedQuery = normalizedQuery {
+                    for hashtag in hashtags {
+                        if hashtag.lowercased().hasPrefix(normalizedQuery) {
+                            result.append(hashtag)
+                        }
+                    }
+                }
+                return result
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { hashtags in
+                subscriber?.putNext(hashtags)
+                subscriber?.putCompletion()
+            })
+            
+            return SBlockDisposable {
+                disposable.dispose()
+            }
+        }
+    }
+    context.alphacodeSignal = { query in
+        return SSignal { subscriber in
+            subscriber?.putNext(TGEmojiSuggestions.suggestions(forQuery: query?.lowercased()))
+            subscriber?.putCompletion()
+            return nil
         }
     }
     return context

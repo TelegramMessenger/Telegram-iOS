@@ -4,44 +4,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 
-enum PermissionStateKind: Int32 {
-    case contacts
-    case notifications
-    case siri
-    case cellularData
-}
-
-private enum PermissionRequestStatus {
-    case requestable
-    case denied
-}
-
-private enum PermissionNotificationsRequestStatus {
-    case requestable
-    case denied
-    case unreachable
-}
-
-private enum PermissionState: Equatable {
-    case contacts(status: PermissionRequestStatus)
-    case notifications(status: PermissionNotificationsRequestStatus)
-    case siri(status: PermissionRequestStatus)
-    case cellularData
-    
-    var kind: PermissionStateKind {
-        switch self {
-            case .contacts:
-                return .contacts
-            case .notifications:
-                return .notifications
-            case .siri:
-                return .siri
-            case .cellularData:
-                return .cellularData
-        }
-    }
-}
-
 private struct PermissionControllerDataState: Equatable {
     var state: PermissionState?
 }
@@ -70,9 +32,20 @@ extension PermissionControllerState {
     }
 }
 
+private func localizedString(for key: String, strings: PresentationStrings, fallback: String = "") -> String {
+    if let string = strings.primaryComponent.dict[key] {
+        return string
+    } else if let string = strings.secondaryComponent?.dict[key] {
+        return string
+    } else {
+        return fallback
+    }
+}
+
 final class PermissionControllerNode: ASDisplayNode {
     private let account: Account
     private var presentationData: PresentationData
+    private let splitTest: PermissionUISplitTest
     
     private var innerState: PermissionControllerInnerState
     
@@ -82,9 +55,10 @@ final class PermissionControllerNode: ASDisplayNode {
     var openPrivacyPolicy: (() -> Void)?
     var dismiss: (() -> Void)?
     
-    init(account: Account) {
+    init(account: Account, splitTest: PermissionUISplitTest) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.splitTest = splitTest
         self.innerState = PermissionControllerInnerState(layout: nil, data: PermissionControllerDataState(state: nil))
         
         super.init()
@@ -103,7 +77,8 @@ final class PermissionControllerNode: ASDisplayNode {
     }
     
     private func applyPresentationData() {
-        self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor    }
+        self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+    }
     
     func animateIn(completion: (() -> Void)? = nil) {
         self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
@@ -113,6 +88,12 @@ final class PermissionControllerNode: ASDisplayNode {
         self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
             completion?()
         })
+    }
+    
+    public func setState(_ state: PermissionState, transition: ContainedViewLayoutTransition) {
+        self.updateState({ currentState -> PermissionControllerInnerState in
+            return PermissionControllerInnerState(layout: currentState.layout, data: PermissionControllerDataState(state: state))
+        }, transition: transition)
     }
     
     private func updateState(_ f: (PermissionControllerInnerState) -> PermissionControllerInnerState, transition: ContainedViewLayoutTransition) {
@@ -140,39 +121,59 @@ final class PermissionControllerNode: ASDisplayNode {
                 switch dataState {
                     case let .contacts(status):
                         icon = UIImage(bundleImageName: "Settings/Permissions/Contacts")
-                        title = self.presentationData.strings.Permissions_ContactsTitle
-                        text = self.presentationData.strings.Permissions_ContactsText
-                        if status == .denied {
-                            buttonTitle = self.presentationData.strings.Permissions_ContactsAllowInSettings
+                        if case let .modal(titleKey, textKey, allowTitleKey, allowInSettingsTitleKey) = self.splitTest.configuration.contacts {
+                            title = localizedString(for: titleKey, strings: self.presentationData.strings)
+                            text = localizedString(for: textKey, strings: self.presentationData.strings)
+                            if status == .denied {
+                                buttonTitle = localizedString(for: allowInSettingsTitleKey, strings: self.presentationData.strings)
+                            } else {
+                                buttonTitle = localizedString(for: allowTitleKey, strings: self.presentationData.strings)
+                            }
                         } else {
-                            buttonTitle = self.presentationData.strings.Permissions_ContactsAllow
+                            title = self.presentationData.strings.Permissions_ContactsTitle_v0
+                            text = self.presentationData.strings.Permissions_ContactsText_v0
+                            if status == .denied {
+                                buttonTitle = self.presentationData.strings.Permissions_ContactsAllowInSettings_v0
+                            } else {
+                                buttonTitle = self.presentationData.strings.Permissions_ContactsAllow_v0
+                            }
                         }
                         hasPrivacyPolicy = true
                     case let .notifications(status):
                         icon = UIImage(bundleImageName: "Settings/Permissions/Notifications")
-                        title = self.presentationData.strings.Permissions_NotificationsTitle
-                        text = self.presentationData.strings.Permissions_NotificationsText
-                        if status == .denied {
-                            buttonTitle = self.presentationData.strings.Permissions_NotificationsAllowInSettings
+                        if case let .modal(titleKey, textKey, allowTitleKey, allowInSettingsTitleKey) = self.splitTest.configuration.notifications {
+                            title = localizedString(for: titleKey, strings: self.presentationData.strings, fallback: self.presentationData.strings.Permissions_NotificationsTitle_v0)
+                            text = localizedString(for: textKey, strings: self.presentationData.strings, fallback: self.presentationData.strings.Permissions_NotificationsText_v0)
+                            if status == .denied {
+                                buttonTitle = localizedString(for: allowInSettingsTitleKey, strings: self.presentationData.strings, fallback: self.presentationData.strings.Permissions_NotificationsAllowInSettings_v0)
+                            } else {
+                                buttonTitle = localizedString(for: allowTitleKey, strings: self.presentationData.strings, fallback: self.presentationData.strings.Permissions_NotificationsAllow_v0)
+                            }
                         } else {
-                            buttonTitle = self.presentationData.strings.Permissions_NotificationsAllow
+                            title = self.presentationData.strings.Permissions_NotificationsTitle_v0
+                            text = self.presentationData.strings.Permissions_NotificationsText_v0
+                            if status == .denied {
+                                buttonTitle = self.presentationData.strings.Permissions_NotificationsAllowInSettings_v0
+                            } else {
+                                buttonTitle = self.presentationData.strings.Permissions_NotificationsAllow_v0
+                            }
                         }
                         hasPrivacyPolicy = false
                     case let .siri(status):
                         icon = UIImage(bundleImageName: "Settings/Permissions/Siri")
-                        title = self.presentationData.strings.Permissions_SiriTitle
-                        text = self.presentationData.strings.Permissions_SiriText
+                        title = self.presentationData.strings.Permissions_SiriTitle_v0
+                        text = self.presentationData.strings.Permissions_SiriText_v0
                         if status == .denied {
-                            buttonTitle = self.presentationData.strings.Permissions_SiriAllowInSettings
+                            buttonTitle = self.presentationData.strings.Permissions_SiriAllowInSettings_v0
                         } else {
-                            buttonTitle = self.presentationData.strings.Permissions_SiriAllow
+                            buttonTitle = self.presentationData.strings.Permissions_SiriAllow_v0
                         }
                         hasPrivacyPolicy = false
                     case .cellularData:
                         icon = UIImage(bundleImageName: "Settings/Permissions/CellularData")
-                        title = self.presentationData.strings.Permissions_CellularDataTitle
-                        text = self.presentationData.strings.Permissions_CellularDataText
-                        buttonTitle = self.presentationData.strings.Permissions_CellularDataAllowInSettings
+                        title = self.presentationData.strings.Permissions_CellularDataTitle_v0
+                        text = self.presentationData.strings.Permissions_CellularDataText_v0
+                        buttonTitle = self.presentationData.strings.Permissions_CellularDataAllowInSettings_v0
                         hasPrivacyPolicy = false
                 }
 

@@ -731,9 +731,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
             
             let peer = peerViewMainPeer(view)
             let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                if let _ = peer as? TelegramUser, let _ = view.cachedData as? CachedUserData {
-                    arguments.openEditing()
-                }
+                arguments.openEditing()
             })
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Settings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))

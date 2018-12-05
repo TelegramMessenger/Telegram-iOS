@@ -165,7 +165,7 @@ final class InstantPageTextItem: InstantPageItem {
             let lineFrame = frameForLine(line, boundingWidth: boundsWidth, alignment: self.alignment)
             if lineFrame.insetBy(dx: -5.0, dy: -5.0).contains(transformedPoint) {
                 var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
-                if index == attributedString.length {
+                if index == self.attributedString.length {
                     index -= 1
                 } else if index != 0 {
                     var glyphStart: CGFloat = 0.0
@@ -174,8 +174,8 @@ final class InstantPageTextItem: InstantPageItem {
                         index -= 1
                     }
                 }
-                if index >= 0 && index < attributedString.length {
-                    return (index, attributedString.attributes(at: index, effectiveRange: nil))
+                if index >= 0 && index < self.attributedString.length {
+                    return (index, self.attributedString.attributes(at: index, effectiveRange: nil))
                 }
                 break
             }
@@ -194,15 +194,18 @@ final class InstantPageTextItem: InstantPageItem {
                 let lineRange = NSIntersectionRange(range, line.range)
                 if lineRange.length != 0 {
                     var leftOffset: CGFloat = 0.0
-                    if lineRange.location != line.range.location {
+                    if lineRange.location != line.range.location || line.isRTL {
                         leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
                     }
                     var rightOffset: CGFloat = line.frame.width
-                    if lineRange.location + lineRange.length != line.range.length {
+                    if lineRange.location + lineRange.length != line.range.length || line.isRTL {
                         rightOffset = ceil(CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, nil))
                     }
                     let lineFrame = frameForLine(line, boundingWidth: boundsWidth, alignment: self.alignment)
-                    rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset, y: lineFrame.minY), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height)))
+                    let width = abs(rightOffset - leftOffset)
+                    if width > 1.0 {
+                        rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + (leftOffset < rightOffset ? leftOffset : rightOffset), y: lineFrame.minY), size: CGSize(width: width, height: lineFrame.size.height)))
+                    }
                 }
             }
             if !rects.isEmpty {
@@ -309,7 +312,7 @@ final class InstantPageTextItem: InstantPageItem {
         return false
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
         return nil
     }
     
@@ -358,11 +361,11 @@ final class InstantPageScrollableTextItem: InstantPageScrollableItem {
         context.restoreGState()
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (ASDisplayNode & InstantPageNode)? {
+    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (ASDisplayNode & InstantPageNode)? {
         var additionalNodes: [InstantPageNode] = []
         for item in additionalItems {
             if item.wantsNode {
-                if let node = item.node(account: account, strings: strings, theme: theme, openMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }, currentExpandedDetails: nil) {
+                if let node = item.node(account: account, strings: strings, theme: theme, openMedia: { _ in }, longPressMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in}, updateWebEmbedHeight: { _ in }, updateDetailsExpanded: { _ in }, currentExpandedDetails: nil) {
                     node.frame = item.frame
                     additionalNodes.append(node)
                 }
@@ -662,7 +665,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                 if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
                     let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                     let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
-                    strikethroughItems.append(InstantPageTextStrikethroughItem(frame: CGRect(x: workingLineOrigin.x + lowerX, y: workingLineOrigin.y, width: upperX - lowerX, height: fontLineHeight)))
+                    let x = lowerX < upperX ? lowerX : upperX
+                    strikethroughItems.append(InstantPageTextStrikethroughItem(frame: CGRect(x: workingLineOrigin.x + x, y: workingLineOrigin.y, width: abs(upperX - lowerX), height: fontLineHeight)))
                 }
                 if let color = attributes[NSAttributedStringKey.init(rawValue: InstantPageMarkerColorAttribute)] as? UIColor {
                     var lineHeight = fontLineHeight
@@ -674,7 +678,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                     }
                     let lowerX = floor(CTLineGetOffsetForStringIndex(line, range.location, nil))
                     let upperX = ceil(CTLineGetOffsetForStringIndex(line, range.location + range.length, nil))
-                    markedItems.append(InstantPageTextMarkedItem(frame: CGRect(x: workingLineOrigin.x + lowerX, y: workingLineOrigin.y + delta, width: upperX - lowerX, height: lineHeight), color: color))
+                    let x = lowerX < upperX ? lowerX : upperX
+                    markedItems.append(InstantPageTextMarkedItem(frame: CGRect(x: workingLineOrigin.x + x, y: workingLineOrigin.y + delta, width: abs(upperX - lowerX), height: lineHeight), color: color))
                 }
                 if let item = attributes[NSAttributedStringKey.init(rawValue: InstantPageAnchorAttribute)] as? Dictionary<String, Any>, let name = item["name"] as? String, let empty = item["empty"] as? Bool {
                     anchorItems.append(InstantPageTextAnchorItem(name: name, empty: empty))
@@ -743,7 +748,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             let lineFrame = frameForLine(line, boundingWidth: boundingWidth, alignment: alignment)
             for imageItem in line.imageItems {
                 if let image = media[imageItem.id] as? TelegramMediaFile {
-                    let item = InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false)
+                    let item = InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, url: nil, caption: nil, credit: nil), interactive: true, roundCorners: false, fit: false)
                     additionalItems.append(item)
                     
                     if item.frame.minY < topInset {

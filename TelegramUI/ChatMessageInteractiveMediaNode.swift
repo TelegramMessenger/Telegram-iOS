@@ -679,7 +679,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                             }
                         }
-                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case let .Loaded(content) = webpage.content {
+                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case .Loaded = webpage.content {
                         state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                     }
                 case .Local:
@@ -709,28 +709,23 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                         }
                     }
-                    if case .constrained = sizeCalculation {
-                        if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
-                            let durationString = stringForDuration(duration)
-                            badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
-                        }
+                    if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
+                        let durationString = stringForDuration(duration)
+                        badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                     }
                 case .Remote:
                     state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
                     if let file = self.media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
+                        let durationString = stringForDuration(duration)
                         if case .constrained = sizeCalculation {
                             if isMediaStreamable(message: message, media: file) {
                                 state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
-                            
-                                let durationString = stringForDuration(duration)
                                 badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: dataSizeString(file.size ?? 0))
                                 mediaDownloadState = .remote
                             } else {
-                                let durationString = stringForDuration(duration)
                                 badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                             }
                         } else {
-                            let durationString = stringForDuration(duration)
                             if isMediaStreamable(message: message, media: file) {
                                 state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                 badgeContent = .text(inset: 16.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
@@ -739,7 +734,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                             }
                         }
-                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case let .Loaded(content) = webpage.content {
+                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case .Loaded = webpage.content {
                         state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                     }
             }

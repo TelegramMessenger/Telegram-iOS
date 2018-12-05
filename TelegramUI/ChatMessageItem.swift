@@ -319,6 +319,10 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         loop: for media in message.media {
             if let telegramFile = media as? TelegramMediaFile {
+                if GlobalExperimentalSettings.animatedStickers && telegramFile.fileName == "animation.json" {
+                    viewClassName = ChatMessageAnimatedStickerItemNode.self
+                    break loop
+                }
                 for attribute in telegramFile.attributes {
                     switch attribute {
                         case .Sticker:

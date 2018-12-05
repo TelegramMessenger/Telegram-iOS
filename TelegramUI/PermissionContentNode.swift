@@ -4,7 +4,7 @@ import AsyncDisplayKit
 
 final class PermissionContentNode: ASDisplayNode {
     private var theme: PresentationTheme
-    let kind: PermissionStateKind
+    let kind: PermissionKind
     
     private let iconNode: ASImageNode
     private let titleNode: ImmediateTextNode
@@ -17,7 +17,7 @@ final class PermissionContentNode: ASDisplayNode {
     var buttonAction: (() -> Void)?
     var openPrivacyPolicy: (() -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, kind: PermissionStateKind, icon: UIImage?, title: String, text: String, buttonTitle: String, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, kind: PermissionKind, icon: UIImage?, title: String, text: String, buttonTitle: String, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
         self.theme = theme
         self.kind = kind
         
@@ -57,7 +57,7 @@ final class PermissionContentNode: ASDisplayNode {
         self.textNode.attributedText = parseMarkdownIntoAttributedString(text.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
         
         self.actionButton.title = buttonTitle
-        self.privacyPolicyButton.isHidden = openPrivacyPolicy != nil
+        self.privacyPolicyButton.isHidden = openPrivacyPolicy == nil
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
@@ -92,9 +92,11 @@ final class PermissionContentNode: ASDisplayNode {
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let buttonHeight = self.actionButton.updateLayout(width: size.width, transition: transition)
+        let privacyButtonSize = self.privacyPolicyButton.measure(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         
         let titleSubtitleSpacing: CGFloat = 26.0
         let buttonSpacing: CGFloat = 36.0
+        let privacySpacing: CGFloat = 45.0
         var contentHeight = titleSize.height + titleSubtitleSpacing + textSize.height + buttonHeight + buttonSpacing
         
         var imageSize = CGSize()
@@ -110,10 +112,13 @@ final class PermissionContentNode: ASDisplayNode {
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: iconFrame.maxY + imageSpacing), size: titleSize)
         let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: textSize)
         let buttonFrame = CGRect(origin: CGPoint(x: 0.0, y: textFrame.maxY + buttonSpacing), size: CGSize(width: size.width, height: buttonHeight))
+        let privacyButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - privacyButtonSize.width) / 2.0), y: buttonFrame.maxY + privacySpacing), size: privacyButtonSize)
+        
         
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         transition.updateFrame(node: self.textNode, frame: textFrame)
         transition.updateFrame(node: self.actionButton, frame: buttonFrame)
+        transition.updateFrame(node: self.privacyPolicyButton, frame: privacyButtonFrame)
     }
 }

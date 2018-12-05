@@ -501,6 +501,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     let detailsIndex = detailsIndex
                     if let newNode = item.node(account: self.account, strings: self.strings, theme: theme, openMedia: { [weak self] media in
                         self?.openMedia(media)
+                    }, longPressMedia: { [weak self] media in
+                        self?.longPressMedia(media)
                     }, openPeer: { [weak self] peerId in
                         self?.openPeer(peerId)
                     }, openUrl: { [weak self] url in
@@ -858,6 +860,34 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return item.urlAttribute(at: location.offsetBy(dx: -item.frame.minX - parentOffset.x, dy: -item.frame.minY - parentOffset.y))
         }
         return nil
+    }
+    
+    private func longPressMedia(_ media: InstantPageMedia) {
+        let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+            if let strongSelf = self, let image = media.media as? TelegramMediaImage {
+                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, reference: nil, partialReference: nil)
+                let _ = copyToPasteboard(applicationContext: strongSelf.account.telegramApplicationContext, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
+            }
+        }), ContextMenuAction(content: .text(self.strings.Conversation_LinkDialogSave), action: { [weak self] in
+            if let strongSelf = self, let image = media.media as? TelegramMediaImage {
+                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, reference: nil, partialReference: nil)
+                let _ = saveToCameraRoll(applicationContext: strongSelf.account.telegramApplicationContext, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
+            }
+        }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in
+            if let strongSelf = self, let webPage = strongSelf.webPage, let image = media.media as? TelegramMediaImage {
+                strongSelf.present(ShareController(account: strongSelf.account, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) }))), nil)
+            }
+        })], catchTapsOutside: true)
+        self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+            if let strongSelf = self {
+                for (_, itemNode) in strongSelf.visibleItemsWithNodes {
+                    if let (node, _) = itemNode.transitionNode(media: media) {
+                        return (strongSelf.scrollNode, node.convert(node.bounds, to: strongSelf.scrollNode), strongSelf, strongSelf.bounds)
+                    }
+                }
+            }
+            return nil
+        }))
     }
     
     @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {

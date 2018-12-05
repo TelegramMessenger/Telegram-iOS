@@ -15,6 +15,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private let roundCorners: Bool
     private let fit: Bool
     private let openMedia: (InstantPageMedia) -> Void
+    private let longPressMedia: (InstantPageMedia) -> Void
     
     private let imageNode: TransformImageNode
     private let statusNode: RadialStatusNode
@@ -29,7 +30,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
+    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void) {
         self.account = account
         self.theme = theme
         self.webPage = webPage
@@ -39,6 +40,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         self.roundCorners = roundCorners
         self.fit = fit
         self.openMedia = openMedia
+        self.longPressMedia = longPressMedia
         
         self.imageNode = TransformImageNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
@@ -54,21 +56,23 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
             
-            self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(largest.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
-                displayLinkDispatcher.dispatch {
-                    if let strongSelf = self {
-                        strongSelf.fetchStatus = status
-                        strongSelf.updateFetchStatus()
+            if interactive {
+                self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(largest.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
+                    displayLinkDispatcher.dispatch {
+                        if let strongSelf = self {
+                            strongSelf.fetchStatus = status
+                            strongSelf.updateFetchStatus()
+                        }
                     }
+                }))
+                
+                if media.url != nil {
+                    self.linkIconNode.image = UIImage(bundleImageName: "Instant View/ImageLink")
+                    self.addSubnode(self.linkIconNode)
                 }
-            }))
-            
-            if media.url != nil {
-                self.linkIconNode.image = UIImage(bundleImageName: "Instant View/ImageLink")
-                self.addSubnode(self.linkIconNode)
+
+                self.addSubnode(self.statusNode)
             }
-            
-            self.addSubnode(self.statusNode)
         } else if let file = media.media as? TelegramMediaFile {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             if file.mimeType.hasPrefix("image/") {
@@ -109,7 +113,9 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         super.didLoad()
         
         if self.interactive {
-            self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            recognizer.delaysTouchesBegan = false
+            self.view.addGestureRecognizer(recognizer)
         } else {
             self.view.isUserInteractionEnabled = false
         }
@@ -226,9 +232,24 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         self.statusNode.isHidden = self.imageNode.isHidden
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.openMedia(self.media)
+    @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            if self.media.media is TelegramMediaImage && self.media.index == -1 {
+                                return
+                            }
+                            self.openMedia(self.media)
+                        case .longTap:
+                            self.longPressMedia(self.media)
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
         }
     }
 }

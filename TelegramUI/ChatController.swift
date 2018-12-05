@@ -1908,8 +1908,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] animated, f in
-            self?.updateChatPresentationInterfaceState(animated: animated,  interactive: true, { $0.updatedInterfaceState(f) })
+        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] animated, saveInterfaceState, f in
+            self?.updateChatPresentationInterfaceState(animated: animated, interactive: true, saveInterfaceState: saveInterfaceState, { $0.updatedInterfaceState(f) })
         }
         
         self.chatDisplayNode.requestUpdateInterfaceState = { [weak self] transition, interactive, f in
@@ -2090,7 +2090,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     |> deliverOnMainQueue).start(next: { actions in
                         if let strongSelf = self, !actions.options.isEmpty {
                             if let banAuthor = actions.banAuthor {
-                                strongSelf.presentBanMessageOptions(author: banAuthor, messageIds: messageIds, options: actions.options)
+                                strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
                             } else {
                                 strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options)
                             }
@@ -2117,7 +2117,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 |> deliverOnMainQueue).start(next: { actions in
                     if let strongSelf = self, !actions.options.isEmpty {
                         if let banAuthor = actions.banAuthor {
-                            strongSelf.presentBanMessageOptions(author: banAuthor, messageIds: messageIds, options: actions.options)
+                            strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
                         } else {
                             var isAction = false
                             if messages.count == 1 {
@@ -3108,11 +3108,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.mediaRecordingModeTooltipController?.dismiss()
     }
     
-    private func saveInterfaceState() {
+    private func saveInterfaceState(includeScrollState: Bool = true) {
         if case let .peer(peerId) = self.chatLocation {
             let timestamp = Int32(Date().timeIntervalSince1970)
-            let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
-            let interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp).withUpdatedHistoryScrollState(scrollState)
+            var interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
+            if includeScrollState {
+                let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
+                interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
+            }
             let _ = updatePeerChatInterfaceState(account: account, peerId: peerId, state: interfaceState).start()
         }
     }
@@ -3152,11 +3155,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         })
     }
     
-    func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
-        self.updateChatPresentationInterfaceState(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate, interactive: interactive, f)
+    func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
+        self.updateChatPresentationInterfaceState(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate, interactive: interactive, saveInterfaceState: saveInterfaceState, f)
     }
     
-    func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, interactive: Bool, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
+    func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
         var temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
         
         if self.presentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup != temporaryChatPresentationInterfaceState.keyboardButtonsMessage?.visibleButtonKeyboardMarkup {
@@ -3426,6 +3429,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 self.deferScreenEdgeGestures = [.top]
             case .inline:
                 self.statusBar.statusBarStyle = .Ignore
+        }
+        
+        if saveInterfaceState {
+            self.saveInterfaceState(includeScrollState: false)
         }
     }
     
@@ -4427,7 +4434,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             
             if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, messageId.peerId != peerId {
                 if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId)
+                    navigateToChatController(navigationController: navigationController, account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId, keepStack: .always)
                 }
             } else if case let .peer(peerId) = self.chatLocation, messageLocation.peerId == peerId {
                 if let fromIndex = fromIndex {
@@ -5293,7 +5300,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }))
     }
     
-    private func presentBanMessageOptions(author: Peer, messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions) {
+    private func presentBanMessageOptions(accountPeerId: PeerId, author: Peer, messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions) {
         if case let .peer(peerId) = self.chatLocation {
             self.navigationActionDisposable.set((fetchChannelParticipant(account: self.account, peerId: peerId, participantId: author.id)
             |> deliverOnMainQueue).start(next: { [weak self] participant in
@@ -5305,7 +5312,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 canBan = false
                             case let .member(_, _, adminInfo, _):
                                 if let adminInfo = adminInfo, !adminInfo.rights.flags.isEmpty {
-                                    canBan = false
+                                    if adminInfo.promotedBy != accountPeerId {
+                                        canBan = false
+                                    }
                                 }
                         }
                     }
@@ -5526,9 +5535,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
         var inputShortcuts: [KeyShortcut]
         if self.chatDisplayNode.isInputViewFocused {
-            inputShortcuts = [KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {
-                
-            })]
+            inputShortcuts = [KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {})]
         } else {
             inputShortcuts = [KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in
                 if let strongSelf = self {

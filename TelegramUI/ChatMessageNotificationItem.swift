@@ -24,9 +24,9 @@ public final class ChatMessageNotificationItem: NotificationItem {
         self.expandAction = expandAction
     }
     
-    public func node() -> NotificationItemNode {
+    public func node(compact: Bool) -> NotificationItemNode {
         let node = ChatMessageNotificationItemNode()
-        node.setupItem(self)
+        node.setupItem(self, compact: compact)
         return node
     }
     
@@ -45,6 +45,7 @@ public final class ChatMessageNotificationItem: NotificationItem {
     }
 }
 
+private let compactAvatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 20.0)!
 private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 24.0)!
 
 final class ChatMessageNotificationItemNode: NotificationItemNode {
@@ -59,6 +60,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     private var titleAttributedText: NSAttributedString?
     private var textAttributedText: NSAttributedString?
     
+    private var compact: Bool?
     private var validLayout: CGFloat?
     
     override init() {
@@ -86,8 +88,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         self.addSubnode(self.imageNode)
     }
     
-    func setupItem(_ item: ChatMessageNotificationItem) {
+    func setupItem(_ item: ChatMessageNotificationItem, compact: Bool) {
         self.item = item
+        self.compact = compact
+        if compact {
+            self.avatarNode.font = compactAvatarFont
+        }
         let presentationData = item.account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         var title: String?
@@ -204,7 +210,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             messageText = ""
         }
         
-        self.titleAttributedText = NSAttributedString(string: title ?? "", font: Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
+        self.titleAttributedText = NSAttributedString(string: title ?? "", font: compact ? Font.semibold(15.0) : Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
         
         let imageNodeLayout = self.imageNode.asyncLayout()
         var applyImage: (() -> Void)?
@@ -241,25 +247,28 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             self.imageNode.setSignal(updateImageSignal)
         }
         
-        self.textAttributedText = NSAttributedString(string: messageText, font: Font.regular(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
+        self.textAttributedText = NSAttributedString(string: messageText, font: compact ? Font.regular(15.0) : Font.regular(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
         
-        if let validLayout = self.validLayout {
-            let _ = self.updateLayout(width: validLayout, transition: .immediate)
+        if let width = self.validLayout {
+            let _ = self.updateLayout(width: width, transition: .immediate)
         }
     }
     
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = width
+        let compact = self.compact ?? false
         
-        let panelHeight: CGFloat = 74.0
-        let leftInset: CGFloat = 77.0
+        let panelHeight: CGFloat = compact ? 64.0 : 74.0
+        let imageSize: CGSize = compact ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 54.0, height: 54.0)
+        let imageSpacing: CGFloat = compact ? 19.0 : 23.0
+        let leftInset: CGFloat = imageSize.width + imageSpacing
         var rightInset: CGFloat = 8.0
         
         if !self.imageNode.isHidden {
-            rightInset += 55.0 + 8.0
+            rightInset += imageSize.width + 8.0
         }
         
-        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: CGSize(width: 54.0, height: 54.0)))
+        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: 10.0, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
         
         var titleInset: CGFloat = 0.0
         if let image = self.titleIconNode.image {
@@ -286,8 +295,8 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size))
         
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: width - 9.0 - 55.0, y: 9.0), size: CGSize(width: 55.0, height: 55.0)))
+        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: width - 10.0 - imageSize.width, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
         
-        return 74.0
+        return panelHeight
     }
 }

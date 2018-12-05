@@ -9,11 +9,13 @@ class PermissionInfoItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let subject: DeviceAccessSubject
+    let type: AccessType
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType) {
         self.theme = theme
         self.strings = strings
         self.subject = subject
+        self.type = type
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -53,9 +55,9 @@ class PermissionInfoItem: ListViewItem {
 class PermissionInfoItemListItem: PermissionInfoItem, ItemListItem {
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, sectionId: ItemListSectionId) {
         self.sectionId = sectionId
-        super.init(theme: theme, strings: strings, subject: subject)
+        super.init(theme: theme, strings: strings, subject: subject, type: type)
     }
     
     override func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -183,7 +185,12 @@ class PermissionInfoItemNode: ListViewItemNode {
                     text = item.strings.Contacts_PermissionsText
                 case .notifications:
                     title = item.strings.Notifications_PermissionsTitle
-                    text = item.strings.Notifications_PermissionsText
+                    switch item.type {
+                        case .unreachable:
+                            text = item.strings.Notifications_PermissionsUnreachableText
+                        default:
+                            text = item.strings.Notifications_PermissionsText
+                    }
                 default:
                     title = ""
                     text = ""

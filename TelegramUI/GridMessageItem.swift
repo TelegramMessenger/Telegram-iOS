@@ -280,7 +280,7 @@ final class GridMessageItemNode: GridItemNode {
                     self.imageNode.addSubnode(self.statusNode)
                 }
             } else {
-                videoAccessoryNode.isHidden = true
+                self.videoAccessoryNode.isHidden = true
             }
             
             if let mediaDimensions = mediaDimensions {
@@ -300,7 +300,7 @@ final class GridMessageItemNode: GridItemNode {
     override func layout() {
         super.layout()
         
-        let imageFrame = self.bounds.insetBy(dx: 1.0, dy: 1.0)
+        let imageFrame = self.bounds
         self.imageNode.frame = imageFrame
         
         if let item = self.item, let (_, _, mediaDimensions) = self.currentState {
@@ -312,7 +312,7 @@ final class GridMessageItemNode: GridItemNode {
         let progressDiameter: CGFloat = 40.0
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - progressDiameter) / 2.0), y: floor((imageFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
         
-        videoAccessoryNode.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - videoAccessoryNode.contentSize.width - 5, y: imageFrame.maxY - videoAccessoryNode.contentSize.height - 5), size: videoAccessoryNode.contentSize)
+        self.videoAccessoryNode.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - self.videoAccessoryNode.contentSize.width - 5, y: imageFrame.maxY - self.videoAccessoryNode.contentSize.height - 5), size: self.videoAccessoryNode.contentSize)
     }
     
     func updateSelectionState(animated: Bool) {

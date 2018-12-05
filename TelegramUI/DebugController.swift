@@ -42,6 +42,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case reimport(PresentationTheme)
     case sendTthumb(PresentationTheme)
     case previewTthumb(PresentationTheme)
+    case animatedStickers(PresentationTheme)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -56,7 +57,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .sendTthumb, .previewTthumb:
+            case .clearTips, .reimport, .sendTthumb, .previewTthumb, .animatedStickers:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -93,8 +94,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 12
             case .previewTthumb:
                 return 13
-            case .versionInfo:
+            case .animatedStickers:
                 return 14
+            case .versionInfo:
+                return 15
         }
     }
     
@@ -219,6 +222,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(theme: theme, title: "Preview TThumb", value: GlobalExperimentalSettings.forceTinyThumbnailsPreview, sectionId: self.section, style: .blocks, updated: { value in
                     GlobalExperimentalSettings.forceTinyThumbnailsPreview = value
                 })
+            case let .animatedStickers(theme):
+                return ItemListSwitchItem(theme: theme, title: "Animated Stickers", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
+                    GlobalExperimentalSettings.animatedStickers = value
+                })
             case let .versionInfo(theme):
                 let bundle = Bundle.main
                 let bundleId = bundle.bundleIdentifier ?? ""
@@ -251,6 +258,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     }
     entries.append(.sendTthumb(presentationData.theme))
     entries.append(.previewTthumb(presentationData.theme))
+    entries.append(.animatedStickers(presentationData.theme))
     entries.append(.versionInfo(presentationData.theme))
     
     return entries

@@ -160,7 +160,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     interaction.activateSearch()
                 })
             case let .permissionInfo(theme, strings):
-                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts)
+                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied)
             case let .permissionEnable(theme, text):
                 return ContactListActionItem(theme: theme, title: text, icon: nil, header: nil, action: {
                     interaction.authorize()
@@ -362,11 +362,11 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                 switch authorizationStatus {
                     case .denied:
                         entries.append(.permissionInfo(theme, strings))
-                        entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings))
+                        entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
                         addHeader = true
                     case .notDetermined:
                         entries.append(.permissionInfo(theme, strings))
-                        entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow))
+                        entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow_v0))
                         addHeader = true
                     default:
                         break
@@ -654,7 +654,7 @@ final class ContactListNode: ASDisplayNode {
         var authorizeImpl: (() -> Void)?
         var openPrivacyPolicyImpl: (() -> Void)?
         
-        self.authorizationNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: .contacts, icon: UIImage(bundleImageName: "Settings/Permissions/Contacts"), title: self.presentationData.strings.Permissions_ContactsTitle, text: self.presentationData.strings.Permissions_ContactsText, buttonTitle: self.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
+        self.authorizationNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: .contacts, icon: UIImage(bundleImageName: "Settings/Permissions/Contacts"), title: self.presentationData.strings.Contacts_PermissionsTitle, text: self.presentationData.strings.Contacts_PermissionsText, buttonTitle: self.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
             authorizeImpl?()
         }, openPrivacyPolicy: {
             openPrivacyPolicyImpl?()
@@ -875,7 +875,7 @@ final class ContactListNode: ASDisplayNode {
                     
                     let authorizationPreviousHidden = strongSelf.authorizationNode.isHidden
                     strongSelf.authorizationNode.removeFromSupernode()
-                    strongSelf.authorizationNode = PermissionContentNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, kind: .contacts, icon: UIImage(bundleImageName: "Settings/Permissions/Contacts"), title: strongSelf.presentationData.strings.Permissions_ContactsTitle, text: strongSelf.presentationData.strings.Permissions_ContactsText, buttonTitle: strongSelf.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
+                    strongSelf.authorizationNode = PermissionContentNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, kind: .contacts, icon: UIImage(bundleImageName: "Settings/Permissions/Contacts"), title: strongSelf.presentationData.strings.Contacts_PermissionsTitle, text: strongSelf.presentationData.strings.Contacts_PermissionsText, buttonTitle: strongSelf.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
                         authorizeImpl?()
                     }, openPrivacyPolicy: {
                         openPrivacyPolicyImpl?()
@@ -923,7 +923,7 @@ final class ContactListNode: ASDisplayNode {
                 |> deliverOnMainQueue).start(next: { status in
                     switch status {
                         case .notDetermined:
-                            DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.presentationData, present: { _, _ in }, openSettings: {}, { _ in })
+                            DeviceAccess.authorizeAccess(to: .contacts)
                         case .denied, .restricted:
                             account.telegramApplicationContext.applicationBindings.openSettings()
                         default:

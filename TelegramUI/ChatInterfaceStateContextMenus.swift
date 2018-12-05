@@ -287,7 +287,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             
             var hasUneditableAttributes = false
 
-            
             if let peer = message.peers[message.id.peerId] as? TelegramChannel {
                 if peer.hasBannedRights(.banSendMessages) {
                     hasUneditableAttributes = true
@@ -324,7 +323,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
                 
                 if !hasUneditableAttributes {
-                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                     if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: account.peerId, message: message) {
                         canEdit = true
                     }
@@ -510,7 +508,6 @@ private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId
     }
     
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-    
     if message.timestamp + limits.maxMessageEditingInterval > timestamp {
         return true
     } else {
@@ -606,7 +603,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                                     }
                             }
                         }
-                    } else if let _ = peer as? TelegramUser {
+                    } else if let user = peer as? TelegramUser {
                         if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
                             optionsMap[id]!.insert(.forward)
                         }
@@ -615,6 +612,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             if !message.flags.contains(.Incoming) || limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
                                 optionsMap[id]!.insert(.deleteGlobally)
                             }
+                        }
+                        if user.botInfo != nil {
+                            optionsMap[id]!.insert(.report)
                         }
                     } else if let _ = peer as? TelegramSecretChat {
                         var isNonRemovableServiceAction = false
