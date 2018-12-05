@@ -1617,6 +1617,17 @@ public final class Postbox {
     }
     
     fileprivate func applyInteractiveReadMaxIndex(_ messageIndex: MessageIndex) -> [MessageId] {
+        let peerIds = self.peerIdsForLocation(.peer(messageIndex.id.peerId), tagMask: nil)
+        switch peerIds {
+            case let .associated(_, messageId):
+                if let messageId = messageId, let readState = self.readStateTable.getCombinedState(messageId.peerId), readState.count != 0 {
+                    if let topMessage = self.messageHistoryTable.topMessage(messageId.peerId) {
+                        let _ = self.messageHistoryTable.applyInteractiveMaxReadIndex(MessageIndex(topMessage), operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+                    }
+                }
+            default:
+                break
+        }
         return self.messageHistoryTable.applyInteractiveMaxReadIndex(messageIndex, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
