@@ -58,7 +58,7 @@ public struct TinyThumbnailData: Equatable {
 }
 
 func compressTinyThumbnail(_ image: UIImage) -> TinyThumbnailData? {
-    let size = image.size.fitted(CGSize(width: 40.0, height: 40.0))
+    let size = image.size.fitted(CGSize(width: 42.0, height: 42.0))
     let context = DrawingContext(size: size, scale: 1.0, clear: false)
     context.withFlippedContext({ c in
         if let image = image.cgImage {
@@ -87,8 +87,7 @@ func compressTinyThumbnail(_ image: UIImage) -> TinyThumbnailData? {
     if let outTablesBuffer = outTablesBuffer {
         let tablesData = Data(bytes: outTablesBuffer, count: Int(outTablesSize))
         tablesDataHash = murMurHash32Data(tablesData)
-        //let tables = hexString(tablesData)
-        //print("tablesData \(tables)")
+        //print("tablesData \(hexString(tablesData))")
     }
     
     var outBuffer: UnsafeMutablePointer<UInt8>?

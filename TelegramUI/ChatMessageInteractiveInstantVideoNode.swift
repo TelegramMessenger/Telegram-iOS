@@ -246,7 +246,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings, format: .regular)
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, width - videoFrame.midX - 85.0), height: CGFloat.greatestFiniteMagnitude))
             
             let result = ChatMessageInstantVideoItemLayoutResult(contentSize: imageSize, overflowLeft: 0.0, overflowRight: max(0.0, floor(videoFrame.midX) + 55.0 + dateAndStatusSize.width - videoFrame.width))
             
