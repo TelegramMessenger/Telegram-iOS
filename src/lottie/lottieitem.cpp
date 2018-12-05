@@ -999,11 +999,12 @@ void LOTStrokeItem::updateRenderNode()
     mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
                             mWidth * scale);
     if (mDashArraySize) {
-        /* AE draw the dash even if dash value is 0 */
-        if (vCompare(mDashArray[0], 0.0f)) mDashArray[0]= 0.2;
-
         for (int i = 0 ; i < mDashArraySize ; i++)
             mDashArray[i] *= scale;
+
+        /* AE draw the dash even if dash value is 0 */
+        if (vCompare(mDashArray[0], 0.0f)) mDashArray[0]= 0.1;
+
         mDrawable->setDashInfo(mDashArray, mDashArraySize);
     }
 }
