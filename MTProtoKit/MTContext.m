@@ -735,11 +735,11 @@
         __block int32_t earliestFailure = INT32_MAX;
         
         int32_t timestamp = (int32_t)CFAbsoluteTimeGetCurrent();
-        __block bool scanIpv6 = true;
+        __block bool scanIpv6 = false;
         for (MTTransportScheme *scheme in schemes) {
             if (scheme.address.isIpv6) {
                 [self _withTransportSchemeStatsForDatacenterId:datacenterId transportScheme:scheme process:^MTTransportSchemeStats *(MTTransportSchemeStats *current) {
-                    if (current.lastResponseTimestamp > timestamp - 60 * 60) {
+                    if (scheme.address.isIpv6 && current.lastResponseTimestamp > timestamp - 60 * 60) {
                         scanIpv6 = true;
                     }
                     return current;
