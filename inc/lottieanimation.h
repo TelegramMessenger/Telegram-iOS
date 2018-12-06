@@ -44,6 +44,8 @@ public:
      *  @param[in] bytesPerLine  number of bytes in a surface scanline.
      *
      *  @note Default surface format is ARGB32_Premultiplied.
+     *
+     *  @internal
      */
     Surface(uint32_t *buffer, size_t width, size_t height, size_t bytesPerLine);
 
@@ -51,6 +53,9 @@ public:
      *  @brief Returns width of the surface.
      *
      *  @return surface width
+     *
+     *  @internal
+     *
      */
     size_t width() const {return mWidth;}
 
@@ -58,6 +63,8 @@ public:
      *  @brief Returns height of the surface.
      *
      *  @return surface height
+     *
+     *  @internal
      */
     size_t height() const {return mHeight;}
 
@@ -65,6 +72,8 @@ public:
      *  @brief Returns number of bytes in the surface scanline.
      *
      *  @return number of bytes in scanline.
+     *
+     *  @internal
      */
     size_t  bytesPerLine() const {return mBytesPerLine;}
 
@@ -72,6 +81,8 @@ public:
      *  @brief Returns buffer attached tp the surface.
      *
      *  @return buffer attaced to the Surface.
+     *
+     *  @internal
      */
     uint32_t *buffer() const {return mBuffer;}
 
@@ -96,6 +107,8 @@ public:
      *
      *  @return Animation object that can render the contents of the
      *          lottie resource represented by file path.
+     *
+     *  @internal
      */
     static std::unique_ptr<Animation>
     loadFromFile(const std::string &path);
@@ -108,6 +121,8 @@ public:
      *
      *  @return Animation object that can render the contents of the
      *          lottie resource represented by JSON string data.
+     *
+     *  @internal
      */
     static std::unique_ptr<Animation>
     loadFromData(std::string jsonData, const std::string &key);
@@ -116,6 +131,8 @@ public:
      *  @brief Returns default framerate of the lottie resource.
      *
      *  @return framerate of the lottie resource
+     *
+     *  @internal
      *
      */
     double frameRate() const;
@@ -126,6 +143,8 @@ public:
      *  @return frame count of the lottie resource.
      *
      *  @note frame number starts with 0.
+     *
+     *  @internal
      */
     size_t totalFrame() const;
 
@@ -134,6 +153,8 @@ public:
      *
      *  @param[out] width  default width of the viewport.
      *  @param[out] height default height of the viewport.
+     *
+     *  @internal
      *
      */
     void   size(size_t &width, size_t &height) const;
@@ -148,6 +169,8 @@ public:
      *
      *  @see totalFrame()
      *  @see frameRate()
+     *
+     *  @internal
      */
     double duration() const;
 
@@ -161,6 +184,7 @@ public:
      *
      *  @return frame numer maps to the position value [startFrame .... endFrame]
      *
+     *  @internal
      */
     size_t frameAtPos(double pos);
 
@@ -180,7 +204,9 @@ public:
      *  @return future that will hold the result when rendering finished.
      *
      *  for Synchronus rendering @see renderSync
+     *
      *  @see Surface
+     *  @internal
      */
     std::future<Surface> render(size_t frameNo, Surface surface);
 
@@ -190,6 +216,8 @@ public:
      *
      *  @param[in] frameNo Content corresponds to the frameno needs to be drawn
      *  @param[in] surface Surface in which content will be drawn
+     *
+     *  @internal
      */
     void              renderSync(size_t frameNo, Surface surface);
 
@@ -202,6 +230,8 @@ public:
      *  @param[in] height  content viewbox height
      *
      *  @return render node list.
+     *
+     *  @internal
      */
     const std::vector<LOTNode *> &renderList(size_t frameNo, size_t width, size_t height) const;
 
@@ -214,17 +244,23 @@ public:
      *  @param[in] height  content viewbox height
      *
      *  @return Root layer node.
+     *
+     *  @internal
      */
     const LOTLayerNode * renderTree(size_t frameNo, size_t width, size_t height) const;
 
     /**
      *  @brief default destructor
+     *
+     *  @internal
      */
     ~Animation();
 
 private:
     /**
      *  @brief default constructor
+     *
+     *  @internal
      */
     Animation();
 
