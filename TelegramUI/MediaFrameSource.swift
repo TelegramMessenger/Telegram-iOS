@@ -9,10 +9,12 @@ enum MediaTrackEvent {
 
 final class MediaFrameSourceSeekResult {
     let buffers: MediaPlaybackBuffers
+    let extraDecodedVideoFrames: [MediaTrackFrame]
     let timestamp: CMTime
     
-    init(buffers: MediaPlaybackBuffers, timestamp: CMTime) {
+    init(buffers: MediaPlaybackBuffers, extraDecodedVideoFrames: [MediaTrackFrame], timestamp: CMTime) {
         self.buffers = buffers
+        self.extraDecodedVideoFrames = extraDecodedVideoFrames
         self.timestamp = timestamp
     }
 }

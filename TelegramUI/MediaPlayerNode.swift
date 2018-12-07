@@ -147,6 +147,7 @@ final class MediaPlayerNode: ASDisplayNode {
                     var numFrames = 0
                     let layer = layerRef.takeUnretainedValue()
                     let layerTime = CMTimeGetSeconds(CMTimebaseGetTime(timebase))
+                    let rate = CMTimebaseGetRate(timebase)
                     var maxTakenTime = layerTime + 0.1
                     var finised = false
                     loop: while true {
@@ -154,9 +155,33 @@ final class MediaPlayerNode: ASDisplayNode {
                         
                         if isReady {
                             switch takeFrame() {
+                                case let .restoreState(frames, atTime):
+                                    layer.flush()
+                                    for i in 0 ..< frames.count {
+                                        let frame = frames[i]
+                                        let frameTime = CMTimeGetSeconds(frame.position)
+                                        maxTakenTime = frameTime
+                                        let attachments = CMSampleBufferGetSampleAttachmentsArray(frame.sampleBuffer, true)! as NSArray
+                                        let dict = attachments[0] as! NSMutableDictionary
+                                        if i == 0 {
+                                            CMSetAttachment(frame.sampleBuffer, kCMSampleBufferAttachmentKey_ResetDecoderBeforeDecoding as NSString, kCFBooleanTrue as AnyObject, kCMAttachmentMode_ShouldPropagate)
+                                            CMSetAttachment(frame.sampleBuffer, kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString, kCFBooleanTrue as AnyObject, kCMAttachmentMode_ShouldPropagate)
+                                        }
+                                        if CMTimeCompare(frame.position, atTime) < 0 {
+                                            dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DoNotDisplay as NSString as String)
+                                        } else if CMTimeCompare(frame.position, atTime) == 0 {
+                                            dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DisplayImmediately as NSString as String)
+                                            dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration as NSString as String)
+                                            //print("restore state to \(frame.position) -> \(frameTime) at \(layerTime) (\(i + 1) of \(frames.count))")
+                                        }
+                                        layer.enqueue(frame.sampleBuffer)
+                                    }
                                 case let .frame(frame):
                                     numFrames += 1
                                     let frameTime = CMTimeGetSeconds(frame.position)
+                                    if rate.isZero {
+                                        //print("enqueue \(frameTime) at \(layerTime)")
+                                    }
                                     if frame.resetDecoder {
                                         layer.flush()
                                     }

@@ -20,6 +20,7 @@ private final class StorageUsageControllerArguments {
 
 private enum StorageUsageSection: Int32 {
     case keepMedia
+    case immutableSize
     case all
     case peers
 }
@@ -30,6 +31,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     
     case collecting(PresentationTheme, String)
     
+    case immutableSize(PresentationTheme, String, String)
+    
     case clearAll(PresentationTheme, String, String, Bool)
     
     case peersHeader(PresentationTheme, String)
@@ -39,6 +42,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
         switch self {
             case .keepMedia, .keepMediaInfo:
                 return StorageUsageSection.keepMedia.rawValue
+            case .immutableSize:
+                return StorageUsageSection.immutableSize.rawValue
             case .collecting, .clearAll:
                 return StorageUsageSection.all.rawValue
             case .peersHeader, .peer:
@@ -54,12 +59,14 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return 1
             case .collecting:
                 return 2
-            case .clearAll:
+            case .immutableSize:
                 return 3
-            case .peersHeader:
+            case .clearAll:
                 return 4
+            case .peersHeader:
+                return 5
             case let .peer(index, _, _, _, _, _, _):
-                return 5 + index
+                return 6 + index
         }
     }
     
@@ -79,6 +86,12 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 }
             case let .collecting(lhsTheme, lhsText):
                 if case let .collecting(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .immutableSize(lhsTheme, lhsText, lhsValue):
+                if case let .immutableSize(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -139,6 +152,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
             case let .collecting(theme, text):
                 return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
+            case let .immutableSize(theme, title, value):
+                return ItemListDisclosureItem(theme: theme, icon: nil, title: title, kind: .disabled, titleColor: .primary, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: nil)
             case let .peersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .clearAll(theme, text, value, enabled):
@@ -175,6 +190,8 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
     var addedHeader = false
     
     if let cacheStats = cacheStats, case let .result(stats) = cacheStats {
+        entries.append(.immutableSize(presentationData.theme, presentationData.strings.Cache_ServiceFiles, dataSizeString(stats.immutableSize)))
+        
         var peerSizes: Int64 = 0
         var statsByPeerId: [(PeerId, Int64)] = []
         for (peerId, categories) in stats.media {
@@ -248,7 +265,17 @@ func storageUsageController(account: Account) -> ViewController {
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let statsPromise = Promise<CacheUsageStatsResult?>()
-    statsPromise.set(.single(nil) |> then(collectCacheUsageStats(account: account) |> map(Optional.init)))
+    let resetStats: () -> Void = {
+        let additionalPaths: [String] = [
+            NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0],
+            NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/files",
+            NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/videos"
+        ]
+        statsPromise.set(.single(nil)
+        |> then(collectCacheUsageStats(account: account, additionalCachePaths: additionalPaths, logFilesPath: account.telegramApplicationContext.applicationBindings.containerPath + "/telegram-data/logs")
+        |> map(Optional.init)))
+    }
+    resetStats()
     
     let actionDisposables = DisposableSet()
     
@@ -431,7 +458,9 @@ func storageUsageController(account: Account) -> ViewController {
                                     subscriber.putCompletion()
                                     return EmptyDisposable
                                 } |> runOn(Queue.concurrentDefaultQueue())
-                                signal = signal |> then(account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths)) |> then(removeTempFiles)
+                                signal = signal
+                                |> then(account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths))
+                                |> then(removeTempFiles)
                             }
                             
                             if otherSize.0 {
@@ -442,9 +471,39 @@ func storageUsageController(account: Account) -> ViewController {
                                 updatedTempSize = 0
                             }
                             
-                            statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize))))
+                            let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize, immutableSize: stats.immutableSize)
                             
-                            clearDisposable.set(signal.start())
+                            var cancelImpl: (() -> Void)?
+                            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                            let progressSignal = Signal<Never, NoError> { subscriber in
+                                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                                    cancelImpl?()
+                                }))
+                                presentControllerImpl?(controller)
+                                return ActionDisposable { [weak controller] in
+                                    Queue.mainQueue().async() {
+                                        controller?.dismiss()
+                                    }
+                                }
+                            }
+                            |> runOn(Queue.mainQueue())
+                            |> delay(0.15, queue: Queue.mainQueue())
+                            let progressDisposable = progressSignal.start()
+                            
+                            signal = signal
+                            |> afterDisposed {
+                                Queue.mainQueue().async {
+                                    progressDisposable.dispose()
+                                }
+                            }
+                            cancelImpl = {
+                                clearDisposable.set(nil)
+                                resetStats()
+                            }
+                            clearDisposable.set((signal
+                            |> deliverOnMainQueue).start(completed: {
+                                statsPromise.set(.single(.result(resultStats)))
+                            }))
                         }
                         
                         dismissAction()
@@ -555,9 +614,41 @@ func storageUsageController(account: Account) -> ViewController {
                                     }
                                 }
                                 
-                                statsPromise.set(.single(.result(CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize))))
+                                var signal = clearCachedMediaResources(account: account, mediaResourceIds: clearResourceIds)
                                 
-                                clearDisposable.set(clearCachedMediaResources(account: account, mediaResourceIds: clearResourceIds).start())
+                                let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
+                                
+                                var cancelImpl: (() -> Void)?
+                                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                let progressSignal = Signal<Never, NoError> { subscriber in
+                                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                                        cancelImpl?()
+                                    }))
+                                    presentControllerImpl?(controller)
+                                    return ActionDisposable { [weak controller] in
+                                        Queue.mainQueue().async() {
+                                            controller?.dismiss()
+                                        }
+                                    }
+                                }
+                                |> runOn(Queue.mainQueue())
+                                |> delay(0.15, queue: Queue.mainQueue())
+                                let progressDisposable = progressSignal.start()
+                                
+                                signal = signal
+                                |> afterDisposed {
+                                    Queue.mainQueue().async {
+                                        progressDisposable.dispose()
+                                    }
+                                }
+                                cancelImpl = {
+                                    clearDisposable.set(nil)
+                                    resetStats()
+                                }
+                                clearDisposable.set((signal
+                                |> deliverOnMainQueue).start(completed: {
+                                    statsPromise.set(.single(.result(resultStats)))
+                                }))
                             }
                             
                             dismissAction()

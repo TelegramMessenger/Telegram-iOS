@@ -26,6 +26,7 @@ struct FFMpegMediaFrameSourceDescription {
 struct FFMpegMediaFrameSourceDescriptionSet {
     let audio: FFMpegMediaFrameSourceDescription?
     let video: FFMpegMediaFrameSourceDescription?
+    let extraVideoFrames: [MediaTrackDecodableFrame]
 }
 
 private final class InitializedState {
@@ -455,30 +456,13 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         var endOfStream = false
         
         while !self.readingError && ((videoTimestamp == nil || videoTimestamp!.isLess(than: until)) || (audioTimestamp == nil || audioTimestamp!.isLess(than: until))) {
-            
             if let packet = self.readPacket() {
                 if let videoStream = initializedState.videoStream, Int(packet.packet.stream_index) == videoStream.index {
-                    let avNoPtsRawValue: UInt64 = 0x8000000000000000
-                    let avNoPtsValue = Int64(bitPattern: avNoPtsRawValue)
-                    let packetPts = packet.packet.pts == avNoPtsValue ? packet.packet.dts : packet.packet.pts
-                    
-                    let pts = CMTimeMake(packetPts, videoStream.timebase.timescale)
-                    let dts = CMTimeMake(packet.packet.dts, videoStream.timebase.timescale)
-                    
-                    let duration: CMTime
-                    
-                    let frameDuration = packet.packet.duration
-                    if frameDuration != 0 {
-                        duration = CMTimeMake(frameDuration * videoStream.timebase.value, videoStream.timebase.timescale)
-                    } else {
-                        duration = videoStream.fps
-                    }
-                    
-                    let frame = MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)
+                    let frame = videoFrameFromPacket(packet, videoStream: videoStream)
                     frames.append(frame)
                     
-                    if videoTimestamp == nil || videoTimestamp! < CMTimeGetSeconds(pts) {
-                        videoTimestamp = CMTimeGetSeconds(pts)
+                    if videoTimestamp == nil || videoTimestamp! < CMTimeGetSeconds(frame.pts) {
+                        videoTimestamp = CMTimeGetSeconds(frame.pts)
                     }
                 } else if let audioStream = initializedState.audioStream, Int(packet.packet.stream_index) == audioStream.index {
                     let avNoPtsRawValue: UInt64 = 0x8000000000000000
@@ -555,23 +539,95 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             }
             
             var actualPts: CMTime = CMTimeMake(0, 1)
-            for _ in 0 ..< 24 {
-                if let packet = self.readPacketInternal() {
-                    if let videoStream = initializedState.videoStream, Int(packet.packet.stream_index) == videoStream.index {
-                        self.packetQueue.append(packet)
-                        actualPts = CMTimeMake(packet.pts, videoStream.timebase.timescale)
-                        break
-                    } else if let audioStream = initializedState.audioStream, Int(packet.packet.stream_index) == audioStream.index {
-                        self.packetQueue.append(packet)
-                        actualPts = CMTimeMake(packet.pts, audioStream.timebase.timescale)
+            var extraVideoFrames: [MediaTrackDecodableFrame] = []
+            if timestamp.isZero || initializedState.videoStream == nil {
+                for _ in 0 ..< 24 {
+                    if let packet = self.readPacketInternal() {
+                        if let videoStream = initializedState.videoStream, Int(packet.packet.stream_index) == videoStream.index {
+                            self.packetQueue.append(packet)
+                            let pts = CMTimeMake(packet.pts, videoStream.timebase.timescale)
+                            actualPts = pts
+                            break
+                        } else if let audioStream = initializedState.audioStream, Int(packet.packet.stream_index) == audioStream.index {
+                            self.packetQueue.append(packet)
+                            let pts = CMTimeMake(packet.pts, audioStream.timebase.timescale)
+                            actualPts = pts
+                            break
+                        }
+                    } else {
                         break
                     }
-                } else {
-                    break
+                }
+            } else if let videoStream = initializedState.videoStream {
+                let targetPts = CMTimeMakeWithSeconds(Float64(timestamp), videoStream.timebase.timescale)
+                let limitPts = CMTimeMakeWithSeconds(Float64(timestamp + 0.5), videoStream.timebase.timescale)
+                var audioPackets: [FFMpegPacket] = []
+                while !self.readingError {
+                    if let packet = self.readPacket() {
+                        if let videoStream = initializedState.videoStream, Int(packet.packet.stream_index) == videoStream.index {
+                            let frame = videoFrameFromPacket(packet, videoStream: videoStream)
+                            extraVideoFrames.append(frame)
+                            
+                            if CMTimeCompare(frame.dts, limitPts) >= 0 && CMTimeCompare(frame.pts, limitPts) >= 0 {
+                                break
+                            }
+                        } else if let audioStream = initializedState.audioStream, Int(packet.packet.stream_index) == audioStream.index {
+                            audioPackets.append(packet)
+                        }
+                    } else {
+                        break
+                    }
+                }
+                if !extraVideoFrames.isEmpty {
+                    var closestFrame: MediaTrackDecodableFrame?
+                    for frame in extraVideoFrames {
+                        if CMTimeCompare(frame.pts, targetPts) >= 0 {
+                            if let closestFrameValue = closestFrame {
+                                if CMTimeCompare(frame.pts, closestFrameValue.pts) < 0 {
+                                    closestFrame = frame
+                                }
+                            } else {
+                                closestFrame = frame
+                            }
+                        }
+                    }
+                    if let closestFrame = closestFrame {
+                        actualPts = closestFrame.pts
+                    }
+                }
+                if let audioStream = initializedState.audioStream {
+                    self.packetQueue.append(contentsOf: audioPackets.filter({ packet in
+                        let pts = CMTimeMake(packet.pts, audioStream.timebase.timescale)
+                        if CMTimeCompare(pts, actualPts) >= 0 {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }))
                 }
             }
             
-            completed(FFMpegMediaFrameSourceDescriptionSet(audio: audioDescription, video: videoDescription), actualPts)
+            completed(FFMpegMediaFrameSourceDescriptionSet(audio: audioDescription, video: videoDescription, extraVideoFrames: extraVideoFrames), actualPts)
         }
     }
+}
+
+private func videoFrameFromPacket(_ packet: FFMpegPacket, videoStream: StreamContext) -> MediaTrackDecodableFrame {
+    let avNoPtsRawValue: UInt64 = 0x8000000000000000
+    let avNoPtsValue = Int64(bitPattern: avNoPtsRawValue)
+    let packetPts = packet.packet.pts == avNoPtsValue ? packet.packet.dts : packet.packet.pts
+    
+    let pts = CMTimeMake(packetPts, videoStream.timebase.timescale)
+    let dts = CMTimeMake(packet.packet.dts, videoStream.timebase.timescale)
+    
+    let duration: CMTime
+    
+    let frameDuration = packet.packet.duration
+    if frameDuration != 0 {
+        duration = CMTimeMake(frameDuration * videoStream.timebase.value, videoStream.timebase.timescale)
+    } else {
+        duration = videoStream.fps
+    }
+    
+    return MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)
 }

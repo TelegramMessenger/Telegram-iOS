@@ -124,7 +124,7 @@ enum ParticipantRevealActionType {
     case remove
 }
 
-private struct ParticipantRevealAction: Equatable {
+struct ParticipantRevealAction: Equatable {
     let type: ItemListPeerItemRevealOptionType
     let title: String
     let action: ParticipantRevealActionType

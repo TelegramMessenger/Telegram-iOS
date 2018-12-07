@@ -11,6 +11,7 @@ enum MediaTrackFrameBufferStatus {
 enum MediaTrackFrameResult {
     case noFrames
     case skipFrame
+    case restoreState([MediaTrackFrame], CMTime)
     case frame(MediaTrackFrame)
     case finished
 }
