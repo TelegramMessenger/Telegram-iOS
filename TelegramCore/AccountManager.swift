@@ -123,7 +123,7 @@ private var declaredEncodables: Void = {
     declareEncodable(AppChangelogState.self, f: { AppChangelogState(decoder: $0) })
     declareEncodable(AppConfiguration.self, f: { AppConfiguration(decoder: $0) })
     declareEncodable(JSON.self, f: { JSON(decoder: $0) })
-    
+    declareEncodable(SearchBotsConfiguration.self, f: { SearchBotsConfiguration(decoder: $0) })
     
     return
 }()
