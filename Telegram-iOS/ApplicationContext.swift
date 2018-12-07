@@ -245,7 +245,18 @@ final class AuthorizedApplicationContext {
         
         let runningWatchTasksPromise = Promise<WatchRunningTasks?>(nil)
         
-        self.wakeupManager = WakeupManager(inForeground: applicationContext.applicationBindings.applicationInForeground, runningServiceTasks: account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get())
+        let downloadPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings]))
+        let runningDownloadTasks = combineLatest(account.postbox.combinedView(keys: [downloadPreferencesKey]), account.shouldKeepBackgroundDownloadConnections.get())
+        |> map { views, shouldKeepBackgroundDownloadConnections -> Bool in
+            let settings: AutomaticMediaDownloadSettings = (views.views[downloadPreferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings ?? AutomaticMediaDownloadSettings.defaultSettings
+            if !settings.downloadInBackground {
+                return false
+            }
+            return shouldKeepBackgroundDownloadConnections
+        }
+        |> distinctUntilChanged
+        
+        self.wakeupManager = WakeupManager(inForeground: applicationContext.applicationBindings.applicationInForeground, runningServiceTasks: account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
         self.wakeupManager.account = account
         
         self.showCallsTab = showCallsTab
@@ -298,6 +309,7 @@ final class AuthorizedApplicationContext {
             }
         })
         account.shouldExplicitelyKeepWorkerConnections.set(backgroundAudioActive)
+        account.shouldKeepBackgroundDownloadConnections.set(applicationContext.fetchManager.hasUserInitiatedEntries)
         account.shouldKeepOnlinePresence.set(applicationContext.applicationBindings.applicationInForeground)
         
         let cache = TGCache(cachesPath: legacyBasePath + "/Caches")!
