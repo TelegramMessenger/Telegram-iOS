@@ -312,7 +312,7 @@ final class AuthorizedApplicationContext {
         
         self.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
         self.mainWindow.previewThemeDarkBlur = presentationData.theme.chatList.searchBarKeyboardColor == .dark
-        self.mainWindow.setupVolumeControlStatusBarGraphics(presentationData.volumeControlStatusBarIcons)
+        self.mainWindow.setupVolumeControlStatusBarGraphics(presentationData.volumeControlStatusBarIcons.images)
         
         self.rootController = TelegramRootController(account: account)
         
