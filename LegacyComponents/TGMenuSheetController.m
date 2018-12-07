@@ -469,7 +469,7 @@ typedef enum
     }
     else
     {
-        CGSize referenceSize = TGIsPad() ? viewController.view.bounds.size : [_context fullscreenBounds].size;
+        CGSize referenceSize = TGIsPad() ? (self.inhibitPopoverPresentation ? CGSizeMake(TGMenuSheetPadMenuWidth, viewController.view.bounds.size.height) : viewController.view.bounds.size) : [_context fullscreenBounds].size;
         CGFloat minSide = MIN(referenceSize.width, referenceSize.height);
         _sheetView.narrowInLandscape = self.narrowInLandscape;
         if (self.narrowInLandscape)
@@ -478,7 +478,7 @@ typedef enum
             _sheetView.menuWidth = referenceSize.width;
     }
     
-    if (compact || _forceFullScreen)
+    if ((compact || _forceFullScreen) && !self.inhibitPopoverPresentation)
     {
         [viewController addChildViewController:self];
         [viewController.view addSubview:self.view];

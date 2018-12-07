@@ -24,6 +24,8 @@
     TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:context dark:false];
     __weak TGMenuSheetController *weakController = controller;
     controller.dismissesByOutsideTap = true;
+    controller.inhibitPopoverPresentation = true;
+    controller.forceFullScreen = true;
     controller.hasSwipeGesture = true;
     controller.narrowInLandscape = true;
     controller.sourceRect = sourceRect;
