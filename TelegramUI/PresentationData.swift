@@ -11,6 +11,16 @@ public struct PresentationDateTimeFormat: Equatable {
     let dateSeparator: String
 }
 
+public struct PresentationVolumeControlStatusBarIcons: Equatable {
+    let offIcon: UIImage
+    let halfIcon: UIImage
+    let fullIcon: UIImage
+    
+    public var images: (UIImage, UIImage, UIImage) {
+        return (self.offIcon, self.halfIcon, self.fullIcon)
+    }
+}
+
 public enum PresentationTimeFormat {
     case regular
     case military
@@ -42,14 +52,14 @@ public final class PresentationData: Equatable {
     public let strings: PresentationStrings
     public let theme: PresentationTheme
     public let chatWallpaper: TelegramWallpaper
-    public let volumeControlStatusBarIcons: (UIImage, UIImage, UIImage)
+    public let volumeControlStatusBarIcons: PresentationVolumeControlStatusBarIcons
     public let fontSize: PresentationFontSize
     public let dateTimeFormat: PresentationDateTimeFormat
     public let nameDisplayOrder: PresentationPersonNameOrder
     public let nameSortOrder: PresentationPersonNameOrder
     public let disableAnimations: Bool
     
-    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, volumeControlStatusBarIcons: (UIImage, UIImage, UIImage), fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, volumeControlStatusBarIcons: PresentationVolumeControlStatusBarIcons, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.strings = strings
         self.theme = theme
         self.chatWallpaper = chatWallpaper
@@ -94,8 +104,8 @@ func dictFromLocalization(_ value: Localization) -> [String: String] {
     return dict
 }
 
-private func volumeControlStatusBarIcons() -> (UIImage, UIImage, UIImage) {
-    return (UIImage(bundleImageName: "Components/Volume/VolumeOff")!, UIImage(bundleImageName: "Components/Volume/VolumeHalf")!, UIImage(bundleImageName: "Components/Volume/VolumeFull")!)
+private func volumeControlStatusBarIcons() -> PresentationVolumeControlStatusBarIcons {
+    return PresentationVolumeControlStatusBarIcons(offIcon: UIImage(bundleImageName: "Components/Volume/VolumeOff")!, halfIcon: UIImage(bundleImageName: "Components/Volume/VolumeHalf")!, fullIcon: UIImage(bundleImageName: "Components/Volume/VolumeFull")!)
 }
 
 private func currentDateTimeFormat() -> PresentationDateTimeFormat {

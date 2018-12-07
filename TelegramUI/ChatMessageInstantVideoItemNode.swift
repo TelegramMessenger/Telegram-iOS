@@ -151,7 +151,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     
                     let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                     replyBackgroundImage = graphics.chatServiceBubbleFillImage
-                    break
                 } else if let attribute = attribute as? InlineBotMessageAttribute {
                     if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
                         inlineBotNameString = bot.username

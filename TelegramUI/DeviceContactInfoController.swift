@@ -107,7 +107,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
     case addPhoneNumber(Int, PresentationTheme, String)
     case email(Int, Int, PresentationTheme, String, String, String, Bool?)
     case url(Int, Int, PresentationTheme, String, String, String, Bool?)
-    case address(Int, Int, PresentationTheme, String, DeviceContactAddressData, Bool?)
+    case address(Int, Int, PresentationTheme, String, DeviceContactAddressData, Signal<(TransformImageArguments) -> DrawingContext?, NoError>?, Bool?)
     case birthday(Int, PresentationTheme, String, Date, String, Bool?)
     case socialProfile(Int, Int, PresentationTheme, String, DeviceContactSocialProfileData, String, Bool?)
     case instantMessenger(Int, Int, PresentationTheme, String, DeviceContactInstantMessagingProfileData, String, Bool?)
@@ -149,7 +149,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 return .email(catIndex)
             case let .url(_, catIndex, _, _, _, _, _):
                 return .url(catIndex)
-            case let .address(_, catIndex, _, _, _, _):
+            case let .address(_, catIndex, _, _, _, _, _):
                 return .address(catIndex)
             case .birthday:
                 return .constant(.birthday)
@@ -249,8 +249,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .address(lhsIndex, lhsCatIndex, lhsTheme, lhsTitle, lhsValue, lhsSelected):
-                if case let .address(rhsIndex, rhsCatIndex, rhsTheme, rhsTitle, rhsValue, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsCatIndex == rhsCatIndex, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue, lhsSelected == rhsSelected {
+            case let .address(lhsIndex, lhsCatIndex, lhsTheme, lhsTitle, lhsValue, lhsImageSignal, lhsSelected):
+                if case let .address(rhsIndex, rhsCatIndex, rhsTheme, rhsTitle, rhsValue, rhsImageSignal, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsCatIndex == rhsCatIndex, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue, lhsSelected == rhsSelected {
                     return true
                 } else {
                     return false
@@ -300,7 +300,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 return index
             case let .url(index, _, _, _, _, _, _):
                 return index
-            case let .address(index, _, _, _, _, _):
+            case let .address(index, _, _, _, _, _, _):
                 return index
             case let .birthday(index, _, _, _, _, _):
                 return index
@@ -391,7 +391,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                         arguments.displayCopyContextMenu(.info(index), value)
                     }
                 }, tag: DeviceContactInfoEntryTag.info(index))
-            case let .address(_, index, theme, title, value, selected):
+            case let .address(_, index, theme, title, value, imageSignal, selected):
                 var string = ""
                 func combineComponent(string: inout String, component: String) {
                     if !component.isEmpty {
@@ -407,7 +407,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                 combineComponent(string: &string, component: value.city)
                 combineComponent(string: &string, component: value.country)
                 combineComponent(string: &string, component: value.postcode)
-                return ItemListTextWithLabelItem(theme: theme, label: title, text: string, textColor: .primary, enabledEntitiyTypes: [], multiline: true, selected: selected, sectionId: self.section, action: {
+                return ItemListAddressItem(theme: theme, label: title, text: string, imageSignal: imageSignal, selected: selected, sectionId: self.section, action: {
                     if selected != nil {
                         arguments.toggleSelection(.address(value))
                     } else {
@@ -597,7 +597,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     
     var addressIndex = 0
     for address in contactData.addresses {
-        entries.append(.address(entries.count, addressIndex, presentationData.theme, localizedGenericContactFieldLabel(label: address.label, strings: presentationData.strings), address, selecting ? !state.excludedComponents.contains(.address(address)) : nil))
+        entries.append(.address(entries.count, addressIndex, presentationData.theme, localizedGenericContactFieldLabel(label: address.label, strings: presentationData.strings), address, nil, selecting ? !state.excludedComponents.contains(.address(address)) : nil))
         addressIndex += 1
     }
     

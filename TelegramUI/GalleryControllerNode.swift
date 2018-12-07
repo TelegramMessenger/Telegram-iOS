@@ -139,6 +139,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                             } else {
                                 node = strongSelf.currentThumbnailContainerNode
                             }
+                            node?.alpha = strongSelf.areControlsHidden ? 0.0 : 1.0
                             node?.updateItems(items, indexes: indexes, centralIndex: convertedIndex, progress: progress)
                             node?.itemChanged = { [weak self] index in
                                 if let strongSelf = self {
@@ -159,10 +160,12 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                         fromLeft = true
                     }
                     if let current = strongSelf.currentThumbnailContainerNode {
-                        current.animateOut(toRight: fromLeft)
-                        current.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak current] _ in
-                            current?.removeFromSupernode()
-                        })
+                        if !strongSelf.areControlsHidden {
+                            current.animateOut(toRight: fromLeft)
+                            current.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak current] _ in
+                                current?.removeFromSupernode()
+                            })
+                        }
                     }
                     strongSelf.currentThumbnailContainerNode = node
                     if let node = node {

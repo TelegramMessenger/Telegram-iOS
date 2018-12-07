@@ -87,7 +87,6 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
     private var statusDisposable = MetaDisposable()
     private let statusNode: RadialStatusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
 
-    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             switch visibility {
@@ -170,7 +169,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             displayLink.isPaused = true
             displayLink.invalidate()
         }
-        statusDisposable.dispose()
+        self.statusDisposable.dispose()
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {

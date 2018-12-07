@@ -129,7 +129,7 @@ final class SearchBarNodeTheme {
     
     init(theme: PresentationTheme, active: Bool = true) {
         self.background = active ? theme.rootController.activeNavigationSearchBar.backgroundColor : theme.rootController.navigationBar.backgroundColor
-        self.separator = theme.rootController.navigationBar.separatorColor
+        self.separator = active ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.backgroundColor
         self.inputFill = theme.rootController.activeNavigationSearchBar.inputFillColor
         self.placeholder = theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor
         self.primaryText = theme.rootController.activeNavigationSearchBar.inputTextColor
@@ -143,6 +143,7 @@ final class SearchBarNodeTheme {
 class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     var cancel: (() -> Void)?
     var textUpdated: ((String) -> Void)?
+    var textReturned: ((String) -> Void)?
     var clearPrefix: (() -> Void)?
     
     private let backgroundNode: ASDisplayNode
@@ -213,6 +214,15 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    var hasCancelButton: Bool = true {
+        didSet {
+            self.cancelButton.isHidden = !self.hasCancelButton
+            if let (boundingSize, leftInset, rightInset) = self.validLayout {
+                self.updateLayout(boundingSize: boundingSize, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+            }
+        }
+    }
+    
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private var theme: SearchBarNodeTheme
@@ -244,7 +254,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         self.textField = SearchBarTextField()
         self.textField.autocorrectionType = .no
-        self.textField.returnKeyType = .done
+        self.textField.returnKeyType = .search
         self.textField.font = Font.regular(14.0)
         self.textField.textColor = theme.primaryText
         
@@ -318,7 +328,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         let cancelButtonSize = self.cancelButton.measure(CGSize(width: 100.0, height: CGFloat.infinity))
         transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 8.0 - cancelButtonSize.width, y: verticalOffset + 31.0), size: cancelButtonSize))
         
-        let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + 8.0, y: verticalOffset + 28.0), size: CGSize(width: contentFrame.width - 16.0 - cancelButtonSize.width - 11.0, height: 28.0))
+        let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + 8.0, y: verticalOffset + 28.0), size: CGSize(width: contentFrame.width - 16.0 - (self.hasCancelButton ? cancelButtonSize.width + 11.0 : 0.0), height: 28.0))
         transition.updateFrame(node: self.textBackgroundNode, frame: textBackgroundFrame)
         
         let textFrame = CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 23.0, y: textBackgroundFrame.minY), size: CGSize(width: max(1.0, textBackgroundFrame.size.width - 23.0 - 20.0), height: textBackgroundFrame.size.height))
@@ -470,6 +480,9 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         self.textField.resignFirstResponder()
+        if let textReturned = self.textReturned {
+            textReturned(textField.text ?? "")
+        }
         return false
     }
     

@@ -7,7 +7,6 @@ import TelegramCore
 
 
 private class ChatGridLiveSelectorRecognizer: UIPanGestureRecognizer {
-    
     private let selectionGestureActivationThreshold: CGFloat = 2.0
     private let selectionGestureVerticalFailureThreshold: CGFloat = 5.0
     
@@ -42,25 +41,22 @@ private class ChatGridLiveSelectorRecognizer: UIPanGestureRecognizer {
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         let location = touches.first!.location(in: self.view)
-        let translation = CGPoint(x: location.x - firstLocation.x, y: location.y - firstLocation.y)
+        let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
         
-        if validatedGesture == nil {
-            if (fabs(translation.y) >= selectionGestureVerticalFailureThreshold)
-            {
-                validatedGesture = false
+        if self.validatedGesture == nil {
+            if (fabs(translation.y) >= selectionGestureVerticalFailureThreshold) {
+                self.validatedGesture = false
             }
             else if (fabs(translation.x) >= selectionGestureActivationThreshold) {
-                validatedGesture = true
+                self.validatedGesture = true
             }
         }
         
-        if let validatedGesture = validatedGesture {
+        if let validatedGesture = self.validatedGesture {
             if validatedGesture {
                 super.touchesMoved(touches, with: event)
             }
         }
-        
-        
     }
 }
 
@@ -197,8 +193,6 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
 
 private func gridNodeLayoutForContainerLayout(size: CGSize) -> GridNodeLayoutType {
     let side = floorToScreenPixels((size.width - 3.0) / 4.0)
-    //let side = floor(size.width / 4.0)
-    //return CGSize(width: side, height: side)
     return .fixed(itemSize: CGSize(width: side, height: side), fillWidth: true, lineSpacing: 1.0, itemSpacing: 1.0)
 }
 
