@@ -600,10 +600,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     infoFrame.origin.x = -clearBounds.minX + floor((size.width - infoFrame.width) / 2.0)
                 }
                 self.infoNode.frame = infoFrame
-                self.typingNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - typingSize.width + 14.0) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: typingSize)
+                var typingFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - typingSize.width + 14.0) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: typingSize)
+                if typingFrame.size.width < size.width {
+                    typingFrame.origin.x = -clearBounds.minX + floor((size.width - typingFrame.width + 14.0) / 2.0)
+                }
+                self.typingNode.frame = typingFrame
                 
                 if let typingIndicator = self.typingIndicator {
-                    typingIndicator.frame = CGRect(x: self.typingNode.frame.origin.x - 24.0, y: self.typingNode.frame.origin.y, width: 24.0, height: 16.0)
+                    typingIndicator.frame = CGRect(x: typingFrame.origin.x - 24.0, y: typingFrame.origin.y, width: 24.0, height: 16.0)
                 }
             }
             

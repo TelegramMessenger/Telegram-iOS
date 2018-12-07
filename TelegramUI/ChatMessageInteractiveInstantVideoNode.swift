@@ -246,9 +246,23 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings, format: .regular)
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
+            let maxDateAndStatusWidth: CGFloat
+            if case .bubble = statusDisplayType {
+                maxDateAndStatusWidth = width
+            } else {
+                maxDateAndStatusWidth = width - videoFrame.midX - 85.0
+            }
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude))
             
-            let result = ChatMessageInstantVideoItemLayoutResult(contentSize: imageSize, overflowLeft: 0.0, overflowRight: max(0.0, floor(videoFrame.midX) + 55.0 + dateAndStatusSize.width - videoFrame.width))
+            var contentSize = imageSize
+            var dateAndStatusOverflow = false
+            if case .bubble = statusDisplayType, videoFrame.maxX + dateAndStatusSize.width > width {
+                contentSize.height += dateAndStatusSize.height + 2.0
+                contentSize.width = max(contentSize.width, dateAndStatusSize.width)
+                dateAndStatusOverflow = true
+            }
+            
+            let result = ChatMessageInstantVideoItemLayoutResult(contentSize: contentSize, overflowLeft: 0.0, overflowRight: dateAndStatusOverflow ? 0.0 : (max(0.0, floor(videoFrame.midX) + 55.0 + dateAndStatusSize.width - videoFrame.width)))
             
             return (result, { [weak self] layoutData, transition in
                 if let strongSelf = self {
@@ -301,8 +315,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     dateAndStatusApply(false)
                     switch layoutData {
                         case let .unconstrained(width):
-                           // let dateAndStatusOversized: Bool = videoFrame.maxX + dateAndStatusSize.width > width
-                            strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 55.0, width - dateAndStatusSize.width - 4.0), y: videoFrame.height - dateAndStatusSize.height), size: dateAndStatusSize)
+                            let dateAndStatusOrigin: CGPoint
+                            if dateAndStatusOverflow {
+                                dateAndStatusOrigin = CGPoint(x: videoFrame.minX - 4.0, y: videoFrame.maxY + 2.0)
+                            } else {
+                                dateAndStatusOrigin = CGPoint(x: min(floor(videoFrame.midX) + 55.0, width - dateAndStatusSize.width - 4.0), y: videoFrame.height - dateAndStatusSize.height)
+                            }
+                            strongSelf.dateAndStatusNode.frame = CGRect(origin: dateAndStatusOrigin, size: dateAndStatusSize)
                         case let .constrained(_, right):
                             strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floor(videoFrame.midX) + 55.0, videoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: videoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
                     }

@@ -324,7 +324,9 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     let peersPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
     let arguments = ChannelMembersControllerArguments(account: account, addMember: {
-        actionsDisposable.add((peersPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { members in
+        actionsDisposable.add((peersPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { members in
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
             let contactsController = ContactMultiselectionController(account: account, mode: .peerSelection(searchChatList: false), options: [], filters: [.excludeSelf, .disable(disabledIds)])
             
@@ -340,22 +342,28 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                 return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMembers(account: account, peerId: peerId, memberIds: peerIds)
             }
             
-            peersPromise.set(contactsController.result
-                |> deliverOnMainQueue |> mapToSignal { [weak contactsController] contacts in
-                    contactsController?.displayProgress = true
-                    
-                    return addMembers(contacts) |> `catch` { error -> Signal<Void, NoError> in
-                        return .single(Void())
-                    } |> mapToSignal { _ in
-                        return channelMembers(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId)
-                        } |> deliverOnMainQueue |> afterNext { _ in
-                            contactsController?.dismiss()
+            addMembersDisposable.set((contactsController.result
+            |> deliverOnMainQueue
+            |> mapToSignal { [weak contactsController] contacts -> Signal<Never, NoError> in
+                contactsController?.displayProgress = true
+                
+                let signals = contacts.compactMap({ contact -> Signal<Never, NoError>? in
+                    switch contact {
+                        case let .peer(contactId):
+                            return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMember(account: account, peerId: peerId, memberId: contactId)
+                            |> ignoreValues
+                        case .deviceContact:
+                            return nil
                     }
                 })
-            
-            contactsController.dismissed = {
                 
-            }
+                return combineLatest(signals)
+                |> ignoreValues
+                |> deliverOnMainQueue
+                |> afterCompleted {
+                    contactsController?.dismiss()
+                }
+            }).start())
             
             presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }))
@@ -373,34 +381,11 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             return $0.withUpdatedRemovingPeerId(memberId)
         }
         
-        let applyPeers: Signal<Void, NoError> = peersPromise.get()
-            |> filter { $0 != nil }
-            |> take(1)
-            |> deliverOnMainQueue
-            |> mapToSignal { peers -> Signal<Void, NoError> in
-                if let peers = peers {
-                    var updatedPeers = peers
-                    for i in 0 ..< updatedPeers.count {
-                        if updatedPeers[i].peer.id == memberId {
-                            updatedPeers.remove(at: i)
-                            break
-                        }
-                    }
-                    peersPromise.set(.single(updatedPeers))
-                }
-                
-                return .complete()
-        }
-        
-        removePeerDisposable.set((removePeerMember(account: account, peerId: peerId, memberId: memberId) |> then(applyPeers) |> deliverOnMainQueue).start(error: { _ in
+        removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChannelBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+        |> deliverOnMainQueue).start(completed: {
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
             }
-        }, completed: {
-            updateState {
-                return $0.withUpdatedRemovingPeerId(nil)
-            }
-            
         }))
     }, openPeer: { peer in
         if let controller = peerInfoController(account: account, peer: peer) {

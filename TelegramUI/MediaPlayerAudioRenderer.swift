@@ -612,6 +612,10 @@ private final class AudioPlayerRendererContext {
                                 } else {
                                     assertionFailure()
                                 }
+                            case .restoreState:
+                                assertionFailure()
+                                strongSelf.checkBuffer()
+                                break
                             case .skipFrame:
                                 strongSelf.checkBuffer()
                                 break

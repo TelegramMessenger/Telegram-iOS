@@ -35,7 +35,7 @@ private enum ChannelMembersSearchSection {
 
 private enum ChannelMembersSearchContent: Equatable {
     case peer(Peer)
-    case participant(RenderedChannelParticipant, String?, Bool)
+    case participant(participant: RenderedChannelParticipant, label: String?, revealActions: [ParticipantRevealAction], enabled: Bool)
     
     static func ==(lhs: ChannelMembersSearchContent, rhs: ChannelMembersSearchContent) -> Bool {
         switch lhs {
@@ -45,8 +45,8 @@ private enum ChannelMembersSearchContent: Equatable {
                 } else {
                     return false
                 }
-            case let .participant(participant, label, enabled):
-                if case .participant(participant, label, enabled) = rhs {
+            case let .participant(participant, label, revealActions, enabled):
+                if case .participant(participant, label, revealActions, enabled) = rhs {
                     return true
                 } else {
                     return false
@@ -58,7 +58,7 @@ private enum ChannelMembersSearchContent: Equatable {
         switch self {
             case let .peer(peer):
                 return peer.id
-            case let .participant(participant, _, _):
+            case let .participant(participant, _, _, _):
                 return participant.peer.id
         }
     }
@@ -93,14 +93,24 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
                 return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
                     peerSelected(peer, nil)
                 })
-            case let .participant(participant, label, enabled):
-                let status: ContactsPeerItemStatus
-                if let label = label {
-                    status = .custom(label)
-                } else {
-                    status = .none
+            case let .participant(participant, label, revealActions, enabled):
+                var options: [ItemListPeerItemRevealOption] = []
+                for action in revealActions {
+                    options.append(ItemListPeerItemRevealOption(type: action.type, title: action.title, action: {
+                        switch action.action {
+                            case .promote:
+                                //arguments.promotePeer(participant)
+                                break
+                            case .restrict:
+                                //arguments.restrictPeer(participant)
+                                break
+                            case .remove:
+                                //arguments.removePeer(peer.id)
+                                break
+                        }
+                    }))
                 }
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: participant.peer), status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
+                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: participant.peer), status: .none, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: theme, strings: strings, actionTitle: nil, action: nil) }), action: { _ in
                     peerSelected(participant.peer, participant)
                 })
         }
@@ -142,7 +152,6 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)>
     
-    
     init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping(Bool)->Void) {
         self.account = account
         self.openPeer = openPeer
@@ -164,8 +173,6 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         self.addSubnode(self.dimNode)
         self.addSubnode(self.listNode)
         
-        
-        
         let themeAndStringsPromise = self.themeAndStringsPromise
         let foundItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ChannelMembersSearchEntry]?, NoError> in
@@ -177,14 +184,15 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     switch mode {
                         case .searchMembers, .banAndPromoteActions:
                             foundGroupMembers = Signal { subscriber in
-                                let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                                let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                                     if case .ready = state.loadingState {
                                         subscriber.putNext(state.list)
                                         subscriber.putCompletion()
                                     }
                                 })
                                 return disposable
-                            } |> runOn(Queue.mainQueue())
+                            }
+                            |> runOn(Queue.mainQueue())
                             foundMembers = .single([])
                         case .inviteActions:
                             foundGroupMembers = .single([])
@@ -192,7 +200,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             |> map { $0 ?? [] }
                     case .searchAdmins:
                         foundGroupMembers = Signal { subscriber in
-                            let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                            let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                                 if case .ready = state.loadingState {
                                     subscriber.putNext(state.list)
                                     subscriber.putCompletion()
@@ -203,7 +211,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         foundMembers = .single([])
                     case .searchBanned:
                         foundGroupMembers = Signal { subscriber in
-                            let (disposable, listControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restrictedAndBanned(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                            let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restrictedAndBanned(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                                 if case .ready = state.loadingState {
                                     subscriber.putNext(state.list)
                                     subscriber.putCompletion()
@@ -270,28 +278,28 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     switch mode {
                                     case .searchAdmins:
                                         switch participant.participant {
-                                        case .creator:
-                                            label = themeAndStrings.1.Channel_Management_LabelCreator
-                                        case let .member(_, _, adminInfo, _):
-                                            if let adminInfo = adminInfo {
-                                                if let peer = participant.peers[adminInfo.promotedBy] {
-                                                    label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                            case .creator:
+                                                label = themeAndStrings.1.Channel_Management_LabelCreator
+                                            case let .member(_, _, adminInfo, _):
+                                                if let adminInfo = adminInfo {
+                                                    if let peer = participant.peers[adminInfo.promotedBy] {
+                                                        label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                                    }
                                                 }
-                                            }
                                         }
                                     case .searchBanned:
                                         switch participant.participant {
-                                        case let .member(_, _, _, banInfo):
-                                            if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                                label = themeAndStrings.1.Channel_Management_RestrictedBy(peer.displayTitle).0
-                                            }
-                                        default:
-                                            break
+                                            case let .member(_, _, _, banInfo):
+                                                if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
+                                                    label = themeAndStrings.1.Channel_Management_RestrictedBy(peer.displayTitle).0
+                                                }
+                                            default:
+                                                break
                                         }
                                     default:
                                         break
                                     }
-                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant, label, enabled), section: section))
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], enabled: enabled), section: section))
                                     index += 1
                                 }
                             }
@@ -317,7 +325,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     }
                                     
                                     
-                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant, label, enabled), section: section))
+                                    entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], enabled: enabled), section: section))
                                     index += 1
                                 }
                             }
@@ -426,6 +434,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
             
             var options = ListViewDeleteAndInsertOptions()
             options.insert(.PreferSynchronousDrawing)
+            options.insert(.PreferSynchronousResourceLoading)
             if firstTime {
             } else {
                 //options.insert(.AnimateAlpha)

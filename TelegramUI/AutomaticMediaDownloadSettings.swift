@@ -95,6 +95,7 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     public var masterEnabled: Bool
     public var peers: AutomaticMediaDownloadPeers
     public var autoplayGifs: Bool
+    public var downloadInBackground: Bool
     
     public static var defaultSettings: AutomaticMediaDownloadSettings {
         let defaultCategory = AutomaticMediaDownloadCategories(
@@ -110,25 +111,28 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
             otherPrivate: defaultCategory,
             groups: defaultCategory,
             channels: defaultCategory
-        ), autoplayGifs: true)
+        ), autoplayGifs: true, downloadInBackground: true)
     }
     
-    init(masterEnabled: Bool, peers: AutomaticMediaDownloadPeers, autoplayGifs: Bool) {
+    init(masterEnabled: Bool, peers: AutomaticMediaDownloadPeers, autoplayGifs: Bool, downloadInBackground: Bool) {
         self.masterEnabled = masterEnabled
         self.peers = peers
         self.autoplayGifs = autoplayGifs
+        self.downloadInBackground = downloadInBackground
     }
     
     public init(decoder: PostboxDecoder) {
         self.masterEnabled = decoder.decodeInt32ForKey("masterEnabled", orElse: 1) != 0
         self.peers = (decoder.decodeObjectForKey("peers", decoder: AutomaticMediaDownloadPeers.init(decoder:)) as? AutomaticMediaDownloadPeers) ?? AutomaticMediaDownloadSettings.defaultSettings.peers
         self.autoplayGifs = decoder.decodeInt32ForKey("autoplayGifs", orElse: 1) != 0
+        self.downloadInBackground = decoder.decodeInt32ForKey("downloadInBackground", orElse: 1) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.masterEnabled ? 1 : 0, forKey: "masterEnabled")
         encoder.encodeObject(self.peers, forKey: "peers")
         encoder.encodeInt32(self.autoplayGifs ? 1 : 0, forKey: "autoplayGifs")
+        encoder.encodeInt32(self.downloadInBackground ? 1 : 0, forKey: "downloadInBackground")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

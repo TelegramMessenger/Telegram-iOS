@@ -16,8 +16,9 @@ private final class DataAndStorageControllerArguments {
     let openSaveIncomingPhotos: () -> Void
     let toggleSaveEditedPhotos: (Bool) -> Void
     let toggleAutoplayGifs: (Bool) -> Void
+    let toggleDownloadInBackground: (Bool) -> Void
     
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void, toggleAutomaticDownloadMaster: @escaping (Bool) -> Void, openAutomaticDownloadCategory: @escaping (AutomaticDownloadCategory) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void, toggleAutomaticDownloadMaster: @escaping (Bool) -> Void, openAutomaticDownloadCategory: @escaping (AutomaticDownloadCategory) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -28,6 +29,7 @@ private final class DataAndStorageControllerArguments {
         self.openSaveIncomingPhotos = openSaveIncomingPhotos
         self.toggleSaveEditedPhotos = toggleSaveEditedPhotos
         self.toggleAutoplayGifs = toggleAutoplayGifs
+        self.toggleDownloadInBackground = toggleDownloadInBackground
     }
 }
 
@@ -56,6 +58,8 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case saveIncomingPhotos(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
     case autoplayGifs(PresentationTheme, String, Bool)
+    case downloadInBackground(PresentationTheme, String, Bool)
+    case downloadInBackgroundInfo(PresentationTheme, String)
     case connectionHeader(PresentationTheme, String)
     case connectionProxy(PresentationTheme, String, String)
     
@@ -67,7 +71,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.automaticMediaDownload.rawValue
             case .voiceCallsHeader, .useLessVoiceData:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos, .autoplayGifs:
+            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos, .autoplayGifs, .downloadInBackground, .downloadInBackgroundInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
@@ -108,10 +112,14 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 15
             case .autoplayGifs:
                 return 16
-            case .connectionHeader:
+            case .downloadInBackground:
                 return 17
-            case .connectionProxy:
+            case .downloadInBackgroundInfo:
                 return 18
+            case .connectionHeader:
+                return 19
+            case .connectionProxy:
+                return 20
         }
     }
     
@@ -213,6 +221,18 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .downloadInBackground(lhsTheme, lhsText, lhsValue):
+                if case let .downloadInBackground(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .downloadInBackgroundInfo(lhsTheme, lhsText):
+                if case let .downloadInBackgroundInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .connectionHeader(lhsTheme, lhsText):
                 if case let .connectionHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -304,6 +324,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutoplayGifs(value)
                 })
+            case let .downloadInBackground(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleDownloadInBackground(value)
+                })
+            case let .downloadInBackgroundInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .connectionHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .connectionProxy(theme, text, value):
@@ -371,6 +397,8 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayAnimations, data.automaticMediaDownloadSettings.autoplayGifs))
+    entries.append(.downloadInBackground(presentationData.theme, presentationData.strings.ChatSettings_DownloadInBackground, data.automaticMediaDownloadSettings.downloadInBackground))
+    entries.append(.downloadInBackgroundInfo(presentationData.theme, presentationData.strings.ChatSettings_DownloadInBackgroundInfo))
     
     let proxyValue: String
     if let proxySettings = data.proxySettings, let activeServer = proxySettings.activeServer, proxySettings.enabled {
@@ -479,6 +507,12 @@ func dataAndStorageController(account: Account) -> ViewController {
         let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
             var settings = settings
             settings.autoplayGifs = value
+            return settings
+        }).start()
+    }, toggleDownloadInBackground: { value in
+        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+            var settings = settings
+            settings.downloadInBackground = value
             return settings
         }).start()
     })

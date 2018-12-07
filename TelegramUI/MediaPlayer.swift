@@ -20,6 +20,7 @@ private final class MediaPlayerLoadedState {
     let frameSource: MediaFrameSource
     let mediaBuffers: MediaPlaybackBuffers
     let controlTimebase: MediaPlayerControlTimebase
+    var extraVideoFrames: ([MediaTrackFrame], CMTime)?
     var lostAudioSession: Bool = false
     
     init(frameSource: MediaFrameSource, mediaBuffers: MediaPlaybackBuffers, controlTimebase: MediaPlayerControlTimebase) {
@@ -156,7 +157,12 @@ private final class MediaPlayerContext {
                 }
                 
                 if let loadedState = maybeLoadedState, let videoBuffer = loadedState.mediaBuffers.videoBuffer {
-                    return videoBuffer.takeFrame()
+                    if let (extraVideoFrames, atTime) = loadedState.extraVideoFrames {
+                        loadedState.extraVideoFrames = nil
+                        return .restoreState(extraVideoFrames, atTime)
+                    } else {
+                        return videoBuffer.takeFrame()
+                    }
                 } else {
                     return .noFrames
                 }
@@ -259,7 +265,8 @@ private final class MediaPlayerContext {
         
         self.lastStatusUpdateTimestamp = nil
         
-        let seekResult = frameSource.seek(timestamp: timestamp) |> deliverOn(self.queue)
+        let seekResult = frameSource.seek(timestamp: timestamp)
+        |> deliverOn(self.queue)
         
         disposable.set(seekResult.start(next: { [weak self] seekResult in
             if let strongSelf = self {
@@ -345,6 +352,7 @@ private final class MediaPlayerContext {
         }
         
         let loadedState = MediaPlayerLoadedState(frameSource: frameSource, mediaBuffers: buffers, controlTimebase: controlTimebase)
+        loadedState.extraVideoFrames = (seekResult.extraDecodedVideoFrames, seekResult.timestamp)
         
         if let audioRenderer = self.audioRenderer?.renderer {
             let queue = self.queue
@@ -601,27 +609,27 @@ private final class MediaPlayerContext {
                             worstStatus = status
                         case let .full(currentFullUntil):
                             switch worst {
-                            case .buffering:
-                                worstStatus = worst
-                            case let .full(worstFullUntil):
-                                if currentFullUntil < worstFullUntil {
-                                    worstStatus = status
-                                } else {
+                                case .buffering:
                                     worstStatus = worst
-                                }
-                            case .finished:
-                                worstStatus = status
+                                case let .full(worstFullUntil):
+                                    if currentFullUntil < worstFullUntil {
+                                        worstStatus = status
+                                    } else {
+                                        worstStatus = worst
+                                    }
+                                case .finished:
+                                    worstStatus = status
                             }
                         case let .finished(currentFinishedAt):
                             switch worst {
-                            case .buffering, .full:
-                                worstStatus = worst
-                            case let .finished(worstFinishedAt):
-                                if currentFinishedAt < worstFinishedAt {
+                                case .buffering, .full:
                                     worstStatus = worst
-                                } else {
-                                    worstStatus = status
-                                }
+                                case let .finished(worstFinishedAt):
+                                    if currentFinishedAt < worstFinishedAt {
+                                        worstStatus = worst
+                                    } else {
+                                        worstStatus = status
+                                    }
                             }
                     }
                 } else {

@@ -511,11 +511,12 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
 }
 
 public func passcodeEntryController(account: Account, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
-    return account.postbox.transaction { transaction -> PostboxAccessChallengeData in
-        return transaction.getAccessChallengeData()
+    return account.postbox.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings?) in
+        let passcodeSettings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationPasscodeSettings) as? PresentationPasscodeSettings
+        return (transaction.getAccessChallengeData(), passcodeSettings)
     }
     |> deliverOnMainQueue
-    |> map { challenge -> ViewController? in
+    |> map { (challenge, passcodeSettings) -> ViewController? in
         if case .none = challenge {
             completion(true)
             return nil
@@ -536,10 +537,14 @@ public func passcodeEntryController(account: Account, animateIn: Bool = true, co
                 case .plaintextPassword:
                     mode = TGPasscodeEntryControllerModeVerifyComplex
             }
-            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: true, allowTouchId: false, attemptData: attemptData, completion: { value in
+            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: true, allowTouchId: passcodeSettings?.enableBiometrics ?? false, attemptData: attemptData, completion: { value in
                 completion(value != nil)
                 dismissImpl?()
             })!
+            controller.touchIdCompletion = {
+                completion(true)
+                dismissImpl?()
+            }
             controller.checkCurrentPasscode = { value in
                 if let value = value {
                     switch challenge {
@@ -571,6 +576,9 @@ public func passcodeEntryController(account: Account, animateIn: Bool = true, co
                     }
                     transaction.setAccessChallengeData(data)
                 }).start()
+            }
+            legacyController.presentationCompleted = { [weak controller] in
+                controller?.refreshTouchId()
             }
             legacyController.bind(controller: controller)
             legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
