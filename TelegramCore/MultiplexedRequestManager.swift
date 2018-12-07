@@ -14,6 +14,11 @@ enum MultiplexedRequestTarget: Equatable, Hashable {
     case cdn(Int)
 }
 
+private struct MultiplexedRequestTargetKey: Equatable, Hashable {
+    let target: MultiplexedRequestTarget
+    let continueInBackground: Bool
+}
+
 private final class RequestData {
     let id: Int32
     let consumerId: Int64
@@ -21,16 +26,18 @@ private final class RequestData {
     let functionDescription: FunctionDescription
     let payload: Buffer
     let tag: MediaResourceFetchTag?
+    let continueInBackground: Bool
     let deserializeResponse: (Buffer) -> Any?
     let completed: (Any) -> Void
     let error: (MTRpcError) -> Void
     
-    init(id: Int32, consumerId: Int64, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any) -> Void, error: @escaping (MTRpcError) -> Void) {
+    init(id: Int32, consumerId: Int64, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, continueInBackground: Bool, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any) -> Void, error: @escaping (MTRpcError) -> Void) {
         self.id = id
         self.consumerId = consumerId
         self.target = target
         self.functionDescription = functionDescription
         self.tag = tag
+        self.continueInBackground = continueInBackground
         self.payload = payload
         self.deserializeResponse = deserializeResponse
         self.completed = completed
@@ -61,7 +68,7 @@ private final class RequestTargetContext {
 }
 
 private struct MultiplexedRequestTargetTimerKey: Equatable, Hashable {
-    let target: MultiplexedRequestTarget
+    let key: MultiplexedRequestTargetKey
     let id: Int32
 }
 
@@ -73,21 +80,21 @@ private typealias SignalKitTimer = SwiftSignalKit.Timer
 
 private final class MultiplexedRequestManagerContext {
     private let queue: Queue
-    private let takeWorker: (MultiplexedRequestTarget, MediaResourceFetchTag?) -> Download?
+    private let takeWorker: (MultiplexedRequestTarget, MediaResourceFetchTag?, Bool) -> Download?
     
     private var queuedRequests: [RequestData] = []
     private var nextId: Int32 = 0
     
-    private var targetContexts: [MultiplexedRequestTarget: [RequestTargetContext]] = [:]
+    private var targetContexts: [MultiplexedRequestTargetKey: [RequestTargetContext]] = [:]
     private var emptyTargetTimers: [MultiplexedRequestTargetTimerKey: SignalKitTimer] = [:]
     
-    init(queue: Queue, takeWorker: @escaping (MultiplexedRequestTarget, MediaResourceFetchTag?) -> Download?) {
+    init(queue: Queue, takeWorker: @escaping (MultiplexedRequestTarget, MediaResourceFetchTag?, Bool) -> Download?) {
         self.queue = queue
         self.takeWorker = takeWorker
     }
     
     deinit {
-        for targetContextList in targetContexts.values {
+        for targetContextList in self.targetContexts.values {
             for targetContext in targetContextList {
                 for request in targetContext.requests {
                     request.disposable.dispose()
@@ -99,10 +106,12 @@ private final class MultiplexedRequestManagerContext {
         }
     }
     
-    func request(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, completed: @escaping (Any) -> Void, error: @escaping (MTRpcError) -> Void) -> Disposable {
+    func request(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, continueInBackground: Bool, completed: @escaping (Any) -> Void, error: @escaping (MTRpcError) -> Void) -> Disposable {
+        let targetKey = MultiplexedRequestTargetKey(target: target, continueInBackground: continueInBackground)
+        
         let requestId = self.nextId
         self.nextId += 1
-        self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, target: target, functionDescription: data.0, payload: data.1, tag: tag, deserializeResponse: { buffer in
+        self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, target: target, functionDescription: data.0, payload: data.1, tag: tag, continueInBackground: continueInBackground, deserializeResponse: { buffer in
             return data.2(buffer)
         }, completed: { result in
             completed(result)
@@ -125,8 +134,8 @@ private final class MultiplexedRequestManagerContext {
                     }
                 }
                 
-                if strongSelf.targetContexts[target] != nil {
-                    outer: for targetContext in strongSelf.targetContexts[target]! {
+                if strongSelf.targetContexts[targetKey] != nil {
+                    outer: for targetContext in strongSelf.targetContexts[targetKey]! {
                         for i in 0 ..< targetContext.requests.count {
                             if targetContext.requests[i].requestId == requestId {
                                 targetContext.requests[i].disposable.dispose()
@@ -149,23 +158,24 @@ private final class MultiplexedRequestManagerContext {
         var requestIndex = 0
         while requestIndex < self.queuedRequests.count {
             let request = self.queuedRequests[requestIndex]
+            let targetKey = MultiplexedRequestTargetKey(target: request.target, continueInBackground: request.continueInBackground)
             
-            if self.targetContexts[request.target] == nil {
-                self.targetContexts[request.target] = []
+            if self.targetContexts[targetKey] == nil {
+                self.targetContexts[targetKey] = []
             }
             var selectedContext: RequestTargetContext?
-            for targetContext in self.targetContexts[request.target]! {
+            for targetContext in self.targetContexts[targetKey]! {
                 if targetContext.requests.count < maxRequestsPerWorker {
                     selectedContext = targetContext
                     break
                 }
             }
-            if selectedContext == nil && self.targetContexts[request.target]!.count < maxWorkersPerTarget {
-                if let worker = self.takeWorker(request.target, request.tag) {
+            if selectedContext == nil && self.targetContexts[targetKey]!.count < maxWorkersPerTarget {
+                if let worker = self.takeWorker(request.target, request.tag, request.continueInBackground) {
                     let contextId = self.nextId
                     self.nextId += 1
                     let targetContext = RequestTargetContext(id: contextId, worker: worker)
-                    self.targetContexts[request.target]!.append(targetContext)
+                    self.targetContexts[targetKey]!.append(targetContext)
                     selectedContext = targetContext
                 } else {
                     Logger.shared.log("MultiplexedRequestManager", "couldn't take worker")
@@ -221,9 +231,9 @@ private final class MultiplexedRequestManagerContext {
     }
     
     private func checkEmptyContexts() {
-        for (target, contexts) in self.targetContexts {
+        for (targetKey, contexts) in self.targetContexts {
             for context in contexts {
-                let key = MultiplexedRequestTargetTimerKey(target: target, id: context.id)
+                let key = MultiplexedRequestTargetTimerKey(key: targetKey, id: context.id)
                 if context.requests.isEmpty {
                     if self.emptyTargetTimers[key] == nil {
                         let timer = SignalKitTimer(timeout: 2.0, repeat: false, completion: { [weak self] in
@@ -231,10 +241,10 @@ private final class MultiplexedRequestManagerContext {
                                 return
                             }
                             strongSelf.emptyTargetTimers.removeValue(forKey: key)
-                            if strongSelf.targetContexts[target] != nil {
-                                for i in 0 ..< strongSelf.targetContexts[target]!.count {
-                                    if strongSelf.targetContexts[target]![i].id == key.id {
-                                        strongSelf.targetContexts[target]!.remove(at: i)
+                            if strongSelf.targetContexts[targetKey] != nil {
+                                for i in 0 ..< strongSelf.targetContexts[targetKey]!.count {
+                                    if strongSelf.targetContexts[targetKey]![i].id == key.id {
+                                        strongSelf.targetContexts[targetKey]!.remove(at: i)
                                         break
                                     }
                                 }
@@ -258,20 +268,20 @@ final class MultiplexedRequestManager {
     private let queue = Queue()
     private let context: QueueLocalObject<MultiplexedRequestManagerContext>
     
-    init(takeWorker: @escaping (MultiplexedRequestTarget, MediaResourceFetchTag?) -> Download?) {
+    init(takeWorker: @escaping (MultiplexedRequestTarget, MediaResourceFetchTag?, Bool) -> Download?) {
         let queue = self.queue
         self.context = QueueLocalObject(queue: self.queue, generate: {
             return MultiplexedRequestManagerContext(queue: queue, takeWorker: takeWorker)
         })
     }
     
-    func request<T>(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?) -> Signal<T, MTRpcError> {
+    func request<T>(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool) -> Signal<T, MTRpcError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.context.with { context in
                 disposable.set(context.request(to: target, consumerId: consumerId, data: (data.0, data.1, { buffer in
                     return data.2.parse(buffer)
-                }), tag: tag, completed: { result in
+                }), tag: tag, continueInBackground: continueInBackground, completed: { result in
                     if let result = result as? T {
                         subscriber.putNext(result)
                         subscriber.putCompletion()

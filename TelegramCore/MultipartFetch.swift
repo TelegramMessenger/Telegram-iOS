@@ -84,14 +84,14 @@ private struct DownloadWrapper {
     let isCdn: Bool
     let network: Network
     
-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?) -> Signal<T, MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool) -> Signal<T, MTRpcError> {
         let target: MultiplexedRequestTarget
         if self.isCdn {
             target = .cdn(Int(self.datacenterId))
         } else {
             target = .main(Int(self.datacenterId))
         }
-        return network.multiplexedRequestManager.request(to: target, consumerId: self.consumerId, data: data, tag: tag)
+        return network.multiplexedRequestManager.request(to: target, consumerId: self.consumerId, data: data, tag: tag, continueInBackground: continueInBackground)
     }
 }
 
@@ -115,6 +115,7 @@ private final class MultipartCdnHashSource {
     
     private let fileToken: Data
     private let masterDownload: DownloadWrapper
+    private let continueInBackground: Bool
     
     private var knownUpperBound: Int32
     private var hashes: [Int32: Data] = [:]
@@ -123,14 +124,15 @@ private final class MultipartCdnHashSource {
     
     private var subscribers = Bag<(Int32, Int32, ([Int32: Data]) -> Void)>()
     
-    init(queue: Queue, fileToken: Data, hashes: [Int32: Data], masterDownload: DownloadWrapper) {
+    init(queue: Queue, fileToken: Data, hashes: [Int32: Data], masterDownload: DownloadWrapper, continueInBackground: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
         self.fileToken = fileToken
         self.masterDownload = masterDownload
+        self.continueInBackground = continueInBackground
         
-        var knownUpperBound: Int32 = 0
+        let knownUpperBound: Int32 = 0
         /*self.hashes = hashes
         for (offset, _) in hashes {
             assert(offset % dataHashLength == 0)
@@ -221,7 +223,7 @@ private final class MultipartCdnHashSource {
         self.requestOffsetAndDisposable = (requestOffset, disposable)
         let queue = self.queue
         let fileToken = self.fileToken
-        disposable.set((self.masterDownload.request(Api.functions.upload.getCdnFileHashes(fileToken: Buffer(data: fileToken), offset: requestOffset), tag: nil)
+        disposable.set((self.masterDownload.request(Api.functions.upload.getCdnFileHashes(fileToken: Buffer(data: fileToken), offset: requestOffset), tag: nil, continueInBackground: self.continueInBackground)
         |> map { partHashes -> [Int32: Data] in
             var parsedPartHashes: [Int32: Data] = [:]
             for part in partHashes {
@@ -270,7 +272,7 @@ private enum MultipartFetchSource {
     case master(location: MultipartFetchMasterLocation, download: DownloadWrapper)
     case cdn(masterDatacenterId: Int32, fileToken: Data, key: Data, iv: Data, download: DownloadWrapper, masterDownload: DownloadWrapper, hashSource: MultipartCdnHashSource)
     
-    func request(offset: Int32, limit: Int32, tag: MediaResourceFetchTag?, fileReference: Data?) -> Signal<Data, MultipartFetchDownloadError> {
+    func request(offset: Int32, limit: Int32, tag: MediaResourceFetchTag?, fileReference: Data?, continueInBackground: Bool) -> Signal<Data, MultipartFetchDownloadError> {
         switch self {
             case .none:
                 return .never()
@@ -283,7 +285,7 @@ private enum MultipartFetchSource {
                 switch location {
                     case let .generic(_, location):
                         if let parsedLocation = location(fileReference) {
-                            return download.request(Api.functions.upload.getFile(location: parsedLocation, offset: offset, limit: Int32(updatedLength)), tag: tag)
+                            return download.request(Api.functions.upload.getFile(location: parsedLocation, offset: offset, limit: Int32(updatedLength)), tag: tag, continueInBackground: continueInBackground)
                             |> mapError { error -> MultipartFetchDownloadError in
                                 if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
                                     return .revalidateMediaReference
@@ -314,7 +316,7 @@ private enum MultipartFetchSource {
                             return .fail(.revalidateMediaReference)
                         }
                     case let .web(_, location):
-                        return download.request(Api.functions.upload.getWebFile(location: location, offset: offset, limit: Int32(updatedLength)), tag: tag)
+                        return download.request(Api.functions.upload.getWebFile(location: location, offset: offset, limit: Int32(updatedLength)), tag: tag, continueInBackground: continueInBackground)
                         |> mapError { error -> MultipartFetchDownloadError in
                             return .generic
                         }
@@ -335,7 +337,7 @@ private enum MultipartFetchSource {
                     updatedLength += 1
                 }
                 
-                let part = download.request(Api.functions.upload.getCdnFile(fileToken: Buffer(data: fileToken), offset: offset, limit: Int32(updatedLength)), tag: nil)
+                let part = download.request(Api.functions.upload.getCdnFile(fileToken: Buffer(data: fileToken), offset: offset, limit: Int32(updatedLength)), tag: nil, continueInBackground: continueInBackground)
                 |> mapError { _ -> MultipartFetchDownloadError in
                     return .generic
                 }
@@ -402,6 +404,7 @@ private final class MultipartFetchManager {
     let postbox: Postbox
     let network: Network
     let revalidationContext: MediaReferenceRevalidationContext
+    let continueInBackground: Bool
     let partReady: (Int, Data) -> Void
     let reportCompleteSize: (Int) -> Void
     
@@ -437,6 +440,9 @@ private final class MultipartFetchManager {
         
         if let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo {
             self.fileReference = info.reference.apiFileReference
+            self.continueInBackground = info.continueInBackground
+        } else {
+            self.continueInBackground = false
         }
         
         self.state = MultipartDownloadState(encryptionKey: encryptionKey, decryptedSize: decryptedSize)
@@ -587,7 +593,7 @@ private final class MultipartFetchManager {
                 requestLimit = (requestLimit / self.partAlignment + 1) * self.partAlignment
             }
             
-            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, fileReference: self.fileReference)
+            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
             |> deliverOn(self.queue)
             let partDisposable = MetaDisposable()
             self.fetchingParts[downloadRange.lowerBound] = (downloadRange.count, partDisposable)
@@ -634,7 +640,7 @@ private final class MultipartFetchManager {
                     case let .switchToCdn(id, token, key, iv, partHashes):
                         switch strongSelf.source {
                             case let .master(location, download):
-                                strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, datacenterId: id, isCdn: true, network: strongSelf.network), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download))
+                                strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, datacenterId: id, isCdn: true, network: strongSelf.network), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download, continueInBackground: strongSelf.continueInBackground))
                                 strongSelf.checkState()
                             case .cdn, .none:
                                 break
@@ -646,7 +652,7 @@ private final class MultipartFetchManager {
                             case let .cdn(_, fileToken, _, _, _, masterDownload, _):
                                 if !strongSelf.reuploadingToCdn {
                                     strongSelf.reuploadingToCdn = true
-                                    let reupload: Signal<[Api.FileHash], NoError> = masterDownload.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)), tag: nil)
+                                    let reupload: Signal<[Api.FileHash], NoError> = masterDownload.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)), tag: nil, continueInBackground: strongSelf.continueInBackground)
                                     |> `catch` { _ -> Signal<[Api.FileHash], NoError> in
                                         return .single([])
                                     }
@@ -666,7 +672,7 @@ private final class MultipartFetchManager {
     }
 }
 
-func multipartFetch(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int?, intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+func multipartFetch(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int?, intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil, continueInBackground: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let location: MultipartFetchMasterLocation
         if let resource = resource as? TelegramCloudMediaResource {

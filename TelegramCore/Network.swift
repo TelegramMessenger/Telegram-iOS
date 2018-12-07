@@ -583,6 +583,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     private let shouldKeepConnectionDisposable = MetaDisposable()
     
     public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
+    public let shouldKeepBackgroundDownloadConnections = Promise<Bool>(false)
     
     public var mockConnectionStatus: ConnectionStatus? {
         didSet {
@@ -611,30 +612,30 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         context.add(NetworkHelper(requestPublicKeys: { [weak self] id in
             if let strongSelf = self {
                 return strongSelf.request(Api.functions.help.getCdnConfig())
-                    |> map(Optional.init)
-                    |> `catch` { _ -> Signal<Api.CdnConfig?, NoError> in
-                        return .single(nil)
-                    }
-                    |> map { result -> NSArray in
-                        let array = NSMutableArray()
-                        if let result = result {
-                            switch result {
-                                case let .cdnConfig(publicKeys):
-                                    for key in publicKeys {
-                                        switch key {
-                                            case let .cdnPublicKey(dcId, publicKey):
-                                                if id == Int(dcId) {
-                                                    let dict = NSMutableDictionary()
-                                                    dict["key"] = publicKey
-                                                    dict["fingerprint"] = MTRsaFingerprint(publicKey)
-                                                    array.add(dict)
-                                                }
-                                        }
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.CdnConfig?, NoError> in
+                    return .single(nil)
+                }
+                |> map { result -> NSArray in
+                    let array = NSMutableArray()
+                    if let result = result {
+                        switch result {
+                            case let .cdnConfig(publicKeys):
+                                for key in publicKeys {
+                                    switch key {
+                                        case let .cdnPublicKey(dcId, publicKey):
+                                            if id == Int(dcId) {
+                                                let dict = NSMutableDictionary()
+                                                dict["key"] = publicKey
+                                                dict["fingerprint"] = MTRsaFingerprint(publicKey)
+                                                array.add(dict)
+                                            }
                                     }
-                            }
+                                }
                         }
-                        return array
                     }
+                    return array
+                }
             } else {
                 return .never()
             }
@@ -649,7 +650,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }))
         requestService.delegate = self
         
-        self._multiplexedRequestManager = MultiplexedRequestManager(takeWorker: { [weak self] target, tag in
+        self._multiplexedRequestManager = MultiplexedRequestManager(takeWorker: { [weak self] target, tag, continueInBackground in
             if let strongSelf = self {
                 let datacenterId: Int
                 let isCdn: Bool
@@ -662,7 +663,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                         datacenterId = id
                         isCdn = true
                 }
-                return strongSelf.makeWorker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: tag)
+                return strongSelf.makeWorker(datacenterId: datacenterId, isCdn: isCdn, isMedia: isMedia, tag: tag, continueInBackground: continueInBackground)
             }
             return nil
         })
@@ -717,10 +718,11 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return self.worker(datacenterId: self.datacenterId, isCdn: false, isMedia: false, tag: nil)
     }
     
-    private func makeWorker(datacenterId: Int, isCdn: Bool, isMedia: Bool, tag: MediaResourceFetchTag?) -> Download {
-        let shouldKeepWorkerConnection: Signal<Bool, NoError> = combineLatest(self.shouldKeepConnection.get(), self.shouldExplicitelyKeepWorkerConnections.get())
-        |> map { shouldKeepConnection, shouldExplicitelyKeepWorkerConnections -> Bool in
-            return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections
+    private func makeWorker(datacenterId: Int, isCdn: Bool, isMedia: Bool, tag: MediaResourceFetchTag?, continueInBackground: Bool = false) -> Download {
+        let queue = Queue.mainQueue()
+        let shouldKeepWorkerConnection: Signal<Bool, NoError> = combineLatest(queue: queue, self.shouldKeepConnection.get(), self.shouldExplicitelyKeepWorkerConnections.get(), self.shouldKeepBackgroundDownloadConnections.get())
+        |> map { shouldKeepConnection, shouldExplicitelyKeepWorkerConnections, shouldKeepBackgroundDownloadConnections -> Bool in
+            return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections || (continueInBackground && shouldKeepBackgroundDownloadConnections)
         }
         |> distinctUntilChanged
         return Download(queue: self.queue, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: self.context, masterDatacenterId: self.datacenterId, usageInfo: usageCalculationInfo(basePath: self.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection)

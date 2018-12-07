@@ -812,6 +812,7 @@ public class Account {
     public let shouldKeepOnlinePresence = Promise<Bool>()
     public let autolockReportDeadline = Promise<Int32?>()
     public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
+    public let shouldKeepBackgroundDownloadConnections = Promise<Bool>(false)
     
     private let networkStateValue = Promise<AccountNetworkState>(.waitingForNetwork)
     public var networkState: Signal<AccountNetworkState, NoError> {
@@ -1035,6 +1036,7 @@ public class Account {
         
         self.network.shouldKeepConnection.set(shouldBeMaster)
         self.network.shouldExplicitelyKeepWorkerConnections.set(self.shouldExplicitelyKeepWorkerConnections.get())
+        self.network.shouldKeepBackgroundDownloadConnections.set(self.shouldKeepBackgroundDownloadConnections.get())
         
         let serviceTasksMaster = shouldBeMaster
         |> deliverOn(self.serviceQueue)

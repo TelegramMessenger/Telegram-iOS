@@ -324,6 +324,10 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
                 }
             }
             
+            updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in
+                return updated
+            })
+            
             var renderedMessages: [Message] = []
             for message in messages {
                 if let message = StoreMessage(apiMessage: message), case let .Id(updatedId) = message.id {

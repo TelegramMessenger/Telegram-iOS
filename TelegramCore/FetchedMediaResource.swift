@@ -495,19 +495,21 @@ extension MediaResourceReference {
 final class TelegramCloudMediaResourceFetchInfo: MediaResourceFetchInfo {
     let reference: MediaResourceReference
     let preferBackgroundReferenceRevalidation: Bool
+    let continueInBackground: Bool
     
-    init(reference: MediaResourceReference, preferBackgroundReferenceRevalidation: Bool) {
+    init(reference: MediaResourceReference, preferBackgroundReferenceRevalidation: Bool, continueInBackground: Bool) {
         self.reference = reference
         self.preferBackgroundReferenceRevalidation = preferBackgroundReferenceRevalidation
+        self.continueInBackground = continueInBackground
     }
 }
 
-public func fetchedMediaResource(postbox: Postbox, reference: MediaResourceReference, range: (Range<Int>, MediaBoxFetchPriority)? = nil, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false) -> Signal<FetchResourceSourceType, NoError> {
+public func fetchedMediaResource(postbox: Postbox, reference: MediaResourceReference, range: (Range<Int>, MediaBoxFetchPriority)? = nil, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, NoError> {
     if let (range, priority) = range {
-        return postbox.mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation)))
+        return postbox.mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)))
         |> map { _ in .local }
     } else {
-        return postbox.mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation)), implNext: reportResultStatus)
+        return postbox.mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)), implNext: reportResultStatus)
     }
 }
 
