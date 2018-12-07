@@ -1166,6 +1166,7 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOffset);
         } else if (0 == strcmp(key, "tr")) {
+            EnterObject();
             obj->mTransform = parseTransformObject();
         } else if (0 == strcmp(key, "hd")) {
             obj->mHidden = GetBool();
