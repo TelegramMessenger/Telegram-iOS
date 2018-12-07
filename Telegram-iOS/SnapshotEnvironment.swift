@@ -61,7 +61,7 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
         }
     }
     
-    let applicationBindings = TelegramApplicationBindings(isMainApp: true, openUrl: { _ in
+    let applicationBindings = TelegramApplicationBindings(isMainApp: true, containerPath: path, openUrl: { _ in
     }, openUniversalUrl: { _, completion in
         completion.completion(false)
     }, canOpenUrl: { _ in

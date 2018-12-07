@@ -117,7 +117,7 @@ class ShareRootController: UIViewController {
             
             setupSharedLogger(logsPath)
             
-            let applicationBindings = TelegramApplicationBindings(isMainApp: false, openUrl: { _ in
+            let applicationBindings = TelegramApplicationBindings(isMainApp: false, containerPath: appGroupUrl.path, openUrl: { _ in
             }, openUniversalUrl: { _, completion in
                 completion.completion(false)
                 return

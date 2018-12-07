@@ -31,6 +31,7 @@ private final class WakeupManagerState {
 
 private struct CombinedRunningImportantTasks: Equatable {
     let serviceTasks: AccountRunningImportantTasks
+    let downloadTasks: Bool
     let backgroundLocation: Bool
     let watchTasks: WatchRunningTasks?
     
@@ -39,11 +40,11 @@ private struct CombinedRunningImportantTasks: Equatable {
         if let watchTasks = self.watchTasks {
             hasWatchTask = watchTasks.running
         }
-        return self.serviceTasks.isEmpty && !self.backgroundLocation && !hasWatchTask
+        return self.serviceTasks.isEmpty && !self.backgroundLocation && !hasWatchTask && !self.downloadTasks
     }
     
     static func ==(lhs: CombinedRunningImportantTasks, rhs: CombinedRunningImportantTasks) -> Bool {
-        return lhs.serviceTasks == rhs.serviceTasks && lhs.backgroundLocation == rhs.backgroundLocation && lhs.watchTasks == rhs.watchTasks
+        return lhs.serviceTasks == rhs.serviceTasks && lhs.backgroundLocation == rhs.backgroundLocation && lhs.watchTasks == rhs.watchTasks && lhs.downloadTasks == rhs.downloadTasks
     }
 }
 
@@ -72,12 +73,12 @@ final class WakeupManager {
     
     private var inForegroundDisposable: Disposable?
     private var runningServiceTasksDisposable: Disposable?
-    private var runningServiceTasksValue: CombinedRunningImportantTasks = CombinedRunningImportantTasks(serviceTasks: [], backgroundLocation: false, watchTasks: nil)
+    private var runningServiceTasksValue: CombinedRunningImportantTasks = CombinedRunningImportantTasks(serviceTasks: [], downloadTasks: false, backgroundLocation: false, watchTasks: nil)
     private let wakeupDisposable = MetaDisposable()
     
     private var wakeupResultSubscribers: [(Int32, ([MessageId]) -> Signal<Void, NoError>)] = []
     
-    init(inForeground: Signal<Bool, NoError>, runningServiceTasks: Signal<AccountRunningImportantTasks, NoError>, runningBackgroundLocationTasks: Signal<Bool, NoError>, runningWatchTasks: Signal<WatchRunningTasks?, NoError>) {
+    init(inForeground: Signal<Bool, NoError>, runningServiceTasks: Signal<AccountRunningImportantTasks, NoError>, runningBackgroundLocationTasks: Signal<Bool, NoError>, runningWatchTasks: Signal<WatchRunningTasks?, NoError>, runningDownloadTasks: Signal<Bool, NoError>) {
         self.inForegroundDisposable = (inForeground |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
@@ -92,13 +93,13 @@ final class WakeupManager {
                 }
             }
         })
-        self.runningServiceTasksDisposable = (combineLatest(inForeground, runningServiceTasks, runningBackgroundLocationTasks, runningWatchTasks)
-            |> map { inForeground, runningServiceTasks, runningBackgroundLocationTasks, runningWatchTasks -> CombinedRunningImportantTasks in
-                let combinedTasks = CombinedRunningImportantTasks(serviceTasks: runningServiceTasks, backgroundLocation: runningBackgroundLocationTasks, watchTasks: runningWatchTasks)
+        self.runningServiceTasksDisposable = (combineLatest(inForeground, runningServiceTasks, runningBackgroundLocationTasks, runningWatchTasks, runningDownloadTasks)
+            |> map { inForeground, runningServiceTasks, runningBackgroundLocationTasks, runningWatchTasks, runningDownloadTasks -> CombinedRunningImportantTasks in
+                let combinedTasks = CombinedRunningImportantTasks(serviceTasks: runningServiceTasks, downloadTasks: runningDownloadTasks, backgroundLocation: runningBackgroundLocationTasks, watchTasks: runningWatchTasks)
                 if !inForeground && !combinedTasks.isEmpty {
                     return combinedTasks
                 } else {
-                    return CombinedRunningImportantTasks(serviceTasks: [], backgroundLocation: false, watchTasks: nil)
+                    return CombinedRunningImportantTasks(serviceTasks: [], downloadTasks: false, backgroundLocation: false, watchTasks: nil)
                 }
             }
             |> distinctUntilChanged

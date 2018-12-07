@@ -3579,3 +3579,8 @@ Unused sets are archived when you add more.";
 "Notifications.PermissionsUnreachableText" = "Check that both Alert and Sound are enabled in Settings.";
 "Notifications.PermissionsAllow" = "Turn Notifications ON";
 "Notifications.PermissionsAllowInSettings" = "Turn ON in Settings";
+
+"ChatSettings.DownloadInBackground" = "Background Download";
+"ChatSettings.DownloadInBackgroundInfo" = "The app will continue downloading media files for a limited time.";
+
+"Cache.ServiceFiles" = "Service Files";
