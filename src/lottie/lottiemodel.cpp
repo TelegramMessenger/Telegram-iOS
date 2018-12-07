@@ -55,11 +55,6 @@ VMatrix LOTTransformData::matrix(int frameNo, bool autoOrient) const
         return computeMatrix(frameNo, autoOrient);
 }
 
-float LOTTransformData::opacity(int frameNo) const
-{
-    return mOpacity.value(frameNo) / 100.f;
-}
-
 void LOTTransformData::cacheMatrix()
 {
     mCachedMatrix = computeMatrix(0);

@@ -1222,7 +1222,11 @@ std::shared_ptr<LOTTransformData> LottieParserImpl::parseTransformObject(bool dd
             parseProperty(obj->mSkewAxis);
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOpacity);
-        } else if (0 == strcmp(key, "hd")) {
+        } else if (0 == strcmp(key, "so")) {
+            parseProperty(obj->mStartOpacity);
+        } else if (0 == strcmp(key, "eo")) {
+            parseProperty(obj->mEndOpacity);
+        }  else if (0 == strcmp(key, "hd")) {
             obj->mHidden = GetBool();
         } else if (0 == strcmp(key, "rx")) {
             parseProperty(obj->m3D->mRx);

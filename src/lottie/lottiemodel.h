@@ -444,7 +444,9 @@ class LOTTransformData : public LOTData
 public:
     LOTTransformData():LOTData(LOTData::Type::Transform),mScale({100, 100}){}
     VMatrix matrix(int frameNo, bool autoOrient = false) const;
-    float    opacity(int frameNo) const;
+    float opacity(int frameNo) const { return mOpacity.value(frameNo)/100;}
+    float startOpacity(int frameNo) const { return mStartOpacity.value(frameNo)/100;}
+    float endOpacity(int frameNo) const { return mEndOpacity.value(frameNo)/100;}
     void cacheMatrix();
     bool staticMatrix() const {return mStaticMatrix;}
     bool ddd() const {return m3D ? true : false;}
@@ -461,6 +463,8 @@ public:
     LOTAnimatable<float>          mOpacity{100};   /* "o" */
     LOTAnimatable<float>          mSkew{0};      /* "sk" */
     LOTAnimatable<float>          mSkewAxis{0};  /* "sa" */
+    LOTAnimatable<float>          mStartOpacity{100}; /* "so" */
+    LOTAnimatable<float>          mEndOpacity{100};   /* "eo" */
     bool                          mStaticMatrix{true};
     bool                          mSeparate{false};
     VMatrix                       mCachedMatrix;
