@@ -154,7 +154,7 @@ private func synchronizeRecentlyUsedMedia(transaction: Transaction, postbox: Pos
                     case .generic:
                         return .fail(.generic)
                     case .invalidReference:
-                        return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource), preferBackgroundReferenceRevalidation: false), resource: fileReference.media.resource)
+                        return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: fileReference.media.resource)
                         |> mapError { _ -> SaveRecentlyUsedMediaError in
                             return .generic
                         }

@@ -150,7 +150,7 @@ private func synchronizeSavedStickers(transaction: Transaction, postbox: Postbox
                     case .generic:
                         return .fail(.generic)
                     case .invalidReference:
-                        return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource), preferBackgroundReferenceRevalidation: false), resource: fileReference.media.resource)
+                        return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: fileReference.media.resource)
                         |> mapError { _ -> SaveStickerError in
                             return .generic
                         }
