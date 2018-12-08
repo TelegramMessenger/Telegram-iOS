@@ -74,12 +74,7 @@ func managedSynchronizeAppLogEventsOperations(postbox: Postbox, network: Network
         let tag: PeerOperationLogTag = OperationLogTags.SynchronizeAppLogEvents
         
         let helper = Atomic<ManagedSynchronizeAppLogEventsOperationsHelper>(value: ManagedSynchronizeAppLogEventsOperationsHelper())
-        
-        let peerId = PeerId(namespace: 0, id: 0)
-        let _ = (postbox.transaction({ t in
-            t.operationLogRemoveAllEntries(peerId: peerId, tag: tag)
-        })).start()
-        
+                
         let disposable = postbox.mergedOperationLogView(tag: tag, limit: 50).start(next: { view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
                 return helper.update(view.entries)

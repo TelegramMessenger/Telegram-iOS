@@ -61,6 +61,8 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                         })
                         
                         updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxGroupMemberCount: config.chatSizeMax, maxSupergroupMemberCount: config.megagroupSizeMax, maxMessageForwardBatchSize: config.forwardedCountMax, maxSavedGifCount: config.savedGifsLimit, maxRecentStickerCount: config.stickersRecentLimit, maxMessageEditingInterval: config.editTimeLimit, maxMediaCaptionLength: config.captionLengthMax, canRemoveIncomingMessagesInPrivateChats: (config.flags & (1 << 6)) != 0))
+                        
+                        updateSearchBotsConfiguration(transaction: transaction, configuration: SearchBotsConfiguration(imageBotUsername: config.imgSearchUsername, gifBotUsername: config.gifSearchUsername, venueBotUsername: config.venueSearchUsername))
                     
                         let (primary, secondary) = getLocalization(transaction)
                         var invalidateLocalization = false
