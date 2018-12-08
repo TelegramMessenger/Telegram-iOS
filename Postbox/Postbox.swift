@@ -978,6 +978,8 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
                     if userVersion != currentUserVersion {
                         if userVersion > currentUserVersion {
                             postboxLog("Version \(userVersion) is newer than supported")
+                            assertionFailure("Version \(userVersion) is newer than supported")
+                            valueBox.drop()
                         } else {
                             if let operation = registeredUpgrades()[userVersion] {
                                 switch operation {
@@ -988,7 +990,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
                                 }
                                 continue loop
                             } else {
-                                assertionFailure()
+                                assertionFailure("Couldn't find any upgrade for \(userVersion)")
                                 postboxLog("Couldn't find any upgrade for \(userVersion)")
                                 valueBox.drop()
                             }
