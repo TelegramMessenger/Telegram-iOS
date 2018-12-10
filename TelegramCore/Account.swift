@@ -102,6 +102,47 @@ public func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.St
         lhs.seq == rhs.seq
 }
 
+private let accountRecordToActiveKeychainId = Atomic<[AccountRecordId: Int]>(value: [:])
+
+private func makeExclusiveKeychain(id: AccountRecordId, postbox: Postbox) -> Keychain {
+    var keychainId = 0
+    let _ = accountRecordToActiveKeychainId.modify { dict in
+        var dict = dict
+        if let value = dict[id] {
+            dict[id] = value + 1
+            keychainId = value + 1
+        } else {
+            keychainId = 0
+            dict[id] = 0
+        }
+        return dict
+    }
+    return Keychain(get: { key in
+        let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
+            return dict[id] == keychainId
+        }
+        if enabled {
+            return postbox.keychainEntryForKey(key)
+        } else {
+            return nil
+        }
+    }, set: { (key, data) in
+        let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
+            return dict[id] == keychainId
+        }
+        if enabled {
+            postbox.setKeychainEntryForKey(key, value: data)
+        }
+    }, remove: { key in
+        let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
+            return dict[id] == keychainId
+        }
+        if enabled {
+            postbox.removeKeychainEntryForKey(key)
+        }
+    })
+}
+
 public class UnauthorizedAccount {
     public let networkArguments: NetworkInitializationArguments
     public let id: AccountRecordId
@@ -141,14 +182,7 @@ public class UnauthorizedAccount {
         if masterDatacenterId == Int32(self.network.mtProto.datacenterId) {
             return .single(self)
         } else {
-            let postbox = self.postbox
-            let keychain = Keychain(get: { key in
-                return postbox.keychainEntryForKey(key)
-            }, set: { (key, data) in
-                postbox.setKeychainEntryForKey(key, value: data)
-            }, remove: { key in
-                postbox.removeKeychainEntryForKey(key)
-            })
+            let keychain = makeExclusiveKeychain(id: self.id, postbox: self.postbox)
             
             return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
                 return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
@@ -222,13 +256,7 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                     |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
                         let accountState = view.state
                         
-                        let keychain = Keychain(get: { key in
-                            return postbox.keychainEntryForKey(key)
-                        }, set: { (key, data) in
-                            postbox.setKeychainEntryForKey(key, value: data)
-                        }, remove: { key in
-                            postbox.removeKeychainEntryForKey(key)
-                        })
+                        let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
                         
                         if let accountState = accountState {
                             switch accountState {

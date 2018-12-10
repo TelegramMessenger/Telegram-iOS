@@ -15,7 +15,7 @@ public final class LoggingSettings: AccountSharedData, Equatable {
     public let redactSensitiveData: Bool
     
     #if DEBUG
-    public static var defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
+    public static var defaultSettings = LoggingSettings(logToFile: true, logToConsole: true, redactSensitiveData: true)
     #else
     public static var defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
     #endif
