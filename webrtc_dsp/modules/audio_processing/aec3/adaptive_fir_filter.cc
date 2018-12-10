@@ -353,7 +353,7 @@ void ApplyFilter_NEON(const RenderBuffer& render_buffer,
 }
 #endif
 
-#if defined(WEBRTC_ARCH_ARM_FAMILY) && defined(WEBRTC_ARCH_X86_FAMILY)
+#if defined(WEBRTC_ARCH_X86_FAMILY)
 // Produces the filter output (SSE2 variant).
 void ApplyFilter_SSE2(const RenderBuffer& render_buffer,
                       rtc::ArrayView<const FftData> H,

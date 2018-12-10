@@ -377,9 +377,11 @@ std::string NetworkSocketPosix::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv6A
 		jstring jitfName=static_cast<jstring>(env->GetObjectArrayElement(jinfo, 0));
 		jstring jipv4=static_cast<jstring>(env->GetObjectArrayElement(jinfo, 1));
 		jstring jipv6=static_cast<jstring>(env->GetObjectArrayElement(jinfo, 2));
-		const char* itfchars=env->GetStringUTFChars(jitfName, NULL);
-		name=std::string(itfchars);
-		env->ReleaseStringUTFChars(jitfName, itfchars);
+		if(jitfName){
+			const char *itfchars=env->GetStringUTFChars(jitfName, NULL);
+			name=std::string(itfchars);
+			env->ReleaseStringUTFChars(jitfName, itfchars);
+		}
 
 		if(v4addr && jipv4){
 			const char* ipchars=env->GetStringUTFChars(jipv4, NULL);
