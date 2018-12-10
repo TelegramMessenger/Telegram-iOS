@@ -1211,6 +1211,10 @@ void LOTDrawable::sync()
     if (mFlag & DirtyState::None) return;
 
     if (mFlag & DirtyState::Path) {
+        if (mStroke.mDash.size()) {
+            VDasher dasher(mStroke.mDash.data(), mStroke.mDash.size());
+            mPath = dasher.dashed(mPath);
+        }
         const std::vector<VPath::Element> &elm = mPath.elements();
         const std::vector<VPointF> &       pts = mPath.points();
         const float *ptPtr = reinterpret_cast<const float *>(pts.data());
@@ -1256,10 +1260,6 @@ void LOTDrawable::sync()
             mCNode->mStroke.join = LOTJoinStyle::JoinMiter;
             break;
         }
-
-        mCNode->mStroke.dashArray = mStroke.mDash.data();
-        mCNode->mStroke.dashArraySize = mStroke.mDash.size();
-
     } else {
         mCNode->mStroke.enable = 0;
     }
