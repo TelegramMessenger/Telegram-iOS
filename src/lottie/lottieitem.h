@@ -53,6 +53,8 @@ private:
    std::vector<VDrawable *>                    mDrawableList;
 };
 
+class LOTLayerMaskItem;
+
 typedef vFlag<DirtyFlagBit> DirtyFlag;
 class LOTLayerItem
 {
@@ -81,13 +83,11 @@ protected:
    inline bool isStatic() const {return mStatic;}
    float opacity(int frameNo) const;
    inline DirtyFlag flag() const {return mDirtyFlag;}
-   VRle maskRle(const VRect &clipRect);
-   bool hasMask() const {return !mMasks.empty();}
 protected:
    std::vector<LOTMask>                        mMasksCNode;
    std::unique_ptr<LOTLayerNode>               mLayerCNode;
    std::vector<VDrawable *>                    mDrawableList;
-   std::vector<std::unique_ptr<LOTMaskItem>>   mMasks;
+   std::unique_ptr<LOTLayerMaskItem>           mLayerMask;
    LOTLayerData                               *mLayerData{nullptr};
    LOTLayerItem                               *mParentLayer{nullptr};
    LOTLayerItem                               *mPrecompLayer{nullptr};
@@ -165,6 +165,23 @@ public:
     VPath                    mFinalPath;
     std::future<VRle>        mRleTask;
     VRle                     mRle;
+};
+
+/*
+ * Handels mask property of a layer item
+ */
+class LOTLayerMaskItem
+{
+public:
+    LOTLayerMaskItem(LOTLayerData *layerData);
+    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag);
+    bool isStatic() const {return mStatic;}
+    VRle maskRle(const VRect &clipRect);
+public:
+    std::vector<LOTMaskItem>   mMasks;
+    VRle                       mRle;
+    bool                       mStatic{true};
+    bool                       mDirty{true};
 };
 
 class LOTDrawable : public VDrawable

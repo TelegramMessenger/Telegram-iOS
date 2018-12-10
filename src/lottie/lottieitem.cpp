@@ -138,8 +138,10 @@ bool LOTCompItem::render(const lottie::Surface &surface)
 }
 
 void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
-                         float parentAlpha, const DirtyFlag &/*flag*/)
+                         float parentAlpha, const DirtyFlag &flag)
 {
+    if (flag.testFlag(DirtyFlagBit::None) && mData->isStatic()) return;
+
     if (mData->mShape.isStatic()) {
         if (mLocalPath.empty()) {
             mData->mShape.value(frameNo).toPath(mLocalPath);
@@ -205,19 +207,19 @@ void LOTLayerItem::buildLayerNode()
             break;
         }
     }
-    if (hasMask()) {
+    if (mLayerMask) {
         mMasksCNode.clear();
-        for (const auto &mask : mMasks) {
+        for (const auto &mask : mLayerMask->mMasks) {
             LOTMask cNode;
-            const std::vector<VPath::Element> &elm = mask->mFinalPath.elements();
-            const std::vector<VPointF> &       pts = mask->mFinalPath.points();
+            const std::vector<VPath::Element> &elm = mask.mFinalPath.elements();
+            const std::vector<VPointF> &       pts = mask.mFinalPath.points();
             const float *ptPtr = reinterpret_cast<const float *>(pts.data());
             const char * elmPtr = reinterpret_cast<const char *>(elm.data());
             cNode.mPath.ptPtr = ptPtr;
             cNode.mPath.ptCount = pts.size();
             cNode.mPath.elmPtr = elmPtr;
             cNode.mPath.elmCount = elm.size();
-            switch (mask->maskMode()) {
+            switch (mask.maskMode()) {
             case LOTMaskData::Mode::Add:
                 cNode.mMode = MaskModeAdd;
                 break;
@@ -259,8 +261,8 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle
     renderList(mDrawableList);
 
     VRle mask;
-    if (hasMask()) {
-        mask = maskRle(painter->clipBoundingRect());
+    if (mLayerMask) {
+        mask = mLayerMask->maskRle(painter->clipBoundingRect());
         if (!inheritMask.empty())
             mask = mask & inheritMask;
         // if resulting mask is empty then return.
@@ -288,43 +290,66 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle
     }
 }
 
-VRle LOTLayerItem::maskRle(const VRect &clipRect)
+LOTLayerMaskItem::LOTLayerMaskItem(LOTLayerData *layerData)
 {
+    mMasks.reserve(layerData->mMasks.size());
+
+    for (auto &i : layerData->mMasks) {
+        mMasks.emplace_back(i.get());
+        mStatic &= i->isStatic();
+    }
+}
+
+void LOTLayerMaskItem::update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag)
+{
+    if (flag.testFlag(DirtyFlagBit::None) && isStatic()) return;
+
+    for (auto &i : mMasks) {
+        i.update(frameNo, parentMatrix, parentAlpha, flag);
+    }
+    mDirty = true;
+}
+
+VRle LOTLayerMaskItem::maskRle(const VRect &clipRect)
+{
+    if (!mDirty) return mRle;
+
     VRle rle;
     for (auto &i : mMasks) {
-        switch (i->maskMode()) {
+        switch (i.maskMode()) {
         case LOTMaskData::Mode::Add: {
-            rle = rle + i->rle();
+            rle = rle + i.rle();
             break;
         }
         case LOTMaskData::Mode::Substarct: {
             if (rle.empty() && !clipRect.empty())
                 rle = VRle::toRle(clipRect);
-            rle = rle - i->rle();
+            rle = rle - i.rle();
             break;
         }
         case LOTMaskData::Mode::Intersect: {
-            rle = rle & i->rle();
+            rle = rle & i.rle();
             break;
         }
         case LOTMaskData::Mode::Difference: {
-            rle = rle ^ i->rle();
+            rle = rle ^ i.rle();
             break;
         }
         default:
             break;
         }
     }
-    return rle;
+
+    mRle = rle;
+    mDirty = false;
+    return mRle;
 }
+
 
 LOTLayerItem::LOTLayerItem(LOTLayerData *layerData): mLayerData(layerData)
 {
-    if (mLayerData->mHasMask) {
-        for (auto &i : mLayerData->mMasks) {
-            mMasks.push_back(std::make_unique<LOTMaskItem>(i.get()));
-        }
-    }
+    if (mLayerData->mHasMask)
+        mLayerMask = std::make_unique<LOTLayerMaskItem>(mLayerData);
 }
 
 void LOTLayerItem::updateStaticProperty()
@@ -348,11 +373,6 @@ void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
     m *= parentMatrix;
     float alpha = parentAlpha * opacity(frameNo());
 
-    // 6. update the mask
-    if (hasMask()) {
-        for (auto &i : mMasks) i->update(frameNo(), m, alpha, mDirtyFlag);
-    }
-
     // 3. update the dirty flag based on the change
     if (!mCombinedMatrix.fuzzyCompare(m)) {
         mDirtyFlag |= DirtyFlagBit::Matrix;
@@ -363,13 +383,18 @@ void LOTLayerItem::update(int frameNumber, const VMatrix &parentMatrix,
     mCombinedMatrix = m;
     mCombinedAlpha = alpha;
 
-    // 4. if no parent property change and layer is static then nothing to do.
+    // 4. update the mask
+    if (mLayerMask) {
+        mLayerMask->update(frameNo(), m, alpha, mDirtyFlag);
+    }
+
+    // 5. if no parent property change and layer is static then nothing to do.
     if ((flag() & DirtyFlagBit::None) && isStatic()) return;
 
-    // 5. update the content of the layer
+    // 6. update the content of the layer
     updateContent();
 
-    // 6. reset the dirty flag
+    // 7. reset the dirty flag
     mDirtyFlag = DirtyFlagBit::None;
 }
 
@@ -470,8 +495,8 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
     }
 
     VRle mask;
-    if (hasMask()) {
-        mask = maskRle(painter->clipBoundingRect());
+    if (mLayerMask) {
+        mask = mLayerMask->maskRle(painter->clipBoundingRect());
         if (!inheritMask.empty())
             mask = mask & inheritMask;
         // if resulting mask is empty then return.
