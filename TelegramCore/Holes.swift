@@ -139,7 +139,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
         |> take(1)
         |> mapToSignal { peer in
             if let inputPeer = forceApiInputPeer(peer) {
-                print("fetchMessageHistoryHole for \(peer.displayTitle) \(direction)")
+                print("fetchMessageHistoryHole for \(peer.debugDisplayTitle) \(direction)")
                 let request: Signal<Api.messages.Messages, MTRpcError>
                 var maxIndexRequest: Signal<Api.messages.Messages?, MTRpcError> = .single(nil)
                 var implicitelyFillHole = false
@@ -357,7 +357,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         })
                         updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                         
-                        print("fetchMessageHistoryHole for \(peer.displayTitle) done")
+                        print("fetchMessageHistoryHole for \(peer.debugDisplayTitle) done")
                         
                         return
                     })

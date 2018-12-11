@@ -6,7 +6,7 @@ import Foundation
 #endif
 
 public extension Peer {
-    public var displayTitle: String {
+    public var debugDisplayTitle: String {
         switch self {
             case let user as TelegramUser:
                 return user.name
@@ -17,6 +17,10 @@ public extension Peer {
             default:
                 return ""
         }
+    }
+    
+    public var displayTitle: String {
+        return self.debugDisplayTitle
     }
     
     public var compactDisplayTitle: String {
@@ -131,17 +135,17 @@ public extension PeerId {
     }
 }
 
-public func peerDisplayTitles(_ peerIds: [PeerId], _ dict: SimpleDictionary<PeerId, Peer>) -> String {
+public func peerDebugDisplayTitles(_ peerIds: [PeerId], _ dict: SimpleDictionary<PeerId, Peer>) -> String {
     var peers: [Peer] = []
     for id in peerIds {
         if let peer = dict[id] {
             peers.append(peer)
         }
     }
-    return peerDisplayTitles(peers)
+    return peerDebugDisplayTitles(peers)
 }
 
-public func peerDisplayTitles(_ peers: [Peer]) -> String {
+public func peerDebugDisplayTitles(_ peers: [Peer]) -> String {
     if peers.count == 0 {
         return ""
     } else {
@@ -153,7 +157,7 @@ public func peerDisplayTitles(_ peers: [Peer]) -> String {
             } else {
                 string.append(", ")
             }
-            string.append(peer.displayTitle)
+            string.append(peer.debugDisplayTitle)
         }
         return string
     }

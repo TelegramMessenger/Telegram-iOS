@@ -708,7 +708,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if ttl > 0 {
-                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: max(ttl, maximumMediaAutoremoveTimeout(parsedMedia)), countdownBeginTime: nil))
+                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttl, countdownBeginTime: nil))
             }
             
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
@@ -923,7 +923,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if ttl > 0 {
-                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: max(ttl, maximumMediaAutoremoveTimeout(parsedMedia)), countdownBeginTime: nil))
+                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttl, countdownBeginTime: nil))
             }
             
             var groupingKey: Int64?
