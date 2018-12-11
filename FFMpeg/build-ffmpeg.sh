@@ -1,21 +1,43 @@
 #!/bin/sh
 
-# directories
-FF_VERSION="4.1"
-#FF_VERSION="snapshot-git"
-if [[ $FFMPEG_VERSION != "" ]]; then
-  FF_VERSION=$FFMPEG_VERSION
+if [ "$1" = "debug" ];
+then
+	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-optimizations --disable-stripping"
+elif [ "$1" = "release" ];
+then
+	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-debug"
+else
+	echo "No configuration specified (debug / release)"
+	exit 1
 fi
-SOURCE="ffmpeg-$FF_VERSION"
-FAT="FFmpeg-iOS"
 
-SCRATCH="scratch"
-# must be an absolute path
-THIN=`pwd`/"thin"
+ARCHS="$2"
 
-export PKG_CONFIG_PATH=`pwd`/"libopus"
+for ARCH in $ARCHS
+do
+	if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" -o "$ARCH" = "arm64" -o "$ARCH" = "arm7" ]
+	then
+		echo "1" >/dev/null
+	else
+		echo "Invalid architecture $ARCH"
+		exit 1
+	fi
+done
 
-LIBOPUS=`pwd`/libopus
+BUILD_DIR=$3
+SOURCE_DIR=$4
+
+FF_VERSION="4.1"
+SOURCE="$SOURCE_DIR/ffmpeg-$FF_VERSION"
+
+FAT="$BUILD_DIR/FFmpeg-iOS"
+
+SCRATCH="$BUILD_DIR/scratch"
+THIN="$BUILD_DIR/thin"
+
+export PKG_CONFIG_PATH="$SOURCE_DIR/libopus"
+
+LIBOPUS="$SOURCE_DIR/libopus"
 
 set -e
 
@@ -32,25 +54,7 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
                  --enable-decoder=h264,libopus,mp3_at,aac_at,flac,alac_at,pcm_s16le,pcm_s24le,gsm_ms_at \
                  --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav \
                  --enable-parser=aac,h264,mp3,libopus \
-                 --enable-protocol=http \
                  "
-
-if [ "$1" = "debug" ];
-then
-	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-optimizations --disable-stripping"
-elif [ "$1" = "release" ];
-then
-	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-debug"
-else
-	echo "No configuration specified (debug / release)"
-	exit 1
-fi
-
-# avresample
-#CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-avresample"
-
-ARCHS="arm64 armv7 x86_64 i386"
-ARCHS="x86_64"
 
 COMPILE="y"
 LIPO="y"
@@ -82,12 +86,11 @@ then
 
 	if [ ! -r $SOURCE ]
 	then
-		echo 'FFmpeg source not found. Trying to download...'
-		curl http://www.ffmpeg.org/releases/$SOURCE.tar.bz2 | tar xj \
-			|| exit 1
+		echo "FFmpeg source not found at $SOURCE"
+		exit 1
 	fi
 
-	CWD=`pwd`
+	CWD="$BUILD_DIR"
 	for ARCH in $ARCHS
 	do
 		echo "building $ARCH..."
@@ -122,38 +125,52 @@ then
 		CXXFLAGS="$CFLAGS"
 		LDFLAGS="$CFLAGS"
 
-		TMPDIR=${TMPDIR/%\/} $CWD/$SOURCE/configure \
-		    --target-os=darwin \
-		    --arch=$ARCH \
-		    --cc="$CC" \
-		    --as="$AS" \
-		    $CONFIGURE_FLAGS \
-		    --extra-cflags="$CFLAGS" \
-		    --extra-ldflags="$LDFLAGS" \
-		    --prefix="$THIN/$ARCH" \
-		|| exit 1
+		CONFIGURED_MARKER="$THIN/$ARCH/configured_marker"
+		CONFIGURED_MARKER_CONTENTS=""
+		if [ -r "$CONFIGURED_MARKER" ]
+		then
+			CONFIGURED_MARKER_CONTENTS=`cat "$CONFIGURED_MARKER"`
+		fi
+		if [ "$CONFIGURED_MARKER_CONTENTS" = "$CONFIGURE_FLAGS" ]
+		then
+			echo "1" >/dev/null
+		else
+			mkdir -p "$THIN/$ARCH"
+			TMPDIR=${TMPDIR/%\/} "$SOURCE/configure" \
+			    --target-os=darwin \
+			    --arch=$ARCH \
+			    --cc="$CC" \
+			    --as="$AS" \
+			    $CONFIGURE_FLAGS \
+			    --extra-cflags="$CFLAGS" \
+			    --extra-ldflags="$LDFLAGS" \
+			    --prefix="$THIN/$ARCH" \
+			|| exit 1
+			echo "$CONFIGURE_FLAGS" > "$CONFIGURED_MARKER"
+		fi
 
 		make -j20 install $EXPORT || exit 1
-		cd $CWD
+		cd "$CWD"
 	done
 fi
 
 if [ "$LIPO" ]
 then
 	echo "building fat binaries..."
-	mkdir -p $FAT/lib
+	mkdir -p "$FAT"/lib
 	set - $ARCHS
-	CWD=`pwd`
-	cd $THIN/$1/lib
+	CWD="$BUILD_DIR"
+	cd "$THIN/$1/lib"
 	for LIB in *.a
 	do
-		cd $CWD
-		echo lipo -create `find $THIN -name $LIB` -output $FAT/lib/$LIB 1>&2
-		lipo -create `find $THIN -name $LIB` -output $FAT/lib/$LIB || exit 1
+		cd "$CWD"
+		echo lipo -create `find "$THIN" -name "$LIB"` -output "$FAT/lib/$LIB" 1>&2
+		LIPO_INPUT=`find "$THIN" -name "$LIB"`
+		lipo -create "$LIPO_INPUT" -output "$FAT/lib/$LIB" || exit 1
 	done
 
-	cd $CWD
-	cp -rf $THIN/$1/include $FAT
+	cd "$CWD"
+	cp -rf "$THIN/$1/include" "$FAT"
 fi
 
 echo Done
