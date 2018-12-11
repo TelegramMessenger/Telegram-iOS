@@ -295,10 +295,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         if let _ = mediaReference?.media as? TelegramMediaAction {
                             isAction = true
                         }
-                        if !disableAutoremove, var messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
-                            if let file = mediaReference?.media as? TelegramMediaFile, let duration = file.duration {
-                                messageAutoremoveTimeout = max(duration, messageAutoremoveTimeout)
-                            }
+                        if !disableAutoremove, let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
                             attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
                         }
                     }
@@ -324,7 +321,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         case let .broadcast(info):
                             attributes.append(ViewCountMessageAttribute(count: 1))
                             if info.flags.contains(.messagesShouldHaveSignatures) {
-                                attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.displayTitle))
+                                attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
                             }
                         case .group:
                             break
@@ -392,10 +389,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                     mediaDuration = duration
                                 }
                             }
-                            if !disableAutoremove, var messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
-                                if let mediaDuration = mediaDuration {
-                                    messageAutoremoveTimeout = max(mediaDuration, messageAutoremoveTimeout)
-                                }
+                            if !disableAutoremove, let messageAutoremoveTimeout = peer.messageAutoremoveTimeout, !isAction {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: messageAutoremoveTimeout, countdownBeginTime: nil))
                             }
                         }

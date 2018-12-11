@@ -26,6 +26,11 @@ func managedAppChangelog(postbox: Postbox, network: Network, stateManager: Accou
             return transaction.getPreferencesEntry(key: PreferencesKeys.appChangelogState) as? AppChangelogState ?? AppChangelogState.default
         }
         |> mapToSignal { appChangelogState -> Signal<Void, NoError> in
+            var appChangelogState = appChangelogState
+            #if DEBUG
+            appChangelogState = AppChangelogState(checkedVersion: "5.0.17", previousVersion: "5.0.17")
+            #endif
+            
             if appChangelogState.checkedVersion == appVersion {
                 return .complete()
             }

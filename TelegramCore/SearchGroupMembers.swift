@@ -17,7 +17,7 @@ private func searchLocalGroupMembers(postbox: Postbox, peerId: PeerId, query: St
         }
         
         return peers.filter { peer in
-            if peer.displayTitle.isEmpty {
+            if peer.debugDisplayTitle.isEmpty {
                 return false
             }
             if peer.indexName.matchesByTokens(normalizedQuery) {
@@ -53,7 +53,7 @@ public func searchGroupMembers(postbox: Postbox, network: Network, accountPeerId
                             if existingIds.contains(peer.id) {
                                 return false
                             }
-                            if peer.displayTitle.isEmpty {
+                            if peer.debugDisplayTitle.isEmpty {
                                 return false
                             }
                             return true
