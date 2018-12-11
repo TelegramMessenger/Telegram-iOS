@@ -1,7 +1,6 @@
-prefix=/Users/peter/build/ffmpeg/libopus
 exec_prefix=${prefix}
 includedir=${prefix}/include
-libdir=${exec_prefix}/lib
+libdir=${prefix}/lib
 
 Name: Opus
 Description: The Opus library

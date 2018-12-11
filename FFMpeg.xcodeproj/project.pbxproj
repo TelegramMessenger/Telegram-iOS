@@ -444,7 +444,7 @@
 			};
 			name = Release;
 		};
-		D05B076121BFB99900B1D27C /* Debug Hockeyapp */ = {
+		D05B076121BFB99900B1D27C /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -504,9 +504,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D05B076221BFB99900B1D27C /* Debug Hockeyapp */ = {
+		D05B076221BFB99900B1D27C /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -534,9 +534,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$BUILT_PRODUCTS_DIR/FFMpeg/FFmpeg-iOS/include";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D05B076321BFB9A100B1D27C /* Debug Fork */ = {
+		D05B076321BFB9A100B1D27C /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -596,9 +596,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D05B076421BFB9A100B1D27C /* Debug Fork */ = {
+		D05B076421BFB9A100B1D27C /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -626,9 +626,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$BUILT_PRODUCTS_DIR/FFMpeg/FFmpeg-iOS/include";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D05B076521BFB9A600B1D27C /* Debug AppStore */ = {
+		D05B076521BFB9A600B1D27C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -688,9 +688,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D05B076621BFB9A600B1D27C /* Debug AppStore */ = {
+		D05B076621BFB9A600B1D27C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -718,9 +718,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$BUILT_PRODUCTS_DIR/FFMpeg/FFmpeg-iOS/include";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D05B076721BFB9AF00B1D27C /* Debug AppStore LLC */ = {
+		D05B076721BFB9AF00B1D27C /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -780,9 +780,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D05B076821BFB9AF00B1D27C /* Debug AppStore LLC */ = {
+		D05B076821BFB9AF00B1D27C /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -810,9 +810,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$BUILT_PRODUCTS_DIR/FFMpeg/FFmpeg-iOS/include";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D05B076921BFB9B700B1D27C /* Release Hockeyapp */ = {
+		D05B076921BFB9B700B1D27C /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -866,9 +866,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D05B076A21BFB9B700B1D27C /* Release Hockeyapp */ = {
+		D05B076A21BFB9B700B1D27C /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -896,9 +896,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$BUILT_PRODUCTS_DIR/FFMpeg/FFmpeg-iOS/include";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D05B076B21BFB9BE00B1D27C /* Release Hockeyapp Internal */ = {
+		D05B076B21BFB9BE00B1D27C /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -952,9 +952,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D05B076C21BFB9BE00B1D27C /* Release Hockeyapp Internal */ = {
+		D05B076C21BFB9BE00B1D27C /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -982,9 +982,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$BUILT_PRODUCTS_DIR/FFMpeg/FFmpeg-iOS/include";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D05B076D21BFB9C900B1D27C /* Release AppStore */ = {
+		D05B076D21BFB9C900B1D27C /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1038,9 +1038,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D05B076E21BFB9C900B1D27C /* Release AppStore */ = {
+		D05B076E21BFB9C900B1D27C /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -1068,9 +1068,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$BUILT_PRODUCTS_DIR/FFMpeg/FFmpeg-iOS/include";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D05B076F21BFB9D200B1D27C /* Release AppStore LLC */ = {
+		D05B076F21BFB9D200B1D27C /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1124,9 +1124,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D05B077021BFB9D200B1D27C /* Release AppStore LLC */ = {
+		D05B077021BFB9D200B1D27C /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -1154,7 +1154,7 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$BUILT_PRODUCTS_DIR/FFMpeg/FFmpeg-iOS/include";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
 /* End XCBuildConfiguration section */
 
@@ -1163,15 +1163,15 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D04554BB21BF0E8E007A6DD9 /* Debug */,
-				D05B076721BFB9AF00B1D27C /* Debug AppStore LLC */,
-				D05B076521BFB9A600B1D27C /* Debug AppStore */,
-				D05B076321BFB9A100B1D27C /* Debug Fork */,
-				D05B076121BFB99900B1D27C /* Debug Hockeyapp */,
+				D05B076721BFB9AF00B1D27C /* DebugAppStoreLLC */,
+				D05B076521BFB9A600B1D27C /* DebugAppStore */,
+				D05B076321BFB9A100B1D27C /* DebugFork */,
+				D05B076121BFB99900B1D27C /* DebugHockeyapp */,
 				D04554BC21BF0E8E007A6DD9 /* Release */,
-				D05B076F21BFB9D200B1D27C /* Release AppStore LLC */,
-				D05B076D21BFB9C900B1D27C /* Release AppStore */,
-				D05B076B21BFB9BE00B1D27C /* Release Hockeyapp Internal */,
-				D05B076921BFB9B700B1D27C /* Release Hockeyapp */,
+				D05B076F21BFB9D200B1D27C /* ReleaseAppStoreLLC */,
+				D05B076D21BFB9C900B1D27C /* ReleaseAppStore */,
+				D05B076B21BFB9BE00B1D27C /* ReleaseHockeyappInternal */,
+				D05B076921BFB9B700B1D27C /* ReleaseHockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1180,15 +1180,15 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D04554BE21BF0E8E007A6DD9 /* Debug */,
-				D05B076821BFB9AF00B1D27C /* Debug AppStore LLC */,
-				D05B076621BFB9A600B1D27C /* Debug AppStore */,
-				D05B076421BFB9A100B1D27C /* Debug Fork */,
-				D05B076221BFB99900B1D27C /* Debug Hockeyapp */,
+				D05B076821BFB9AF00B1D27C /* DebugAppStoreLLC */,
+				D05B076621BFB9A600B1D27C /* DebugAppStore */,
+				D05B076421BFB9A100B1D27C /* DebugFork */,
+				D05B076221BFB99900B1D27C /* DebugHockeyapp */,
 				D04554BF21BF0E8E007A6DD9 /* Release */,
-				D05B077021BFB9D200B1D27C /* Release AppStore LLC */,
-				D05B076E21BFB9C900B1D27C /* Release AppStore */,
-				D05B076C21BFB9BE00B1D27C /* Release Hockeyapp Internal */,
-				D05B076A21BFB9B700B1D27C /* Release Hockeyapp */,
+				D05B077021BFB9D200B1D27C /* ReleaseAppStoreLLC */,
+				D05B076E21BFB9C900B1D27C /* ReleaseAppStore */,
+				D05B076C21BFB9BE00B1D27C /* ReleaseHockeyappInternal */,
+				D05B076A21BFB9B700B1D27C /* ReleaseHockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

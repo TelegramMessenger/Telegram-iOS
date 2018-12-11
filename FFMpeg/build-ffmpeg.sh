@@ -1,16 +1,5 @@
 #!/bin/sh
 
-if [ "$1" = "debug" ];
-then
-	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-optimizations --disable-stripping"
-elif [ "$1" = "release" ];
-then
-	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-debug"
-else
-	echo "No configuration specified (debug / release)"
-	exit 1
-fi
-
 ARCHS="$2"
 
 for ARCH in $ARCHS
@@ -35,9 +24,7 @@ FAT="$BUILD_DIR/FFmpeg-iOS"
 SCRATCH="$BUILD_DIR/scratch"
 THIN="$BUILD_DIR/thin"
 
-export PKG_CONFIG_PATH="$SOURCE_DIR/libopus"
-
-LIBOPUS="$SOURCE_DIR/libopus"
+PKG_CONFIG="$SOURCE_DIR/pkg-config-wrapper.sh"
 
 set -e
 
@@ -55,6 +42,20 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
                  --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav \
                  --enable-parser=aac,h264,mp3,libopus \
                  "
+
+
+if [ "$1" = "debug" ];
+then
+	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-optimizations --disable-stripping"
+elif [ "$1" = "release" ];
+then
+	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-debug"
+else
+	echo "No configuration specified (debug / release)"
+	exit 1
+fi
+
+#CONFIGURE_FLAGS="$CONFIGURE_FLAGS --pkg-config=$PKG_CONFIG"
 
 COMPILE="y"
 LIPO="y"
@@ -96,6 +97,19 @@ then
 		echo "building $ARCH..."
 		mkdir -p "$SCRATCH/$ARCH"
 		cd "$SCRATCH/$ARCH"
+
+		LIBOPUS_TARGET_PATH="$SCRATCH/$ARCH"
+		LIBOPUS_PATH="$LIBOPUS_TARGET_PATH/libopus"
+		rm -rf "$LIBOPUS_PATH"
+		cp -R "$SOURCE_DIR/libopus" "$LIBOPUS_TARGET_PATH"
+
+		echo "prefix=\"$LIBOPUS_PATH\"" > "$LIBOPUS_PATH/opus.pc"
+		printf "\n" >> "$LIBOPUS_PATH/opus.pc"
+		cat "$SOURCE_DIR/libopus/opus.pc" >> "$LIBOPUS_PATH/opus.pc"
+		echo "LIBOPUS_TARGET_PATH = $LIBOPUS_TARGET_PATH"
+
+		export PKG_CONFIG_PATH="$LIBOPUS_PATH"
+		echo "PKG_CONFIG_PATH = $PKG_CONFIG_PATH"
 
 		CFLAGS="-arch $ARCH"
 		if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]
@@ -149,7 +163,9 @@ then
 			echo "$CONFIGURE_FLAGS" > "$CONFIGURED_MARKER"
 		fi
 
-		make -j20 install $EXPORT || exit 1
+		CORE_COUNT=`sysctl -n hw.logicalcpu`
+
+		make -j$CORE_COUNT install $EXPORT || exit 1
 		cd "$CWD"
 	done
 fi
