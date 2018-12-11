@@ -1,5 +1,10 @@
 import Foundation
 
+public struct ImmediateTextNodeLayoutInfo {
+    public let size: CGSize
+    public let truncated: Bool
+}
+
 public class ImmediateTextNode: TextNode {
     public var attributedText: NSAttributedString?
     public var textAlignment: NSTextAlignment = .natural
@@ -29,6 +34,13 @@ public class ImmediateTextNode: TextNode {
         let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets))
         let _ = apply()
         return layout.size
+    }
+    
+    public func updateLayoutInfo(_ constrainedSize: CGSize) -> ImmediateTextNodeLayoutInfo {
+        let makeLayout = TextNode.asyncLayout(self)
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets))
+        let _ = apply()
+        return ImmediateTextNodeLayoutInfo(size: layout.size, truncated: layout.truncated)
     }
     
     override public func didLoad() {

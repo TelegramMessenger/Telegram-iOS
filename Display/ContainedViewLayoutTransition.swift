@@ -137,16 +137,16 @@ public extension ContainedViewLayoutTransition {
     
     func animatePosition(node: ASDisplayNode, from position: CGPoint, completion: ((Bool) -> Void)? = nil) {
         switch self {
-        case .immediate:
-            if let completion = completion {
-                completion(true)
-            }
-        case let .animated(duration, curve):
-            node.layer.animatePosition(from: position, to: node.position, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+            case .immediate:
                 if let completion = completion {
-                    completion(result)
+                    completion(true)
                 }
-            })
+            case let .animated(duration, curve):
+                node.layer.animatePosition(from: position, to: node.position, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
         }
     }
     

@@ -76,6 +76,7 @@
 		D03E7DF91C96C5F200C07816 /* NSWeakReference.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DF71C96C5F200C07816 /* NSWeakReference.m */; };
 		D03E7DFF1C96F7B400C07816 /* StatusBarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */; };
 		D03E7E011C974AB300C07816 /* DisplayLinkDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7E001C974AB300C07816 /* DisplayLinkDispatcher.swift */; };
+		D04554AA21BDB93E007A6DD9 /* CollectionIndexNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04554A921BDB93E007A6DD9 /* CollectionIndexNode.swift */; };
 		D04C468E1F4C97BE00D30FE1 /* PageControlNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04C468D1F4C97BE00D30FE1 /* PageControlNode.swift */; };
 		D05174B31EAA833200A1BF36 /* CASeeThroughTracingLayer.h in Headers */ = {isa = PBXBuildFile; fileRef = D05174B11EAA833200A1BF36 /* CASeeThroughTracingLayer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D05174B41EAA833200A1BF36 /* CASeeThroughTracingLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */; };
@@ -254,6 +255,7 @@
 		D03E7DF71C96C5F200C07816 /* NSWeakReference.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSWeakReference.m; sourceTree = "<group>"; };
 		D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarManager.swift; sourceTree = "<group>"; };
 		D03E7E001C974AB300C07816 /* DisplayLinkDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DisplayLinkDispatcher.swift; sourceTree = "<group>"; };
+		D04554A921BDB93E007A6DD9 /* CollectionIndexNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionIndexNode.swift; sourceTree = "<group>"; };
 		D04C468D1F4C97BE00D30FE1 /* PageControlNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageControlNode.swift; sourceTree = "<group>"; };
 		D05174B11EAA833200A1BF36 /* CASeeThroughTracingLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CASeeThroughTracingLayer.h; sourceTree = "<group>"; };
 		D05174B21EAA833200A1BF36 /* CASeeThroughTracingLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CASeeThroughTracingLayer.m; sourceTree = "<group>"; };
@@ -508,6 +510,7 @@
 				D0FA08C32048803C00DD23FC /* TextNode.swift */,
 				D0FA08C5204880C900DD23FC /* ImmediateTextNode.swift */,
 				D0CA3F892073F7650042D2B6 /* LinkHighlightingNode.swift */,
+				D04554A921BDB93E007A6DD9 /* CollectionIndexNode.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -1012,6 +1015,7 @@
 				D0CA3F8A2073F7650042D2B6 /* LinkHighlightingNode.swift in Sources */,
 				D0C2DFCB1CC4431D0044FF83 /* ListViewAnimation.swift in Sources */,
 				D0BE93191E8ED71100DCC1E6 /* NativeWindowHostView.swift in Sources */,
+				D04554AA21BDB93E007A6DD9 /* CollectionIndexNode.swift in Sources */,
 				D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */,
 				D05174B41EAA833200A1BF36 /* CASeeThroughTracingLayer.m in Sources */,
 				D03AA4D9202D8E5E0056C405 /* GlobalOverlayPresentationContext.swift in Sources */,

@@ -227,6 +227,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
+    public var indicatorStyle: UIScrollViewIndicatorStyle = .default {
+        didSet {
+            self.scrollView.indicatorStyle = self.indicatorStyle
+        }
+    }
+    
     public private(set) var opaqueState: Any?
     
     public override init() {
@@ -755,6 +761,9 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, customScrollToItem: Bool, itemTransition: ContainedViewLayoutTransition, synchronousLoads: Bool, updatingLayout: Bool, completion: (GridNodeDisplayedItemRange) -> Void) {
         let boundsTransition: ContainedViewLayoutTransition = updateLayoutTransition ?? .immediate
         
+        var addedNodes = false
+        let verticalIndicator = self.scrollView.subviews.last as? UIImageView
+        
         var previousItemFrames: [WrappedGridItemNode: CGRect]?
         var saveItemFrames = false
         switch presentationLayoutTransition.transition {
@@ -782,7 +791,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             previousItemFrames = itemFrames
         }
         
-        applyingContentOffset = true
+        self.applyingContentOffset = true
         
         let previousBounds = self.bounds
         self.scrollView.contentSize = presentationLayoutTransition.layout.contentSize
@@ -819,6 +828,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 let itemNode = self.items[item.index].node(layout: presentationLayoutTransition.layout.layout, synchronousLoad: synchronousLoads)
                 itemNode.frame = item.frame
                 self.addItemNode(index: item.index, itemNode: itemNode, lowestSectionNode: lowestSectionNode)
+                addedNodes = true
                 itemNode.updateLayout(item: self.items[item.index], size: item.frame.size, isVisible: bounds.intersects(item.frame), synchronousLoads: synchronousLoads)
             }
         }
@@ -845,6 +855,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 let sectionNode = section.section.node()
                 sectionNode.frame = sectionFrame
                 self.addSectionNode(section: wrappedSection, sectionNode: sectionNode)
+                addedNodes = true
             }
         }
         
@@ -1097,6 +1108,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 visibleItemsUpdated(GridNodeVisibleItems(top: (topIndex, self.items[topIndex]), bottom: (bottomIndex, self.items[bottomIndex]), topVisible: topVisible, bottomVisible: bottomVisible, topSectionVisible: topSectionVisible, count: self.items.count))
             } else {
                 visibleItemsUpdated(GridNodeVisibleItems(top: nil, bottom: nil, topVisible: nil, bottomVisible: nil, topSectionVisible: nil, count: self.items.count))
+            }
+        }
+        
+        if addedNodes {
+            if let verticalIndicator = verticalIndicator, self.scrollView.subviews.last !== verticalIndicator {
+                verticalIndicator.superview?.bringSubview(toFront: verticalIndicator)
             }
         }
         
