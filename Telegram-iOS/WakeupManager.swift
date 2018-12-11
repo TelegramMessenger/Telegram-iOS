@@ -108,7 +108,13 @@ final class WakeupManager {
                 strongSelf.runningServiceTasksValue = value
                 if !value.isEmpty {
                     //assert(strongSelf.state.currentServiceTask == nil)
-                    strongSelf.wakeupForServiceTasks(timeout: value.serviceTasks.contains(.pendingMessages) ? 85.0 : 25.0)
+                    var timeout: Double = 25.0
+                    if value.downloadTasks {
+                        timeout = 1.6 * 60.0
+                    } else if value.serviceTasks.contains(.pendingMessages) {
+                        timeout = 1.4 * 60.0
+                    }
+                    strongSelf.wakeupForServiceTasks(timeout: timeout)
                 } else if let currentServiceTask = strongSelf.state.currentServiceTask {
                     strongSelf.state.currentServiceTask = nil
                     Logger.shared.log("WakeupManager", "ending service task #\(currentServiceTask.id)")
