@@ -431,7 +431,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 let previousTheme = strongSelf.presentationData.theme
                 
                 strongSelf.presentationData = presentationData
-                strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations)))
+                strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)))
                 
                 strongSelf.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
             }
