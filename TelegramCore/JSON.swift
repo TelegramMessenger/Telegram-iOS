@@ -1,5 +1,9 @@
 import Foundation
+#if os(macOS)
+import PostboxMac
+#else
 import Postbox
+#endif
 
 public indirect enum JSON: PostboxCoding, Equatable {
     case null
