@@ -246,7 +246,8 @@ inline const std::vector<VPointF> &VPath::points() const
 
 inline void VPath::clone(const VPath &srcPath)
 {
-   d.write() = srcPath.d.read();
+   reset();
+   addPath(srcPath);
 }
 
 V_END_NAMESPACE
