@@ -222,7 +222,7 @@ public:
    bool dirty() const {return mPathChanged;}
    const VPath &localPath() const {return mTemp;}
    const VPath &finalPath();
-   void updatePath(const VPath &path) {mTemp.clone(path); mPathChanged = true; mNeedUpdate = true;}
+   void updatePath(const VPath &path) {mTemp = path; mPathChanged = true; mNeedUpdate = true;}
    bool staticPath() const { return mStaticPath; }
 protected:
    virtual void updatePath(VPath& path, int frameNo) = 0;

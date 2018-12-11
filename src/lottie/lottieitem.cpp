@@ -151,8 +151,7 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
     opacity = opacity * parentAlpha;
     mCombinedAlpha = opacity;
 
-    mFinalPath.reset();
-    mFinalPath.addPath(mLocalPath);
+    mFinalPath.clone(mLocalPath);
     mFinalPath.transform(parentMatrix);
 
     VPath tmp = mFinalPath;
@@ -787,6 +786,18 @@ void LOTContentGroupItem::processTrimItems(
     }
 }
 
+/*
+ * LOTPathDataItem uses 3 path objects for path object reuse.
+ * mLocalPath -  keeps track of the local path of the item before
+ * applying path operation and transformation.
+ * mTemp - keeps a referece to the mLocalPath and can be updated by the
+ *          path operation objects(trim, merge path),
+ *  mFinalPath - it takes a deep copy of the intermediate path(mTemp) each time
+ *  when the path is dirty(so if path changes every frame we don't realloc just copy to the
+ *  final path).
+ * NOTE: As path objects are COW objects we have to be carefull about the refcount so that
+ * we don't generate deep copy while modifying the path objects.
+ */
 void LOTPathDataItem::update(int frameNo, const VMatrix &,
                              float, const DirtyFlag &flag)
 {
@@ -794,11 +805,17 @@ void LOTPathDataItem::update(int frameNo, const VMatrix &,
 
     // 1. update the local path if needed
     if (hasChanged(frameNo)) {
+        // loose the reference to mLocalPath if any
+        // from the last frame update.
+        mTemp = VPath();
+
         updatePath(mLocalPath, frameNo);
         mPathChanged = true;
         mNeedUpdate = true;
     }
-
+    // 2. keep a reference path in temp in case there is some
+    // path operation like trim which will update the path.
+    // we don't want to update the local path.
     mTemp = mLocalPath;
 
     // 3. compute the final path with parentMatrix
