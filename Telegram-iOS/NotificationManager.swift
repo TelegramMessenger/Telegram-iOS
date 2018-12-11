@@ -356,7 +356,10 @@ final class NotificationManager {
             Logger.shared.log("NotificationManager", "account missing")
             return
         }
-        let strings = (account.telegramApplicationContext.currentPresentationData.with { $0 }).strings
+        let presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
+        let strings = presentationData.strings
+        let nameDisplayOrder = presentationData.nameDisplayOrder
+        
         for (messages, sound, initialDisplayContents, delayMessage) in messageList {
             for message in messages {
                 self.processedMessages.insert(message.id)
@@ -431,9 +434,9 @@ final class NotificationManager {
                                     body = strings.MESSAGE_FWDS(peer.displayTitle, "\(messages.count)").0
                                 }
                             } else if messages[0].groupingKey != nil {
-                                var kind = messageContentKind(messages[0], strings: strings, accountPeerId: account.peerId).key
+                                var kind = messageContentKind(messages[0], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId).key
                                 for i in 1 ..< messages.count {
-                                    let nextKind = messageContentKind(messages[i], strings: strings, accountPeerId: account.peerId)
+                                    let nextKind = messageContentKind(messages[i], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId)
                                     if kind != nextKind.key {
                                         kind = .text
                                         break
@@ -491,7 +494,7 @@ final class NotificationManager {
                                 title = nil
                             }
                             let chatPeer = RenderedPeer(peerId: firstMessage.id.peerId, peers: additionalPeers)
-                            let (_, _, messageText) = chatListItemStrings(strings: strings, message: firstMessage, chatPeer: chatPeer, accountPeerId: account.peerId)
+                            let (_, _, messageText) = chatListItemStrings(strings: strings, nameDisplayOrder: nameDisplayOrder, message: firstMessage, chatPeer: chatPeer, accountPeerId: account.peerId)
                             body = messageText
                             
                             loop: for media in firstMessage.media {

@@ -31,3 +31,6 @@ url=../TelegramCore.git
 [submodule "submodules/TelegramUI"]
 	path = submodules/TelegramUI
 url=../TelegramUI.git
+[submodule "submodules/ffmpeg"]
+	path = submodules/ffmpeg
+url=../ffmpeg.git

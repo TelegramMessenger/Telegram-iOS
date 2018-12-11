@@ -26,6 +26,9 @@
       location = "group:submodules/lottie-ios/Lottie.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:submodules/ffmpeg/FFMpeg.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:submodules/libtgvoip/libtgvoip.xcodeproj">
    </FileRef>
    <FileRef

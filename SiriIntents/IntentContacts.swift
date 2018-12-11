@@ -58,5 +58,5 @@ func personWithUser(stableId: String, user: TelegramUser) -> INPerson {
     var nameComponents = PersonNameComponents()
     nameComponents.givenName = user.firstName
     nameComponents.familyName = user.lastName
-    return INPerson(personHandle: INPersonHandle(value: stableId, type: .unknown), nameComponents: nameComponents, displayName: user.displayTitle, image: nil, contactIdentifier: stableId, customIdentifier: "tg\(user.id.toInt64())")
+    return INPerson(personHandle: INPersonHandle(value: stableId, type: .unknown), nameComponents: nameComponents, displayName: user.debugDisplayTitle, image: nil, contactIdentifier: stableId, customIdentifier: "tg\(user.id.toInt64())")
 }
