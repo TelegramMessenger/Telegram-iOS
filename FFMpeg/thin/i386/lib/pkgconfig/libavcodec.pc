@@ -1,0 +1,14 @@
+prefix=/Users/peter/build/FFmpeg-iOS-build-script/thin/i386
+exec_prefix=${prefix}
+libdir=/Users/peter/build/FFmpeg-iOS-build-script/thin/i386/lib
+includedir=/Users/peter/build/FFmpeg-iOS-build-script/thin/i386/include
+
+Name: libavcodec
+Description: FFmpeg codec library
+Version: 58.35.100
+Requires: libavutil >= 56.22.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavcodec -pthread -liconv -lm -framework AudioToolbox -L/Users/peter/build/ffmpeg/libopus/lib -lopus
+Libs.private: 
+Cflags: -I${includedir}

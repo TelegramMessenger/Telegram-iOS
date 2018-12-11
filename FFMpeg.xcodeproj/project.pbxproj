@@ -8,12 +8,32 @@
 
 /* Begin PBXBuildFile section */
 		D04554BA21BF0E8E007A6DD9 /* FFMpeg.h in Headers */ = {isa = PBXBuildFile; fileRef = D04554B821BF0E8E007A6DD9 /* FFMpeg.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D04554CE21BF111B007A6DD9 /* libavformat.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D04554CA21BF111B007A6DD9 /* libavformat.a */; };
+		D04554CF21BF111B007A6DD9 /* libavcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D04554CB21BF111B007A6DD9 /* libavcodec.a */; };
+		D04554D021BF111B007A6DD9 /* libavutil.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D04554CC21BF111B007A6DD9 /* libavutil.a */; };
+		D04554D121BF111B007A6DD9 /* libswresample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D04554CD21BF111B007A6DD9 /* libswresample.a */; };
+		D04555A521BF115E007A6DD9 /* Initialize.h in Headers */ = {isa = PBXBuildFile; fileRef = D04555A321BF115E007A6DD9 /* Initialize.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D04555A621BF115E007A6DD9 /* Initialize.m in Sources */ = {isa = PBXBuildFile; fileRef = D04555A421BF115E007A6DD9 /* Initialize.m */; };
+		D04555D521BF8B28007A6DD9 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D04555D421BF8B28007A6DD9 /* libz.tbd */; };
+		D04555D721BF8B2F007A6DD9 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D04555D621BF8B2F007A6DD9 /* AudioToolbox.framework */; };
+		D04555D921BF8B4E007A6DD9 /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D04555D821BF8B4E007A6DD9 /* libiconv.tbd */; };
+		D04555DB21BF8B77007A6DD9 /* libopus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D04555DA21BF8B77007A6DD9 /* libopus.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		D04554B521BF0E8E007A6DD9 /* FFMpeg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = FFMpeg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D04554B821BF0E8E007A6DD9 /* FFMpeg.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FFMpeg.h; sourceTree = "<group>"; };
 		D04554B921BF0E8E007A6DD9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D04554CA21BF111B007A6DD9 /* libavformat.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavformat.a; path = "FFMpeg/FFmpeg-iOS/lib/libavformat.a"; sourceTree = "<group>"; };
+		D04554CB21BF111B007A6DD9 /* libavcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavcodec.a; path = "FFMpeg/FFmpeg-iOS/lib/libavcodec.a"; sourceTree = "<group>"; };
+		D04554CC21BF111B007A6DD9 /* libavutil.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavutil.a; path = "FFMpeg/FFmpeg-iOS/lib/libavutil.a"; sourceTree = "<group>"; };
+		D04554CD21BF111B007A6DD9 /* libswresample.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libswresample.a; path = "FFMpeg/FFmpeg-iOS/lib/libswresample.a"; sourceTree = "<group>"; };
+		D04555A321BF115E007A6DD9 /* Initialize.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Initialize.h; sourceTree = "<group>"; };
+		D04555A421BF115E007A6DD9 /* Initialize.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Initialize.m; sourceTree = "<group>"; };
+		D04555D421BF8B28007A6DD9 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		D04555D621BF8B2F007A6DD9 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		D04555D821BF8B4E007A6DD9 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
+		D04555DA21BF8B77007A6DD9 /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = opus/lib/libopus.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -21,6 +41,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D04555DB21BF8B77007A6DD9 /* libopus.a in Frameworks */,
+				D04555D921BF8B4E007A6DD9 /* libiconv.tbd in Frameworks */,
+				D04555D721BF8B2F007A6DD9 /* AudioToolbox.framework in Frameworks */,
+				D04555D521BF8B28007A6DD9 /* libz.tbd in Frameworks */,
+				D04554CE21BF111B007A6DD9 /* libavformat.a in Frameworks */,
+				D04554CF21BF111B007A6DD9 /* libavcodec.a in Frameworks */,
+				D04554D021BF111B007A6DD9 /* libavutil.a in Frameworks */,
+				D04554D121BF111B007A6DD9 /* libswresample.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -32,6 +60,7 @@
 			children = (
 				D04554B721BF0E8E007A6DD9 /* FFMpeg */,
 				D04554B621BF0E8E007A6DD9 /* Products */,
+				D04554C921BF1119007A6DD9 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -48,8 +77,25 @@
 			children = (
 				D04554B821BF0E8E007A6DD9 /* FFMpeg.h */,
 				D04554B921BF0E8E007A6DD9 /* Info.plist */,
+				D04555A321BF115E007A6DD9 /* Initialize.h */,
+				D04555A421BF115E007A6DD9 /* Initialize.m */,
 			);
 			path = FFMpeg;
+			sourceTree = "<group>";
+		};
+		D04554C921BF1119007A6DD9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D04555DA21BF8B77007A6DD9 /* libopus.a */,
+				D04555D821BF8B4E007A6DD9 /* libiconv.tbd */,
+				D04555D621BF8B2F007A6DD9 /* AudioToolbox.framework */,
+				D04555D421BF8B28007A6DD9 /* libz.tbd */,
+				D04554CB21BF111B007A6DD9 /* libavcodec.a */,
+				D04554CA21BF111B007A6DD9 /* libavformat.a */,
+				D04554CC21BF111B007A6DD9 /* libavutil.a */,
+				D04554CD21BF111B007A6DD9 /* libswresample.a */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -60,6 +106,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D04554BA21BF0E8E007A6DD9 /* FFMpeg.h in Headers */,
+				D04555A521BF115E007A6DD9 /* Initialize.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,6 +117,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D04554BD21BF0E8E007A6DD9 /* Build configuration list for PBXNativeTarget "FFMpeg" */;
 			buildPhases = (
+				D04554C821BF0F5E007A6DD9 /* Run Script */,
 				D04554B021BF0E8E007A6DD9 /* Headers */,
 				D04554B121BF0E8E007A6DD9 /* Sources */,
 				D04554B221BF0E8E007A6DD9 /* Frameworks */,
@@ -125,11 +173,34 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		D04554C821BF0F5E007A6DD9 /* Run Script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Run Script";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "
+";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		D04554B121BF0E8E007A6DD9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D04555A621BF115E007A6DD9 /* Initialize.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,10 +342,16 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/FFMpeg/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/opus/lib",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.FFMpeg;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_HEADER_SEARCH_PATHS = "FFMpeg/FFmpeg-iOS/include";
 			};
 			name = Debug;
 		};
@@ -295,10 +372,16 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/FFMpeg/FFmpeg-iOS/lib",
+					"$(PROJECT_DIR)/opus/lib",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.FFMpeg;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_HEADER_SEARCH_PATHS = "FFMpeg/FFmpeg-iOS/include";
 			};
 			name = Release;
 		};

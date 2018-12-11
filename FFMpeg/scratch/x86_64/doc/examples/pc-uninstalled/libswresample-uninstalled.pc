@@ -1,0 +1,12 @@
+prefix=
+exec_prefix=
+libdir=${pcfiledir}/../../../libswresample
+includedir=/Users/peter/Documents/FFMpegTest/FFMpeg/FFMpeg/ffmpeg-4.1
+
+Name: libswresample
+Description: FFmpeg audio resampling library
+Version: 3.3.100
+Requires:  libavutil >= 56.22.100
+Conflicts:
+Libs: -L${libdir} -Wl,-rpath,${libdir} -lswresample -lm
+Cflags: -I${includedir}

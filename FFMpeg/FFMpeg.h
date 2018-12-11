@@ -16,4 +16,4 @@ FOUNDATION_EXPORT const unsigned char FFMpegVersionString[];
 
 // In this header, you should import all the public headers of your framework using statements like #import <FFMpeg/PublicHeader.h>
 
-
+#import <FFMpeg/Initialize.h>
