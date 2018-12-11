@@ -2543,7 +2543,7 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		057D02DF1AC0A66800C7AC3C /* Debug Hockeyapp */ = {
+		057D02DF1AC0A66800C7AC3C /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -2561,9 +2561,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		057D02E01AC0A66800C7AC3C /* Release AppStore */ = {
+		057D02E01AC0A66800C7AC3C /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -2578,9 +2578,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		058D09CD195D04C000B7D73C /* Debug Hockeyapp */ = {
+		058D09CD195D04C000B7D73C /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2629,9 +2629,9 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		058D09CE195D04C000B7D73C /* Release AppStore */ = {
+		058D09CE195D04C000B7D73C /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2673,9 +2673,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		058D09D3195D04C000B7D73C /* Debug Hockeyapp */ = {
+		058D09D3195D04C000B7D73C /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = FB07EABBCF28656C6297BC2D /* Pods-AsyncDisplayKitTests.debug.xcconfig */;
 			buildSettings = {
@@ -2697,9 +2697,9 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AsyncDisplayKitTestHost.app/AsyncDisplayKitTestHost";
 				WRAPPER_EXTENSION = xctest;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		058D09D4195D04C000B7D73C /* Release AppStore */ = {
+		058D09D4195D04C000B7D73C /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D3779BCFF841AD3EB56537ED /* Pods-AsyncDisplayKitTests.release.xcconfig */;
 			buildSettings = {
@@ -2720,9 +2720,9 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AsyncDisplayKitTestHost.app/AsyncDisplayKitTestHost";
 				WRAPPER_EXTENSION = xctest;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		B35061EE1B010EDF0018CF92 /* Debug Hockeyapp */ = {
+		B35061EE1B010EDF0018CF92 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2753,9 +2753,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		B35061EF1B010EDF0018CF92 /* Release AppStore */ = {
+		B35061EF1B010EDF0018CF92 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2786,9 +2786,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D021D4F0219CB1920064BEBA /* Debug Fork */ = {
+		D021D4F0219CB1920064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2837,9 +2837,9 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D4F1219CB1920064BEBA /* Debug Fork */ = {
+		D021D4F1219CB1920064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2870,9 +2870,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D4F2219CB1920064BEBA /* Debug Fork */ = {
+		D021D4F2219CB1920064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = FB07EABBCF28656C6297BC2D /* Pods-AsyncDisplayKitTests.debug.xcconfig */;
 			buildSettings = {
@@ -2894,9 +2894,9 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AsyncDisplayKitTestHost.app/AsyncDisplayKitTestHost";
 				WRAPPER_EXTENSION = xctest;
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D4F3219CB1920064BEBA /* Debug Fork */ = {
+		D021D4F3219CB1920064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -2914,16 +2914,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D063755A1E67124400F00C9A /* Release Hockeyapp */ = {
+		D063755A1E67124400F00C9A /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = AsyncDisplayKitTests;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D079FD051F06BD7A0038FADE /* Debug AppStore */ = {
+		D079FD051F06BD7A0038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2972,9 +2972,9 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D079FD061F06BD7A0038FADE /* Debug AppStore */ = {
+		D079FD061F06BD7A0038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3008,9 +3008,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D079FD071F06BD7A0038FADE /* Debug AppStore */ = {
+		D079FD071F06BD7A0038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = FB07EABBCF28656C6297BC2D /* Pods-AsyncDisplayKitTests.debug.xcconfig */;
 			buildSettings = {
@@ -3032,9 +3032,9 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AsyncDisplayKitTestHost.app/AsyncDisplayKitTestHost";
 				WRAPPER_EXTENSION = xctest;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D079FD081F06BD7A0038FADE /* Debug AppStore */ = {
+		D079FD081F06BD7A0038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -3052,9 +3052,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D086A5691CC0115200F08284 /* Release Hockeyapp */ = {
+		D086A5691CC0115200F08284 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3092,9 +3092,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D086A56C1CC0115200F08284 /* Release Hockeyapp */ = {
+		D086A56C1CC0115200F08284 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -3109,9 +3109,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D086A56D1CC0115200F08284 /* Release Hockeyapp */ = {
+		D086A56D1CC0115200F08284 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3143,9 +3143,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D0924FD01FE52BD8003F693F /* Release Hockeyapp Internal */ = {
+		D0924FD01FE52BD8003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3183,9 +3183,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FD11FE52BD8003F693F /* Release Hockeyapp Internal */ = {
+		D0924FD11FE52BD8003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3217,16 +3217,16 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FD21FE52BD8003F693F /* Release Hockeyapp Internal */ = {
+		D0924FD21FE52BD8003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = AsyncDisplayKitTests;
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FD31FE52BD8003F693F /* Release Hockeyapp Internal */ = {
+		D0924FD31FE52BD8003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -3241,9 +3241,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0ADF91C212B3AB400310BBC /* Debug AppStore LLC */ = {
+		D0ADF91C212B3AB400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3292,9 +3292,9 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF91D212B3AB400310BBC /* Debug AppStore LLC */ = {
+		D0ADF91D212B3AB400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3328,9 +3328,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF91E212B3AB400310BBC /* Debug AppStore LLC */ = {
+		D0ADF91E212B3AB400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = FB07EABBCF28656C6297BC2D /* Pods-AsyncDisplayKitTests.debug.xcconfig */;
 			buildSettings = {
@@ -3352,9 +3352,9 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AsyncDisplayKitTestHost.app/AsyncDisplayKitTestHost";
 				WRAPPER_EXTENSION = xctest;
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF91F212B3AB400310BBC /* Debug AppStore LLC */ = {
+		D0ADF91F212B3AB400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -3372,9 +3372,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0CE6EDD213DB54100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EDD213DB54100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3416,9 +3416,9 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EDE213DB54100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EDE213DB54100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3449,9 +3449,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EDF213DB54100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EDF213DB54100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D3779BCFF841AD3EB56537ED /* Pods-AsyncDisplayKitTests.release.xcconfig */;
 			buildSettings = {
@@ -3472,9 +3472,9 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AsyncDisplayKitTestHost.app/AsyncDisplayKitTestHost";
 				WRAPPER_EXTENSION = xctest;
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EE0213DB54100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EE0213DB54100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -3489,7 +3489,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
 /* End XCBuildConfiguration section */
 
@@ -3497,62 +3497,62 @@
 		057D02E31AC0A66800C7AC3C /* Build configuration list for PBXNativeTarget "AsyncDisplayKitTestHost" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				057D02DF1AC0A66800C7AC3C /* Debug Hockeyapp */,
-				D021D4F3219CB1920064BEBA /* Debug Fork */,
-				D079FD081F06BD7A0038FADE /* Debug AppStore */,
-				D0ADF91F212B3AB400310BBC /* Debug AppStore LLC */,
-				057D02E01AC0A66800C7AC3C /* Release AppStore */,
-				D0CE6EE0213DB54100BCD44B /* Release AppStore LLC */,
-				D086A56C1CC0115200F08284 /* Release Hockeyapp */,
-				D0924FD31FE52BD8003F693F /* Release Hockeyapp Internal */,
+				057D02DF1AC0A66800C7AC3C /* DebugHockeyapp */,
+				D021D4F3219CB1920064BEBA /* DebugFork */,
+				D079FD081F06BD7A0038FADE /* DebugAppStore */,
+				D0ADF91F212B3AB400310BBC /* DebugAppStoreLLC */,
+				057D02E01AC0A66800C7AC3C /* ReleaseAppStore */,
+				D0CE6EE0213DB54100BCD44B /* ReleaseAppStoreLLC */,
+				D086A56C1CC0115200F08284 /* ReleaseHockeyapp */,
+				D0924FD31FE52BD8003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release AppStore";
+			defaultConfigurationName = ReleaseAppStore;
 		};
 		058D09A7195D04C000B7D73C /* Build configuration list for PBXProject "AsyncDisplayKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				058D09CD195D04C000B7D73C /* Debug Hockeyapp */,
-				D021D4F0219CB1920064BEBA /* Debug Fork */,
-				D079FD051F06BD7A0038FADE /* Debug AppStore */,
-				D0ADF91C212B3AB400310BBC /* Debug AppStore LLC */,
-				058D09CE195D04C000B7D73C /* Release AppStore */,
-				D0CE6EDD213DB54100BCD44B /* Release AppStore LLC */,
-				D086A5691CC0115200F08284 /* Release Hockeyapp */,
-				D0924FD01FE52BD8003F693F /* Release Hockeyapp Internal */,
+				058D09CD195D04C000B7D73C /* DebugHockeyapp */,
+				D021D4F0219CB1920064BEBA /* DebugFork */,
+				D079FD051F06BD7A0038FADE /* DebugAppStore */,
+				D0ADF91C212B3AB400310BBC /* DebugAppStoreLLC */,
+				058D09CE195D04C000B7D73C /* ReleaseAppStore */,
+				D0CE6EDD213DB54100BCD44B /* ReleaseAppStoreLLC */,
+				D086A5691CC0115200F08284 /* ReleaseHockeyapp */,
+				D0924FD01FE52BD8003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release AppStore";
+			defaultConfigurationName = ReleaseAppStore;
 		};
 		058D09D2195D04C000B7D73C /* Build configuration list for PBXNativeTarget "AsyncDisplayKitTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				058D09D3195D04C000B7D73C /* Debug Hockeyapp */,
-				D021D4F2219CB1920064BEBA /* Debug Fork */,
-				D079FD071F06BD7A0038FADE /* Debug AppStore */,
-				D0ADF91E212B3AB400310BBC /* Debug AppStore LLC */,
-				058D09D4195D04C000B7D73C /* Release AppStore */,
-				D0CE6EDF213DB54100BCD44B /* Release AppStore LLC */,
-				D063755A1E67124400F00C9A /* Release Hockeyapp */,
-				D0924FD21FE52BD8003F693F /* Release Hockeyapp Internal */,
+				058D09D3195D04C000B7D73C /* DebugHockeyapp */,
+				D021D4F2219CB1920064BEBA /* DebugFork */,
+				D079FD071F06BD7A0038FADE /* DebugAppStore */,
+				D0ADF91E212B3AB400310BBC /* DebugAppStoreLLC */,
+				058D09D4195D04C000B7D73C /* ReleaseAppStore */,
+				D0CE6EDF213DB54100BCD44B /* ReleaseAppStoreLLC */,
+				D063755A1E67124400F00C9A /* ReleaseHockeyapp */,
+				D0924FD21FE52BD8003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release AppStore";
+			defaultConfigurationName = ReleaseAppStore;
 		};
 		B35061ED1B010EDF0018CF92 /* Build configuration list for PBXNativeTarget "AsyncDisplayKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				B35061EE1B010EDF0018CF92 /* Debug Hockeyapp */,
-				D021D4F1219CB1920064BEBA /* Debug Fork */,
-				D079FD061F06BD7A0038FADE /* Debug AppStore */,
-				D0ADF91D212B3AB400310BBC /* Debug AppStore LLC */,
-				B35061EF1B010EDF0018CF92 /* Release AppStore */,
-				D0CE6EDE213DB54100BCD44B /* Release AppStore LLC */,
-				D086A56D1CC0115200F08284 /* Release Hockeyapp */,
-				D0924FD11FE52BD8003F693F /* Release Hockeyapp Internal */,
+				B35061EE1B010EDF0018CF92 /* DebugHockeyapp */,
+				D021D4F1219CB1920064BEBA /* DebugFork */,
+				D079FD061F06BD7A0038FADE /* DebugAppStore */,
+				D0ADF91D212B3AB400310BBC /* DebugAppStoreLLC */,
+				B35061EF1B010EDF0018CF92 /* ReleaseAppStore */,
+				D0CE6EDE213DB54100BCD44B /* ReleaseAppStoreLLC */,
+				D086A56D1CC0115200F08284 /* ReleaseHockeyapp */,
+				D0924FD11FE52BD8003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release AppStore";
+			defaultConfigurationName = ReleaseAppStore;
 		};
 /* End XCConfigurationList section */
 	};
