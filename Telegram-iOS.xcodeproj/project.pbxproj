@@ -371,6 +371,8 @@
 		D0B844601DACF561005F29E1 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B8445F1DACF561005F29E1 /* libc++.tbd */; };
 		D0BEAF731E54C9A900BD963D /* ApplicationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEAF721E54C9A900BD963D /* ApplicationContext.swift */; };
 		D0C2DFF81CC4D1BA0044FF83 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C2DFF71CC4D1BA0044FF83 /* MobileCoreServices.framework */; };
+		D0CAD6A421C03BEB001E3055 /* FFMpeg.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; };
+		D0CAD6A521C03BEB001E3055 /* FFMpeg.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0CAF3191D763B230011F558 /* MtProtoKitDynamic.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2F21D75FFAB0011F558 /* MtProtoKitDynamic.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0CD17B51CC3AE14007C5650 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */; };
 		D0CD17B61CC3AE14007C5650 /* AsyncDisplayKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -510,6 +512,7 @@
 				D08611B21F5711080047111E /* HockeySDK.framework in Embed Frameworks */,
 				D06706611D51185400DED3E3 /* TelegramCore.framework in Embed Frameworks */,
 				D0CD17B61CC3AE14007C5650 /* AsyncDisplayKit.framework in Embed Frameworks */,
+				D0CAD6A521C03BEB001E3055 /* FFMpeg.framework in Embed Frameworks */,
 				D096C2BF1CC3C021006D814E /* Display.framework in Embed Frameworks */,
 				D0B4AF901EC122A700D51FF6 /* TelegramUI.framework in Embed Frameworks */,
 				D096C2C21CC3C104006D814E /* Postbox.framework in Embed Frameworks */,
@@ -1086,6 +1089,8 @@
 		D0C2DFF71CC4D1BA0044FF83 /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
 		D0C2DFF91CC4D1C90044FF83 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
 		D0C50E451E9459BF00F62E39 /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = "submodules/TelegramUI/third-party/opus/lib/libopus.a"; sourceTree = "<group>"; };
+		D0CAD6A121C03BE2001E3055 /* FFMpeg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = FFMpeg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = FFMpeg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CAF2F21D75FFAB0011F558 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CAF3171D76394C0011F558 /* TelegramCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TelegramCore.framework; path = "submodules/TelegramCore/build/Debug-iphoneos/TelegramCore.framework"; sourceTree = "<group>"; };
 		D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1165,6 +1170,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0CAD6A421C03BEB001E3055 /* FFMpeg.framework in Frameworks */,
 				09C50E88217385CF009E676F /* WatchConnectivity.framework in Frameworks */,
 				09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */,
 				D01A47551F4DBED700383CC1 /* HockeySDK.framework in Frameworks */,
@@ -1874,6 +1880,7 @@
 		D00859931B28189D00EAF753 = {
 			isa = PBXGroup;
 			children = (
+				D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */,
 				D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */,
 				D023EBB31DDB2F0E00BD496D /* Resources */,
 				D03B0E791D63484500955575 /* Share */,
@@ -1981,6 +1988,7 @@
 		D00859C21B281E0000EAF753 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0CAD6A121C03BE2001E3055 /* FFMpeg.framework */,
 				D006CFA121A8D12600FDCD32 /* ModernProto.framework */,
 				0972C6DF21791D950069E98A /* UserNotifications.framework */,
 				09C50E87217385CF009E676F /* WatchConnectivity.framework */,
@@ -2626,17 +2634,17 @@
 				TargetAttributes = {
 					09C56F8A2172797200BDF00F = {
 						CreatedOnToolsVersion = 10.0;
-						DevelopmentTeam = 6N38VWS5BX;
+						DevelopmentTeam = X834Q8SBVP;
 						ProvisioningStyle = Manual;
 					};
 					09C56F962172797400BDF00F = {
 						CreatedOnToolsVersion = 10.0;
-						DevelopmentTeam = 6N38VWS5BX;
+						DevelopmentTeam = X834Q8SBVP;
 						ProvisioningStyle = Manual;
 					};
 					D008599B1B28189D00EAF753 = {
 						CreatedOnToolsVersion = 6.3.1;
-						DevelopmentTeam = 6N38VWS5BX;
+						DevelopmentTeam = X834Q8SBVP;
 						SystemCapabilities = {
 							com.apple.ApplicationGroups.iOS = {
 								enabled = 1;
@@ -2662,7 +2670,7 @@
 					};
 					D02CF5FB215D9ABE00E0F56A = {
 						CreatedOnToolsVersion = 10.0;
-						DevelopmentTeam = 6N38VWS5BX;
+						DevelopmentTeam = X834Q8SBVP;
 						ProvisioningStyle = Manual;
 						SystemCapabilities = {
 							com.apple.ApplicationGroups.iOS = {
@@ -2672,7 +2680,7 @@
 					};
 					D03B0E771D63484500955575 = {
 						CreatedOnToolsVersion = 8.0;
-						DevelopmentTeam = 6N38VWS5BX;
+						DevelopmentTeam = X834Q8SBVP;
 						LastSwiftMigration = 0910;
 						ProvisioningStyle = Manual;
 						SystemCapabilities = {
@@ -2683,7 +2691,7 @@
 					};
 					D0B2F736204F4C9900D3BFB9 = {
 						CreatedOnToolsVersion = 9.2;
-						DevelopmentTeam = 6N38VWS5BX;
+						DevelopmentTeam = X834Q8SBVP;
 						ProvisioningStyle = Manual;
 						SystemCapabilities = {
 							com.apple.ApplicationGroups.iOS = {
@@ -2693,7 +2701,7 @@
 					};
 					D0D268751D79A70A00C422DA = {
 						CreatedOnToolsVersion = 8.0;
-						DevelopmentTeam = 6N38VWS5BX;
+						DevelopmentTeam = X834Q8SBVP;
 						ProvisioningStyle = Manual;
 						SystemCapabilities = {
 							com.apple.ApplicationGroups.iOS = {
