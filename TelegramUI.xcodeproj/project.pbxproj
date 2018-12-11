@@ -5918,7 +5918,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D021D510219CB2240064BEBA /* Debug Fork */ = {
+		D021D510219CB2240064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -5979,9 +5979,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D511219CB2240064BEBA /* Debug Fork */ = {
+		D021D511219CB2240064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -5995,9 +5995,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D512219CB2240064BEBA /* Debug Fork */ = {
+		D021D512219CB2240064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -6035,9 +6035,9 @@
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D0400EDB1D5B900A007931CE /* Release AppStore */ = {
+		D0400EDB1D5B900A007931CE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6091,9 +6091,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D0400EDD1D5B900A007931CE /* Release AppStore */ = {
+		D0400EDD1D5B900A007931CE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6108,9 +6108,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D079FD261F06BEF70038FADE /* Debug AppStore */ = {
+		D079FD261F06BEF70038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6171,9 +6171,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D079FD271F06BEF70038FADE /* Debug AppStore */ = {
+		D079FD271F06BEF70038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6187,9 +6187,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D079FD281F06BEF70038FADE /* Debug AppStore */ = {
+		D079FD281F06BEF70038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -6227,9 +6227,9 @@
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0924FEE1FE52C29003F693F /* Release Hockeyapp Internal */ = {
+		D0924FEE1FE52C29003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6283,9 +6283,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FEF1FE52C29003F693F /* Release Hockeyapp Internal */ = {
+		D0924FEF1FE52C29003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6300,9 +6300,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FF01FE52C29003F693F /* Release Hockeyapp Internal */ = {
+		D0924FF01FE52C29003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -6340,9 +6340,9 @@
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0ADF948212B3B0000310BBC /* Debug AppStore LLC */ = {
+		D0ADF948212B3B0000310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6403,9 +6403,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF949212B3B0000310BBC /* Debug AppStore LLC */ = {
+		D0ADF949212B3B0000310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6419,9 +6419,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF94A212B3B0000310BBC /* Debug AppStore LLC */ = {
+		D0ADF94A212B3B0000310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -6459,9 +6459,9 @@
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0CE6F02213DC32300BCD44B /* Release AppStore LLC */ = {
+		D0CE6F02213DC32300BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6515,9 +6515,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6F03213DC32300BCD44B /* Release AppStore LLC */ = {
+		D0CE6F03213DC32300BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6532,9 +6532,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6F04213DC32300BCD44B /* Release AppStore LLC */ = {
+		D0CE6F04213DC32300BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -6570,9 +6570,9 @@
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0EC6E9E1EB9F79800EBF1C3 /* Debug Hockeyapp */ = {
+		D0EC6E9E1EB9F79800EBF1C3 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -6610,9 +6610,9 @@
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0EC6E9F1EB9F79800EBF1C3 /* Release Hockeyapp */ = {
+		D0EC6E9F1EB9F79800EBF1C3 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -6650,9 +6650,9 @@
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D0EC6EA01EB9F79800EBF1C3 /* Release AppStore */ = {
+		D0EC6EA01EB9F79800EBF1C3 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -6688,9 +6688,9 @@
 				SWIFT_VERSION = 4.0;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D0FC40911D5B8E7500261D9D /* Debug Hockeyapp */ = {
+		D0FC40911D5B8E7500261D9D /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6751,9 +6751,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0FC40921D5B8E7500261D9D /* Release Hockeyapp */ = {
+		D0FC40921D5B8E7500261D9D /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6807,9 +6807,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D0FC40971D5B8E7500261D9D /* Debug Hockeyapp */ = {
+		D0FC40971D5B8E7500261D9D /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6823,9 +6823,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0FC40981D5B8E7500261D9D /* Release Hockeyapp */ = {
+		D0FC40981D5B8E7500261D9D /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
@@ -6840,7 +6840,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
 /* End XCBuildConfiguration section */
 
@@ -6848,47 +6848,47 @@
 		D0EC6EA11EB9F79800EBF1C3 /* Build configuration list for PBXNativeTarget "TelegramUI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0EC6E9E1EB9F79800EBF1C3 /* Debug Hockeyapp */,
-				D021D512219CB2240064BEBA /* Debug Fork */,
-				D079FD281F06BEF70038FADE /* Debug AppStore */,
-				D0ADF94A212B3B0000310BBC /* Debug AppStore LLC */,
-				D0EC6E9F1EB9F79800EBF1C3 /* Release Hockeyapp */,
-				D0924FF01FE52C29003F693F /* Release Hockeyapp Internal */,
-				D0EC6EA01EB9F79800EBF1C3 /* Release AppStore */,
-				D0CE6F04213DC32300BCD44B /* Release AppStore LLC */,
+				D0EC6E9E1EB9F79800EBF1C3 /* DebugHockeyapp */,
+				D021D512219CB2240064BEBA /* DebugFork */,
+				D079FD281F06BEF70038FADE /* DebugAppStore */,
+				D0ADF94A212B3B0000310BBC /* DebugAppStoreLLC */,
+				D0EC6E9F1EB9F79800EBF1C3 /* ReleaseHockeyapp */,
+				D0924FF01FE52C29003F693F /* ReleaseHockeyappInternal */,
+				D0EC6EA01EB9F79800EBF1C3 /* ReleaseAppStore */,
+				D0CE6F04213DC32300BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		D0FC40791D5B8E7400261D9D /* Build configuration list for PBXProject "TelegramUI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0FC40911D5B8E7500261D9D /* Debug Hockeyapp */,
-				D021D510219CB2240064BEBA /* Debug Fork */,
-				D079FD261F06BEF70038FADE /* Debug AppStore */,
-				D0ADF948212B3B0000310BBC /* Debug AppStore LLC */,
-				D0FC40921D5B8E7500261D9D /* Release Hockeyapp */,
-				D0924FEE1FE52C29003F693F /* Release Hockeyapp Internal */,
-				D0400EDB1D5B900A007931CE /* Release AppStore */,
-				D0CE6F02213DC32300BCD44B /* Release AppStore LLC */,
+				D0FC40911D5B8E7500261D9D /* DebugHockeyapp */,
+				D021D510219CB2240064BEBA /* DebugFork */,
+				D079FD261F06BEF70038FADE /* DebugAppStore */,
+				D0ADF948212B3B0000310BBC /* DebugAppStoreLLC */,
+				D0FC40921D5B8E7500261D9D /* ReleaseHockeyapp */,
+				D0924FEE1FE52C29003F693F /* ReleaseHockeyappInternal */,
+				D0400EDB1D5B900A007931CE /* ReleaseAppStore */,
+				D0CE6F02213DC32300BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		D0FC40961D5B8E7500261D9D /* Build configuration list for PBXNativeTarget "TelegramUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0FC40971D5B8E7500261D9D /* Debug Hockeyapp */,
-				D021D511219CB2240064BEBA /* Debug Fork */,
-				D079FD271F06BEF70038FADE /* Debug AppStore */,
-				D0ADF949212B3B0000310BBC /* Debug AppStore LLC */,
-				D0FC40981D5B8E7500261D9D /* Release Hockeyapp */,
-				D0924FEF1FE52C29003F693F /* Release Hockeyapp Internal */,
-				D0400EDD1D5B900A007931CE /* Release AppStore */,
-				D0CE6F03213DC32300BCD44B /* Release AppStore LLC */,
+				D0FC40971D5B8E7500261D9D /* DebugHockeyapp */,
+				D021D511219CB2240064BEBA /* DebugFork */,
+				D079FD271F06BEF70038FADE /* DebugAppStore */,
+				D0ADF949212B3B0000310BBC /* DebugAppStoreLLC */,
+				D0FC40981D5B8E7500261D9D /* ReleaseHockeyapp */,
+				D0924FEF1FE52C29003F693F /* ReleaseHockeyappInternal */,
+				D0400EDD1D5B900A007931CE /* ReleaseAppStore */,
+				D0CE6F03213DC32300BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 /* End XCConfigurationList section */
 	};
