@@ -266,3 +266,7 @@ public struct SharedDataKeys {
 public func applicationSpecificItemCacheCollectionId(_ value: Int8) -> Int8 {
     return 64 + value
 }
+
+public func applicationSpecificOrderedItemListCollectionId(_ value: Int32) -> Int32 {
+    return 1000 + value
+}

@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public struct ArhivedStickerPacksInfoId {
+public struct ArchivedStickerPacksInfoId {
     public let rawValue: MemoryBuffer
     public let id: Int32
     

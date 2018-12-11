@@ -85,6 +85,11 @@ public enum CallSessionTerminationReason: Equatable {
 public struct ReportCallRating  {
     public let id: Int64
     public let accessHash: Int64
+    
+    public init(id: Int64, accessHash: Int64) {
+        self.id = id
+        self.accessHash = accessHash
+    }
 }
 
 enum CallSessionInternalState {
@@ -385,7 +390,7 @@ private final class CallSessionManagerContext {
             
             if let (id, accessHash, reason) = dropData {
                 self.contextIdByStableId.removeValue(forKey: id)
-                context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, reason: reason) |> deliverOn(self.queue)).start(next: { [weak self] reportRating in
+                context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, reason: reason) |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLog in
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
                             context.state = .terminated(reason: .ended(.hungUp), reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
@@ -919,7 +924,7 @@ private enum DropCallSessionReason {
     case missed
 }
 
-private func dropCallSession(network: Network, addUpdates: @escaping (Api.Updates) -> Void, stableId: CallSessionStableId, accessHash: Int64, reason: DropCallSessionReason) -> Signal<Bool, NoError> {
+private func dropCallSession(network: Network, addUpdates: @escaping (Api.Updates) -> Void, stableId: CallSessionStableId, accessHash: Int64, reason: DropCallSessionReason) -> Signal<(Bool, Bool), NoError> {
     var mappedReason: Api.PhoneCallDiscardReason
     var duration: Int32 = 0
     switch reason {
@@ -940,8 +945,9 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { updates -> Signal<Bool, NoError> in
-            var report:Bool = false
+        |> mapToSignal { updates -> Signal<(Bool, Bool), NoError> in
+            var report: Bool = false
+            var debug: Bool = false
             if let updates = updates {
                 switch updates {
                     case .updates(let updates, _, _, _, _):
@@ -951,6 +957,7 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
                                     switch phoneCall {
                                         case.phoneCallDiscarded(let values):
                                             report = (values.flags & (1 << 2)) != 0
+                                            debug = (values.flags & (1 << 3)) != 0
                                         default:
                                             break
                                     }
@@ -966,6 +973,6 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
                 addUpdates(updates)
                 
             }
-            return .single(report)
+            return .single((report, debug))
     }
 }
