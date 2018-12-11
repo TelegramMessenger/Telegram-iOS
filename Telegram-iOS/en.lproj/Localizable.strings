@@ -3584,3 +3584,6 @@ Unused sets are archived when you add more.";
 "ChatSettings.DownloadInBackgroundInfo" = "The app will continue downloading media files for a limited time.";
 
 "Cache.ServiceFiles" = "Service Files";
+
+"SharedMedia.SearchNoResults" = "No Results";
+"SharedMedia.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
