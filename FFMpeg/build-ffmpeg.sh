@@ -4,7 +4,7 @@ ARCHS="$2"
 
 for ARCH in $ARCHS
 do
-	if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" -o "$ARCH" = "arm64" -o "$ARCH" = "arm7" ]
+	if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" -o "$ARCH" = "arm64" -o "$ARCH" = "armv7" ]
 	then
 		echo "1" >/dev/null
 	else
@@ -182,7 +182,7 @@ then
 		cd "$CWD"
 		echo lipo -create `find "$THIN" -name "$LIB"` -output "$FAT/lib/$LIB" 1>&2
 		LIPO_INPUT=`find "$THIN" -name "$LIB"`
-		lipo -create "$LIPO_INPUT" -output "$FAT/lib/$LIB" || exit 1
+		lipo -create $LIPO_INPUT -output "$FAT/lib/$LIB" || exit 1
 	done
 
 	cd "$CWD"
