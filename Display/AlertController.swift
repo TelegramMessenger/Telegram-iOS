@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-public final class AlertControllerTheme {
+public final class AlertControllerTheme: Equatable {
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
     public let highlightedItemColor: UIColor
@@ -19,6 +19,31 @@ public final class AlertControllerTheme {
         self.accentColor = accentColor
         self.destructiveColor = destructiveColor
     }
+    
+    public static func ==(lhs: AlertControllerTheme, rhs: AlertControllerTheme) -> Bool {
+        if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
+        if lhs.separatorColor != rhs.separatorColor {
+            return false
+        }
+        if lhs.highlightedItemColor != rhs.highlightedItemColor {
+            return false
+        }
+        if lhs.primaryColor != rhs.primaryColor {
+            return false
+        }
+        if lhs.secondaryColor != rhs.secondaryColor {
+            return false
+        }
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.destructiveColor != rhs.destructiveColor {
+            return false
+        }
+        return true
+    }
 }
 
 open class AlertController: ViewController {
@@ -26,7 +51,13 @@ open class AlertController: ViewController {
         return self.displayNode as! AlertControllerNode
     }
     
-    private let theme: AlertControllerTheme
+    public var theme: AlertControllerTheme {
+        didSet {
+            if oldValue != self.theme {
+                self.controllerNode.updateTheme(self.theme)
+            }
+        }
+    }
     private let contentNode: AlertContentNode
     private let allowInputInset: Bool
     

@@ -6,7 +6,7 @@ public enum ActionSheetControllerThemeBackgroundType {
     case dark
 }
 
-public final class ActionSheetControllerTheme {
+public final class ActionSheetControllerTheme: Equatable {
     public let dimColor: UIColor
     public let backgroundType: ActionSheetControllerThemeBackgroundType
     public let itemBackgroundColor: UIColor
@@ -29,5 +29,39 @@ public final class ActionSheetControllerTheme {
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
         self.controlAccentColor = controlAccentColor
+    }
+    
+    public static func ==(lhs: ActionSheetControllerTheme, rhs: ActionSheetControllerTheme) -> Bool {
+        if lhs.dimColor != rhs.dimColor {
+            return false
+        }
+        if lhs.backgroundType != rhs.backgroundType {
+            return false
+        }
+        if lhs.itemBackgroundColor != rhs.itemBackgroundColor {
+            return false
+        }
+        if lhs.itemHighlightedBackgroundColor != rhs.itemHighlightedBackgroundColor {
+            return false
+        }
+        if lhs.standardActionTextColor != rhs.standardActionTextColor {
+            return false
+        }
+        if lhs.destructiveActionTextColor != rhs.destructiveActionTextColor {
+            return false
+        }
+        if lhs.disabledActionTextColor != rhs.disabledActionTextColor {
+            return false
+        }
+        if lhs.primaryTextColor != rhs.primaryTextColor {
+            return false
+        }
+        if lhs.secondaryTextColor != rhs.secondaryTextColor {
+            return false
+        }
+        if lhs.controlAccentColor != rhs.controlAccentColor {
+            return false
+        }
+        return true
     }
 }

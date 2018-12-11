@@ -10,7 +10,12 @@ private class ActionSheetControllerNodeScrollView: UIScrollView {
 }
 
 final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let theme: ActionSheetControllerTheme
+    var theme: ActionSheetControllerTheme {
+        didSet {
+            self.itemGroupsContainerNode.theme = self.theme
+            self.updateTheme()
+        }
+    }
     
     private let dismissTapView: UIView
     
@@ -42,19 +47,15 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.dismissTapView = UIView()
         
         self.leftDimView = UIView()
-        self.leftDimView.backgroundColor = self.theme.dimColor
         self.leftDimView.isUserInteractionEnabled = false
         
         self.rightDimView = UIView()
-        self.rightDimView.backgroundColor = self.theme.dimColor
         self.rightDimView.isUserInteractionEnabled = false
         
         self.topDimView = UIView()
-        self.topDimView.backgroundColor = self.theme.dimColor
         self.topDimView.isUserInteractionEnabled = false
         
         self.bottomDimView = UIView()
-        self.bottomDimView.backgroundColor = self.theme.dimColor
         self.bottomDimView.isUserInteractionEnabled = false
 
         self.itemGroupsContainerNode = ActionSheetItemGroupsContainerNode(theme: self.theme)
@@ -75,6 +76,15 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.dismissTapView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTap(_:))))
         
         self.scrollView.addSubnode(self.itemGroupsContainerNode)
+        
+        self.updateTheme()
+    }
+    
+    func updateTheme() {
+        self.leftDimView.backgroundColor = self.theme.dimColor
+        self.rightDimView.backgroundColor = self.theme.dimColor
+        self.topDimView.backgroundColor = self.theme.dimColor
+        self.bottomDimView.backgroundColor = self.theme.dimColor
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

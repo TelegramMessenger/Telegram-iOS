@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		09C147D8216CCEF700390252 /* KeyShortcutsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C147D7216CCEF700390252 /* KeyShortcutsController.swift */; };
 		09C147DA216CD7E500390252 /* KeyShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C147D9216CD7E500390252 /* KeyShortcut.swift */; };
+		09DD88EB21BCA5E0000766BC /* EditableTextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88EA21BCA5E0000766BC /* EditableTextNode.swift */; };
 		09E12476214D0978009FC9C3 /* DeviceMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E12475214D0978009FC9C3 /* DeviceMetrics.swift */; };
 		D00701982029CAD6006B9E34 /* TooltipController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701972029CAD6006B9E34 /* TooltipController.swift */; };
 		D007019A2029CAE2006B9E34 /* TooltipControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */; };
@@ -198,6 +199,7 @@
 /* Begin PBXFileReference section */
 		09C147D7216CCEF700390252 /* KeyShortcutsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcutsController.swift; sourceTree = "<group>"; };
 		09C147D9216CD7E500390252 /* KeyShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyShortcut.swift; sourceTree = "<group>"; };
+		09DD88EA21BCA5E0000766BC /* EditableTextNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableTextNode.swift; sourceTree = "<group>"; };
 		09E12475214D0978009FC9C3 /* DeviceMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceMetrics.swift; sourceTree = "<group>"; };
 		D00701972029CAD6006B9E34 /* TooltipController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipController.swift; sourceTree = "<group>"; };
 		D00701992029CAE2006B9E34 /* TooltipControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TooltipControllerNode.swift; sourceTree = "<group>"; };
@@ -508,6 +510,7 @@
 				D0FA08C32048803C00DD23FC /* TextNode.swift */,
 				D0FA08C5204880C900DD23FC /* ImmediateTextNode.swift */,
 				D0CA3F892073F7650042D2B6 /* LinkHighlightingNode.swift */,
+				09DD88EA21BCA5E0000766BC /* EditableTextNode.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -1109,6 +1112,7 @@
 				D02383861DE0E3B4004018B6 /* ListViewIntermediateState.swift in Sources */,
 				D0DA444E1E4DCA6E005FDCA7 /* AlertControllerNode.swift in Sources */,
 				D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */,
+				09DD88EB21BCA5E0000766BC /* EditableTextNode.swift in Sources */,
 				D05CC2A21B69326C00E235A3 /* WindowContent.swift in Sources */,
 				D05CC3151B695A9600E235A3 /* NavigationTransitionCoordinator.swift in Sources */,
 				D03B0E701D6331FB00955575 /* StatusBarHost.swift in Sources */,

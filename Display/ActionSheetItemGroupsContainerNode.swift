@@ -4,7 +4,12 @@ import AsyncDisplayKit
 private let groupSpacing: CGFloat = 8.0
 
 final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
-    private let theme: ActionSheetControllerTheme
+    var theme: ActionSheetControllerTheme {
+        didSet {
+            self.setGroups(self.groups)
+            self.setNeedsLayout()
+        }
+    }
     
     private var groups: [ActionSheetItemGroup] = []
     private var groupNodes: [ActionSheetItemGroupNode] = []

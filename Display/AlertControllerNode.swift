@@ -8,6 +8,8 @@ final class AlertControllerNode: ASDisplayNode {
     private let contentNode: AlertContentNode
     private let allowInputInset: Bool
     
+    private var containerLayout: ContainerViewLayout?
+    
     var dismiss: (() -> Void)?
     
     init(contentNode: AlertContentNode, theme: AlertControllerTheme, allowInputInset: Bool) {
@@ -35,12 +37,23 @@ final class AlertControllerNode: ASDisplayNode {
         
         self.containerNode.addSubnode(self.contentNode)
         self.addSubnode(self.containerNode)
+        
+        self.contentNode.requestLayout = { [weak self] transition in
+            if let strongSelf = self, let containerLayout = self?.containerLayout {
+                strongSelf.containerLayoutUpdated(containerLayout, transition: transition)
+            }
+        }
     }
     
     override func didLoad() {
         super.didLoad()
         
         self.dimmingNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimmingNodeTapGesture(_:))))
+    }
+    
+    func updateTheme(_ theme: AlertControllerTheme) {
+        self.containerNode.backgroundColor = theme.backgroundColor
+        self.contentNode.updateTheme(theme)
     }
     
     func animateIn() {
@@ -58,6 +71,8 @@ final class AlertControllerNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.containerLayout = layout
+        
         transition.updateFrame(node: self.dimmingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         var insetOptions: ContainerViewLayoutInsetOptions = [.statusBar]

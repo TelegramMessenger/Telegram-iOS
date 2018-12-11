@@ -27,7 +27,6 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
     init(theme: AlertControllerTheme, action: TextAlertAction) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.highlightedItemColor
         self.backgroundNode.alpha = 0.0
         
         self.action = action
@@ -35,21 +34,6 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
         super.init()
         
         self.titleNode.maximumNumberOfLines = 2
-        var font = Font.regular(17.0)
-        var color = theme.accentColor
-        switch action.type {
-            case .defaultAction, .genericAction:
-                break
-            case .destructiveAction:
-                color = theme.destructiveColor
-        }
-        switch action.type {
-            case .defaultAction:
-                font = Font.semibold(17.0)
-            case .destructiveAction, .genericAction:
-                break
-        }
-        self.setAttributedTitle(NSAttributedString(string: action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
         
         self.highligthedChanged = { [weak self] value in
             if let strongSelf = self {
@@ -65,6 +49,28 @@ private final class TextAlertContentActionNode: HighlightableButtonNode {
                 }
             }
         }
+        
+        self.updateTheme(theme)
+    }
+    
+    func updateTheme(_ theme: AlertControllerTheme) {
+        self.backgroundNode.backgroundColor = theme.highlightedItemColor
+        
+        var font = Font.regular(17.0)
+        var color = theme.accentColor
+        switch self.action.type {
+            case .defaultAction, .genericAction:
+                break
+            case .destructiveAction:
+                color = theme.destructiveColor
+        }
+        switch self.action.type {
+            case .defaultAction:
+                font = Font.semibold(17.0)
+            case .destructiveAction, .genericAction:
+                break
+        }
+        self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
     }
     
     override func didLoad() {
@@ -90,7 +96,7 @@ public enum TextAlertContentActionLayout {
 }
 
 public final class TextAlertContentNode: AlertContentNode {
-    private let theme: AlertControllerTheme
+    private var theme: AlertControllerTheme
     private let actionLayout: TextAlertContentActionLayout
     
     private let titleNode: ASTextNode?
@@ -99,6 +105,8 @@ public final class TextAlertContentNode: AlertContentNode {
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
+    
+    private var validLayout: CGSize?
     
     public var textAttributeAction: (NSAttributedStringKey, (Any) -> Void)? {
         didSet {
@@ -186,7 +194,35 @@ public final class TextAlertContentNode: AlertContentNode {
         }
     }
     
+    override public func updateTheme(_ theme: AlertControllerTheme) {
+        self.theme = theme
+        
+        let textFont: UIFont
+        if let titleNode = self.titleNode {
+            titleNode.attributedText = NSAttributedString(string: titleNode.attributedText?.string ?? "", font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+            textFont = Font.regular(13.0)
+        } else {
+            textFont = Font.semibold(17.0)
+        }
+        
+        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: textFont, textColor: theme.primaryColor, paragraphAlignment: .center)
+        
+        self.actionNodesSeparator.backgroundColor = theme.separatorColor
+        for actionNode in self.actionNodes {
+            actionNode.updateTheme(theme)
+        }
+        for separatorNode in self.actionVerticalSeparators {
+            separatorNode.backgroundColor = theme.separatorColor
+        }
+        
+        if let size = self.validLayout {
+            _ = self.updateLayout(size: size, transition: .immediate)
+        }
+    }
+    
     override public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        self.validLayout = size
+        
         let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 18.0, right: 18.0)
         
         var titleSize: CGSize?

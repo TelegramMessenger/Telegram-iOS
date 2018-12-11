@@ -19,6 +19,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
     private var contentNode: PeekControllerContentNode & ASDisplayNode
     private var contentNodeHasValidLayout = false
     
+    private var topAccessoryNode: ASDisplayNode?
+    
     private var menuNode: PeekControllerMenuNode?
     private var displayingMenu = false
     
@@ -50,6 +52,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         self.content = content
         self.contentNode = content.node()
+        self.topAccessoryNode = content.topAccessoryNode()
         
         var activatedActionImpl: (() -> Void)?
         let menuItems = content.menuItems()
@@ -74,6 +77,10 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.view.addSubview(self.blurView)
         self.containerNode.addSubnode(self.contentNode)
         self.addSubnode(self.containerNode)
+        
+        if let topAccessoryNode = self.topAccessoryNode {
+            self.addSubnode(topAccessoryNode)
+        }
         
         if let menuNode = self.menuNode {
             self.addSubnode(menuNode)
@@ -158,6 +165,13 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         transition.updateFrame(node: self.containerNode, frame: containerFrame)
         
+        if let topAccessoryNode = self.topAccessoryNode {
+            let accessorySize = topAccessoryNode.frame.size
+            let accessoryFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(containerFrame.midX - accessorySize.width / 2.0), y: containerFrame.minY - accessorySize.height - 16.0), size: accessorySize)
+            transition.updateFrame(node: topAccessoryNode, frame: accessoryFrame)
+            transition.updateAlpha(node: topAccessoryNode, alpha: self.displayingMenu ? 0.0 : 1.0)
+        }
+        
         if let menuNode = self.menuNode, let menuSize = menuSize {
             let menuY: CGFloat
             if self.displayingMenu {
@@ -182,9 +196,16 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.blurView.layer.animateAlpha(from: 0.0, to: self.blurView.alpha, duration: 0.3)
         
-        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, initialVelocity: 0.0, damping: 110.0, additive: true)
+        let offset = CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y)
+        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: offset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, initialVelocity: 0.0, damping: 110.0, additive: true)
         self.containerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
         self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        
+        if let topAccessoryNode = self.topAccessoryNode {
+            topAccessoryNode.layer.animateSpring(from: NSValue(cgPoint: offset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, initialVelocity: 0.0, damping: 110.0, additive: true)
+            topAccessoryNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
+            topAccessoryNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
         
         if case .press = self.content.menuActivation() {
             self.hapticFeedback?.tap()
@@ -196,11 +217,22 @@ final class PeekControllerNode: ViewControllerTracingNode {
     func animateOut(to rect: CGRect, completion: @escaping () -> Void) {
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.blurView.layer.animateAlpha(from: self.blurView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
-        self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y), duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, force: true, completion: { _ in
+        
+        let offset = CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y)
+        self.containerNode.layer.animatePosition(from: CGPoint(), to: offset, duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, force: true, completion: { _ in
             completion()
         })
         self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.containerNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.25, removeOnCompletion: false)
+        
+        if let topAccessoryNode = self.topAccessoryNode {
+            topAccessoryNode.layer.animatePosition(from: CGPoint(), to: offset, duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, additive: true, force: true, completion: { _ in
+                completion()
+            })
+            topAccessoryNode.layer.animateAlpha(from: topAccessoryNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            topAccessoryNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.25, removeOnCompletion: false)
+        }
+        
         if let menuNode = self.menuNode {
             menuNode.layer.animatePosition(from: menuNode.position, to: CGPoint(x: menuNode.position.x, y: self.bounds.size.height + menuNode.bounds.size.height / 2.0), duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false)
         }

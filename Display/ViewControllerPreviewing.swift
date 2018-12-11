@@ -36,6 +36,10 @@ private final class ViewControllerPeekContent: PeekControllerContent {
         return ViewControllerPeekContentNode(controller: self.controller)
     }
     
+    func topAccessoryNode() -> ASDisplayNode? {
+        return nil
+    }
+    
     func isEqual(to: PeekControllerContent) -> Bool {
         if let to = to as? ViewControllerPeekContent {
             return self.controller === to.controller

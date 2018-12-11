@@ -5,7 +5,13 @@ open class ActionSheetController: ViewController {
         return self.displayNode as! ActionSheetControllerNode
     }
     
-    private let theme: ActionSheetControllerTheme
+    public var theme: ActionSheetControllerTheme {
+        didSet {
+            if oldValue != self.theme {
+                self.actionSheetNode.theme = self.theme
+            }
+        }
+    }
     
     private var groups: [ActionSheetItemGroup] = []
     

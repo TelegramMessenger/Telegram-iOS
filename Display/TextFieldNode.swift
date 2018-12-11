@@ -24,6 +24,22 @@ public final class TextFieldNodeView: UITextField {
         }
         super.deleteBackward()
     }
+    
+    override public var keyboardAppearance: UIKeyboardAppearance {
+        get {
+            return super.keyboardAppearance
+        }
+        set {
+            let resigning = self.isFirstResponder
+            if resigning {
+                self.resignFirstResponder()
+            }
+            super.keyboardAppearance = newValue
+            if resigning {
+                self.becomeFirstResponder()
+            }
+        }
+    }
 }
 
 public class TextFieldNode: ASDisplayNode {

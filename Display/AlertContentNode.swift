@@ -2,6 +2,8 @@ import Foundation
 import AsyncDisplayKit
 
 open class AlertContentNode: ASDisplayNode {
+    open var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
+    
     open var dismissOnOutsideTap: Bool {
         return true
     }
@@ -10,5 +12,9 @@ open class AlertContentNode: ASDisplayNode {
         assertionFailure()
         
         return CGSize()
+    }
+    
+    open func updateTheme(_ theme: AlertControllerTheme) {
+        
     }
 }
