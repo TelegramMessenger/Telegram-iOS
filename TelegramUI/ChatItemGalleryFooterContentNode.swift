@@ -557,7 +557,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
                         var generalMessageContentKind: MessageContentKind?
                         for message in messages {
-                            let currentKind = messageContentKind(message, strings: presentationData.strings, accountPeerId: strongSelf.account.peerId)
+                            let currentKind = messageContentKind(message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.account.peerId)
                             if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
                                 generalMessageContentKind = currentKind
                             } else {
@@ -683,7 +683,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
                     var generalMessageContentKind: MessageContentKind?
                     for message in messages {
-                        let currentKind = messageContentKind(message, strings: presentationData.strings, accountPeerId: strongSelf.account.peerId)
+                        let currentKind = messageContentKind(message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.account.peerId)
                         if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
                             generalMessageContentKind = currentKind
                         } else {

@@ -31,9 +31,9 @@ public enum PresentationDateFormat {
     case dayFirst
 }
 
-public enum PresentationPersonNameOrder {
-    case firstLast
-    case lastFirst
+public enum PresentationPersonNameOrder: Int32 {
+    case firstLast = 0
+    case lastFirst = 1
 }
 
 extension PresentationStrings : Equatable {
@@ -41,12 +41,6 @@ extension PresentationStrings : Equatable {
         return lhs === rhs
     }
 }
-//
-//extension PresentationTheme : Equatable {
-//    public static func ==(lhs: PresentationTheme, rhs: PresentationTheme) -> Bool {
-//        return lhs === rhs
-//    }
-//}
 
 public final class PresentationData: Equatable {
     public let strings: PresentationStrings
@@ -167,23 +161,6 @@ private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
     }
 }
 
-private func currentPersonNameDisplayOrder() -> PresentationPersonNameOrder {
-    if #available(iOSApplicationExtension 9.0, *) {
-        switch CNContactFormatter.nameOrder(for: CNContact()) {
-            case .givenNameFirst:
-                return .firstLast
-            default:
-                return .lastFirst
-        }
-    } else {
-        if ABPersonGetCompositeNameFormat() == kABPersonCompositeNameFormatFirstNameFirst {
-            return .firstLast
-        } else {
-            return .lastFirst
-        }
-    }
-}
-
 public final class InitialPresentationDataAndSettings {
     public let presentationData: PresentationData
     public let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
@@ -203,7 +180,7 @@ public final class InitialPresentationDataAndSettings {
 }
 
 public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<InitialPresentationDataAndSettings, NoError> {
-    return postbox.transaction { transaction -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings) in
+    return postbox.transaction { transaction -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings, ContactSynchronizationSettings) in
         let themeSettings: PresentationThemeSettings
         if let current = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
             themeSettings = current
@@ -248,9 +225,11 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         
         let experimentalUISettings: ExperimentalUISettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.experimentalUISettings) as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
         
-        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings)
+        let contactSettings: ContactSynchronizationSettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.contactSynchronizationSettings) as? ContactSynchronizationSettings) ?? ContactSynchronizationSettings.defaultSettings
+        
+        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings, contactSettings)
     }
-    |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings) -> InitialPresentationDataAndSettings in
+    |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings, contactSettings) -> InitialPresentationDataAndSettings in
         let themeValue: PresentationTheme
         
         let effectiveTheme: PresentationThemeReference
@@ -295,7 +274,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
             stringsValue = defaultPresentationStrings
         }
         let dateTimeFormat = currentDateTimeFormat()
-        let nameDisplayOrder = currentPersonNameDisplayOrder()
+        let nameDisplayOrder = contactSettings.nameDisplayOrder
         let nameSortOrder = currentPersonNameSortOrder()
         return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
@@ -367,7 +346,7 @@ private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting,
 }
 
 public func updatedPresentationData(postbox: Postbox, applicationBindings: TelegramApplicationBindings) -> Signal<PresentationData, NoError> {
-    let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.presentationThemeSettings, PreferencesKeys.localizationSettings]))
+    let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.presentationThemeSettings, PreferencesKeys.localizationSettings, ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
     return postbox.combinedView(keys: [preferencesKey])
     |> mapToSignal { view -> Signal<PresentationData, NoError> in
         let themeSettings: PresentationThemeSettings
@@ -376,6 +355,8 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
         } else {
             themeSettings = PresentationThemeSettings.defaultSettings
         }
+        
+        let contactSettings: ContactSynchronizationSettings = (view.views[preferencesKey] as! PreferencesView).values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings
         
         return applicationBindings.applicationInForeground
         |> mapToSignal({ inForeground  -> Signal<PresentationData, NoError> in
@@ -433,9 +414,9 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
                     }
                     
                     let dateTimeFormat = currentDateTimeFormat()
-                    let nameDisplayOrder = currentPersonNameDisplayOrder()
+                    let nameDisplayOrder = contactSettings.nameDisplayOrder
                     let nameSortOrder = currentPersonNameSortOrder()
-                    
+
                     return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
                 }
             } else {
@@ -447,7 +428,7 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
 
 public func defaultPresentationData() -> PresentationData {
     let dateTimeFormat = currentDateTimeFormat()
-    let nameDisplayOrder = currentPersonNameDisplayOrder()
+    let nameDisplayOrder: PresentationPersonNameOrder = .firstLast
     let nameSortOrder = currentPersonNameSortOrder()
     
     let themeSettings = PresentationThemeSettings.defaultSettings

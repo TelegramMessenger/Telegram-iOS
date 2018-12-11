@@ -223,61 +223,56 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
             let progressSize = CGSize(width: 24.0, height: 24.0)
             let progressFrame =  CGRect(origin: CGPoint(x: item.frame.midX - progressSize.width / 2.0, y: item.frame.midY - progressSize.height / 2.0), size: progressSize)
             
-            let updatedStatusSignal = account.postbox.mediaBox.resourceStatus(item.fileReference.media.resource)
-            
-            let statusDisposable: MetaDisposable
-            if let disposable = self.statusDisposable[item.fileReference.media.fileId] {
-                statusDisposable = disposable
-            } else {
-                statusDisposable = MetaDisposable()
-                self.statusDisposable[item.fileReference.media.fileId] = statusDisposable
+            if item.frame.maxY < minVisibleY {
+                continue
+            }
+            if item.frame.minY > maxVisibleY {
+                continue
             }
             
-            statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak self] status in
-                displayLinkDispatcher.dispatch {
+            if self.statusDisposable[item.fileReference.media.fileId] == nil {
+                let statusDisposable = MetaDisposable()
+                let updatedStatusSignal = account.postbox.mediaBox.resourceStatus(item.fileReference.media.resource)
+                self.statusDisposable[item.fileReference.media.fileId] = statusDisposable
+                statusDisposable.set((updatedStatusSignal
+                |> deliverOnMainQueue).start(next: { [weak self] status in
                     guard let `self` = self else {return}
                     
                     let state: RadialStatusNodeState
                     
                     switch status {
-                    case let .Fetching(_, progress):
-                        state = .progress(color: .white, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
-                    case .Remote:
-                        state = .progress(color: .white, lineWidth: nil, value: 0, cancelEnabled: false)
-                    case .Local:
-                        state = .none
+                        case let .Fetching(_, progress):
+                            state = .progress(color: .white, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false)
+                        case .Remote:
+                            state = .progress(color: .white, lineWidth: nil, value: 0, cancelEnabled: false)
+                        case .Local:
+                            state = .none
                     }
                     
-                    if state == .none {
-                        if let statusNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
+                    if let statusNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
+                        if state == .none {
                             self.visibleProgressNodes.removeValue(forKey: item.fileReference.media.fileId)
                             statusNode.transitionToState(state, completion: { [weak statusNode] in
-                                statusNode?.removeFromSupernode()
+                                statusNode?.isHidden = true
                             })
-                        }
-                    } else {
-                        if let visibleProgressNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
-                            if ensureFrames {
-                                visibleProgressNode.frame = progressFrame
-                            }
                         } else {
-                            let visibleProgressNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
-                            visibleProgressNode.frame = progressFrame
-                            self.visibleProgressNodes[item.fileReference.media.fileId] = visibleProgressNode
+                            statusNode.isHidden = false
+                            statusNode.transitionToState(state, completion: {})
                         }
-                        
-                        let statusNode = self.visibleProgressNodes[item.fileReference.media.fileId]!
-                        statusNode.transitionToState(state, completion: {})
-                        self.addSubnode(statusNode)
                     }
-                }
-            }))
-            
-            if item.frame.maxY < minVisibleY {
-                continue;
+                }))
             }
-            if item.frame.minY > maxVisibleY {
-                continue;
+            
+            if let visibleProgressNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
+                if ensureFrames {
+                    visibleProgressNode.frame = progressFrame
+                }
+            } else {
+                let statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+                statusNode.isHidden = true
+                statusNode.frame = progressFrame
+                self.visibleProgressNodes[item.fileReference.media.fileId] = statusNode
+                self.addSubnode(statusNode)
             }
             
             visibleIds.insert(item.fileReference.media.fileId)
@@ -315,6 +310,13 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
             }
         }
         
+        var removeProgressIds: [MediaId] = []
+        for id in self.visibleProgressNodes.keys {
+            if !visibleIds.contains(id) {
+                removeProgressIds.append(id)
+            }
+        }
+        
         for id in removeIds {
             let (_, layerHolder) = self.visibleLayers[id]!
             layerHolder.layer.removeFromSuperlayer()
@@ -325,6 +327,13 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
             let thumbnailLayer = self.visibleThumbnailLayers[id]!
             thumbnailLayer.removeFromSuperlayer()
             self.visibleThumbnailLayers.removeValue(forKey: id)
+        }
+        
+        for id in removeProgressIds {
+            let progressNode = self.visibleProgressNodes[id]!
+            progressNode.removeFromSupernode()
+            self.visibleProgressNodes.removeValue(forKey: id)
+            self.statusDisposable.removeValue(forKey: id)?.dispose()
         }
     }
     

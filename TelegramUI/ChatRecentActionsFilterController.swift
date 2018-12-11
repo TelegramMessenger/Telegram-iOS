@@ -64,7 +64,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
     
     case adminsTitle(PresentationTheme, String)
     case allAdmins(PresentationTheme, String, Bool)
-    case adminPeerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Int32, RenderedChannelParticipant, Bool)
+    case adminPeerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Int32, RenderedChannelParticipant, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -87,7 +87,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                 return .index(200)
             case .allAdmins:
                 return .index(201)
-            case let .adminPeerItem(_, _, _, _, participant, _):
+            case let .adminPeerItem(_, _, _, _, _, participant, _):
                 return .peer(participant.peer.id)
         }
     }
@@ -124,8 +124,8 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adminPeerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsIndex, lhsParticipant, lhsChecked):
-                if case let .adminPeerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsIndex, rhsParticipant, rhsChecked) = rhs {
+            case let .adminPeerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameDisplayOrder, lhsIndex, lhsParticipant, lhsChecked):
+                if case let .adminPeerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameDisplayOrder, rhsIndex, rhsParticipant, rhsChecked) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -133,6 +133,9 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
+                    if lhsNameDisplayOrder != rhsNameDisplayOrder {
                         return false
                     }
                     if lhsIndex != rhsIndex {
@@ -185,9 +188,9 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                     default:
                         return false
                 }
-            case let .adminPeerItem(_, _, _, lhsIndex, _, _):
+            case let .adminPeerItem(_, _, _, _, lhsIndex, _, _):
                 switch rhs {
-                    case let .adminPeerItem(_, _, _, rhsIndex, _, _):
+                    case let .adminPeerItem(_, _, _, _, rhsIndex, _, _):
                         return lhsIndex < rhsIndex
                     default:
                         return false
@@ -213,7 +216,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(theme: theme, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { _ in
                     arguments.toggleAllAdmins()
                 })
-            case let .adminPeerItem(theme, strings, dateTimeFormat, _, participant, checked):
+            case let .adminPeerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, participant, checked):
                 let peerText: String
                 switch participant.participant {
                     case .creator:
@@ -221,7 +224,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                     case .member:
                         peerText = strings.ChatAdmins_AdminLabel.capitalized
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, sectionId: self.section, action: {
                     arguments.toggleAdmin(participant.peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 }, removePeer: { _ in })
@@ -345,7 +348,7 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
             } else {
                 adminSelected = true
             }
-            entries.append(.adminPeerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, index, participant, adminSelected))
+            entries.append(.adminPeerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index, participant, adminSelected))
             index += 1
         }
     }

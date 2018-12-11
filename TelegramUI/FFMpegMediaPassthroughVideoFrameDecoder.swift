@@ -13,16 +13,16 @@ final class FFMpegMediaPassthroughVideoFrameDecoder: MediaTrackFrameDecoder {
     func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {
         var blockBuffer: CMBlockBuffer?
         
-        let bytes = malloc(Int(frame.packet.packet.size))!
-        memcpy(bytes, frame.packet.packet.data, Int(frame.packet.packet.size))
-        guard CMBlockBufferCreateWithMemoryBlock(nil, bytes, Int(frame.packet.packet.size), nil, nil, 0, Int(frame.packet.packet.size), 0, &blockBuffer) == noErr else {
+        let bytes = malloc(Int(frame.packet.size))!
+        memcpy(bytes, frame.packet.data, Int(frame.packet.size))
+        guard CMBlockBufferCreateWithMemoryBlock(nil, bytes, Int(frame.packet.size), nil, nil, 0, Int(frame.packet.size), 0, &blockBuffer) == noErr else {
             free(bytes)
             return nil
         }
         
         var timingInfo = CMSampleTimingInfo(duration: frame.duration, presentationTimeStamp: frame.pts, decodeTimeStamp: frame.dts)
         var sampleBuffer: CMSampleBuffer?
-        var sampleSize = Int(frame.packet.packet.size)
+        var sampleSize = Int(frame.packet.size)
         guard CMSampleBufferCreate(nil, blockBuffer, true, nil, nil, self.videoFormat, 1, 1, &timingInfo, 1, &sampleSize, &sampleBuffer) == noErr else {
             return nil
         }

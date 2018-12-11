@@ -304,44 +304,64 @@ private extension PeerIndexNameRepresentation {
     func isLessThan(other: PeerIndexNameRepresentation, ordering: PresentationPersonNameOrder) -> ComparisonResult {
         switch self {
             case let .title(lhsTitle, _):
+                let rhsString: String
                 switch other {
                     case let .title(title, _):
-                        return lhsTitle.compare(title)
-                    case let .personName(_, last, _, _):
-                        let lastResult = lhsTitle.compare(last)
-                        if lastResult == .orderedSame {
-                            return .orderedAscending
-                        } else {
-                            return lastResult
-                        }
-                }
-            case let .personName(lhsFirst, lhsLast, _, _):
-                switch other {
-                    case let .title(title, _):
-                        let lastResult = lhsFirst.compare(title)
-                        if lastResult == .orderedSame {
-                            return .orderedDescending
-                        } else {
-                            return lastResult
-                        }
+                        rhsString = title
                     case let .personName(first, last, _, _):
                         switch ordering {
                             case .firstLast:
-                                let firstResult = lhsFirst.compare(first)
-                                if firstResult == .orderedSame {
-                                    return lhsLast.compare(last)
+                                if first.isEmpty {
+                                    rhsString = last
                                 } else {
-                                    return firstResult
+                                    rhsString = first + last
                                 }
                             case .lastFirst:
-                                let lastResult = lhsLast.compare(last)
-                                if lastResult == .orderedSame {
-                                    return lhsFirst.compare(first)
+                                if last.isEmpty {
+                                    rhsString = first
                                 } else {
-                                    return lastResult
+                                    rhsString = last + first
                                 }
                         }
                 }
+                return lhsTitle.caseInsensitiveCompare(rhsString)
+            case let .personName(lhsFirst, lhsLast, _, _):
+                let lhsString: String
+                switch ordering {
+                    case .firstLast:
+                        if lhsFirst.isEmpty {
+                            lhsString = lhsLast
+                        } else {
+                            lhsString = lhsFirst + lhsLast
+                        }
+                    case .lastFirst:
+                        if lhsLast.isEmpty {
+                            lhsString = lhsFirst
+                        } else {
+                            lhsString = lhsLast + lhsFirst
+                        }
+                }
+                let rhsString: String
+                switch other {
+                    case let .title(title, _):
+                        rhsString = title
+                    case let .personName(first, last, _, _):
+                        switch ordering {
+                            case .firstLast:
+                                if first.isEmpty {
+                                    rhsString = last
+                                } else {
+                                    rhsString = first + last
+                                }
+                            case .lastFirst:
+                                if last.isEmpty {
+                                    rhsString = first
+                                } else {
+                                    rhsString = last + first
+                                }
+                        }
+                }
+                return lhsString.caseInsensitiveCompare(rhsString)
         }
     }
 }
@@ -424,21 +444,21 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                 var indexHeader: unichar = 35
                 switch peer.indexName {
                     case let .title(title, _):
-                        if let c = title.utf16.first {
+                        if let c = title.uppercased().utf16.first {
                             indexHeader = c
                         }
                     case let .personName(first, last, _, _):
                         switch sortOrder {
                             case .firstLast:
-                                if let c = first.utf16.first {
+                                if let c = first.uppercased().utf16.first {
                                     indexHeader = c
-                                } else if let c = last.utf16.first {
+                                } else if let c = last.uppercased().utf16.first {
                                     indexHeader = c
                                 }
                             case .lastFirst:
-                                if let c = last.utf16.first {
+                                if let c = last.uppercased().utf16.first {
                                     indexHeader = c
-                                } else if let c = first.utf16.first {
+                                } else if let c = first.uppercased().utf16.first {
                                     indexHeader = c
                                 }
                         }
@@ -511,20 +531,45 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     return entries
 }
 
-private func preparedContactListNodeTransition(account: Account, from fromEntries: [ContactListNodeEntry], to toEntries: [ContactListNodeEntry], interaction: ContactListNodeInteraction, firstTime: Bool, isEmpty: Bool, animated: Bool) -> ContactsListNodeTransition {
+private func preparedContactListNodeTransition(account: Account, from fromEntries: [ContactListNodeEntry], to toEntries: [ContactListNodeEntry], interaction: ContactListNodeInteraction, firstTime: Bool, isEmpty: Bool, generateIndexSections: Bool, animated: Bool) -> ContactsListNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     
-    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, firstTime: firstTime, isEmpty: isEmpty, animated: animated)
+    var indexSections: [String] = []
+    if generateIndexSections {
+        var existingSections = Set<unichar>()
+        for entry in toEntries {
+            switch entry {
+                case .search:
+                    //indexSections.apend(CollectionIndexNode.searchIndex)
+                    break
+                case let .peer(_, _, _, header, _, _, _, _, _, _, _):
+                    if let header = header as? ContactListNameIndexHeader {
+                        if !existingSections.contains(header.letter) {
+                            existingSections.insert(header.letter)
+                            if let scalar = UnicodeScalar(header.letter) {
+                                let title = "\(Character(scalar))"
+                                indexSections.append(title)
+                            }
+                        }
+                    }
+                default:
+                    break
+            }
+        }
+    }
+    
+    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, animated: animated)
 }
 
 private struct ContactsListNodeTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let indexSections: [String]
     let firstTime: Bool
     let isEmpty: Bool
     let animated: Bool
@@ -584,9 +629,11 @@ final class ContactListNode: ASDisplayNode {
     private let filters: [ContactListFilter]
     
     let listNode: ListView
+    private var indexNode: CollectionIndexNode?
+    private var indexSections: [String]?
     
     private var queuedTransitions: [ContactsListNodeTransition] = []
-    private var hasValidLayout = false
+    private var validLayout: ContainerViewLayout?
     
     private var _ready = ValuePromise<Bool>()
     var ready: Signal<Bool, NoError> {
@@ -647,6 +694,14 @@ final class ContactListNode: ASDisplayNode {
         self.listNode = ListView()
         self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
         
+        var generateSections = false
+        if case .natural = presentation {
+            generateSections = true
+            self.indexNode = CollectionIndexNode()
+        } else {
+            self.indexNode = nil
+        }
+        
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.disableAnimations))
         
         self.authorizationPromise = Promise(AccessType.allowed)
@@ -664,12 +719,15 @@ final class ContactListNode: ASDisplayNode {
         super.init()
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        if self.indexNode == nil {
+            self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        }
         
         self.selectionStateValue = selectionState
         self.selectionStatePromise.set(.single(selectionState))
         
         self.addSubnode(self.listNode)
+        self.indexNode.flatMap(self.addSubnode)
         self.addSubnode(self.authorizationNode)
         
         let processingQueue = Queue()
@@ -682,6 +740,37 @@ final class ContactListNode: ASDisplayNode {
         }, openPeer: { [weak self] peer in
             self?.openPeer?(peer)
         })
+        
+        self.indexNode?.indexSelected = { [weak self] section in
+            guard let strongSelf = self, let entries = previousEntries.with({ $0 }) else {
+                return
+            }
+            var index = 0
+            var peerIndex = 0
+            loop: for entry in entries {
+                switch entry {
+                    case .search:
+                        if section == CollectionIndexNode.searchIndex {
+                            strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                            break loop
+                        }
+                    case let .peer(_, _, _, header, _, _, _, _, _, _, _):
+                        if let header = header as? ContactListNameIndexHeader {
+                            if let scalar = UnicodeScalar(header.letter) {
+                                let title = "\(Character(scalar))"
+                                if title == section {
+                                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: peerIndex == 0 ? 0 : index, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                                    break loop
+                                }
+                            }
+                        }
+                        peerIndex += 1
+                    default:
+                        break
+                }
+                index += 1
+            }
+        }
         
         let account = self.account
         var firstTime: Int32 = 1
@@ -795,7 +884,7 @@ final class ContactListNode: ASDisplayNode {
                         
                         let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed)
                         let previous = previousEntries.swap(entries)
-                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, animated: false))
+                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animated: false))
                     }
                     
                     if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -844,7 +933,7 @@ final class ContactListNode: ASDisplayNode {
                         } else {
                             animated = false
                         }
-                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: isEmpty, animated: animated))
+                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: isEmpty, generateIndexSections: generateSections, animated: animated))
                     }
             
                     if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -953,6 +1042,9 @@ final class ContactListNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let hadValidLayout = self.validLayout != nil
+        self.validLayout = layout
+        
         var insets = layout.insets(options: [.input])
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
@@ -985,14 +1077,18 @@ final class ContactListNode: ASDisplayNode {
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        if let indexNode = self.indexNode, let indexSections = self.indexSections {
+            let indexNodeFrame = CGRect(origin: CGPoint(x: layout.size.width - insets.right - 20.0, y: insets.top), size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom))
+            transition.updateFrame(node: indexNode, frame: indexNodeFrame)
+            indexNode.update(size: indexNodeFrame.size, color: self.presentationData.theme.list.itemAccentColor, sections: indexSections, transition: transition)
+        }
         
         //if let authorizationNode = self.authorizationNode {
             authorizationNode.updateLayout(size: layout.size, insets: insets, transition: transition)
             transition.updateFrame(node: authorizationNode, frame: self.bounds)
         //}
             
-        if !self.hasValidLayout {
-            self.hasValidLayout = true
+        if !hadValidLayout {
             self.dequeueTransitions()
         }
     }
@@ -1000,13 +1096,13 @@ final class ContactListNode: ASDisplayNode {
     private func enqueueTransition(_ transition: ContactsListNodeTransition) {
         self.queuedTransitions.append(transition)
         
-        if self.hasValidLayout {
+        if self.validLayout != nil {
             self.dequeueTransitions()
         }
     }
     
     private func dequeueTransitions() {
-        if self.hasValidLayout {
+        if self.validLayout != nil {
             while !self.queuedTransitions.isEmpty {
                 let transition = self.queuedTransitions.removeFirst()
                 
@@ -1018,6 +1114,15 @@ final class ContactListNode: ASDisplayNode {
                     if case .orderedByPresence = self.presentation {
                         options.insert(.AnimateCrossfade)
                     }
+                }
+                if let indexNode = self.indexNode, let layout = self.validLayout {
+                    self.indexSections = transition.indexSections
+                    
+                    var insets = layout.insets(options: [.input])
+                    insets.left += layout.safeInsets.left
+                    insets.right += layout.safeInsets.right
+                    
+                    indexNode.update(size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom), color: self.presentationData.theme.list.itemAccentColor, sections: transition.indexSections, transition: .immediate)
                 }
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {

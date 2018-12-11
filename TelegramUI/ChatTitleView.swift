@@ -78,6 +78,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
+    private var nameDisplayOrder: PresentationPersonNameOrder
     
     private let contentContainer: ASDisplayNode
     private let titleNode: ImmediateTextNode
@@ -255,7 +256,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             if peerView.peerId == self.account.peerId {
                                 string = NSAttributedString(string: self.strings.Conversation_SavedMessages, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             } else {
-                                string = NSAttributedString(string: peer.displayTitle(strings: self.strings), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                string = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             }
                         }
                         if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -446,11 +447,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
+        self.nameDisplayOrder = nameDisplayOrder
         
         self.contentContainer = ASDisplayNode()
         

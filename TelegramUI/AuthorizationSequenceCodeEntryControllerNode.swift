@@ -245,8 +245,16 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.layoutArguments = (layout, navigationBarHeight)
         
-        var insets = layout.insets(options: [.input])
+        var insets = layout.insets(options: [])
         insets.top = navigationBarHeight
+        
+        if let inputHeight = layout.inputHeight {
+            if inputHeight.isEqual(to: layout.standardInputHeight - 44.0) {
+                insets.bottom += layout.standardInputHeight
+            } else {
+                insets.bottom += inputHeight
+            }
+        }
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
             if let codeType = self.codeType, case .otherSession = codeType {

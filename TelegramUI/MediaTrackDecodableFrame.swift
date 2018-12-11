@@ -1,6 +1,6 @@
 import Foundation
 import CoreMedia
-import TelegramUIPrivateModule
+import FFMpeg
 
 enum MediaTrackFrameType {
     case video

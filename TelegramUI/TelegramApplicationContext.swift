@@ -229,6 +229,14 @@ public final class TelegramApplicationContext {
                 let _ = immediateExperimentalUISettingsValue.swap(settings)
             }
         })
+        
+        let _ = self.contactDataManager.personNameDisplayOrder().start(next: { order in
+            let _ = updateContactSettingsInteractively(postbox: postbox, { settings in
+                var settings = settings
+                settings.nameDisplayOrder = order
+                return settings
+            }).start()
+        })
     }
     
     deinit {

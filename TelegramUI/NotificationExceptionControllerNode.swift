@@ -5,15 +5,12 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-
-
-
 private final class NotificationExceptionState : Equatable {
-    
     let mode:NotificationExceptionMode
     let isSearchMode: Bool
     let revealedPeerId: PeerId?
     let editing: Bool
+    
     init(mode: NotificationExceptionMode, isSearchMode: Bool = false, revealedPeerId: PeerId? = nil, editing: Bool = false) {
         self.mode = mode
         self.isSearchMode = isSearchMode
@@ -294,7 +291,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
                 let soundName = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: value.settings.messageSound)
                 title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).0 : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).0)")
             }
-            entries.append(.peer(index: index, peer: value.peer, theme: presentationData.theme, strings: presentationData.strings, dateFormat: presentationData.dateTimeFormat, description: title, notificationSettings: value.settings, revealed: state.revealedPeerId == value.peer.id, editing: state.editing))
+            entries.append(.peer(index: index, peer: value.peer, theme: presentationData.theme, strings: presentationData.strings, dateFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, description: title, notificationSettings: value.settings, revealed: state.revealedPeerId == value.peer.id, editing: state.editing))
             index += 1
         }
     }
@@ -324,14 +321,15 @@ private enum NotificationExceptionEntryId: Hashable {
     case search
     case peerId(Int64)
     case addException
+    
     var hashValue: Int {
         switch self {
-        case .search:
-            return 0
-        case .addException:
-            return 1
-        case let .peerId(peerId):
-            return peerId.hashValue
+            case .search:
+                return 0
+            case .addException:
+                return 1
+            case let .peerId(peerId):
+                return peerId.hashValue
         }
     }
     
@@ -380,7 +378,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     typealias ItemGenerationArguments = NotificationExceptionArguments
     
     case search(PresentationTheme, PresentationStrings)
-    case peer(index: Int, peer: Peer, theme: PresentationTheme, strings: PresentationStrings, dateFormat: PresentationDateTimeFormat, description: String, notificationSettings: TelegramPeerNotificationSettings, revealed: Bool, editing: Bool)
+    case peer(index: Int, peer: Peer, theme: PresentationTheme, strings: PresentationStrings, dateFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, description: String, notificationSettings: TelegramPeerNotificationSettings, revealed: Bool, editing: Bool)
     case addException(PresentationTheme, PresentationStrings, Bool)
     
     func item(_ arguments: NotificationExceptionArguments) -> ListViewItem {
@@ -393,8 +391,8 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
             return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addExceptionIcon(theme), title: strings.Notification_Exceptions_AddException, sectionId: self.section, editing: editing, action: {
                 arguments.selectPeer()
             })
-        case let .peer(_, peer, theme, strings, dateTimeFormat, value, _, revealed, editing):
-            return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: nil, text: .text(value), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, sectionId: self.section, action: {
+        case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing):
+            return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .text(value), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, sectionId: self.section, action: {
                 arguments.openPeer(peer)
             }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                 arguments.updateRevealedPeerId(peerId)
@@ -410,7 +408,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
             return .search
         case .addException:
             return .addException
-        case let .peer(_, peer, _, _, _, _, _, _, _):
+        case let .peer(_, peer, _, _, _, _, _, _, _, _):
             return .peerId(peer.id.toInt64())
         }
     }
@@ -431,10 +429,10 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
             default:
                 return false
             }
-        case let .peer(lhsIndex, lhsPeer, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsValue, lhsSettings, lhsRevealed, lhsEditing):
+        case let .peer(lhsIndex, lhsPeer, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsValue, lhsSettings, lhsRevealed, lhsEditing):
             switch rhs {
-            case let .peer(rhsIndex, rhsPeer, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsValue, rhsSettings, rhsRevealed, rhsEditing):
-                return lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsDateTimeFormat == rhsDateTimeFormat && lhsIndex == rhsIndex && lhsPeer.isEqual(rhsPeer) && lhsValue == rhsValue && lhsSettings == rhsSettings && lhsRevealed == rhsRevealed && lhsEditing == rhsEditing
+            case let .peer(rhsIndex, rhsPeer, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsValue, rhsSettings, rhsRevealed, rhsEditing):
+                return lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsDateTimeFormat == rhsDateTimeFormat && lhsNameOrder == rhsNameOrder && lhsIndex == rhsIndex && lhsPeer.isEqual(rhsPeer) && lhsValue == rhsValue && lhsSettings == rhsSettings && lhsRevealed == rhsRevealed && lhsEditing == rhsEditing
             default:
                 return false
             }
@@ -452,11 +450,11 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
             default:
                 return true
             }
-        case let .peer(lhsIndex, _, _, _, _, _, _, _ , _):
+        case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _):
             switch rhs {
             case .search, .addException:
                 return false
-            case let .peer(rhsIndex, _, _, _, _, _, _, _, _):
+            case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _):
                 return lhsIndex < rhsIndex
             }
         }

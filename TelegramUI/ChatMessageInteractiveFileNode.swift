@@ -17,6 +17,9 @@ private let durationFont = Font.regular(11.0)
 final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let titleNode: TextNode
     private let descriptionNode: TextNode
+    private let descriptionMeasuringNode: TextNode
+    private let fetchingTextNode: ImmediateTextNode
+    private let fetchingCompactTextNode: ImmediateTextNode
     private let waveformNode: AudioWaveformNode
     private let waveformForegroundNode: AudioWaveformNode
     private var waveformScrubbingNode: MediaPlayerScrubbingNode?
@@ -57,6 +60,24 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.descriptionNode.displaysAsynchronously = true
         self.descriptionNode.isUserInteractionEnabled = false
         
+        self.descriptionMeasuringNode = TextNode()
+        
+        self.fetchingTextNode = ImmediateTextNode()
+        self.fetchingTextNode.displaysAsynchronously = true
+        self.fetchingTextNode.isUserInteractionEnabled = false
+        self.fetchingTextNode.maximumNumberOfLines = 1
+        self.fetchingTextNode.contentMode = .left
+        self.fetchingTextNode.contentsScale = UIScreenScale
+        self.fetchingTextNode.isHidden = true
+        
+        self.fetchingCompactTextNode = ImmediateTextNode()
+        self.fetchingCompactTextNode.displaysAsynchronously = true
+        self.fetchingCompactTextNode.isUserInteractionEnabled = false
+        self.fetchingCompactTextNode.maximumNumberOfLines = 1
+        self.fetchingCompactTextNode.contentMode = .left
+        self.fetchingCompactTextNode.contentsScale = UIScreenScale
+        self.fetchingCompactTextNode.isHidden = true
+        
         self.waveformNode = AudioWaveformNode()
         self.waveformNode.isLayerBacked = true
         self.waveformForegroundNode = AudioWaveformNode()
@@ -70,6 +91,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)
+        self.addSubnode(self.fetchingTextNode)
+        self.addSubnode(self.fetchingCompactTextNode)
     }
     
     deinit {
@@ -147,19 +170,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionAsyncLayout = TextNode.asyncLayout(self.descriptionNode)
+        let descriptionMeasuringAsyncLayout = TextNode.asyncLayout(self.descriptionMeasuringNode)
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         
         let currentMessage = self.message
         let currentTheme = self.themeAndStrings?.0
-        let currentResourceStatus = self.resourceStatus
         
         return { account, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
-            var updatedTheme: ChatPresentationThemeData?
-            
-            if presentationData.theme != currentTheme {
-                updatedTheme = presentationData.theme
-            }
-            
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 var updatedStatusSignal: Signal<FileMediaResourceStatus, NoError>?
@@ -233,7 +250,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         sentViaBot = true
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(message: message, dateTimeFormat: presentationData.dateTimeFormat, strings: presentationData.strings)
+                    let dateText = stringForMessageTimestampStatus(message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
                     
                     let (size, apply) = statusLayout(presentationData.theme, presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, constrainedSize)
                     statusSize = size
@@ -273,7 +290,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         if voice {
                             isVoice = true
                             let durationString = stringForDuration(audioDuration)
-                            candidateDescriptionString = NSAttributedString(string: durationString, font: durationFont, textColor:incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+                            candidateDescriptionString = NSAttributedString(string: durationString, font: durationFont, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
                             if let waveform = waveform {
                                 waveform.withDataNoCopy { data in
                                     audioWaveform = AudioWaveform(bitstream: data, bitsPerSample: 5)
@@ -334,6 +351,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let (titleLayout, titleApply) = titleAsyncLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
+                let fileSizeString: String
+                if let _ = file.size {
+                    fileSizeString = "000.0 MB"
+                } else {
+                    fileSizeString = ""
+                }
+                let (descriptionMeasuringLayout, descriptionMeasuringApply) = descriptionMeasuringAsyncLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(fileSizeString) / \(fileSizeString)", font: descriptionFont, textColor: .black), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                let descriptionMaxWidth = max(descriptionLayout.size.width, descriptionMeasuringLayout.size.width)
+                
                 let minVoiceWidth: CGFloat = 120.0
                 let maxVoiceWidth = constrainedSize.width
                 let maxVoiceLength: CGFloat = 30.0
@@ -341,12 +368,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 var minLayoutWidth: CGFloat
                 if hasThumbnail {
-                    minLayoutWidth = max(titleLayout.size.width, descriptionLayout.size.width) + 86.0
+                    minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 86.0
                 } else if isVoice {
                     let calcDuration = max(minVoiceLength, min(maxVoiceLength, CGFloat(audioDuration)))
                     minLayoutWidth = minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
                 } else {
-                    minLayoutWidth = max(titleLayout.size.width, descriptionLayout.size.width) + 44.0 + 8.0
+                    minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 44.0 + 8.0
                 }
                 
                 if let statusSize = statusSize {
@@ -445,9 +472,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             
                             let _ = titleApply()
                             let _ = descriptionApply()
+                            let _ = descriptionMeasuringApply()
                             
                             strongSelf.titleNode.frame = titleFrame
                             strongSelf.descriptionNode.frame = descriptionFrame
+                            strongSelf.descriptionMeasuringNode.frame = CGRect(origin: CGPoint(), size: descriptionMeasuringLayout.size)
                             
                             if let consumableContentIcon = consumableContentIcon {
                                 if strongSelf.consumableContentNode.supernode == nil {
@@ -625,6 +654,25 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let isSending = message.flags.isSending
         
+        var downloadingStrings: (String, String)?
+        
+        if !isAudio {
+            switch resourceStatus.mediaStatus {
+                case let .fetchStatus(fetchStatus):
+                    switch fetchStatus {
+                        case let .Fetching(_, progress):
+                            if let size = file.size {
+                                let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true)
+                                downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true))", compactString)
+                            }
+                        default:
+                            break
+                    }
+                default:
+                    break
+            }
+        }
+        
         if isAudio && !isVoice && !isSending {
             let streamingStatusForegroundColor: UIColor = incoming ? bubbleTheme.incomingAccentControlColor : bubbleTheme.outgoingAccentControlColor
             let streamingStatusBackgroundColor: UIColor = incoming ? bubbleTheme.incomingMediaInactiveControlColor : bubbleTheme.outgoingMediaInactiveControlColor
@@ -743,6 +791,36 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 })
             }
         }
+        
+        if let (expandedString, compactString) = downloadingStrings {
+            self.fetchingTextNode.attributedText = NSAttributedString(string: expandedString, font: descriptionFont, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+            self.fetchingCompactTextNode.attributedText = NSAttributedString(string: compactString, font: descriptionFont, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+        } else {
+            self.fetchingTextNode.attributedText = nil
+            self.fetchingCompactTextNode.attributedText = nil
+        }
+        
+        let maxFetchingStatusWidth = max(self.titleNode.frame.width, self.descriptionMeasuringNode.frame.width) + 2.0
+        let fetchingInfo = self.fetchingTextNode.updateLayoutInfo(CGSize(width: maxFetchingStatusWidth, height: CGFloat.greatestFiniteMagnitude))
+        let fetchingCompactSize = self.fetchingCompactTextNode.updateLayout(CGSize(width: maxFetchingStatusWidth, height: CGFloat.greatestFiniteMagnitude))
+        
+        if downloadingStrings != nil {
+            self.descriptionNode.isHidden = true
+            if fetchingInfo.truncated {
+                self.fetchingTextNode.isHidden = true
+                self.fetchingCompactTextNode.isHidden = false
+            } else {
+                self.fetchingTextNode.isHidden = false
+                self.fetchingCompactTextNode.isHidden = true
+            }
+        } else {
+            self.descriptionNode.isHidden = false
+            self.fetchingTextNode.isHidden = true
+            self.fetchingCompactTextNode.isHidden = true
+        }
+        
+        self.fetchingTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingInfo.size)
+        self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
     }
     
     static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ account: Account, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {

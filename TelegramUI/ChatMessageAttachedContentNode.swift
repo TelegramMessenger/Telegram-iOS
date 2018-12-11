@@ -304,7 +304,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 sentViaBot = true
             }
             
-            let dateText = stringForMessageTimestampStatus(message: message, dateTimeFormat: presentationData.dateTimeFormat, strings: presentationData.strings)
+            let dateText = stringForMessageTimestampStatus(message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
             
             var webpageGalleryMediaCount: Int?
             for media in message.media {

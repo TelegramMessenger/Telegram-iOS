@@ -604,10 +604,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             if initialDisplayHeader && displayAuthorInfo {
                 if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                    authorNameString = peer.displayTitle
+                    authorNameString = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     authorNameColor = chatMessagePeerIdColors[Int(peer.id.id % 7)]
                 } else if let effectiveAuthor = effectiveAuthor {
-                    authorNameString = effectiveAuthor.displayTitle
+                    authorNameString = effectiveAuthor.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     authorNameColor = chatMessagePeerIdColors[Int(effectiveAuthor.id.id % 7)]
                 }
                 if let rawAuthorNameColor = authorNameColor {
@@ -686,7 +686,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         sentViaBot = true
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(message: message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings)
+                    let dateText = stringForMessageTimestampStatus(message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
                     
                     let statusType: ChatMessageDateAndStatusType
                     if message.effectivelyIncoming(item.account.peerId) {
@@ -774,7 +774,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         if let authorSignature = forwardInfo.authorSignature {
                             forwardAuthorSignature = authorSignature
                         } else if forwardInfo.author.id != source.id {
-                            forwardAuthorSignature = forwardInfo.author.displayTitle
+                            forwardAuthorSignature = forwardInfo.author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                         } else {
                             forwardAuthorSignature = nil
                         }
@@ -782,7 +782,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         forwardSource = forwardInfo.author
                         forwardAuthorSignature = nil
                     }
-                    let sizeAndApply = forwardInfoLayout(item.presentationData.theme, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = forwardInfoLayout(item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     forwardInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     forwardInfoOriginY = headerSize.height
@@ -796,7 +796,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     } else {
                         headerSize.height += 2.0
                     }
-                    let sizeAndApply = replyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                    let sizeAndApply = replyInfoLayout(item.presentationData, item.presentationData.strings, item.account, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                     
                     replyInfoOriginY = headerSize.height

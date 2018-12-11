@@ -3,15 +3,16 @@ import TelegramCore
 import Postbox
 
 extension Peer {
-    func displayTitle(strings: PresentationStrings) -> String {
+    func displayTitle(strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) -> String {
         switch self {
             case let user as TelegramUser:
                 if let firstName = user.firstName {
                     if let lastName = user.lastName {
-                        if strings.lc == 0x6b6f {
-                            return "\(lastName) \(firstName)"
-                        } else {
-                            return "\(firstName) \(lastName)"
+                        switch displayOrder {
+                            case .firstLast:
+                                return "\(firstName) \(lastName)"
+                            case .lastFirst:
+                                return "\(lastName) \(firstName)"
                         }
                     } else {
                         return firstName

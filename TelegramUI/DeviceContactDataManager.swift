@@ -7,6 +7,7 @@ import AddressBook
 public typealias DeviceContactStableId = String
 
 private protocol DeviceContactDataContext {
+    func personNameDisplayOrder() -> PresentationPersonNameOrder
     func getExtendedContactData(stableId: DeviceContactStableId) -> DeviceContactExtendedData?
     func appendContactData(_ contactData: DeviceContactExtendedData, to stableId: DeviceContactStableId) -> DeviceContactExtendedData?
     func createContactWithData(_ contactData: DeviceContactExtendedData) -> (DeviceContactStableId, DeviceContactExtendedData)?
@@ -62,6 +63,15 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
             phoneNumbers.append(DeviceContactPhoneNumberData(label: number.label ?? "", value: number.value.stringValue))
         }
         return (contact.identifier, DeviceContactBasicData(firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers))
+    }
+    
+    func personNameDisplayOrder() -> PresentationPersonNameOrder {
+        switch CNContactFormatter.nameOrder(for: CNContact()) {
+            case .givenNameFirst:
+                return .firstLast
+            default:
+                return .lastFirst
+        }
     }
     
     func getExtendedContactData(stableId: DeviceContactStableId) -> DeviceContactExtendedData? {
@@ -318,6 +328,14 @@ private final class DeviceContactDataLegacyContext: DeviceContactDataContext {
         return (stableId, DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: phoneNumbers))
     }
     
+    func personNameDisplayOrder() -> PresentationPersonNameOrder {
+        if ABPersonGetCompositeNameFormat() == kABPersonCompositeNameFormatFirstNameFirst {
+            return .firstLast
+        } else {
+            return .lastFirst
+        }
+    }
+    
     func getExtendedContactData(stableId: DeviceContactStableId) -> DeviceContactExtendedData? {
         if let contact = self.getContactById(stableId: stableId) {
             let basicData = DeviceContactDataLegacyContext.parseContact(contact).1
@@ -378,6 +396,7 @@ private final class DeviceContactDataManagerImpl {
     private var accessInitialized = false
     
     private var dataContext: DeviceContactDataContext?
+    let personNameDisplayOrder = ValuePromise<PresentationPersonNameOrder>()
     private var extendedContexts: [DeviceContactStableId: ExtendedContactDataContext] = [:]
     
     private var stableIdToBasicContactData: [DeviceContactStableId: DeviceContactBasicData] = [:]
@@ -402,27 +421,24 @@ private final class DeviceContactDataManagerImpl {
             strongSelf.accessInitialized = true
             if authorizationStatus {
                 if #available(iOSApplicationExtension 9.0, *) {
-                    strongSelf.dataContext = DeviceContactDataModernContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
+                    let dataContext = DeviceContactDataModernContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
                         guard let strongSelf = self else {
                             return
                         }
                         strongSelf.updateAll(stableIdToBasicContactData)
                     })
+                    strongSelf.dataContext = dataContext
+                    strongSelf.personNameDisplayOrder.set(dataContext.personNameDisplayOrder())
                 } else {
-                    strongSelf.dataContext = DeviceContactDataLegacyContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
+                    let dataContext = DeviceContactDataLegacyContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
                         guard let strongSelf = self else {
                             return
                         }
                         strongSelf.updateAll(stableIdToBasicContactData)
                     })
+                    strongSelf.dataContext = dataContext
+                    strongSelf.personNameDisplayOrder.set(dataContext.personNameDisplayOrder())
                 }
-                
-                /*strongSelf.dataContext = DeviceContactDataLegacyContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
-                     guard let strongSelf = self else {
-                         return
-                     }
-                     strongSelf.updateAll(stableIdToBasicContactData)
-                 })*/
             } else {
                 strongSelf.updateAll([:])
             }
@@ -624,6 +640,18 @@ public final class DeviceContactDataManager {
         self.impl = QueueLocalObject(queue: queue, generate: {
             return DeviceContactDataManagerImpl(queue: queue)
         })
+    }
+    
+    public func personNameDisplayOrder() -> Signal<PresentationPersonNameOrder, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with({ impl in
+                disposable.set(impl.personNameDisplayOrder.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            })
+            return disposable
+        }
     }
     
     public func basicData() -> Signal<[DeviceContactStableId: DeviceContactBasicData], NoError> {

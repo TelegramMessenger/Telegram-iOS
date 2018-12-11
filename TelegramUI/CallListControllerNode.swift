@@ -203,6 +203,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.listNode = ListView()
+        self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         
         self.emptyTextNode = ASTextNode()
         self.emptyTextNode.alpha = 0.0

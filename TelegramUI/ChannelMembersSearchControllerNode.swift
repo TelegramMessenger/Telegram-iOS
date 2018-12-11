@@ -121,6 +121,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((Peer, RenderedChannelParticipant?) -> Void)?
+    var present: ((ViewController, Any?) -> Void)?
     
     var themeAndStrings: (PresentationTheme, PresentationStrings)
 
@@ -292,6 +293,8 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 self?.requestOpenPeerFromSearch?(peer, participant)
             }, updateActivity: { value in
                 
+            }, present: { [weak self] c, a in
+                self?.present?(c, a)
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()

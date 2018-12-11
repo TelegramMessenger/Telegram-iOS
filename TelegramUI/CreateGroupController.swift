@@ -42,7 +42,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     case groupInfo(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
     
-    case member(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, PeerPresence?)
+    case member(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, PeerPresence?)
     
     var section: ItemListSectionId {
         switch self {
@@ -59,7 +59,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return 0
             case .setProfilePhoto:
                 return 1
-            case let .member(index, _, _, _, _, _):
+            case let .member(index, _, _, _, _, _, _):
                 return 2 + index
         }
     }
@@ -100,8 +100,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .member(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsPresence):
-                if case let .member(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsPresence) = rhs {
+            case let .member(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameDisplayOrder, lhsPeer, lhsPresence):
+                if case let .member(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameDisplayOrder, rhsPeer, rhsPresence) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -112,6 +112,9 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
+                    if lhsNameDisplayOrder != rhsNameDisplayOrder {
                         return false
                     }
                     if !lhsPeer.isEqual(rhsPeer) {
@@ -146,8 +149,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
-            case let .member(_, theme, strings, dateTimeFormat, peer, presence):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+            case let .member(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, presence):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
         }
     }
 }
@@ -210,7 +213,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     })
     
     for i in 0 ..< peers.count {
-        entries.append(.member(Int32(i), presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peers[i], view.presences[peers[i].id]))
+        entries.append(.member(Int32(i), presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peers[i], view.presences[peers[i].id]))
     }
     
     return entries

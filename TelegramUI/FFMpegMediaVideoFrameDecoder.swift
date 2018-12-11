@@ -1,22 +1,22 @@
-import TelegramUIPrivateModule
 import CoreMedia
 import Accelerate
+import FFMpeg
 
 private let bufferCount = 32
 
 final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
-    private let codecContext: UnsafeMutablePointer<AVCodecContext>
+    private let codecContext: FFMpegAVCodecContext
     
-    private let videoFrame: UnsafeMutablePointer<AVFrame>
+    private let videoFrame: FFMpegAVFrame
     private var resetDecoderOnNextFrame = true
     
     private var pixelBufferPool: CVPixelBufferPool?
     
     private var delayedFrames: [MediaTrackFrame] = []
     
-    init(codecContext: UnsafeMutablePointer<AVCodecContext>) {
+    init(codecContext: FFMpegAVCodecContext) {
         self.codecContext = codecContext
-        self.videoFrame = av_frame_alloc()
+        self.videoFrame = FFMpegAVFrame()
         
         /*var sourcePixelBufferOptions: [String: Any] = [:]
         sourcePixelBufferOptions[kCVPixelBufferPixelFormatTypeKey as String] = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange as NSNumber
@@ -40,13 +40,6 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         self.pixelBufferPool = pixelBufferPool*/
     }
     
-    deinit {
-        av_frame_unref(self.videoFrame)
-        
-        var codecContextRef: UnsafeMutablePointer<AVCodecContext>? = codecContext
-        avcodec_free_context(&codecContextRef)
-    }
-    
     func decodeInternal(frame: MediaTrackDecodableFrame) {
     
     }
@@ -56,11 +49,10 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     }
     
     func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?) -> MediaTrackFrame? {
-        var status = frame.packet.sendToDecoder(self.codecContext)
+        var status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
-            status = avcodec_receive_frame(self.codecContext, self.videoFrame)
-            if status == 0 {
-                var pts = CMTimeMake(self.videoFrame.pointee.pts, frame.pts.timescale)
+            if self.codecContext.receive(into: self.videoFrame) {
+                var pts = CMTimeMake(self.videoFrame.pts, frame.pts.timescale)
                 if let ptsOffset = ptsOffset {
                     pts = CMTimeAdd(pts, ptsOffset)
                 }
@@ -87,11 +79,11 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         }
     }
     
-    private func convertVideoFrame(_ frame: UnsafeMutablePointer<AVFrame>, pts: CMTime, dts: CMTime, duration: CMTime) -> MediaTrackFrame? {
-        if frame.pointee.data.0 == nil {
+    private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime) -> MediaTrackFrame? {
+        if frame.data[0] == nil {
             return nil
         }
-        if frame.pointee.linesize.1 != frame.pointee.linesize.2 {
+        if frame.lineSize[1] != frame.lineSize[2] {
             return nil
         }
         
@@ -107,15 +99,15 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             let ioSurfaceProperties = NSMutableDictionary()
             ioSurfaceProperties["IOSurfaceIsGlobal"] = true as NSNumber
             
-            var options: [String: Any] = [kCVPixelBufferBytesPerRowAlignmentKey as String: frame.pointee.linesize.0 as NSNumber]
+            var options: [String: Any] = [kCVPixelBufferBytesPerRowAlignmentKey as String: frame.lineSize[0] as NSNumber]
             /*if #available(iOSApplicationExtension 9.0, *) {
                 options[kCVPixelBufferOpenGLESTextureCacheCompatibilityKey as String] = true as NSNumber
             }*/
             options[kCVPixelBufferIOSurfacePropertiesKey as String] = ioSurfaceProperties
             
             CVPixelBufferCreate(kCFAllocatorDefault,
-                                          Int(frame.pointee.width),
-                                          Int(frame.pointee.height),
+                                          Int(frame.width),
+                                          Int(frame.height),
                                           kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
                                           options as CFDictionary,
                                           &pixelBufferRef)
@@ -125,7 +117,7 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             return nil
         }
         
-        let srcPlaneSize = Int(frame.pointee.linesize.1) * Int(frame.pointee.height / 2)
+        let srcPlaneSize = Int(frame.lineSize[1]) * Int(frame.height / 2)
         let dstPlaneSize = srcPlaneSize * 2
         
         let dstPlane = malloc(dstPlaneSize)!.assumingMemoryBound(to: UInt8.self)
@@ -134,8 +126,8 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         }
         
         for i in 0 ..< srcPlaneSize {
-            dstPlane[2 * i] = frame.pointee.data.1![i]
-            dstPlane[2 * i + 1] = frame.pointee.data.2![i]
+            dstPlane[2 * i] = frame.data[1]![i]
+            dstPlane[2 * i + 1] = frame.data[2]![i]
         }
         
         let status = CVPixelBufferLockBaseAddress(pixelBuffer, [])
@@ -148,13 +140,13 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         let bytesPerRowUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
         
         var base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)!
-        if bytePerRowY == frame.pointee.linesize.0 {
-            memcpy(base, frame.pointee.data.0!, bytePerRowY * Int(frame.pointee.height))
+        if bytePerRowY == frame.lineSize[0] {
+            memcpy(base, frame.data[0]!, bytePerRowY * Int(frame.height))
         } else {
             var dest = base
-            var src = frame.pointee.data.0!
-            let linesize = Int(frame.pointee.linesize.0)
-            for _ in 0 ..< Int(frame.pointee.height) {
+            var src = frame.data[0]!
+            let linesize = Int(frame.lineSize[0])
+            for _ in 0 ..< Int(frame.height) {
                 memcpy(dest, src, linesize)
                 dest = dest.advanced(by: bytePerRowY)
                 src = src.advanced(by: linesize)
@@ -162,13 +154,13 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         }
         
         base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1)!
-        if bytesPerRowUV == frame.pointee.linesize.1 * 2 {
-            memcpy(base, dstPlane, bytesPerRowUV * Int(frame.pointee.height) / 2)
+        if bytesPerRowUV == frame.lineSize[1] * 2 {
+            memcpy(base, dstPlane, bytesPerRowUV * Int(frame.height) / 2)
         } else {
             var dest = base
             var src = dstPlane
-            let linesize = Int(frame.pointee.linesize.1) * 2
-            for _ in 0 ..< Int(frame.pointee.height) / 2 {
+            let linesize = Int(frame.lineSize[1]) * 2
+            for _ in 0 ..< Int(frame.height) / 2 {
                 memcpy(dest, src, linesize)
                 dest = dest.advanced(by: bytesPerRowUV)
                 src = src.advanced(by: linesize)
@@ -229,7 +221,7 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     }
     
     func reset() {
-        avcodec_flush_buffers(self.codecContext)
+        self.codecContext.flushBuffers()
         self.resetDecoderOnNextFrame = true
     }
 }

@@ -69,7 +69,7 @@ public enum MessageContentKind: Equatable {
     }
 }
 
-public func messageContentKind(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> MessageContentKind {
+public func messageContentKind(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> MessageContentKind {
     for media in message.media {
         switch media {
             case let expiredMedia as TelegramMediaExpiredContent:
@@ -127,7 +127,7 @@ public func messageContentKind(_ message: Message, strings: PresentationStrings,
                     return .location
                 }
             case _ as TelegramMediaAction:
-                return .text(plainServiceMessageString(strings: strings, message: message, accountPeerId: accountPeerId) ?? "")
+                return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) ?? "")
             default:
                 break
         }
@@ -135,11 +135,11 @@ public func messageContentKind(_ message: Message, strings: PresentationStrings,
     return .text(message.text)
 }
  
-func descriptionStringForMessage(_ message: Message, strings: PresentationStrings, accountPeerId: PeerId) -> (String, Bool) {
+func descriptionStringForMessage(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> (String, Bool) {
     if !message.text.isEmpty {
         return (message.text, false)
     }
-    switch messageContentKind(message, strings: strings, accountPeerId: accountPeerId) {
+    switch messageContentKind(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId) {
         case let .text(text):
             return (text, false)
         case .image:

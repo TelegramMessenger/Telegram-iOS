@@ -130,6 +130,8 @@ public final class SecretMediaPreviewController: ViewController {
     
     private var messageView: MessageView?
     private var currentNodeMessageId: MessageId?
+    private var currentNodeMessageIsVideo = false
+    private var tempFile: TempBoxFile?
     
     private let _hiddenMedia = Promise<(MessageId, Media)?>(nil)
     private var hiddenMediaManagerIndex: Int?
@@ -148,6 +150,8 @@ public final class SecretMediaPreviewController: ViewController {
         self.navigationItem.leftBarButtonItem = backItem
         
         self.statusBar.statusBarStyle = .White
+        
+        
         
         self.disposable.set((account.postbox.messageView(messageId) |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
@@ -192,6 +196,9 @@ public final class SecretMediaPreviewController: ViewController {
             mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
         self.screenCaptureEventsDisposable?.dispose()
+        if let tempFile = self.tempFile {
+            TempBox.shared.dispose(tempFile)
+        }
     }
     
     @objc func donePressed() {
@@ -205,7 +212,7 @@ public final class SecretMediaPreviewController: ViewController {
             }
         }, dismissController: { [weak self] in
             self?.dismiss(forceAway: true)
-        }, replaceRootController: { [weak self] _, _ in
+        }, replaceRootController: { _, _ in
         })
         self.displayNode = SecretMediaPreviewControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()
@@ -215,7 +222,7 @@ public final class SecretMediaPreviewController: ViewController {
         
         self.controllerNode.transitionDataForCentralItem = { [weak self] in
             if let strongSelf = self {
-                if let centralItemNode = strongSelf.controllerNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? GalleryControllerPresentationArguments {
+                if let _ = strongSelf.controllerNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? GalleryControllerPresentationArguments {
                     if let message = strongSelf.messageView?.message {
                         if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                             return (transitionArguments.transitionNode, transitionArguments.addToTransitionSurface)
@@ -234,7 +241,7 @@ public final class SecretMediaPreviewController: ViewController {
             if let strongSelf = self {
                 strongSelf._hiddenMedia.set(.single(nil))
                 
-                var animatedOutNode = true
+                let animatedOutNode = true
                 var animatedOutInterface = false
                 
                 let completion = {
@@ -261,10 +268,20 @@ public final class SecretMediaPreviewController: ViewController {
                 if let _ = index {
                     if let message = strongSelf.messageView?.message, let media = mediaForMessage(message: message) {
                         var beginTimeAndTimeout: (Double, Double)?
+                        var videoDuration: Int32?
+                        for media in message.media {
+                            if let file = media as? TelegramMediaFile {
+                                videoDuration = file.duration
+                            }
+                        }
                         for attribute in message.attributes {
                             if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
                                 if let countdownBeginTime = attribute.countdownBeginTime {
-                                    beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                                    if let videoDuration = videoDuration {
+                                        beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                                    } else {
+                                        beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                                    }
                                 }
                                 break
                             }
@@ -302,7 +319,7 @@ public final class SecretMediaPreviewController: ViewController {
                                 } else {
                                     text = strongSelf.presentationData.strings.SecretImage_NotViewedYet(peerTitle).0
                                 }
-                               contentNode.setText(text)
+                                contentNode.setText(text)
                                 strongSelf.controllerNode.updatePresentationState({
                                     $0.withUpdatedFooterContentNode(contentNode)
                                 }, transition: .immediate)
@@ -328,7 +345,6 @@ public final class SecretMediaPreviewController: ViewController {
         var nodeAnimatesItself = false
         
         if let centralItemNode = self.controllerNode.pager.centralItemNode(), let message = self.messageView?.message {
-            
             if let media = mediaForMessage(message: message) {
                 if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments, let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                     nodeAnimatesItself = true
@@ -394,7 +410,20 @@ public final class SecretMediaPreviewController: ViewController {
         if let message = message {
             if self.currentNodeMessageId != message.id {
                 self.currentNodeMessageId = message.id
-                guard let item = galleryItemForEntry(account: account, presentationData: self.presentationData, entry: .MessageEntry(message, false, nil, nil), streamVideos: false, hideControls: true, playbackCompleted: { [weak self] in
+                var tempFilePath: String?
+                for media in message.media {
+                    if let file = media as? TelegramMediaFile {
+                        if let path = self.account.postbox.mediaBox.completedResourcePath(file.resource) {
+                            let tempFile = TempBox.shared.file(path: path, fileName: file.fileName ?? "file")
+                            self.tempFile = tempFile
+                            tempFilePath = tempFile.path
+                            self.currentNodeMessageIsVideo = true
+                        }
+                        break
+                    }
+                }
+                
+                guard let item = galleryItemForEntry(account: self.account, presentationData: self.presentationData, entry: .MessageEntry(message, false, nil, nil), streamVideos: false, hideControls: true, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
                     self?.dismiss(forceAway: false)
                     }) else {
                     self._ready.set(.single(true))
@@ -409,10 +438,20 @@ public final class SecretMediaPreviewController: ViewController {
                 self.markMessageAsConsumedDisposable.set(markMessageContentAsConsumedInteractively(postbox: self.account.postbox, messageId: message.id).start())
             } else {
                 var beginTimeAndTimeout: (Double, Double)?
+                var videoDuration: Int32?
+                for media in message.media {
+                    if let file = media as? TelegramMediaFile {
+                        videoDuration = file.duration
+                    }
+                }
                 for attribute in message.attributes {
                     if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
                         if let countdownBeginTime = attribute.countdownBeginTime {
-                            beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                            if let videoDuration = videoDuration {
+                                beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                            } else {
+                                beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                            }
                         }
                         break
                     }
@@ -428,7 +467,9 @@ public final class SecretMediaPreviewController: ViewController {
             if !self.didSetReady {
                 self._ready.set(.single(true))
             }
-            self.dismiss()
+            if !self.currentNodeMessageIsVideo {
+                self.dismiss()
+            }
         }
     }
     

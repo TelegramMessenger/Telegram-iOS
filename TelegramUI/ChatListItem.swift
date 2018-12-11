@@ -520,7 +520,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = params.leftInset + 78.0
             
-            let (peer, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, message: message, chatPeer: itemPeer, accountPeerId: item.account.peerId)
+            let (peer, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: message, chatPeer: itemPeer, accountPeerId: item.account.peerId)
             var hideAuthor = initialHideAuthor
             if isPeerGroup {
                 hideAuthor = false
@@ -540,11 +540,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if let author = message.author as? TelegramUser, let peer = peer, !(peer is TelegramUser) {
                     if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                     } else {
-                        peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings)
+                        peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
                 } else if case .groupReference = item.content {
                     if let messagePeer = itemPeer.chatMainPeer {
-                        peerText = messagePeer.displayTitle(strings: item.presentationData.strings)
+                        peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
                 }
                 
@@ -559,7 +559,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 case .peer:
                     if peer?.id == item.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
-                    } else if let displayTitle = peer?.displayTitle(strings: item.presentationData.strings) {
+                    } else if let displayTitle = peer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .groupReference:

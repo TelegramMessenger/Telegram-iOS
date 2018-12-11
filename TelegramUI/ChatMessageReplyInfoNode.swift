@@ -39,35 +39,35 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ account: Account, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationData, _ strings: PresentationStrings, _ account: Account, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
         
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
         let previousMediaReference = maybeNode?.previousMediaReference
         
-        return { theme, strings, account, type, message, constrainedSize in
-            let titleString = message.author?.displayTitle(strings: strings) ?? strings.User_DeletedAccount
-            let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
+        return { presentationData, strings, account, type, message, constrainedSize in
+            let titleString = message.author?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
+            let (textString, isMedia) = descriptionStringForMessage(message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: account.peerId)
             
-            let placeholderColor: UIColor =  message.effectivelyIncoming(account.peerId) ? theme.theme.chat.bubble.incomingMediaPlaceholderColor : theme.theme.chat.bubble.outgoingMediaPlaceholderColor
+            let placeholderColor: UIColor =  message.effectivelyIncoming(account.peerId) ? presentationData.theme.theme.chat.bubble.incomingMediaPlaceholderColor : presentationData.theme.theme.chat.bubble.outgoingMediaPlaceholderColor
             let titleColor: UIColor
             let lineImage: UIImage?
             let textColor: UIColor
                 
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? theme.theme.chat.bubble.incomingAccentTextColor : theme.theme.chat.bubble.outgoingAccentTextColor
-                    lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(theme.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(theme.theme)
+                    titleColor = incoming ? presentationData.theme.theme.chat.bubble.incomingAccentTextColor : presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                    lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(presentationData.theme.theme)
                     if isMedia {
-                        textColor = incoming ? theme.theme.chat.bubble.incomingSecondaryTextColor : theme.theme.chat.bubble.outgoingSecondaryTextColor
+                        textColor = incoming ? presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor
                     } else {
-                        textColor = incoming ? theme.theme.chat.bubble.incomingPrimaryTextColor : theme.theme.chat.bubble.outgoingPrimaryTextColor
+                        textColor = incoming ? presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor
                     }
                 case .standalone:
-                    let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                    let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     titleColor = serviceColor.primaryText
-                    lineImage = PresentationResourcesChat.chatServiceVerticalLineImage(theme.theme)
+                    lineImage = PresentationResourcesChat.chatServiceVerticalLineImage(presentationData.theme.theme)
                     textColor = titleColor
             }
             

@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import TelegramCore
 
-public func chatListItemStrings(strings: PresentationStrings, message: Message?, chatPeer: RenderedPeer, accountPeerId: PeerId) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
+public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message?, chatPeer: RenderedPeer, accountPeerId: PeerId) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
     let peer: Peer?
     
     var hideAuthor = false
@@ -130,12 +130,12 @@ public func chatListItemStrings(strings: PresentationStrings, message: Message?,
                         }
                     }
                 default:
-                    if let text = plainServiceMessageString(strings: strings, message: message, accountPeerId: accountPeerId) {
+                    if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) {
                         messageText = text
                     }
                 }
             case _ as TelegramMediaExpiredContent:
-                if let text = plainServiceMessageString(strings: strings, message: message, accountPeerId: accountPeerId) {
+                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) {
                     messageText = text
                 }
             default:

@@ -168,7 +168,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 } else if let attribute = attribute as? InlineBotMessageAttribute {
                     if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
                         inlineBotNameString = bot.username
@@ -205,7 +205,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     if let authorSignature = forwardInfo.authorSignature {
                         forwardAuthorSignature = authorSignature
                     } else if forwardInfo.author.id != source.id {
-                        forwardAuthorSignature = forwardInfo.author.displayTitle
+                        forwardAuthorSignature = forwardInfo.author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     } else {
                         forwardAuthorSignature = nil
                     }
@@ -214,7 +214,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     forwardAuthorSignature = nil
                 }
                 let availableWidth = max(60.0, availableContentWidth - videoLayout.contentSize.width + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData.theme, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 
                 if let currentForwardBackgroundNode = currentForwardBackgroundNode {
                     updatedForwardBackgroundNode = currentForwardBackgroundNode

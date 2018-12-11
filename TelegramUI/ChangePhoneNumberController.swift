@@ -11,7 +11,7 @@ final class ChangePhoneNumberController: ViewController {
     
     private let account: Account
     
-    private var currentData: (Int32, String)?
+    private var currentData: (Int32, String?, String)?
     private let requestDisposable = MetaDisposable()
     
     var inProgress: Bool = false {
@@ -52,11 +52,11 @@ final class ChangePhoneNumberController: ViewController {
         self.requestDisposable.dispose()
     }
     
-    func updateData(countryCode: Int32, number: String) {
-        if self.currentData == nil || self.currentData! != (countryCode, number) {
-            self.currentData = (countryCode, number)
+    func updateData(countryCode: Int32, countryName: String, number: String) {
+        if self.currentData == nil || self.currentData! != (countryCode, countryName, number) {
+            self.currentData = (countryCode, countryName, number)
             if self.isNodeLoaded {
-                self.controllerNode.codeAndNumber = (countryCode, number)
+                self.controllerNode.codeAndNumber = (countryCode, countryName, number)
             }
         }
     }
@@ -67,9 +67,9 @@ final class ChangePhoneNumberController: ViewController {
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
                 let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.presentationData.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.presentationData.theme))
-                controller.completeWithCountryCode = { code, _ in
+                controller.completeWithCountryCode = { code, name in
                     if let strongSelf = self {
-                        strongSelf.updateData(countryCode: Int32(code), number: strongSelf.controllerNode.codeAndNumber.1)
+                        strongSelf.updateData(countryCode: Int32(code), countryName: name, number: strongSelf.controllerNode.codeAndNumber.2)
                         strongSelf.controllerNode.activateInput()
                     }
                 }
@@ -98,7 +98,7 @@ final class ChangePhoneNumberController: ViewController {
     }
     
     @objc func nextPressed() {
-        let (code, number) = self.controllerNode.codeAndNumber
+        let (code, _, number) = self.controllerNode.codeAndNumber
         var phoneNumber = number
         if let code = code {
             phoneNumber = "\(code)\(phoneNumber)"

@@ -62,7 +62,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     case addMember(PresentationTheme, String)
     case addMemberInfo(PresentationTheme, String)
     case inviteLink(PresentationTheme, String)
-    case peerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, RenderedChannelParticipant, ItemListPeerItemEditing, Bool)
+    case peerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, RenderedChannelParticipant, ItemListPeerItemEditing, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -81,7 +81,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                 return .index(1)
         case .inviteLink:
             return .index(2)
-            case let .peerItem(_, _, _, _, participant, _, _):
+            case let .peerItem(_, _, _, _, _, participant, _, _):
                 return .peer(participant.peer.id)
         }
     }
@@ -106,8 +106,8 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsParticipant, lhsEditing, lhsEnabled):
-                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsParticipant, rhsEditing, rhsEnabled) = rhs {
+            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsParticipant, lhsEditing, lhsEnabled):
+                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsParticipant, rhsEditing, rhsEnabled) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -118,6 +118,9 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
+                    if lhsNameOrder != rhsNameOrder {
                         return false
                     }
                     if lhsParticipant != rhsParticipant {
@@ -155,9 +158,9 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                         return true
                 }
             
-            case let .peerItem(index, _, _, _, _, _, _):
+            case let .peerItem(index, _, _, _, _, _, _, _):
                 switch rhs {
-                    case let .peerItem(rhsIndex, _, _, _, _, _, _):
+                    case let .peerItem(rhsIndex, _, _, _, _, _, _, _):
                         return index < rhsIndex
                     case .addMember, .addMemberInfo, .inviteLink:
                         return false
@@ -177,9 +180,8 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                 })
             case let .addMemberInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .peerItem(_, theme, strings, dateTimeFormat, participant, editing, enabled):
-                
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: participant.peer, presence: participant.presences[participant.peer.id], text: .presence, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+            case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, participant, editing, enabled):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: participant.presences[participant.peer.id], text: .presence, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: {
                     arguments.openPeer(participant.peer)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -244,6 +246,10 @@ private struct ChannelMembersControllerState: Equatable {
 }
 
 private func ChannelMembersControllerEntries(account: Account, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
+    if participants == nil || participants?.count == nil {
+        return []
+    }
+    
     var entries: [ChannelMembersEntry] = []
     
     if let participants = participants {
@@ -295,7 +301,7 @@ private func ChannelMembersControllerEntries(account: Account, presentationData:
                         editable = canEditMembers
                 }
             }
-            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id))
+            entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id))
             index += 1
         }
     }
@@ -310,7 +316,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -444,11 +450,13 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                         pushControllerImpl?(infoController)
                        // arguments.pushController(infoController)
                     }
+                }, present: { c, a in
+                    presentControllerImpl?(c, a)
                 })
             }
             
             var emptyStateItem: ItemListControllerEmptyStateItem?
-            if peers == nil {
+            if peers == nil || peers?.count == 0 {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
             

@@ -244,7 +244,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
            //     sentViaBot = true
            // }
             
-            let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, strings: item.presentationData.strings, format: .regular)
+            let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular)
             
             let maxDateAndStatusWidth: CGFloat
             if case .bubble = statusDisplayType {

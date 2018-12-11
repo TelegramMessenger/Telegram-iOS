@@ -8,6 +8,7 @@ import SwiftSignalKit
 public final class ChatMessageNotificationItem: NotificationItem {
     let account: Account
     let strings: PresentationStrings
+    let nameDisplayOrder: PresentationPersonNameOrder
     let messages: [Message]
     let tapAction: () -> Bool
     let expandAction: (@escaping () -> (ASDisplayNode?, () -> Void)) -> Void
@@ -16,9 +17,10 @@ public final class ChatMessageNotificationItem: NotificationItem {
         return messages.first?.id.peerId
     }
     
-    public init(account: Account, strings: PresentationStrings, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
+    public init(account: Account, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
         self.account = account
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
         self.messages = messages
         self.tapAction = tapAction
         self.expandAction = expandAction
@@ -101,11 +103,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             self.avatarNode.setPeer(account: item.account, peer: peer, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
             
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                title = peer.displayTitle
+                title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             } else if let author = firstMessage.author, author.id != peer.id {
-                title = author.displayTitle + "@" + peer.displayTitle
+                title = author.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             } else {
-                title = peer.displayTitle
+                title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             }
         }
         
@@ -138,7 +140,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if message.containsSecretMedia {
                 imageDimensions = nil
             }
-            messageText = descriptionStringForMessage(message, strings: item.strings, accountPeerId: item.account.peerId).0
+            messageText = descriptionStringForMessage(message, strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, accountPeerId: item.account.peerId).0
         } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
             var displayAuthor = true
             if let channel = peer as? TelegramChannel {
@@ -155,15 +157,15 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if item.messages[0].forwardInfo != nil {
                 if let author = item.messages[0].author, displayAuthor {
                     title = nil
-                    messageText = presentationData.strings.CHAT_MESSAGE_FWDS(author.compactDisplayTitle, peer.displayTitle, "\(item.messages.count)").0
+                    messageText = presentationData.strings.CHAT_MESSAGE_FWDS(author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
                 } else {
                     title = nil
-                    messageText = presentationData.strings.MESSAGE_FWDS(peer.displayTitle, "\(item.messages.count)").0
+                    messageText = presentationData.strings.MESSAGE_FWDS(peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
                 }
             } else if item.messages[0].groupingKey != nil {
-                var kind = messageContentKind(item.messages[0], strings: presentationData.strings, accountPeerId: item.account.peerId).key
+                var kind = messageContentKind(item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.account.peerId).key
                 for i in 1 ..< item.messages.count {
-                    let nextKind = messageContentKind(item.messages[i], strings: presentationData.strings, accountPeerId: item.account.peerId)
+                    let nextKind = messageContentKind(item.messages[i], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.account.peerId)
                     if kind != nextKind.key {
                         kind = .text
                         break
@@ -191,16 +193,16 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 } else if isGroup, let author = item.messages[0].author {
                     switch kind {
                         case .image:
-                            messageText = presentationData.strings.CHAT_MESSAGE_PHOTOS(author.compactDisplayTitle, peer.displayTitle, "\(item.messages.count)").0
+                            messageText = presentationData.strings.CHAT_MESSAGE_PHOTOS(author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
                         default:
-                            messageText = presentationData.strings.CHAT_MESSAGES(author.compactDisplayTitle,  peer.displayTitle, "\(item.messages.count)").0
+                            messageText = presentationData.strings.CHAT_MESSAGES(author.compactDisplayTitle,  peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
                     }
                 } else {
                     switch kind {
                         case .image:
-                            messageText = presentationData.strings.MESSAGE_PHOTOS(peer.displayTitle, "\(item.messages.count)").0
+                            messageText = presentationData.strings.MESSAGE_PHOTOS(peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
                         default:
-                            messageText = presentationData.strings.MESSAGES(peer.displayTitle, "\(item.messages.count)").0
+                            messageText = presentationData.strings.MESSAGES(peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
                     }
                 }
             } else {

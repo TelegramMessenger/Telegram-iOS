@@ -78,7 +78,7 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         return self.phoneInputNode.number
     }
     
-    var codeAndNumber: (Int32?, String) {
+    var codeAndNumber: (Int32?, String?, String) {
         get {
             return self.phoneInputNode.codeAndNumber
         } set(value) {
@@ -148,9 +148,12 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
         
-        self.phoneInputNode.countryCodeUpdated = { [weak self] code in
+        self.phoneInputNode.countryCodeUpdated = { [weak self] code, name in
             if let strongSelf = self {
-                if let code = Int(code), let (_, countryName) = countryCodeToIdAndName[code] {
+                if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
+                    let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.presentationData.strings) ?? countryName
+                    strongSelf.countryButton.setTitle(localizedName, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
+                } else if let code = Int(code), let (_, countryName) = countryCodeToIdAndName[code] {
                     strongSelf.countryButton.setTitle(countryName, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
                 } else {
                     strongSelf.countryButton.setTitle(strongSelf.presentationData.strings.Login_CountryCode, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])

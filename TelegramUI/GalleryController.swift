@@ -131,7 +131,7 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
     return message.text
 }
 
-func galleryItemForEntry(account: Account, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
+func galleryItemForEntry(account: Account, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _):
             if let (media, mediaImage) = mediaForMessage(message: message) {
@@ -141,10 +141,10 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                     if file.isVideo {
                         let content: UniversalVideoContent
                         if file.isAnimated {
-                            content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: false, loopVideo: true, enableSound: false)
+                            content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: false, loopVideo: true, enableSound: false, tempFilePath: tempFilePath)
                         } else {
                             if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
-                                content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, loopVideo: loopVideos)
+                                content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, loopVideo: loopVideos, tempFilePath: tempFilePath)
                             } else {
                                 content = PlatformVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
                             }
@@ -161,7 +161,7 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                         return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
-                            if file.size == nil || file.size! < 5 * 1024 * 1024 {
+                            if file.size == nil || file.size! < 2 * 1024 * 1024 {
                                 return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
                             } else {
                                 return ChatDocumentGalleryItem(account: account, presentationData: presentationData, message: message, location: location)

@@ -51,12 +51,14 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     private let account: Account
     var theme: PresentationTheme
     var strings: PresentationStrings
+    var nameDisplayOrder: PresentationPersonNameOrder
     
-    init(account: Account, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.account = account
         self.messageId = messageId
         self.theme = theme
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
         
         self.closeButton = ASButtonNode()
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
@@ -127,7 +129,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            (text, _) = descriptionStringForMessage(effectiveMessage, strings: self.strings, accountPeerId: self.account.peerId)
+            (text, _) = descriptionStringForMessage(effectiveMessage, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, accountPeerId: self.account.peerId)
         }
         
         var updatedMediaReference: AnyMediaReference?
@@ -196,7 +198,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            switch messageContentKind(effectiveMessage, strings: strings, accountPeerId: self.account.peerId) {
+            switch messageContentKind(effectiveMessage, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: self.account.peerId) {
                 case .text:
                     isMedia = false
                 default:

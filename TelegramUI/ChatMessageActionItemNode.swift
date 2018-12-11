@@ -22,15 +22,15 @@ private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, P
     return result
 }
 
-private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
-    return universalServiceMessageString(theme: theme, strings: strings, message: message, accountPeerId: accountPeerId)
+private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
+    return universalServiceMessageString(theme: theme, strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId)
 }
 
-func plainServiceMessageString(strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> String? {
-    return universalServiceMessageString(theme: nil, strings: strings, message: message, accountPeerId: accountPeerId)?.string
+func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> String? {
+    return universalServiceMessageString(theme: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId)?.string
 }
 
-private func universalServiceMessageString(theme: ChatPresentationThemeData?, strings: PresentationStrings, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
+private func universalServiceMessageString(theme: ChatPresentationThemeData?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     var attributedString: NSAttributedString?
     
     let primaryTextColor: UIColor
@@ -44,7 +44,7 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
     
     for media in message.media {
         if let action = media as? TelegramMediaAction {
-            let authorName = message.author?.displayTitle ?? ""
+            let authorName = message.author?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
             
             var isChannel = false
             if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
@@ -70,7 +70,7 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                         if peerIds.count == 1 {
                             attributePeerIds.append((1, peerIds.first))
                         }
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_Invited(authorName, peerDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_Invited(authorName, peerDebugDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
                 case let .removedMembers(peerIds):
                     if peerIds.first == message.author?.id {
@@ -84,7 +84,7 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                         if peerIds.count == 1 {
                             attributePeerIds.append((1, peerIds.first))
                         }
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_Kicked(authorName, peerDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_Kicked(authorName, peerDebugDisplayTitles(peerIds, message.peers)), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
                 case let .photoUpdated(image):
                     if authorName.isEmpty || isChannel {
@@ -510,7 +510,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, message: item.message, accountPeerId: item.account.peerId)
+                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, accountPeerId: item.account.peerId)
             
                 var image: TelegramMediaImage?
                 for media in item.message.media {

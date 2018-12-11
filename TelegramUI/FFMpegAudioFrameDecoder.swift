@@ -1,33 +1,25 @@
 import Foundation
-import TelegramUIPrivateModule
 import CoreMedia
+import FFMpeg
 
 final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
-    private let codecContext: UnsafeMutablePointer<AVCodecContext>
-    private let swrContext: FFMpegSwResample
+    private let codecContext: FFMpegAVCodecContext
+    private let swrContext: FFMpegSWResample
     
-    private let audioFrame: UnsafeMutablePointer<AVFrame>
+    private let audioFrame: FFMpegAVFrame
     private var resetDecoderOnNextFrame = true
     
-    init(codecContext: UnsafeMutablePointer<AVCodecContext>) {
+    init(codecContext: FFMpegAVCodecContext) {
         self.codecContext = codecContext
-        self.audioFrame = av_frame_alloc()
+        self.audioFrame = FFMpegAVFrame()
         
-        self.swrContext = FFMpegSwResample(sourceChannelCount: Int(codecContext.pointee.channels), sourceSampleRate: Int(codecContext.pointee.sample_rate), sourceSampleFormat: codecContext.pointee.sample_fmt, destinationChannelCount: 2, destinationSampleRate: 44100, destinationSampleFormat: AV_SAMPLE_FMT_S16)
-    }
-    
-    deinit {
-        av_frame_unref(self.audioFrame)
-        
-        var codecContextRef: UnsafeMutablePointer<AVCodecContext>? = codecContext
-        avcodec_free_context(&codecContextRef)
+        self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: 2, destinationSampleRate: 44100, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
     }
     
     func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {
-        var status = frame.packet.sendToDecoder(self.codecContext)
+        let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
-            status = avcodec_receive_frame(self.codecContext, self.audioFrame)
-            if status == 0 {
+            if self.codecContext.receive(into: self.audioFrame) {
                 return convertAudioFrame(self.audioFrame, pts: frame.pts, duration: frame.duration)
             }
         }
@@ -39,7 +31,7 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
         return nil
     }
     
-    private func convertAudioFrame(_ frame: UnsafeMutablePointer<AVFrame>, pts: CMTime, duration: CMTime) -> MediaTrackFrame? {
+    private func convertAudioFrame(_ frame: FFMpegAVFrame, pts: CMTime, duration: CMTime) -> MediaTrackFrame? {
         guard let data = self.swrContext.resample(frame) else {
             return nil
         }
@@ -67,7 +59,7 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     }
     
     func reset() {
-        avcodec_flush_buffers(self.codecContext)
+        self.codecContext.flushBuffers()
         self.resetDecoderOnNextFrame = true
     }
 }

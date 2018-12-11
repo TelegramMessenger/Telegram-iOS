@@ -146,7 +146,7 @@ public final class CallController: ViewController {
                         })
                     ])
                 ])
-                strongSelf.present(actionSheet, in: .window(.root))
+                strongSelf.present(actionSheet, in: .window(.calls))
             }
         }
         

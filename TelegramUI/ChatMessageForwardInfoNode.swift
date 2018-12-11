@@ -18,15 +18,15 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
         super.init()
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer, _ authorName: String?, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer, _ authorName: String?, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageForwardInfoNode) {
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         
-        return { theme, strings, type, peer, authorName, constrainedSize in
+        return { presentationData, strings, type, peer, authorName, constrainedSize in
             let peerString: String
             if let authorName = authorName {
-                peerString = "\(peer.displayTitle(strings: strings)) (\(authorName))"
+                peerString = "\(peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)) (\(authorName))"
             } else {
-                peerString = peer.displayTitle(strings: strings)
+                peerString = peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
             }
             
             let titleColor: UIColor
@@ -34,10 +34,10 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? theme.theme.chat.bubble.incomingAccentTextColor : theme.theme.chat.bubble.outgoingAccentTextColor
+                    titleColor = incoming ? presentationData.theme.theme.chat.bubble.incomingAccentTextColor : presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
                     completeSourceString = strings.Message_ForwardedMessage(peerString)
                 case .standalone:
-                    let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                    let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     titleColor = serviceColor.primaryText
                     completeSourceString = strings.Message_ForwardedMessageShort(peerString)
             }

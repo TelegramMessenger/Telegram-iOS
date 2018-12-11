@@ -144,6 +144,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     
     private let titleNode: TextNode
     private let descriptionNode: TextNode
+    private let descriptionProgressNode: ImmediateTextNode
     
     private let extensionIconNode: ASImageNode
     private let extensionIconText: TextNode
@@ -171,6 +172,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     
     private var appliedItem: ListMessageItem?
     private var layoutParams: ListViewItemLayoutParams?
+    private var contentSizeValue: CGSize?
     private var currentLeftOffet: CGFloat = 0.0
     
     override var canBeLongTapped: Bool {
@@ -190,6 +192,10 @@ final class ListMessageFileItemNode: ListMessageNode {
         
         self.descriptionNode = TextNode()
         self.descriptionNode.isUserInteractionEnabled = false
+        
+        self.descriptionProgressNode = ImmediateTextNode()
+        self.descriptionProgressNode.isUserInteractionEnabled = false
+        self.descriptionProgressNode.maximumNumberOfLines = 1
         
         self.extensionIconNode = ASImageNode()
         self.extensionIconNode.isLayerBacked = true
@@ -223,6 +229,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)
+        self.addSubnode(self.descriptionProgressNode)
         self.addSubnode(self.extensionIconNode)
         self.addSubnode(self.extensionIconText)
         self.addSubnode(self.statusNode)
@@ -492,6 +499,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     strongSelf.account = item.account
                     strongSelf.appliedItem = item
                     strongSelf.layoutParams = params
+                    strongSelf.contentSizeValue = nodeLayout.contentSize
                     strongSelf.currentLeftOffet = leftOffset
                     
                     if let _ = updatedTheme {
@@ -604,93 +612,102 @@ final class ListMessageFileItemNode: ListMessageNode {
                     if let updatedStatusSignal = updatedStatusSignal {
                         strongSelf.statusDisposable.set((updatedStatusSignal
                         |> deliverOnMainQueue).start(next: { [weak strongSelf] fileStatus in
-                            let status = fileStatus.mediaStatus
-                            displayLinkDispatcher.dispatch {
-                                if let strongSelf = strongSelf {
-                                    strongSelf.fetchStatus = fileStatus.fetchStatus
-                                    strongSelf.resourceStatus = status
-                                    var musicIsPlaying: Bool?
-                                    var statusState: RadialStatusNodeState = .none
-                                    if !isAudio {
-                                        if let layoutParams = strongSelf.layoutParams {
-                                            strongSelf.updateProgressFrame(size: nodeLayout.contentSize, leftInset: layoutParams.leftInset, rightInset: layoutParams.rightInset, transition: .immediate)
-                                        }
-                                    } else {
-                                        switch fileStatus.fetchStatus {
-                                            case let .Fetching(isActive, progress):
-                                                var adjustedProgress = progress
-                                                if isActive {
-                                                    adjustedProgress = max(adjustedProgress, 0.027)
-                                                }
-                                                statusState = .cloudProgress(color: item.theme.list.itemAccentColor, strokeBackgroundColor: item.theme.list.itemAccentColor.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
-                                            case .Local:
-                                                break
-                                            case .Remote:
-                                                if let image = PresentationResourcesItemList.cloudFetchIcon(item.theme) {
-                                                    statusState = .customIcon(image)
-                                                }
-                                        }
-                                        strongSelf.statusNode.transitionToState(statusState, completion: {})
-                                        strongSelf.statusButtonNode.isUserInteractionEnabled = statusState != .none
-                                        
-                                        switch status {
-                                            case let .fetchStatus(fetchStatus):
-                                                switch fetchStatus {
-                                                    case let .Fetching(isActive, progress):
-                                                        var adjustedProgress = progress
-                                                        if isActive {
-                                                            adjustedProgress = max(adjustedProgress, 0.027)
-                                                        }
-                                                        strongSelf.progressNode.state = .Fetching(progress: adjustedProgress)
-                                                    case .Local:
-                                                        if isAudio {
-                                                            strongSelf.progressNode.state = .Play
-                                                        } else {
-                                                            strongSelf.progressNode.state = .Icon
-                                                        }
-                                                    case .Remote:
-                                                        if isAudio {
-                                                            strongSelf.progressNode.state = .Play
-                                                        } else {
-                                                            strongSelf.progressNode.state = .Remote
-                                                        }
-                                                }
-                                            case let .playbackStatus(playbackStatus):
-                                                switch playbackStatus {
-                                                    case .playing:
-                                                        musicIsPlaying = true
-                                                        strongSelf.progressNode.state = .Pause
-                                                    case .paused:
-                                                        musicIsPlaying = false
-                                                        strongSelf.progressNode.state = .Play
-                                                }
-                                        }
-                                    }
-                                    if let musicIsPlaying = musicIsPlaying {
-                                        if strongSelf.playbackOverlayNode == nil {
-                                            let playbackOverlayNode = ListMessagePlaybackOverlayNode()
-                                            playbackOverlayNode.frame = strongSelf.iconImageNode.frame
-                                            strongSelf.playbackOverlayNode = playbackOverlayNode
-                                            strongSelf.addSubnode(playbackOverlayNode)
-                                        }
-                                        strongSelf.playbackOverlayNode?.isPlaying = musicIsPlaying
-                                    } else if let playbackOverlayNode = strongSelf.playbackOverlayNode {
-                                        strongSelf.playbackOverlayNode = nil
-                                        playbackOverlayNode.removeFromSupernode()
-                                    }
-                                }
+                            if let strongSelf = strongSelf {
+                                strongSelf.fetchStatus = fileStatus.fetchStatus
+                                strongSelf.resourceStatus = fileStatus.mediaStatus
+                                strongSelf.updateStatus(transition: .immediate)
                             }
                         }))
                     }
                     
-                    strongSelf.updateProgressFrame(size: CGSize(width: params.width, height: 52.0), leftInset: params.leftInset, rightInset: params.rightInset, transition: transition)
                     transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 31.0), size: CGSize(width: 11.0, height: 11.0)))
                     
                     if let updatedFetchControls = updatedFetchControls {
                         let _ = strongSelf.fetchControls.swap(updatedFetchControls)
                     }
+                    
+                    strongSelf.updateStatus(transition: transition)
                 }
             })
+        }
+    }
+    
+    private func updateStatus(transition: ContainedViewLayoutTransition) {
+        guard let item = self.item, let media = self.currentMedia, let fetchStatus = self.fetchStatus, let status = self.resourceStatus, let layoutParams = self.layoutParams, let contentSize = self.contentSizeValue else {
+            return
+        }
+        
+        var isAudio = false
+        if let file = media as? TelegramMediaFile {
+            isAudio = file.isMusic || file.isVoice
+        }
+        
+        var musicIsPlaying: Bool?
+        var statusState: RadialStatusNodeState = .none
+        if !isAudio {
+            self.updateProgressFrame(size: contentSize, leftInset: layoutParams.leftInset, rightInset: layoutParams.rightInset, transition: .immediate)
+        } else {
+            switch fetchStatus {
+                case let .Fetching(isActive, progress):
+                    var adjustedProgress = progress
+                    if isActive {
+                        adjustedProgress = max(adjustedProgress, 0.027)
+                    }
+                    statusState = .cloudProgress(color: item.theme.list.itemAccentColor, strokeBackgroundColor: item.theme.list.itemAccentColor.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
+                case .Local:
+                    break
+                case .Remote:
+                    if let image = PresentationResourcesItemList.cloudFetchIcon(item.theme) {
+                        statusState = .customIcon(image)
+                    }
+            }
+            self.statusNode.transitionToState(statusState, completion: {})
+            self.statusButtonNode.isUserInteractionEnabled = statusState != .none
+            
+            switch status {
+                case let .fetchStatus(fetchStatus):
+                    switch fetchStatus {
+                        case let .Fetching(isActive, progress):
+                            var adjustedProgress = progress
+                            if isActive {
+                                adjustedProgress = max(adjustedProgress, 0.027)
+                            }
+                            self.progressNode.state = .Fetching(progress: adjustedProgress)
+                        case .Local:
+                            if isAudio {
+                                self.progressNode.state = .Play
+                            } else {
+                                self.progressNode.state = .Icon
+                            }
+                        case .Remote:
+                            if isAudio {
+                                self.progressNode.state = .Play
+                            } else {
+                                self.progressNode.state = .Remote
+                            }
+                    }
+                case let .playbackStatus(playbackStatus):
+                    switch playbackStatus {
+                        case .playing:
+                            musicIsPlaying = true
+                            self.progressNode.state = .Pause
+                        case .paused:
+                            musicIsPlaying = false
+                            self.progressNode.state = .Play
+                    }
+            }
+        }
+        if let musicIsPlaying = musicIsPlaying {
+            if self.playbackOverlayNode == nil {
+                let playbackOverlayNode = ListMessagePlaybackOverlayNode()
+                playbackOverlayNode.frame = self.iconImageNode.frame
+                self.playbackOverlayNode = playbackOverlayNode
+                self.addSubnode(playbackOverlayNode)
+            }
+            self.playbackOverlayNode?.isPlaying = musicIsPlaying
+        } else if let playbackOverlayNode = self.playbackOverlayNode {
+            self.playbackOverlayNode = nil
+            playbackOverlayNode.removeFromSupernode()
         }
     }
     
@@ -742,9 +759,13 @@ final class ListMessageFileItemNode: ListMessageNode {
     }
     
     private func updateProgressFrame(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard let item = self.appliedItem else {
+            return
+        }
         var descriptionOffset: CGFloat = 0.0
         
-        if let resourceStatus = self.resourceStatus, let item = self.appliedItem {
+        var downloadingString: String?
+        if let resourceStatus = self.resourceStatus {
             var maybeFetchStatus: MediaResourceStatus = .Local
             switch resourceStatus {
                 case .playbackStatus:
@@ -752,7 +773,12 @@ final class ListMessageFileItemNode: ListMessageNode {
                 case let .fetchStatus(fetchStatus):
                     maybeFetchStatus = fetchStatus
                     switch fetchStatus {
-                        case .Remote, .Fetching:
+                        case let .Fetching(_, progress):
+                            if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
+                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
+                            }
+                            descriptionOffset = 14.0
+                        case .Remote:
                             descriptionOffset = 14.0
                         case .Local:
                             break
@@ -802,6 +828,18 @@ final class ListMessageFileItemNode: ListMessageNode {
             descriptionFrame.origin.x = originX
             transition.updateFrame(node: self.descriptionNode, frame: descriptionFrame)
         }
+        
+        if downloadingString != nil {
+            self.descriptionProgressNode.isHidden = false
+            self.descriptionNode.isHidden = true
+        } else {
+            self.descriptionProgressNode.isHidden = true
+            self.descriptionNode.isHidden = false
+        }
+        self.descriptionProgressNode.attributedText = NSAttributedString(string: downloadingString ?? "", font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+        let descriptionSize = self.descriptionProgressNode.updateLayout(CGSize(width: size.width - 14.0, height: size.height))
+        transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: self.descriptionNode.frame.origin, size: descriptionSize))
+        
     }
     
     func activateMedia() {
