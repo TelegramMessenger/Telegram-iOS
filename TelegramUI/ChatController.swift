@@ -3625,6 +3625,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }, openFileGallery: {
                 self?.presentFileMediaPickerOptions(editingMessage: editMediaOptions != nil)
+            }, openWebSearch: {
+                self?.presentWebSearch(editingMessage : editMediaOptions != nil)
             }, openMap: {
                 self?.presentMapPicker(editingMessage: editMediaOptions != nil)
             }, openContacts: {
@@ -3762,6 +3764,41 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     strongSelf.present(legacyController, in: .window(.root))
                 }
             })
+        })
+    }
+    
+    private func presentWebSearch(editingMessage: Bool) {
+        guard let _ = self.presentationInterfaceState.renderedPeer?.peer else {
+            return
+        }
+        
+        let _ = (self.account.postbox.transaction { transaction -> SearchBotsConfiguration in
+            if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.searchBotsConfiguration) as? SearchBotsConfiguration {
+                return entry
+            } else {
+                return SearchBotsConfiguration.defaultValue
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] configuration in
+            if let strongSelf = self {
+                let controller = WebSearchController(account: strongSelf.account, chatLocation: strongSelf.chatLocation, configuration: configuration, sendSelected: { [weak self] ids, collection in
+                    if let strongSelf = self {
+                        for id in ids {
+                            var result: ChatContextResult?
+                            for r in collection.results {
+                                if r.id == id {
+                                    result = r
+                                    break
+                                }
+                            }
+                            if let result = result {
+                                strongSelf.enqueueChatContextResult(collection, result, includeViaBot: false)
+                            }
+                        }
+                    }
+                })
+                strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }
         })
     }
     
@@ -4024,11 +4061,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }))
     }
     
-    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult) {
+    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, includeViaBot: Bool = true) {
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
-        if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result), canSendMessagesToChat(self.presentationInterfaceState) {
+        if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result, includeViaBot: includeViaBot), canSendMessagesToChat(self.presentationInterfaceState) {
             let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {

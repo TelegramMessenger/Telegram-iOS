@@ -6,7 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
@@ -64,6 +64,14 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
             controller?.dismiss(animated: true)
             openGallery()
         })!
+        if !editing {
+            galleryItem.longPressAction = { [weak controller] in
+                if let controller = controller {
+                    controller.dismiss(animated: true)
+                }
+                openWebSearch()
+            }
+        }
         itemViews.append(galleryItem)
         
         underlyingViews.append(galleryItem)
@@ -145,9 +153,10 @@ func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allow
     }
     let recipientName = peer.displayTitle
     
+    legacyController.enableSizeClassSignal = true
     legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
         if let strongLegacyController = legacyController, let baseController = baseController {
-            TGClipboardMenu.present(inParentController: baseController, context: strongLegacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, completed: { selectionContext, editingContext, currentItem in
+            let controller = TGClipboardMenu.present(inParentController: baseController, context: strongLegacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, completed: { selectionContext, editingContext, currentItem in
                 let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: legacyAssetPickerItemGenerator())
                 sendMessagesWithSignals(signals)
             }, dismissed: {
@@ -155,7 +164,11 @@ func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allow
                     strongLegacyController.dismiss()
                 }
             }, sourceView: baseController.view, sourceRect: nil)
+            controller?.customRemoveFromParentViewController = { [weak legacyController] in
+                legacyController?.dismiss()
+            }
         }
     }
+   
     return legacyController
 }

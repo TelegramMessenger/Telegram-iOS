@@ -529,7 +529,6 @@ public class PeerMediaCollectionController: TelegramController {
     func updateInterfaceState(animated: Bool = true, _ f: (PeerMediaCollectionInterfaceState) -> PeerMediaCollectionInterfaceState) {
         let updatedInterfaceState = f(self.interfaceState)
         
-        
         if self.isNodeLoaded {
             self.mediaCollectionDisplayNode.updateMediaCollectionInterfaceState(updatedInterfaceState, animated: animated)
         }

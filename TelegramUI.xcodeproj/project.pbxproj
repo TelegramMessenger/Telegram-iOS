@@ -45,6 +45,9 @@
 		0962E67321B622BE00245FD9 /* PermissionSplitTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67221B622BE00245FD9 /* PermissionSplitTest.swift */; };
 		0962E67721B673AF00245FD9 /* Permission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67621B673AF00245FD9 /* Permission.swift */; };
 		0962E67921B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67821B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift */; };
+		0962E67B21BA00C900245FD9 /* WebSearchInterfaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67A21BA00C900245FD9 /* WebSearchInterfaceState.swift */; };
+		0962E67D21BA048D00245FD9 /* WebSearchSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67C21BA048D00245FD9 /* WebSearchSettings.swift */; };
+		0962E67F21BA786A00245FD9 /* WebSearchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67E21BA786A00245FD9 /* WebSearchItem.swift */; };
 		096C98BA21787A5C00C211FF /* LegacyBridgeAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */; };
 		096C98BF21787C6700C211FF /* TGBridgeAudioEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */; };
 		096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */; };
@@ -81,6 +84,8 @@
 		09C9EA3821A044B500E90146 /* StringForDuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA3721A044B500E90146 /* StringForDuration.swift */; };
 		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
 		09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304172173C15700C00567 /* WatchSettingsController.swift */; };
+		09DD88E721BAE11B000766BC /* WebSearchRecentQueriesNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88E621BAE11B000766BC /* WebSearchRecentQueriesNode.swift */; };
+		09DD88E921BAF65E000766BC /* ItemListAddressItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88E821BAF65E000766BC /* ItemListAddressItem.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
@@ -1126,6 +1131,9 @@
 		0962E67221B622BE00245FD9 /* PermissionSplitTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionSplitTest.swift; sourceTree = "<group>"; };
 		0962E67621B673AF00245FD9 /* Permission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permission.swift; sourceTree = "<group>"; };
 		0962E67821B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageAnimatedStickerItemNode.swift; sourceTree = "<group>"; };
+		0962E67A21BA00C900245FD9 /* WebSearchInterfaceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchInterfaceState.swift; sourceTree = "<group>"; };
+		0962E67C21BA048D00245FD9 /* WebSearchSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchSettings.swift; sourceTree = "<group>"; };
+		0962E67E21BA786A00245FD9 /* WebSearchItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchItem.swift; sourceTree = "<group>"; };
 		096C98B921787A5C00C211FF /* LegacyBridgeAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBridgeAudio.swift; sourceTree = "<group>"; };
 		096C98BB21787C6600C211FF /* TGBridgeAudioEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeAudioEncoder.m; sourceTree = "<group>"; };
 		096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
@@ -1166,6 +1174,8 @@
 		09C9EA3721A044B500E90146 /* StringForDuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringForDuration.swift; sourceTree = "<group>"; };
 		09D304142173C0E900C00567 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
 		09D304172173C15700C00567 /* WatchSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSettingsController.swift; sourceTree = "<group>"; };
+		09DD88E621BAE11B000766BC /* WebSearchRecentQueriesNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchRecentQueriesNode.swift; sourceTree = "<group>"; };
+		09DD88E821BAF65E000766BC /* ItemListAddressItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListAddressItem.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
 		9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExcetionSettingsController.swift; sourceTree = "<group>"; };
@@ -2348,6 +2358,9 @@
 				0962E66021B3512500245FD9 /* WebSearchController.swift */,
 				0962E66221B3513100245FD9 /* WebSearchControllerNode.swift */,
 				0962E66421B3631100245FD9 /* WebSearchNavigationContentNode.swift */,
+				0962E67A21BA00C900245FD9 /* WebSearchInterfaceState.swift */,
+				0962E67E21BA786A00245FD9 /* WebSearchItem.swift */,
+				09DD88E621BAE11B000766BC /* WebSearchRecentQueriesNode.swift */,
 			);
 			name = "Web Search";
 			sourceTree = "<group>";
@@ -3256,6 +3269,7 @@
 				D06ECFCA20B8448E00C576C2 /* ContactSynchronizationSettings.swift */,
 				D08A10BA211DF7A80077488B /* StickerSettings.swift */,
 				0952D1762177FB5400194860 /* WatchPresetSettings.swift */,
+				0962E67C21BA048D00245FD9 /* WebSearchSettings.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -4050,6 +4064,7 @@
 				D0F19F6120E5694D00EEC860 /* GroupStickerPackCurrentItem.swift */,
 				D0F4B019211073C500912B92 /* DeviceContactInfoController.swift */,
 				092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */,
+				09DD88E821BAF65E000766BC /* ItemListAddressItem.swift */,
 			);
 			name = "Peer Info";
 			sourceTree = "<group>";
@@ -5262,6 +5277,7 @@
 				D0EC6D3A1EB9F58800EBF1C3 /* AudioWaveformNode.swift in Sources */,
 				D0105D682182680E007C04A7 /* IsMediaStreamable.swift in Sources */,
 				D0EB41F71F30D4A800838FE6 /* LegacyMediaLocations.swift in Sources */,
+				09DD88E721BAE11B000766BC /* WebSearchRecentQueriesNode.swift in Sources */,
 				D0EC6D3B1EB9F58800EBF1C3 /* EditableTokenListNode.swift in Sources */,
 				D0EC6D3C1EB9F58800EBF1C3 /* PhoneInputNode.swift in Sources */,
 				D0147BAB206EA6C100E40378 /* SecureIdDocumentImageGalleryItem.swift in Sources */,
@@ -5483,6 +5499,7 @@
 				D00FF2091F4E2414006FA332 /* InstantPageSettingsNode.swift in Sources */,
 				D0BE3037206139F500FBE6D8 /* ImageCompression.swift in Sources */,
 				09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */,
+				0962E67D21BA048D00245FD9 /* WebSearchSettings.swift in Sources */,
 				D0EC6DAB1EB9F58900EBF1C3 /* ChatInterfaceStateAccessoryPanels.swift in Sources */,
 				D0EC6DAC1EB9F58900EBF1C3 /* ChatInterfaceStateInputPanels.swift in Sources */,
 				D056CD761FF2A30900880D28 /* ChatSwipeToReplyRecognizer.swift in Sources */,
@@ -5587,6 +5604,7 @@
 				D0EC6DDF1EB9F58900EBF1C3 /* ChatTextInputAudioRecordingTimeNode.swift in Sources */,
 				D0BFAE5B20AB35D200793CF2 /* IconSwitchNode.swift in Sources */,
 				D0EC6DE01EB9F58900EBF1C3 /* ChatTextInputAudioRecordingCancelIndicator.swift in Sources */,
+				0962E67F21BA786A00245FD9 /* WebSearchItem.swift in Sources */,
 				D09D88711F86D36700BEB4C9 /* CountryList.swift in Sources */,
 				D0EC6DE11EB9F58900EBF1C3 /* ChatMessageSelectionInputPanelNode.swift in Sources */,
 				D04281FA200E5CDC009DDE36 /* ChatRecentActionsControllerState.swift in Sources */,
@@ -5773,6 +5791,7 @@
 				D0B37C5C1F8D22AE004252DF /* ThemeSettingsController.swift in Sources */,
 				D05D8B412192FC8A0064586F /* LocalizationListItem.swift in Sources */,
 				D0383ED4207CFBB900C45548 /* GalleryThumbnailContainerNode.swift in Sources */,
+				0962E67B21BA00C900245FD9 /* WebSearchInterfaceState.swift in Sources */,
 				D0EC6E4B1EB9F58900EBF1C3 /* ItemListControllerSegmentedTitleView.swift in Sources */,
 				D0EC6E4D1EB9F58900EBF1C3 /* PeerInfoController.swift in Sources */,
 				D0EC6E4E1EB9F58900EBF1C3 /* GroupInfoController.swift in Sources */,
@@ -5871,6 +5890,7 @@
 				0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */,
 				D0EC6E821EB9F58900EBF1C3 /* NotificationContainerControllerNode.swift in Sources */,
 				D0EC6E831EB9F58900EBF1C3 /* NotificationItemContainerNode.swift in Sources */,
+				09DD88E921BAF65E000766BC /* ItemListAddressItem.swift in Sources */,
 				D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */,
 				D0EC6E841EB9F58900EBF1C3 /* NotificationItem.swift in Sources */,
 				D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */,

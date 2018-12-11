@@ -23,6 +23,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var replyInfoNode: ChatMessageReplyInfoNode?
     private var replyBackgroundNode: ASImageNode?
     
+    private var actionButtonsNode: ChatMessageActionButtonsNode?
+    
     private var highlightedState: Bool = false
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
@@ -97,6 +99,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         let layoutConstants = self.layoutConstants
         let imageLayout = self.imageNode.asyncLayout()
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
+        let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
         
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentReplyBackgroundNode = self.replyBackgroundNode
@@ -231,6 +234,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
             var updatedReplyBackgroundNode: ASImageNode?
             var replyBackgroundImage: UIImage?
+            var replyMarkup: ReplyMarkupMessageAttribute?
+            
             for attribute in item.message.attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
@@ -244,7 +249,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                     replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
-                    break
+                } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
+                    replyMarkup = attribute
                 }
             }
             
@@ -277,8 +283,25 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             let contentHeight = max(imageSize.height, layoutConstants.image.minDimensions.height)
+            var maxContentWidth = imageSize.width
+            var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
+            if let replyMarkup = replyMarkup {
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.account, item.presentationData.theme, item.presentationData.strings, replyMarkup, item.message, maxContentWidth)
+                maxContentWidth = max(maxContentWidth, minWidth)
+                actionButtonsFinalize = buttonsLayout
+            }
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: contentHeight), insets: layoutInsets), { [weak self] animation, _ in
+            var actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?
+            if let actionButtonsFinalize = actionButtonsFinalize {
+                actionButtonsSizeAndApply = actionButtonsFinalize(maxContentWidth)
+            }
+            
+            var layoutSize = CGSize(width: params.width, height: contentHeight)
+            if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                layoutSize.height += actionButtonsSizeAndApply.0.height
+            }
+            
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
                     
@@ -333,6 +356,35 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
                         replyInfoNode.removeFromSupernode()
                         strongSelf.replyInfoNode = nil
+                    }
+                    
+                    if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                        var animated = false
+                        if let _ = strongSelf.actionButtonsNode {
+                            if case .System = animation {
+                                animated = true
+                            }
+                        }
+                        let actionButtonsNode = actionButtonsSizeAndApply.1(animated)
+                        let previousFrame = actionButtonsNode.frame
+                        let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: actionButtonsSizeAndApply.0)
+                        actionButtonsNode.frame = actionButtonsFrame
+                        if actionButtonsNode !== strongSelf.actionButtonsNode {
+                            strongSelf.actionButtonsNode = actionButtonsNode
+                            actionButtonsNode.buttonPressed = { button in
+                                if let strongSelf = self {
+                                    strongSelf.performMessageButtonAction(button: button)
+                                }
+                            }
+                            strongSelf.addSubnode(actionButtonsNode)
+                        } else {
+                            if case let .System(duration) = animation {
+                                actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                            }
+                        }
+                    } else if let actionButtonsNode = strongSelf.actionButtonsNode {
+                        actionButtonsNode.removeFromSupernode()
+                        strongSelf.actionButtonsNode = nil
                     }
                 }
             })

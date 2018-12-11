@@ -53,6 +53,6 @@ final class GridMessageSelectionNode: ASDisplayNode {
         super.layout()
         
         let checkSize = CGSize(width: 32.0, height: 32.0)
-        self.checkNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width - checkSize.width - 4.0, y: 4.0), size: checkSize)
+        self.checkNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width - checkSize.width, y: 0.0), size: checkSize)
     }
 }
