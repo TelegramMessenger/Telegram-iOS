@@ -310,7 +310,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -444,6 +444,8 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                         pushControllerImpl?(infoController)
                        // arguments.pushController(infoController)
                     }
+                }, present: { c, a in
+                    presentControllerImpl?(c, a)
                 })
             }
             

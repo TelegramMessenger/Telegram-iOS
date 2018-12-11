@@ -379,9 +379,29 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                         }
                     }
                 case let .recentSearch(query):
-                    break
-                default:
-                    break
+                    if let updated = updated, isParticipantMember(updated.participant), updated.peer.indexName.matchesByTokens(query) {
+                        var found = false
+                        loop: for i in 0 ..< list.count {
+                            if list[i].peer.id == updated.peer.id {
+                                list[i] = updated
+                                found = true
+                                updatedList = true
+                                break loop
+                            }
+                        }
+                        if !found {
+                            list.insert(updated, at: 0)
+                            updatedList = true
+                        }
+                    } else if let previous = previous, isParticipantMember(previous) {
+                        loop: for i in 0 ..< list.count {
+                            if list[i].peer.id == previous.peerId {
+                                list.remove(at: i)
+                                updatedList = true
+                                break loop
+                            }
+                        }
+                    }
             }
         }
         if updatedList {

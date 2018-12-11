@@ -1780,6 +1780,8 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 if let infoController = peerInfoController(account: account, peer: peer) {
                     arguments.pushController(infoController)
                 }
+            }, present: { c, a in
+                presentControllerImpl?(c, a)
             })
         }
         

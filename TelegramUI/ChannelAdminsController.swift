@@ -473,7 +473,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -669,6 +669,8 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                         presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
                         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
+                }, present: { c, a in
+                    presentControllerImpl?(c, a)
                 })
             }
             

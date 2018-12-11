@@ -311,7 +311,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
 
     let actionsDisposable = DisposableSet()
@@ -477,6 +477,8 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
                             arguments.openPeerInfo(rendered.peer)
                         }
                     }
+                }, present: { c, a in
+                    presentControllerImpl?(c, a)
                 })
             }
             
