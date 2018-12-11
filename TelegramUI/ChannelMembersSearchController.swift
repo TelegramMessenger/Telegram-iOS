@@ -70,6 +70,9 @@ final class ChannelMembersSearchController: ViewController {
             self?.dismiss()
             self?.openPeer(peer, participant)
         }
+        self.controllerNode.present = { [weak self] c, a in
+            self?.present(c, in: .window(.root), with: a)
+        }
         
         self.displayNodeDidLoad()
     }
