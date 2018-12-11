@@ -5,14 +5,20 @@ import SwiftSignalKit
 import TelegramCore
 
 final class BotCheckoutPaymentShippingOptionSheetController: ActionSheetController {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
+    private var presentationDisposable: Disposable?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, currency: String, options: [BotPaymentShippingOption], currentId: String?, applyValue: @escaping (String) -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(account: Account, currency: String, options: [BotPaymentShippingOption], currentId: String?, applyValue: @escaping (String) -> Void) {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let theme = presentationData.theme
+        let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        
+        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+            }
+        })
         
         var items: [ActionSheetItem] = []
         
@@ -66,6 +72,10 @@ final class BotCheckoutPaymentShippingOptionSheetController: ActionSheetControll
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDisposable?.dispose()
     }
 }
 

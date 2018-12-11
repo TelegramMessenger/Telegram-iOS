@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 
 final class FormControllerScrollerNodeView: UIScrollView {
+    weak var target: FormControllerScrollerNode?
     var ignoreUpdateBounds = false
     
     override init(frame: CGRect) {
@@ -32,6 +33,16 @@ final class FormControllerScrollerNodeView: UIScrollView {
     
     override func scrollRectToVisible(_ rect: CGRect, animated: Bool) {
     }
+    
+    override func touchesShouldBegin(_ touches: Set<UITouch>, with event: UIEvent?, in view: UIView) -> Bool {
+        return self.target?.touchesShouldBegin(touches, with: event) ?? super.touchesShouldBegin(touches, with: event, in: view)
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if self.target?.touchesShouldBegin(touches, with: event) ?? true {
+            super.touchesBegan(touches, with: event)
+        }
+    }
 }
 
 final class FormControllerScrollerNode: ASDisplayNode, UIScrollViewDelegate {
@@ -41,12 +52,15 @@ final class FormControllerScrollerNode: ASDisplayNode, UIScrollViewDelegate {
     
     weak var delegate: UIScrollViewDelegate?
     
+    var touchesPrevented: ((CGPoint) -> Bool)?
+    
     override init() {
         super.init()
         
         self.setViewBlock({
             return FormControllerScrollerNodeView(frame: CGRect())
         })
+        self.view.target = self
     }
     
     override func didLoad() {
@@ -56,5 +70,17 @@ final class FormControllerScrollerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.delegate?.scrollViewDidScroll?(scrollView)
+    }
+    
+    func touchesShouldBegin(_ touches: Set<UITouch>, with event: UIEvent?) -> Bool {
+        let touchesPosition = touches.first!.location(in: self.view)
+        
+        if let touchesPrevented = self.touchesPrevented {
+            if touchesPrevented(touchesPosition) {
+                return false
+            }
+        }
+        
+        return true
     }
 }

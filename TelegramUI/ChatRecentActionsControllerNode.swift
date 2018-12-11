@@ -350,6 +350,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
+        }, rateCall: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)
@@ -423,15 +424,34 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }
             }))
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                
+                strongSelf.presentationData = presentationData
+                strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations)))
+                
+                strongSelf.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
+            }
+        })
     }
     
     deinit {
+        self.presentationDataDisposable?.dispose()
         self.historyDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.galleryHiddenMesageAndMediaDisposable.dispose()
         self.resolvePeerByNameDisposable.dispose()
         self.adminsDisposable?.dispose()
         self.banDisposables.dispose()
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.panelBackgroundNode.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
+        self.panelSeparatorNode.backgroundColor = theme.chat.inputPanel.panelStrokeColor
+        self.panelButtonNode.setTitle(presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: theme.chat.inputPanel.panelControlAccentColor, for: [])
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

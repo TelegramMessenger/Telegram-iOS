@@ -70,8 +70,7 @@ func documentSelectionItemsForField(field: SecureIdParsedRequestedFormField, str
 }
 
 final class SecureIdDocumentTypeSelectionController: ActionSheetController {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
+    private var presentationDisposable: Disposable?
     private let completion: (SecureIdDocumentFormRequestedData) -> Void
     
     private let _ready = Promise<Bool>()
@@ -79,12 +78,20 @@ final class SecureIdDocumentTypeSelectionController: ActionSheetController {
         return self._ready
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, field: SecureIdParsedRequestedFormField, currentValues: [SecureIdValueWithContext], completion: @escaping (SecureIdDocumentFormRequestedData) -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(account: Account, field: SecureIdParsedRequestedFormField, currentValues: [SecureIdValueWithContext], completion: @escaping (SecureIdDocumentFormRequestedData) -> Void) {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let theme = presentationData.theme
+        let strings = presentationData.strings
+        
         self.completion = completion
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        
+        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+            }
+        })
         
         self._ready.set(.single(true))
         
@@ -107,5 +114,9 @@ final class SecureIdDocumentTypeSelectionController: ActionSheetController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDisposable?.dispose()
     }
 }

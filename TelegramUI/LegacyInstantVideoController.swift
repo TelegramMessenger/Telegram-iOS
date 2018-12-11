@@ -84,6 +84,11 @@ final class InstantVideoController: LegacyController {
     }
 }
 
+func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversationInputMicPallete {
+    let inputPanelTheme = theme.chat.inputPanel
+    return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
+}
+
 func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, account: Account, peerId: PeerId, send: @escaping (EnqueueMessage) -> Void) -> InstantVideoController {
     let legacyController = InstantVideoController(presentation: .custom, theme: theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
@@ -94,7 +99,6 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
     legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
         if let legacyController = legacyController, let baseController = baseController {
             legacyController.view.disablesInteractiveTransitionGestureRecognizer = true
-            let inputPanelTheme = theme.chat.inputPanel
             var uploadInterface: LegacyLiveUploadInterface?
             if peerId.namespace != Namespaces.Peer.SecretChat {
                 uploadInterface = LegacyLiveUploadInterface(account: account)
@@ -103,7 +107,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 return nil
             }, parentController: baseController, controlsFrame: panelFrame, isAlreadyLocked: {
                 return false
-            }, liveUploadInterface: uploadInterface, pallete: TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor))!
+            }, liveUploadInterface: uploadInterface, pallete: legacyInputMicPalette(from: theme))!
             controller.finishedWithVideo = { videoUrl, previewImage, _, duration, dimensions, liveUploadData, adjustments in
                 guard let videoUrl = videoUrl else {
                     return
@@ -164,6 +168,13 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 }
             }
             legacyController.bindCaptureController(controller)
+            
+            let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak controller] presentationData in
+                if let controller = controller {
+                    controller.pallete = legacyInputMicPalette(from: presentationData.theme)
+                }
+            })
+            legacyController.disposables.add(presentationDisposable)
         }
     }
     return legacyController

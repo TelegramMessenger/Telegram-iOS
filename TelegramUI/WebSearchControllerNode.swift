@@ -46,16 +46,6 @@ private struct WebSearchTransition {
     let hasMore: Bool
 }
 
-private final class HorizontalListContextResultsOpaqueState {
-    let entryCount: Int
-    let hasMore: Bool
-    
-    init(entryCount: Int, hasMore: Bool) {
-        self.entryCount = entryCount
-        self.hasMore = hasMore
-    }
-}
-
 private func preparedTransition(from fromEntries: [WebSearchEntry], to toEntries: [WebSearchEntry], hasMore: Bool, account: Account, theme: PresentationTheme, interfaceState: WebSearchInterfaceState, controllerInteraction: WebSearchControllerInteraction) -> WebSearchTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
@@ -68,6 +58,56 @@ private func preparedTransition(from fromEntries: [WebSearchEntry], to toEntries
 private func gridNodeLayoutForContainerLayout(size: CGSize) -> GridNodeLayoutType {
     let side = floorToScreenPixels((size.width - 3.0) / 4.0)
     return .fixed(itemSize: CGSize(width: side, height: side), fillWidth: true, lineSpacing: 1.0, itemSpacing: 1.0)
+}
+
+
+private struct WebSearchRecentQueryStableId: Hashable {
+    let query: String
+    
+    var hashValue: Int {
+        return query.hashValue
+    }
+    
+    static func ==(lhs: WebSearchRecentQueryStableId, rhs: WebSearchRecentQueryStableId) -> Bool {
+        return lhs.query == rhs.query
+    }
+}
+
+private struct WebSearchRecentQueryEntry: Comparable, Identifiable {
+    let index: Int
+    let query: String
+    
+    var stableId: WebSearchRecentQueryStableId {
+        return WebSearchRecentQueryStableId(query: self.query)
+    }
+    
+    static func ==(lhs: WebSearchRecentQueryEntry, rhs: WebSearchRecentQueryEntry) -> Bool {
+        return lhs.index == rhs.index && lhs.query == rhs.query
+    }
+    
+    static func <(lhs: WebSearchRecentQueryEntry, rhs: WebSearchRecentQueryEntry) -> Bool {
+        return lhs.index < rhs.index
+    }
+    
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, header: ListViewItemHeader) -> ListViewItem {
+        return WebSearchRecentQueryItem(account: account, theme: theme, strings: strings, query: self.query, controllerInteraction: controllerInteraction, header: header)
+    }
+}
+
+private struct WebSearchRecentTransition {
+    let deletions: [ListViewDeleteItem]
+    let insertions: [ListViewInsertItem]
+    let updates: [ListViewUpdateItem]
+}
+
+private func preparedWebSearchRecentTransition(from fromEntries: [WebSearchRecentQueryEntry], to toEntries: [WebSearchRecentQueryEntry], account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, header: ListViewItemHeader) -> WebSearchRecentTransition {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+    
+    let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, controllerInteraction: controllerInteraction, header: header), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, controllerInteraction: controllerInteraction, header: header), directionHint: nil) }
+    
+    return WebSearchRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
 class WebSearchControllerNode: ASDisplayNode {
@@ -90,6 +130,10 @@ class WebSearchControllerNode: ASDisplayNode {
     
     private let attributionNode: ASImageNode
     
+    private let recentQueriesPlaceholder: ImmediateTextNode
+    private let recentQueriesNode: ListView
+    private var enqueuedRecentTransitions: [(WebSearchRecentTransition, Bool)] = []
+    
     private let gridNode: GridNode
     private var enqueuedTransitions: [(WebSearchTransition, Bool)] = []
     private var dequeuedInitialTransitionOnLayout = false
@@ -97,18 +141,21 @@ class WebSearchControllerNode: ASDisplayNode {
     private var currentExternalResults: ChatContextResultCollection?
     private var currentProcessedResults: ChatContextResultCollection?
     private var currentEntries: [WebSearchEntry]?
+    private var hasMore = false
     private var isLoadingMore = false
     
-    private let results =  ValuePromise<ChatContextResultCollection>(ignoreRepeated: true)
-    
+    private let results = ValuePromise<ChatContextResultCollection?>(nil, ignoreRepeated: true)
     
     private let disposable = MetaDisposable()
     private let loadMoreDisposable = MetaDisposable()
+    
+    private let recentDisposable = MetaDisposable()
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var requestUpdateInterfaceState: (Bool, (WebSearchInterfaceState) -> WebSearchInterfaceState) -> Void = { _, _ in }
     var cancel: (() -> Void)?
+    var dismissInput: (() -> Void)?
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction) {
         self.account = account
@@ -136,6 +183,11 @@ class WebSearchControllerNode: ASDisplayNode {
         self.gridNode = GridNode()
         self.gridNode.backgroundColor = theme.list.plainBackgroundColor
         
+        self.recentQueriesNode = ListView()
+        self.recentQueriesNode.backgroundColor = theme.list.plainBackgroundColor
+        
+        self.recentQueriesPlaceholder = ImmediateTextNode()
+        
         super.init()
         
         self.setViewBlock({
@@ -143,6 +195,7 @@ class WebSearchControllerNode: ASDisplayNode {
         })
         
         self.addSubnode(self.gridNode)
+        self.addSubnode(self.recentQueriesNode)
         self.addSubnode(self.segmentedBackgroundNode)
         self.addSubnode(self.segmentedSeparatorNode)
         self.view.addSubview(self.segmentedControl)
@@ -165,18 +218,41 @@ class WebSearchControllerNode: ASDisplayNode {
             }
         }))
         
+        let previousRecentItems = Atomic<[WebSearchRecentQueryEntry]?>(value: nil)
+        self.recentDisposable.set((combineLatest(webSearchRecentQueries(postbox: self.account.postbox), self.webSearchInterfaceStatePromise.get())
+        |> deliverOnMainQueue).start(next: { [weak self] queries, interfaceState in
+            if let strongSelf = self {
+                var entries: [WebSearchRecentQueryEntry] = []
+                for i in 0 ..< queries.count {
+                    entries.append(WebSearchRecentQueryEntry(index: i, query: queries[i]))
+                }
+                
+                let header = ChatListSearchItemHeader(type: .recentPeers, theme: interfaceState.presentationData.theme, strings:interfaceState.presentationData.strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
+                    _ = clearRecentWebSearchQueries(postbox: strongSelf.account.postbox).start()
+                })
+                
+                let previousEntries = previousRecentItems.swap(entries)
+                
+                let transition = preparedWebSearchRecentTransition(from: previousEntries ?? [], to: entries, account: strongSelf.account, theme: interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction, header: header)
+                strongSelf.enqueueRecentTransition(transition, firstTime: previousEntries == nil)
+            }
+        }))
+        
         self.gridNode.visibleItemsUpdated = { [weak self] visibleItems in
-            //state.hasMore &&
-            //if visibleItems.bottom.0 <= state.entryCount - 10 {
-            //    strongSelf.loadMore()
-            //}
+            if let strongSelf = self, let bottom = visibleItems.bottom, let entries = strongSelf.currentEntries {
+                if bottom.0 <= entries.count {
+                    strongSelf.loadMore()
+                }
+            }
         }
         
-//        let selectorRecogizner = ChatGridLiveSelectorRecognizer(target: self, action: #selector(self.panGesture(_:)))
-//        selectorRecogizner.shouldBegin = { [weak controllerInteraction] in
-//            return controllerInteraction?.selectionState != nil
-//        }
-//        self.view.addGestureRecognizer(selectorRecogizner)
+        self.gridNode.scrollingInitiated = { [weak self] in
+            self?.dismissInput?()
+        }
+        
+        self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
+            self?.dismissInput?()
+        }
     }
     
     deinit {
@@ -235,6 +311,8 @@ class WebSearchControllerNode: ASDisplayNode {
         
         transition.updateFrame(view: self.segmentedControl, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - controlSize.width) / 2.0), y: panelY + floor((segmentedHeight - controlSize.height) / 2.0)), size: controlSize))
         
+        insets.top -= 4.0
+        
         let toolbarHeight: CGFloat = 44.0
         let toolbarY = layout.size.height - toolbarHeight - insets.bottom
         transition.updateFrame(node: self.toolbarBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: toolbarY), size: CGSize(width: layout.size.width, height: toolbarHeight + insets.bottom)))
@@ -260,6 +338,31 @@ class WebSearchControllerNode: ASDisplayNode {
         insets.bottom += toolbarHeight
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, preloadSize: 400.0, type: gridNodeLayoutForContainerLayout(size: layout.size)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
+        var duration: Double = 0.0
+        var curve: UInt = 0
+        switch transition {
+            case .immediate:
+                break
+            case let .animated(animationDuration, animationCurve):
+                duration = animationDuration
+                switch animationCurve {
+                    case .easeInOut:
+                        break
+                    case .spring:
+                        curve = 7
+                }
+        }
+        
+        let listViewCurve: ListViewAnimationCurve
+        if curve == 7 {
+            listViewCurve = .Spring(duration: duration)
+        } else {
+            listViewCurve = .Default(duration: duration)
+        }
+        
+        self.recentQueriesNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.recentQueriesNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true
             self.dequeueTransition()
@@ -279,7 +382,7 @@ class WebSearchControllerNode: ASDisplayNode {
         }
     }
     
-    func updateResults(_ results: ChatContextResultCollection) {
+    func updateResults(_ results: ChatContextResultCollection?) {
         if self.currentExternalResults == results {
             return
         }
@@ -289,6 +392,10 @@ class WebSearchControllerNode: ASDisplayNode {
         self.isLoadingMore = false
         self.loadMoreDisposable.set(nil)
         self.results.set(results)
+    }
+    
+    func clearResults() {
+        self.results.set(nil)
     }
     
     private func loadMore() {
@@ -315,24 +422,31 @@ class WebSearchControllerNode: ASDisplayNode {
             }))
     }
     
-    private func updateInternalResults(_ results: ChatContextResultCollection, interfaceState: WebSearchInterfaceState) {
+    private func updateInternalResults(_ results: ChatContextResultCollection?, interfaceState: WebSearchInterfaceState) {
         var entries: [WebSearchEntry] = []
-        var index = 0
-        var resultIds = Set<WebSearchContextResultStableId>()
-        for result in results.results {
-            let entry = WebSearchEntry(index: index, result: result)
-            if resultIds.contains(entry.stableId) {
-                continue
-            } else {
-                resultIds.insert(entry.stableId)
+        var hasMore = false
+        if let state = interfaceState.state, state.query.isEmpty {
+        } else if let results = results {
+            hasMore = results.nextOffset != nil
+            
+            var index = 0
+            var resultIds = Set<WebSearchContextResultStableId>()
+            for result in results.results {
+                let entry = WebSearchEntry(index: index, result: result)
+                if resultIds.contains(entry.stableId) {
+                    continue
+                } else {
+                    resultIds.insert(entry.stableId)
+                }
+                entries.append(entry)
+                index += 1
             }
-            entries.append(entry)
-            index += 1
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, account: self.account, theme: interfaceState.presentationData.theme, interfaceState: interfaceState, controllerInteraction: self.controllerInteraction)
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: hasMore, account: self.account, theme: interfaceState.presentationData.theme, interfaceState: interfaceState, controllerInteraction: self.controllerInteraction)
         self.currentEntries = entries
+        
         self.enqueueTransition(transition, firstTime: firstTime)
     }
     
@@ -355,7 +469,38 @@ class WebSearchControllerNode: ASDisplayNode {
                 }
             }
             
+            if let state = self.webSearchInterfaceState.state {
+                self.recentQueriesNode.isHidden = !state.query.isEmpty
+            }
+            
+            self.hasMore = transition.hasMore
             self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: nil, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: completion)
+        }
+    }
+    
+    private func enqueueRecentTransition(_ transition: WebSearchRecentTransition, firstTime: Bool) {
+        enqueuedRecentTransitions.append((transition, firstTime))
+        
+        if self.containerLayout != nil {
+            while !self.enqueuedRecentTransitions.isEmpty {
+                self.dequeueRecentTransition()
+            }
+        }
+    }
+    
+    private func dequeueRecentTransition() {
+        if let (transition, firstTime) = self.enqueuedRecentTransitions.first {
+            self.enqueuedRecentTransitions.remove(at: 0)
+            
+            var options = ListViewDeleteAndInsertOptions()
+            if firstTime {
+                options.insert(.PreferSynchronousDrawing)
+            } else {
+                options.insert(.AnimateInsertion)
+            }
+            
+            self.recentQueriesNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
+            })
         }
     }
     

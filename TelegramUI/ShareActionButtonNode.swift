@@ -3,11 +3,21 @@ import AsyncDisplayKit
 import Display
 
 final class ShareActionButtonNode: HighlightTrackingButtonNode {
-    private let badgeTextColor: UIColor
-    
     private let badgeLabel: TextNode
     private var badgeText: NSAttributedString?
     private let badgeBackground: ASImageNode
+    
+    var badgeBackgroundColor: UIColor {
+        didSet {
+            self.badgeBackground.image = generateStretchableFilledCircleImage(diameter: 22.0, color: self.badgeBackgroundColor)
+        }
+    }
+    
+    var badgeTextColor: UIColor {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
     
     var badge: String? {
         didSet {
@@ -28,6 +38,7 @@ final class ShareActionButtonNode: HighlightTrackingButtonNode {
     }
     
     init(badgeBackgroundColor: UIColor, badgeTextColor: UIColor) {
+        self.badgeBackgroundColor = badgeBackgroundColor
         self.badgeTextColor = badgeTextColor
         
         self.badgeLabel = TextNode()

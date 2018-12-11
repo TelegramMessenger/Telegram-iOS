@@ -4,6 +4,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+public enum ArchivedStickerPacksControllerMode {
+    case stickers
+    case masks
+}
+
 private final class ArchivedStickerPacksControllerArguments {
     let account: Account
     
@@ -221,7 +226,7 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
     return entries
 }
 
-public func archivedStickerPacksController(account: Account, archived: [ArchivedStickerPackItem]?, updatedPacks: @escaping([ArchivedStickerPackItem]?)->Void) -> ViewController {
+public func archivedStickerPacksController(account: Account, mode: ArchivedStickerPacksControllerMode, archived: [ArchivedStickerPackItem]?, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void) -> ViewController {
     let statePromise = ValuePromise(ArchivedStickerPacksControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ArchivedStickerPacksControllerState())
     let updateState: ((ArchivedStickerPacksControllerState) -> ArchivedStickerPacksControllerState) -> Void = { f in
@@ -238,9 +243,15 @@ public func archivedStickerPacksController(account: Account, archived: [Archived
     let removePackDisposables = DisposableDict<ItemCollectionId>()
     actionsDisposable.add(removePackDisposables)
     
+    let namespace: ArchivedStickerPacksNamespace
+    switch mode {
+        case .stickers:
+            namespace = .stickers
+        case .masks:
+            namespace = .masks
+    }
     let stickerPacks = Promise<[ArchivedStickerPackItem]?>()
-    stickerPacks.set(.single(archived) |> then(archivedStickerPacks(account: account) |> map(Optional.init)))
-    
+    stickerPacks.set(.single(archived) |> then(archivedStickerPacks(account: account, namespace: namespace) |> map(Optional.init)))
     
     actionsDisposable.add(stickerPacks.get().start(next: { packs in
         updatedPacks(packs)

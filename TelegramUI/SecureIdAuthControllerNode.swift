@@ -450,19 +450,20 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         switch field {
             case let .identity(personalDetails, document):
                 if let document = document {
-                    var hasValueType: (document: SecureIdRequestedIdentityDocument, selfie: Bool, translation: Bool)?
+                    var hasValueType: (document: SecureIdRequestedIdentityDocument, requireSelfie: Bool, hasSelfie: Bool, requireTranslation: Bool, hasTranslation: Bool)?
                     switch document {
                         case let .just(type):
                             if let value = findValue(formData.values, key: type.document.valueKey)?.1 {
+                                let data = extractSecureIdValueAdditionalData(value.value)
                                 switch value.value {
                                     case .passport:
-                                        hasValueType = (.passport, type.selfie, type.translation)
+                                        hasValueType = (.passport, type.selfie, data.selfie, type.translation, data.translation)
                                     case .idCard:
-                                        hasValueType = (.idCard, type.selfie, type.translation)
+                                        hasValueType = (.idCard, type.selfie, data.selfie, type.translation, data.translation)
                                     case .driversLicense:
-                                        hasValueType = (.driversLicense, type.selfie, type.translation)
+                                        hasValueType = (.driversLicense, type.selfie, data.selfie, type.translation, data.translation)
                                     case .internalPassport:
-                                        hasValueType = (.internalPassport, type.selfie, type.translation)
+                                        hasValueType = (.internalPassport, type.selfie, data.selfie, type.translation, data.translation)
                                     default:
                                         break
                                 }
@@ -481,13 +482,13 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                     if hasValueType == nil || dataFilled {
                                         switch value.value {
                                             case .passport:
-                                                hasValueType = (.passport, type.selfie, type.translation)
+                                                hasValueType = (.passport, type.selfie, data.selfie, type.translation, data.translation)
                                             case .idCard:
-                                                hasValueType = (.idCard, type.selfie, type.translation)
+                                                hasValueType = (.idCard, type.selfie, data.selfie, type.translation, data.translation)
                                             case .driversLicense:
-                                                hasValueType = (.driversLicense, type.selfie, type.translation)
+                                                hasValueType = (.driversLicense, type.selfie, data.selfie, type.translation, data.translation)
                                             case .internalPassport:
-                                                hasValueType = (.internalPassport, type.selfie, type.translation)
+                                                hasValueType = (.internalPassport, type.selfie, data.selfie, type.translation, data.translation)
                                             default:
                                                 break
                                         }
@@ -499,8 +500,15 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 }
                             }
                     }
-                    if let (hasValueType, selfie, translation) = hasValueType {
-                        self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: hasValueType, selfie: selfie, translations: translation), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                    if let (hasValueType, requireSelfie, hasSelfie, requireTranslation, hasTranslation) = hasValueType {
+                        var scrollTo: SecureIdDocumentFormScrollToSubject?
+                        if requireSelfie && !hasSelfie {
+                            scrollTo = .selfie
+                        }
+                        else if requireTranslation && !hasTranslation {
+                            scrollTo = .translation
+                        }
+                        self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .identity(details: personalDetails, document: hasValueType, selfie: requireSelfie, translations: requireTranslation), scrollTo: scrollTo, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                             var keys: [SecureIdValueKey] = []
                             if personalDetails != nil {
                                 keys.append(.personalDetails)
@@ -518,21 +526,22 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                 }
             case let .address(addressDetails, document):
                 if let document = document {
-                    var hasValueType: (document: SecureIdRequestedAddressDocument, translation: Bool)?
+                    var hasValueType: (document: SecureIdRequestedAddressDocument, requireTranslation: Bool, hasTranslation: Bool)?
                     switch document {
                         case let .just(type):
                             if let value = findValue(formData.values, key: type.document.valueKey)?.1 {
+                                let data = extractSecureIdValueAdditionalData(value.value)
                                 switch value.value {
                                     case .utilityBill:
-                                        hasValueType = (.utilityBill, type.translation)
+                                        hasValueType = (.utilityBill, type.translation, data.translation)
                                     case .bankStatement:
-                                        hasValueType = (.bankStatement, type.translation)
+                                        hasValueType = (.bankStatement, type.translation, data.translation)
                                     case .rentalAgreement:
-                                        hasValueType = (.rentalAgreement, type.translation)
+                                        hasValueType = (.rentalAgreement, type.translation, data.translation)
                                     case .passportRegistration:
-                                        hasValueType = (.passportRegistration, type.translation)
+                                        hasValueType = (.passportRegistration, type.translation, data.translation)
                                     case .temporaryRegistration:
-                                        hasValueType = (.temporaryRegistration, type.translation)
+                                        hasValueType = (.temporaryRegistration, type.translation, data.translation)
                                     default:
                                         break
                                 }
@@ -549,15 +558,15 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                     if hasValueType == nil || dataFilled {
                                         switch value.value {
                                             case .utilityBill:
-                                                hasValueType = (.utilityBill, type.translation)
+                                                hasValueType = (.utilityBill, type.translation, data.translation)
                                             case .bankStatement:
-                                                hasValueType = (.bankStatement, type.translation)
+                                                hasValueType = (.bankStatement, type.translation, data.translation)
                                             case .rentalAgreement:
-                                                hasValueType = (.rentalAgreement, type.translation)
+                                                hasValueType = (.rentalAgreement, type.translation, data.translation)
                                             case .passportRegistration:
-                                                hasValueType = (.passportRegistration, type.translation)
+                                                hasValueType = (.passportRegistration, type.translation, data.translation)
                                             case .temporaryRegistration:
-                                                hasValueType = (.temporaryRegistration, type.translation)
+                                                hasValueType = (.temporaryRegistration, type.translation, data.translation)
                                             default:
                                                 break
                                         }
@@ -569,8 +578,12 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                 }
                             }
                     }
-                    if let (hasValueType, translation) = hasValueType {
-                        self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .address(details: addressDetails, document: hasValueType, translations: translation), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                    if let (hasValueType, requireTranslation, hasTranslation) = hasValueType {
+                        var scrollTo: SecureIdDocumentFormScrollToSubject?
+                        if requireTranslation && !hasTranslation {
+                            scrollTo = .translation
+                        }
+                        self.interaction.present(SecureIdDocumentFormController(account: self.account, context: context, requestedData: .address(details: addressDetails, document: hasValueType, translations: requireTranslation), scrollTo: scrollTo, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                             var keys: [SecureIdValueKey] = []
                             if addressDetails {
                                 keys.append(.address)
@@ -654,7 +667,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         if itemsForField.count == 1 {
             completionImpl(itemsForField[0].1)
         } else {
-            let controller = SecureIdDocumentTypeSelectionController(theme: self.presentationData.theme, strings: self.presentationData.strings, field: field, currentValues: formData.values, completion: completionImpl)
+            let controller = SecureIdDocumentTypeSelectionController(account: self.account, field: field, currentValues: formData.values, completion: completionImpl)
             self.interaction.present(controller, nil)
         }
     }

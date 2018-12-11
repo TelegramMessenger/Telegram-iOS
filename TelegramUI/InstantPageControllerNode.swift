@@ -1119,7 +1119,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 if let strongSelf = self {
                                     switch result {
                                         case let .result(webpage):
-                                            if let webpage = webpage {
+                                            if let webpage = webpage, case .Loaded = webpage.content {
                                                 strongSelf.loadProgress.set(1.0)
                                                 strongSelf.pushController(InstantPageController(account: strongSelf.account, webPage: webpage, anchor: anchor))
                                             }
@@ -1172,7 +1172,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private func openUrlIn(_ url: InstantPageUrlItem) {
         if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
             let presentationData = applicationContext.currentPresentationData.with { $0 }
-            let actionSheet = OpenInActionSheetController(postbox: self.account.postbox, applicationContext: applicationContext, theme: presentationData.theme, strings: presentationData.strings, item: .url(url: url.url), openUrl: { [weak self] url in
+            let actionSheet = OpenInActionSheetController(account: self.account, item: .url(url: url.url), openUrl: { [weak self] url in
                 if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
                     openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {})
                 }

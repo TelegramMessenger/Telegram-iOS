@@ -85,6 +85,7 @@ final class UniversalVideoNode: ASDisplayNode {
     private let autoplay: Bool
     private let snapshotContentWhenGone: Bool
     
+    
     private var contentNode: (UniversalVideoContentNode & ASDisplayNode)?
     private var contentNodeId: Int32?
     

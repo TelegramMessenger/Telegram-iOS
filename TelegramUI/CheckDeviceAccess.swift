@@ -69,11 +69,11 @@ public final class DeviceAccess {
                         UNUserNotificationCenter.current().getNotificationSettings(completionHandler: { settings in
                             switch settings.authorizationStatus {
                                 case .authorized:
-                                    if settings.alertSetting == .disabled || settings.soundSetting == .disabled || settings.badgeSetting == .disabled || settings.notificationCenterSetting == .disabled || settings.lockScreenSetting == .disabled {
-                                        subscriber.putNext(.unreachable)
-                                    } else {
+//                                    if settings.alertSetting == .disabled || settings.soundSetting == .disabled || settings.badgeSetting == .disabled || settings.notificationCenterSetting == .disabled || settings.lockScreenSetting == .disabled {
+//                                        subscriber.putNext(.unreachable)
+//                                    } else {
                                         subscriber.putNext(.allowed)
-                                    }
+//                                    }
                                 case .denied:
                                     subscriber.putNext(.denied)
                                 case .notDetermined:

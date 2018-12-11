@@ -158,7 +158,12 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                             selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
                         } else {
                             var menuItems: [PeekControllerMenuItem] = []
-                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, action: {
+                            if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isAnimated {
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: {
+                                    let _ = addSavedGif(postbox: strongSelf.account.postbox, fileReference: .standalone(media: file)).start()
+                                }))
+                            }
+                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                 item.resultSelected(item.result)
                             }))
                             selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))

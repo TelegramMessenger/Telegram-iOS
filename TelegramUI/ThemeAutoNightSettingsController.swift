@@ -3,7 +3,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import CoreLocation
 
 import TelegramUIPrivateModule
 
@@ -16,22 +15,6 @@ private enum TriggerMode {
 private enum TimeBasedManualField {
     case from
     case to
-}
-
-private func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signal<String, NoError> {
-    return Signal { subscriber in
-        let geocoder = CLGeocoder()
-        geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), completionHandler: { placemarks, _ in
-            if let placemarks = placemarks, let locality = placemarks.first?.locality {
-                subscriber.putNext(locality)
-                subscriber.putCompletion()
-            }
-        })
-        
-        return ActionDisposable {
-            
-        }
-    }
 }
 
 private final class ThemeAutoNightSettingsControllerArguments {
@@ -477,7 +460,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
             }
             
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(ThemeAutoNightTimeSelectionActionSheet(theme: presentationData.theme, strings: presentationData.strings, currentValue: currentValue, applyValue: { value in
+            presentControllerImpl?(ThemeAutoNightTimeSelectionActionSheet(account: account, currentValue: currentValue, applyValue: { value in
                 guard let value = value else {
                     return
                 }

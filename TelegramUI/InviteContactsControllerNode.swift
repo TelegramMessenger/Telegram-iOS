@@ -346,6 +346,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 let previousStrings = strongSelf.presentationData.strings
                 
                 strongSelf.presentationData = presentationData
+                strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder)))
                 
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.updateThemeAndStrings()

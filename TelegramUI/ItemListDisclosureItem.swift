@@ -243,7 +243,7 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             let labelFont: UIFont
             let labelBadgeColor: UIColor
             if case .badge = item.labelStyle {
-                labelBadgeColor = item.theme.list.plainBackgroundColor
+                labelBadgeColor = item.theme.rootController.tabBar.badgeTextColor
                 labelFont = badgeFont
             } else {
                 labelBadgeColor =  item.theme.list.itemSecondaryTextColor
@@ -252,10 +252,10 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             
             let titleColor: UIColor
                 switch item.kind {
-                case .generic:
-                    titleColor = item.titleColor == .accent ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor
-                case .disabled:
-                    titleColor = item.theme.list.itemDisabledTextColor
+                    case .generic:
+                        titleColor = item.titleColor == .accent ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor
+                    case .disabled:
+                        titleColor = item.theme.list.itemDisabledTextColor
             }
                 
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

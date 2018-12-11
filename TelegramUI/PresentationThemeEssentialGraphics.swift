@@ -229,7 +229,7 @@ public final class PrincipalThemeAdditionalGraphics {
             context.setFillColor(serviceColor.fill.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         })!.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
-        self.chatFreeformContentAdditionalInfoBackgroundImage = generateStretchableFilledCircleImage(radius: 4.0, color: serviceColor.fill)!
+        self.chatFreeformContentAdditionalInfoBackgroundImage = generateStretchableFilledCircleImage(radius: 10.0, color: serviceColor.fill)!
         self.chatEmptyItemBackgroundImage = generateStretchableFilledCircleImage(radius: 14.0, color: serviceColor.fill)!
         self.chatLoadingIndicatorBackgroundImage = generateStretchableFilledCircleImage(diameter: 30.0, color: serviceColor.fill)!
         

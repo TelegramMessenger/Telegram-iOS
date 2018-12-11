@@ -432,7 +432,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     func item(_ arguments: NotificationsAndSoundsArguments) -> ListViewItem {
         switch self {
             case let .permissionInfo(theme, strings, type):
-                return PermissionInfoItemListItem(theme: theme, strings: strings, subject: .notifications, type: type, sectionId: self.section)
+                return PermissionInfoItemListItem(theme: theme, strings: strings, subject: .notifications, type: type, style: .blocks, sectionId: self.section)
             case let .permissionEnable(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.authorizeNotifications()

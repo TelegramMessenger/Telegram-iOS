@@ -16,7 +16,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
     private let disposable = MetaDisposable()
     
-    private var validLayout: CGSize?
+    private var validLayout: (CGSize, CGFloat, CGFloat, Bool, Bool)?
     private var didScrollPreviousOffset: CGFloat?
     
     private var didScrollPreviousState: ChatMediaInputPaneScrollState?
@@ -35,17 +35,26 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         
         super.init()
         
-        self.backgroundColor = theme.chat.inputMediaPanel.gifsBackgroundColor
-        
         self.addSubnode(self.emptyNode)
+        
+        self.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
     deinit {
         self.disposable.dispose()
     }
     
+    override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.backgroundColor = theme.chat.inputMediaPanel.gifsBackgroundColor
+        self.emptyNode.attributedText = NSAttributedString(string: strings.Conversation_EmptyGifPanelPlaceholder, font: Font.regular(15.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
+        
+        if let layout = self.validLayout {
+            self.updateLayout(size: layout.0, topInset: layout.1, bottomInset: layout.2, isExpanded: layout.3, isVisible: layout.4, transition: .immediate)
+        }
+    }
+    
     override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
+        self.validLayout = (size, topInset, bottomInset, isExpanded, isVisible)
         let emptySize = self.emptyNode.updateLayout(size)
         transition.updateFrame(node: self.emptyNode, frame: CGRect(origin: CGPoint(x: floor(size.width - emptySize.width) / 2.0, y: topInset + floor(size.height - topInset - emptySize.height) / 2.0), size: emptySize))
         
@@ -72,8 +81,8 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         if self.multiplexedNode == nil {
             let multiplexedNode = MultiplexedVideoNode(account: account)
             self.multiplexedNode = multiplexedNode
-            if let validLayout = self.validLayout {
-                multiplexedNode.frame = CGRect(origin: CGPoint(), size: validLayout)
+            if let layout = self.validLayout {
+                multiplexedNode.frame = CGRect(origin: CGPoint(), size: layout.0)
             }
             
             self.view.addSubview(multiplexedNode)

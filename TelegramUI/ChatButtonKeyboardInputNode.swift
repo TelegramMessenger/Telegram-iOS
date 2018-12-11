@@ -72,7 +72,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         if self.theme !== interfaceState.theme {
             self.theme = interfaceState.theme
             
-            self.separatorNode.backgroundColor = interfaceState.theme.chat.inputButtonPanel.panelSerapatorColor
+            self.separatorNode.backgroundColor = interfaceState.theme.chat.inputButtonPanel.panelSeparatorColor
             self.backgroundColor = interfaceState.theme.chat.inputButtonPanel.panelBackgroundColor
         }
         

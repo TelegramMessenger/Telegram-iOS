@@ -173,7 +173,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textPlaceholderNode: TextNode
     var contextPlaceholderNode: TextNode?
     let textInputContainer: ASDisplayNode
-    var textInputNode: ASEditableTextNode?
+    var textInputNode: EditableTextNode?
     
     let textInputBackgroundView: UIImageView
     let actionButtons: ChatTextInputActionButtonsNode
@@ -388,7 +388,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     private func loadTextInputNode() {
-        let textInputNode = ASEditableTextNode()
+        let textInputNode = EditableTextNode()
         var textColor: UIColor = .black
         var tintColor: UIColor = .blue
         var baseFontSize: CGFloat = 17.0

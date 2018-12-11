@@ -44,6 +44,10 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.activity = activity
     }
     
+    func setQuery(_ query: String) {
+        self.searchBar.text = query
+    }
+    
     override func layout() {
         super.layout()
         

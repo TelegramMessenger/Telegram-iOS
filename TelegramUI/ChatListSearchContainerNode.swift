@@ -906,47 +906,47 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
         
         var recentItemsTransition = combineLatest(hasRecentPeers, fixedRecentlySearchedPeers, presentationDataPromise.get(), self.statePromise.get())
-            |> mapToSignal { [weak self] hasRecentPeers, peers, presentationData, state -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
-                var entries: [ChatListRecentEntry] = []
-                if !filter.contains(.onlyGroups) {
-                    if groupId == nil, hasRecentPeers {
-                        entries.append(.topPeers([], presentationData.theme, presentationData.strings))
-                    }
+        |> mapToSignal { [weak self] hasRecentPeers, peers, presentationData, state -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
+            var entries: [ChatListRecentEntry] = []
+            if !filter.contains(.onlyGroups) {
+                if groupId == nil, hasRecentPeers {
+                    entries.append(.topPeers([], presentationData.theme, presentationData.strings))
                 }
-                var peerIds = Set<PeerId>()
-                var index = 0
-                loop: for searchedPeer in peers {
-                    if let peer = searchedPeer.peer.peers[searchedPeer.peer.peerId] {
-                        if peerIds.contains(peer.id) {
-                            continue loop
-                        }
-                        if !doesPeerMatchFilter(peer: peer, filter: filter) {
-                            continue
-                        }
-                        peerIds.insert(peer.id)
-                        
-                        entries.append(.peer(index: index, peer: searchedPeer, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder, state.peerIdWithRevealedOptions == peer.id))
-                        index += 1
+            }
+            var peerIds = Set<PeerId>()
+            var index = 0
+            loop: for searchedPeer in peers {
+                if let peer = searchedPeer.peer.peers[searchedPeer.peer.peerId] {
+                    if peerIds.contains(peer.id) {
+                        continue loop
                     }
+                    if !doesPeerMatchFilter(peer: peer, filter: filter) {
+                        continue
+                    }
+                    peerIds.insert(peer.id)
+                    
+                    entries.append(.peer(index: index, peer: searchedPeer, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder, state.peerIdWithRevealedOptions == peer.id))
+                    index += 1
                 }
-                let previousEntries = previousRecentItems.swap(entries)
-                
-                let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, account: account, filter: filter, peerSelected: { peer in
-                    openPeer(peer, true)
-                    let _ = addRecentlySearchedPeer(postbox: account.postbox, peerId: peer.id).start()
-                    self?.recentListNode.clearHighlightAnimated(true)
-                }, peerLongTapped: { peer in
-                    openRecentPeerOptions(peer)
-                }, clearRecentlySearchedPeers: {
-                    self?.clearRecentSearch()
-                }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
-                    interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
-                }, deletePeer: { peerId in
-                    if let strongSelf = self {
-                        let _ = removeRecentlySearchedPeer(postbox: strongSelf.account.postbox, peerId: peerId).start()
-                    }
-                })
-                return .single((transition, previousEntries == nil))
+            }
+            let previousEntries = previousRecentItems.swap(entries)
+            
+            let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, account: account, filter: filter, peerSelected: { peer in
+                openPeer(peer, true)
+                let _ = addRecentlySearchedPeer(postbox: account.postbox, peerId: peer.id).start()
+                self?.recentListNode.clearHighlightAnimated(true)
+            }, peerLongTapped: { peer in
+                openRecentPeerOptions(peer)
+            }, clearRecentlySearchedPeers: {
+                self?.clearRecentSearch()
+            }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+                interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
+            }, deletePeer: { peerId in
+                if let strongSelf = self {
+                    let _ = removeRecentlySearchedPeer(postbox: strongSelf.account.postbox, peerId: peerId).start()
+                }
+            })
+            return .single((transition, previousEntries == nil))
         }
         
         if filter.contains(.excludeRecent) {
@@ -962,31 +962,32 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }))
         
         self.searchDisposable.set((foundItems
-            |> deliverOnMainQueue).start(next: { [weak self] entriesAndFlags in
-                if let strongSelf = self {
-                    strongSelf._isSearching.set(entriesAndFlags?.1 ?? false)
-                    
-                    let previousEntries = previousSearchItems.swap(entriesAndFlags?.0)
-                    
-                    let firstTime = previousEntries == nil
-                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, account: account, enableHeaders: true, filter: filter, interaction: interaction)
-                    strongSelf.enqueueTransition(transition, firstTime: firstTime)
-                }
-            }))
+        |> deliverOnMainQueue).start(next: { [weak self] entriesAndFlags in
+            if let strongSelf = self {
+                strongSelf._isSearching.set(entriesAndFlags?.1 ?? false)
+                
+                let previousEntries = previousSearchItems.swap(entriesAndFlags?.0)
+                
+                let firstTime = previousEntries == nil
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, account: account, enableHeaders: true, filter: filter, interaction: interaction)
+                strongSelf.enqueueTransition(transition, firstTime: firstTime)
+            }
+        }))
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    //let previousStrings = strongSelf.presentationData.strings
-                    
-                    strongSelf.presentationData = presentationData
-                    
-                    if previousTheme !== presentationData.theme {
-                        strongSelf.updateTheme(theme: presentationData.theme)
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                //let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                strongSelf.presentationDataPromise.set(.single(ChatListPresentationData(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)))
+                
+                if previousTheme !== presentationData.theme {
+                    strongSelf.updateTheme(theme: presentationData.theme)
                 }
-            })
+            }
+        })
         
         self.recentListNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
@@ -1116,13 +1117,12 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             case let .animated(animationDuration, animationCurve):
                 duration = animationDuration
                 switch animationCurve {
-                case .easeInOut:
-                    break
-                case .spring:
-                    curve = 7
-                }
+                    case .easeInOut:
+                        break
+                    case .spring:
+                        curve = 7
+                    }
         }
-        
         
         let listViewCurve: ListViewAnimationCurve
         if curve == 7 {

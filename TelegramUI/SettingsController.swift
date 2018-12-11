@@ -649,7 +649,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
                             account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                             let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
                             updateState {
-                                $0.withUpdatedUpdatingAvatar(.image(representation))
+                                $0.withUpdatedUpdatingAvatar(.image(representation, true))
                             }
                             updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource) |> deliverOnMainQueue).start(next: { result in
                                 switch result {
@@ -668,7 +668,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
                     let _ = currentAvatarMixin.swap(nil)
                     updateState {
                         if let profileImage = peer?.smallProfileImage {
-                            return $0.withUpdatedUpdatingAvatar(.image(profileImage))
+                            return $0.withUpdatedUpdatingAvatar(.image(profileImage, false))
                         } else {
                             return $0.withUpdatedUpdatingAvatar(.none)
                         }

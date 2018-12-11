@@ -46,14 +46,14 @@ final class ActivityIndicator: ASDisplayNode {
             switch self.type {
                 case let .navigationAccent(theme):
                     self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
-                case let .custom(color, diameter, lineWidth, forceCustom):
+                case let .custom(color, diameter, lineWidth, _):
                     self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
             }
             
             switch self.type {
                 case let .navigationAccent(theme):
                     self.indicatorView?.color = theme.rootController.navigationBar.controlColor
-                case let .custom(color, diameter, lineWidth, forceCustom):
+                case let .custom(color, diameter, lineWidth, _):
                     self.indicatorView?.color = convertIndicatorColor(color)
             }
         }
@@ -101,7 +101,7 @@ final class ActivityIndicator: ASDisplayNode {
         switch self.type {
             case let .navigationAccent(theme):
                 indicatorView.color = theme.rootController.navigationBar.controlColor
-            case let .custom(color, diameter, lineWidth, forceCustom):
+            case let .custom(color, _, _, forceCustom):
                 indicatorView.color = convertIndicatorColor(color)
                 if !forceCustom {
                     self.view.addSubview(indicatorView)

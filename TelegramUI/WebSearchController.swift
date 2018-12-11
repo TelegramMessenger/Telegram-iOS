@@ -27,12 +27,16 @@ private func requestContextResults(account: Account, botId: PeerId, query: Strin
 
 final class WebSearchControllerInteraction {
     let openResult: (ChatContextResult) -> Void
+    let setSearchQuery: (String) -> Void
+    let deleteRecentQuery: (String) -> Void
     let toggleSelection: ([String], Bool) -> Void
     let sendSelected: (ChatContextResultCollection) -> Void
     var selectionState: WebSearchSelectionState?
     
-    init(openResult: @escaping (ChatContextResult) -> Void, toggleSelection: @escaping ([String], Bool) -> Void, sendSelected: @escaping (ChatContextResultCollection) -> Void) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping ([String], Bool) -> Void, sendSelected: @escaping (ChatContextResultCollection) -> Void) {
         self.openResult = openResult
+        self.setSearchQuery = setSearchQuery
+        self.deleteRecentQuery = deleteRecentQuery
         self.toggleSelection = toggleSelection
         self.sendSelected = sendSelected
     }
@@ -115,6 +119,16 @@ final class WebSearchController: ViewController {
         
         self.controllerInteraction = WebSearchControllerInteraction(openResult: { result in
             
+        }, setSearchQuery: { [weak self] query in
+            if let strongSelf = self {
+                strongSelf.navigationContentNode?.setQuery(query)
+                strongSelf.updateSearchQuery(query)
+                strongSelf.navigationContentNode?.deactivate()
+            }
+        }, deleteRecentQuery: { [weak self] query in
+            if let strongSelf = self {
+                _ = removeRecentWebSearchQuery(postbox: strongSelf.account.postbox, string: query).start()
+            }
         }, toggleSelection: { [weak self] ids, value in
             if let strongSelf = self {
                 strongSelf.updateInterfaceState { $0.withToggledSelectedMessages(ids, value: value) }
@@ -145,6 +159,12 @@ final class WebSearchController: ViewController {
         }
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        self.navigationContentNode?.activate()
+    }
+    
     override public func loadDisplayNode() {
         self.displayNode = WebSearchControllerNode(account: self.account, theme: self.interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, controllerInteraction: self.controllerInteraction!)
         self.controllerNode.requestUpdateInterfaceState = { [weak self] animated, f in
@@ -155,6 +175,11 @@ final class WebSearchController: ViewController {
         self.controllerNode.cancel = { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
+            }
+        }
+        self.controllerNode.dismissInput = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.navigationContentNode?.deactivate()
             }
         }
         self.controllerNode.updateInterfaceState(self.interfaceState, animated: false)
@@ -185,11 +210,17 @@ final class WebSearchController: ViewController {
     }
     
     private func updateSearchQuery(_ query: String) {
+        if !query.isEmpty {
+            let _ = addRecentWebSearchQuery(postbox: self.account.postbox, string: query).start()
+        }
+        
         let mode = self.interfaceStatePromise.get()
         |> map { state -> WebSearchMode? in
             return state.state?.mode
         }
         |> distinctUntilChanged
+        
+        self.updateInterfaceState { $0.withUpdatedQuery(query) }
         
         var results = mode
         |> mapToSignal { mode -> (Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>) in
@@ -223,6 +254,8 @@ final class WebSearchController: ViewController {
                     if let results = results {
                         strongSelf.controllerNode.updateResults(results)
                     }
+                } else {
+                    strongSelf.controllerNode.updateResults(nil)
                 }
             }
         }))
@@ -318,6 +351,7 @@ final class WebSearchController: ViewController {
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        self.navigationContentNode?.deactivate()
         self.controllerNode.animateOut(completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
             completion?()

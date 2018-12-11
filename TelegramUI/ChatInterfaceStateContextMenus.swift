@@ -457,6 +457,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
+        if data.messageActions.options.contains(.rateCall) {
+            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Call_RateCall, action: {
+                let _ = controllerInteraction.rateCall(message)
+            })))
+        }
+        
         if data.messageActions.options.contains(.forward) {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, action: {
                     interfaceInteraction.forwardMessages(selectAll ? messages : [message])
@@ -469,7 +475,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
-        if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+        if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && !isAction {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .destructive, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, action: {
                 interfaceInteraction.deleteMessages(selectAll ? messages : [message])
             })))
@@ -495,6 +501,7 @@ struct ChatAvailableMessageActionOptions: OptionSet {
     static let forward = ChatAvailableMessageActionOptions(rawValue: 1 << 2)
     static let report = ChatAvailableMessageActionOptions(rawValue: 1 << 3)
     static let viewStickerPack = ChatAvailableMessageActionOptions(rawValue: 1 << 4)
+    static let rateCall = ChatAvailableMessageActionOptions(rawValue: 1 << 5)
 }
 
 struct ChatAvailableMessageActions {
@@ -534,6 +541,8 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             }
                             break
                         }
+                    } else if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
+                        optionsMap[id]!.insert(.rateCall)
                     }
                 }
                 if id.peerId == accountPeerId {

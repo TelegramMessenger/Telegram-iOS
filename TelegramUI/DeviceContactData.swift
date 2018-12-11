@@ -434,3 +434,25 @@ extension DeviceContactExtendedData {
         self.init(basicData: DeviceContactBasicData(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: phone)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
     }
 }
+
+extension DeviceContactAddressData {
+    public var dictionary: [String: String]  {
+        var dictionary: [String: String] = [:]
+        if !self.street1.isEmpty {
+            dictionary["Street"] = self.street1
+        }
+        if !self.city.isEmpty {
+            dictionary["City"] = self.city
+        }
+        if !self.state.isEmpty {
+            dictionary["State"] = self.state
+        }
+        if !self.country.isEmpty {
+            dictionary["Country"] = self.country
+        }
+        if !self.postcode.isEmpty {
+            dictionary["ZIP"] = self.postcode
+        }
+        return dictionary
+    }
+}

@@ -10,12 +10,14 @@ class PermissionInfoItem: ListViewItem {
     let strings: PresentationStrings
     let subject: DeviceAccessSubject
     let type: AccessType
+    let style: ItemListStyle
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle) {
         self.theme = theme
         self.strings = strings
         self.subject = subject
         self.type = type
+        self.style = style
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -55,9 +57,9 @@ class PermissionInfoItem: ListViewItem {
 class PermissionInfoItemListItem: PermissionInfoItem, ItemListItem {
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, sectionId: ItemListSectionId) {
         self.sectionId = sectionId
-        super.init(theme: theme, strings: strings, subject: subject, type: type)
+        super.init(theme: theme, strings: strings, subject: subject, type: type, style: style)
     }
     
     override func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -174,8 +176,18 @@ class PermissionInfoItemNode: ListViewItemNode {
                 insets = UIEdgeInsets()
             }
             let separatorHeight = UIScreenPixel
-            let itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-            let itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+            
+            let itemBackgroundColor: UIColor
+            let itemSeparatorColor: UIColor
+            
+            switch item.style {
+                case .plain:
+                    itemBackgroundColor = item.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                case .blocks:
+                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+            }
             
             let title: String
             let text: String

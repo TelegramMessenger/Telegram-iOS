@@ -242,7 +242,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         
         let inputPanelTheme = theme.chat.inputPanel
         
-        self.pallete = TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
+        self.pallete = legacyInputMicPalette(from: theme)
         
         self.insertSubview(self.innerIconView, at: 0)
         
@@ -311,9 +311,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
                 self.innerIconView.image = PresentationResourcesChat.chatInputPanelVideoButtonImage(self.theme)
         }
         
-        let inputPanelTheme = theme.chat.inputPanel
-        
-        self.pallete = TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
+        self.pallete = legacyInputMicPalette(from: theme)
     }
     
     deinit {

@@ -6,10 +6,51 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
+final class ShareInputFieldNodeTheme: Equatable {
+    let backgroundColor: UIColor
+    let textColor: UIColor
+    let placeholderColor: UIColor
+    let clearButtonColor: UIColor
+    let keyboardAppearance: UIKeyboardAppearance
+    
+    public init(backgroundColor: UIColor, textColor: UIColor, placeholderColor: UIColor, clearButtonColor: UIColor, keyboardAppearance: UIKeyboardAppearance) {
+        self.backgroundColor = backgroundColor
+        self.textColor = textColor
+        self.placeholderColor = placeholderColor
+        self.clearButtonColor = clearButtonColor
+        self.keyboardAppearance = keyboardAppearance
+    }
+    
+    public static func ==(lhs: ShareInputFieldNodeTheme, rhs: ShareInputFieldNodeTheme) -> Bool {
+        if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
+        if lhs.textColor != rhs.textColor {
+            return false
+        }
+        if lhs.placeholderColor != rhs.placeholderColor {
+            return false
+        }
+        if lhs.clearButtonColor != rhs.clearButtonColor {
+            return false
+        }
+        if lhs.keyboardAppearance != rhs.keyboardAppearance {
+            return false
+        }
+        return true
+    }
+}
+
+extension ShareInputFieldNodeTheme {
+    convenience init(presentationTheme theme: PresentationTheme) {
+        self.init(backgroundColor: theme.actionSheet.inputBackgroundColor, textColor: theme.actionSheet.inputTextColor, placeholderColor: theme.actionSheet.inputPlaceholderColor, clearButtonColor: theme.actionSheet.inputClearButtonColor, keyboardAppearance: .default)
+    }
+}
+
 final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
-    private let theme: PresentationTheme
+    private let theme: ShareInputFieldNodeTheme
     private let backgroundNode: ASImageNode
-    private let textInputNode: ASEditableTextNode
+    private let textInputNode: EditableTextNode
     private let placeholderNode: ASTextNode
     private let clearButton: HighlightableButtonNode
     
@@ -23,35 +64,41 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         return self.textInputNode.attributedText?.string ?? ""
     }
     
-    init(theme: PresentationTheme, placeholder: String) {
+    var placeholder: String = "" {
+        didSet {
+            self.placeholderNode.attributedText = NSAttributedString(string: self.placeholder, font: Font.regular(17.0), textColor: self.theme.placeholderColor)
+        }
+    }
+    
+    init(theme: ShareInputFieldNodeTheme, placeholder: String) {
         self.theme = theme
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputBackgroundColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.backgroundColor)
         
-        self.textInputNode = ASEditableTextNode()
-        let textColor: UIColor = theme.actionSheet.inputTextColor
+        self.textInputNode = EditableTextNode()
+        let textColor: UIColor = theme.textColor
         let keyboardAppearance: UIKeyboardAppearance = UIKeyboardAppearance.default
-        textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
-        textInputNode.clipsToBounds = true
-        textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
-        textInputNode.keyboardAppearance = keyboardAppearance
-        textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
-        textInputNode.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
+        self.textInputNode.clipsToBounds = true
+        self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
+        self.textInputNode.keyboardAppearance = keyboardAppearance
+        self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
+        self.textInputNode.keyboardAppearance = theme.keyboardAppearance
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.displaysAsynchronously = false
-        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.actionSheet.inputPlaceholderColor)
+        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.placeholderColor)
         
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
         self.clearButton.displaysAsynchronously = false
-        self.clearButton.setImage(generateClearIcon(color: theme.actionSheet.inputClearButtonColor), for: [])
+        self.clearButton.setImage(generateClearIcon(color: theme.clearButtonColor), for: [])
         self.clearButton.isHidden = true
         
         super.init()

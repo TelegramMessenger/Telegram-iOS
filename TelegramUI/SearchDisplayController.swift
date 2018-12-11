@@ -105,7 +105,7 @@ final class SearchDisplayController {
     }
     
     func deactivate(placeholder: SearchBarPlaceholderNode?, animated: Bool = true) {
-        searchBar.deactivate()
+        self.searchBar.deactivate()
         
         if let placeholder = placeholder {
             let searchBar = self.searchBar

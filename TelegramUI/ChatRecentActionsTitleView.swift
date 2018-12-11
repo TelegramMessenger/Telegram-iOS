@@ -21,7 +21,13 @@ final class ChatRecentActionsTitleView: UIView {
     private let titleNode: TextNode
     private let arrowNode: ASImageNode
     
-    private var color: UIColor
+    var color: UIColor {
+        didSet {
+            if self.color != oldValue {
+                self.setNeedsLayout()
+            }
+        }
+    }
     
     var pressed: (() -> Void)?
     

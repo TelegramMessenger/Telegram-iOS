@@ -16,7 +16,7 @@ final class ChatMessageSelectionNode: ASDisplayNode {
         
         self.addSubnode(self.checkNode)
         
-        self.hitTestSlop = UIEdgeInsetsMake(0.0, 42.0, 0.0, 0.0)
+        //self.hitTestSlop = UIEdgeInsetsMake(0.0, 42.0, 0.0, 0.0)
     }
     
     override func didLoad() {

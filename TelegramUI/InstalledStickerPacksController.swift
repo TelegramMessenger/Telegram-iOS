@@ -340,7 +340,9 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
             entries.append(.masks(presentationData.theme, presentationData.strings.MaskStickerSettings_Title))
             entries.append(.packsTitle(presentationData.theme, presentationData.strings.StickerPacksSettings_StickerPacksSection))
         case .masks:
-            break
+            if let archived = archived, !archived.isEmpty  {
+                entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedMasks, Int32(archived.count), archived))
+        }
     }
     
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView {
@@ -378,7 +380,7 @@ public enum InstalledStickerPacksControllerMode {
     case masks
 }
 
-public func installedStickerPacksController(account: Account, mode: InstalledStickerPacksControllerMode, archivedPacks:[ArchivedStickerPackItem]? = nil, updatedPacks: @escaping([ArchivedStickerPackItem]?) -> Void = { _ in}) -> ViewController {
+public func installedStickerPacksController(account: Account, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }) -> ViewController {
     let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -398,7 +400,6 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     
     let archivedPromise = Promise<[ArchivedStickerPackItem]?>()
 
-    
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
     let arguments = InstalledStickerPacksControllerArguments(account: account, openStickerPack: { info in
@@ -430,10 +431,8 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
                         archivedPromise.set(.single(packs))
                         updatedPacks(packs)
                     })
-//
+
                     let _ = removeStickerPackInteractively(postbox: account.postbox, id: archivedItem.info.id, option: .archive).start()
-                    
-                    
                 }),
                 ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: {
                     dismissAction()
@@ -454,7 +453,14 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     }, openFeatured: {
         pushControllerImpl?(featuredStickerPacksController(account: account))
     }, openArchived: { archived in
-        pushControllerImpl?(archivedStickerPacksController(account: account, archived: archived, updatedPacks: { packs in
+        let archivedMode: ArchivedStickerPacksControllerMode
+        switch mode {
+            case .masks:
+                archivedMode = .masks
+            default:
+                archivedMode = .stickers
+        }
+        pushControllerImpl?(archivedStickerPacksController(account: account, mode: archivedMode, archived: archived, updatedPacks: { packs in
             archivedPromise.set(.single(packs))
             updatedPacks(packs)
         }))
@@ -508,7 +514,7 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
             archivedPromise.set(.single(archivedPacks) |> then(archivedStickerPacks(account: account) |> map(Optional.init)))
         case .masks:
             featured.set(.single([]))
-            archivedPromise.set(.single(nil))
+            archivedPromise.set(.single(nil) |> then(archivedStickerPacks(account: account, namespace: .masks) |> map(Optional.init)))
     }
     
 
@@ -517,8 +523,6 @@ public func installedStickerPacksController(account: Account, mode: InstalledSti
     let stickerSettingsKey = ApplicationSpecificPreferencesKeys.stickerSettings
     let preferencesKey: PostboxViewKey = .preferences(keys: Set([stickerSettingsKey]))
     let preferencesView = account.postbox.combinedView(keys: [preferencesKey])
-    
-    
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, combineLatest(featured.get() |> deliverOnMainQueue, archivedPromise.get() |> deliverOnMainQueue), preferencesView |> deliverOnMainQueue)
         |> deliverOnMainQueue

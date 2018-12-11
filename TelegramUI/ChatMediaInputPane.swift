@@ -12,4 +12,7 @@ class ChatMediaInputPane: ASDisplayNode {
     
     func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, transition: ContainedViewLayoutTransition) {
     }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    }
 }

@@ -7,8 +7,7 @@ import UIKit
 import SwiftSignalKit
 
 final class ProxyServerActionSheetController: ActionSheetController {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
+    private var presentationDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -17,9 +16,10 @@ final class ProxyServerActionSheetController: ActionSheetController {
     
     private var isDismissed: Bool = false
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, server: ProxyServerSettings) {
-        self.theme = theme
-        self.strings = strings
+    init(account: Account, server: ProxyServerSettings) {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let theme = presentationData.theme
+        let strings = presentationData.strings
         
         let sheetTheme = ActionSheetControllerTheme(presentationTheme: theme)
         super.init(theme: sheetTheme)
@@ -51,10 +51,20 @@ final class ProxyServerActionSheetController: ActionSheetController {
                 })
             ])
         ])
+        
+        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+            }
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDisposable?.dispose()
     }
 }
 

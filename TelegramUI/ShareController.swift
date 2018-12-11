@@ -178,6 +178,8 @@ public final class ShareController: ViewController {
     
     private let account: Account
     private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     private let externalShare: Bool
     private let immediateExternalShare: Bool
     private let subject: ShareControllerSubject
@@ -198,6 +200,13 @@ public final class ShareController: ViewController {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.presentationDataDisposable = (self.account.telegramApplicationContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePresentationData(presentationData)
+            }
+        })
         
         switch subject {
             case let .url(text):

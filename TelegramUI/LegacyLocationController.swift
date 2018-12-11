@@ -114,6 +114,12 @@ private func telegramMap(for location: TGLocationMediaAttachment) -> TelegramMed
     return TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: mapVenue, liveBroadcastingTimeout: nil)
 }
 
+func legacyLocationPalette(from theme: PresentationTheme) -> TGLocationPallete {
+    let listTheme = theme.list
+    let searchTheme = theme.rootController.activeNavigationSearchBar
+    return TGLocationPallete(backgroundColor: listTheme.plainBackgroundColor, selectionColor: listTheme.itemHighlightedBackgroundColor, separatorColor: listTheme.itemPlainSeparatorColor, textColor: listTheme.itemPrimaryTextColor, secondaryTextColor: listTheme.itemSecondaryTextColor, accentColor: listTheme.itemAccentColor, destructiveColor: listTheme.itemDestructiveColor, locationColor: UIColor(rgb: 0x008df2), liveLocationColor: UIColor(rgb: 0xff6464), iconColor: searchTheme.backgroundColor, sectionHeaderBackgroundColor: theme.chatList.sectionHeaderFillColor, sectionHeaderTextColor: theme.chatList.sectionHeaderTextColor, searchBarPallete: TGSearchBarPallete(dark: theme.overallDarkAppearance, backgroundColor: searchTheme.backgroundColor, highContrastBackgroundColor: searchTheme.backgroundColor, textColor: searchTheme.inputTextColor, placeholderColor: searchTheme.inputPlaceholderTextColor, clearIcon: generateClearIcon(color: theme.rootController.activeNavigationSearchBar.inputClearButtonColor), barBackgroundColor: searchTheme.backgroundColor, barSeparatorColor: searchTheme.separatorColor, plainBackgroundColor: searchTheme.backgroundColor, accentColor: searchTheme.accentColor, accentContrastColor: searchTheme.backgroundColor, menuBackgroundColor: searchTheme.backgroundColor, segmentedControlBackgroundImage: nil, segmentedControlSelectedImage: nil, segmentedControlHighlightedImage: nil, segmentedControlDividerImage: nil), avatarPlaceholder: nil)
+}
+
 func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, account: Account, modal: Bool, openPeer: @escaping (Peer) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, stopLiveLocation: @escaping () -> Void, openUrl: @escaping (String) -> Void) -> ViewController {
     let legacyLocation = TGLocationMediaAttachment()
     legacyLocation.latitude = mapMedia.latitude
@@ -219,10 +225,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, acc
     }
     
     let theme = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme
-    
-    let listTheme = theme.list
-    let searchTheme = theme.rootController.activeNavigationSearchBar
-    controller.pallete = TGLocationPallete(backgroundColor: listTheme.plainBackgroundColor, selectionColor: listTheme.itemHighlightedBackgroundColor, separatorColor: listTheme.itemPlainSeparatorColor, textColor: listTheme.itemPrimaryTextColor, secondaryTextColor: listTheme.itemSecondaryTextColor, accentColor: listTheme.itemAccentColor, destructiveColor: listTheme.itemDestructiveColor, locationColor: UIColor(rgb: 0x008df2), liveLocationColor: UIColor(rgb: 0xff6464), iconColor: searchTheme.backgroundColor, sectionHeaderBackgroundColor: theme.chatList.sectionHeaderFillColor, sectionHeaderTextColor: theme.chatList.sectionHeaderTextColor, searchBarPallete: TGSearchBarPallete(dark: theme.overallDarkAppearance, backgroundColor: searchTheme.backgroundColor, highContrastBackgroundColor: searchTheme.backgroundColor, textColor: searchTheme.inputTextColor, placeholderColor: searchTheme.inputPlaceholderTextColor, clearIcon: generateClearIcon(color: theme.rootController.activeNavigationSearchBar.inputClearButtonColor), barBackgroundColor: searchTheme.backgroundColor, barSeparatorColor: searchTheme.separatorColor, plainBackgroundColor: searchTheme.backgroundColor, accentColor: searchTheme.accentColor, accentContrastColor: searchTheme.backgroundColor, menuBackgroundColor: searchTheme.backgroundColor, segmentedControlBackgroundImage: nil, segmentedControlSelectedImage: nil, segmentedControlHighlightedImage: nil, segmentedControlDividerImage: nil), avatarPlaceholder: nil)
+    controller.pallete = legacyLocationPalette(from: theme)
     
     controller.modalMode = modal
     controller.presentActionsMenu = { [weak legacyController] legacyLocation, directions in
@@ -234,7 +237,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, acc
                 strongLegacyController.present(ShareController(account: account, subject: .mapMedia(map), externalShare: true), in: .window(.root), with: nil)
             })
             
-            strongLegacyController.present(OpenInActionSheetController(postbox: account.postbox, applicationContext: account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: .location(location: map, withDirections: directions), additionalAction: !directions ? shareAction : nil, openUrl: openUrl), in: .window(.root), with: nil)
+            strongLegacyController.present(OpenInActionSheetController(account: account, item: .location(location: map, withDirections: directions), additionalAction: !directions ? shareAction : nil, openUrl: openUrl), in: .window(.root), with: nil)
         }
     }
     
@@ -254,10 +257,22 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, acc
         }, rootController: nil)
     } else {
         legacyController.navigationItem.title = controller.navigationItem.title
-        
-        legacyController.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(theme), style: .plain, target: controller, action: #selector(controller.actionsButtonPressed))
+        controller.updateRightBarItem = { item, action, animated in
+            if action {
+                legacyController.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(theme), style: .plain, target: controller, action: #selector(controller.actionsButtonPressed))
+            } else {
+                legacyController.navigationItem.setRightBarButton(item, animated: animated)
+            }
+        }
         legacyController.bind(controller: controller)
     }
+    
+    let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak controller] presentationData in
+        if let controller = controller  {
+            controller.pallete = legacyLocationPalette(from: presentationData.theme)
+        }
+    })
+    legacyController.disposables.add(presentationDisposable)
 
     return legacyController
 }

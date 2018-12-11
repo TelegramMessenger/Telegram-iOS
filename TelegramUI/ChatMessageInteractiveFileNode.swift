@@ -695,19 +695,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
         }
         
+        let backgroundNodeColor: UIColor
+        if self.iconNode != nil {
+            backgroundNodeColor = bubbleTheme.mediaOverlayControlBackgroundColor
+        } else if incoming {
+            backgroundNodeColor = bubbleTheme.incomingMediaActiveControlColor
+        } else {
+            backgroundNodeColor = bubbleTheme.outgoingMediaActiveControlColor
+        }
         if state != .none && self.statusNode == nil {
-            let backgroundNodeColor: UIColor
-            if self.iconNode != nil {
-                backgroundNodeColor = bubbleTheme.mediaOverlayControlBackgroundColor
-            } else if incoming {
-                backgroundNodeColor = bubbleTheme.incomingMediaActiveControlColor
-            } else {
-                backgroundNodeColor = bubbleTheme.outgoingMediaActiveControlColor
-            }
             let statusNode = RadialStatusNode(backgroundNodeColor: backgroundNodeColor)
             self.statusNode = statusNode
             statusNode.frame = progressFrame
             self.addSubnode(statusNode)
+        } else if let statusNode = self.statusNode {
+            statusNode.backgroundNodeColor = backgroundNodeColor
         }
         
         if streamingState != .none && self.streamingStatusNode == nil {

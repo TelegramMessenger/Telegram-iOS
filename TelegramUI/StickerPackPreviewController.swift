@@ -16,7 +16,6 @@ final class StickerPackPreviewController: ViewController {
     private let account: Account
     private weak var parentNavigationController: NavigationController?
     
-    private var presentationData: PresentationData
     private let stickerPack: StickerPackReference
     
     private var stickerPackContentsValue: LoadedStickerPack?
@@ -28,6 +27,8 @@ final class StickerPackPreviewController: ViewController {
     private let stickerPackInstalled = Promise<Bool>()
     
     private let openMentionDisposable = MetaDisposable()
+    
+    private var presentationDataDisposable: Disposable?
     
     var sendSticker: ((FileMediaReference) -> Void)? {
         didSet {
@@ -50,13 +51,18 @@ final class StickerPackPreviewController: ViewController {
         
         self.stickerPack = stickerPack
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
         
         self.stickerPackContents.set(loadedStickerPack(postbox: account.postbox, network: account.network, reference: stickerPack, forceActualized: true))
+        
+        self.presentationDataDisposable = (self.account.telegramApplicationContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePresentationData(presentationData)
+            }
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -67,6 +73,7 @@ final class StickerPackPreviewController: ViewController {
         self.stickerPackDisposable.dispose()
         self.stickerPackInstalledDisposable.dispose()
         self.openMentionDisposable.dispose()
+        self.presentationDataDisposable?.dispose()
     }
     
     override func loadDisplayNode() {
@@ -123,7 +130,8 @@ final class StickerPackPreviewController: ViewController {
         self.stickerPackDisposable.set((self.stickerPackContents.get() |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
                 if case .none = next {
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     strongSelf.dismiss()
                 } else {
                     strongSelf.controllerNode.updateStickerPack(next)

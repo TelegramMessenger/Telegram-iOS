@@ -192,7 +192,7 @@ private let bubble = PresentationThemeChatBubble(
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(
-    components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x1f1f1f, alpha: 1.0), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), dateFillStatic: UIColor(rgb: 0x1f1f1f, alpha: 1.0), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.2)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x1f1f1f, alpha: 1.0), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), dateFillStatic: UIColor(rgb: 0x1f1f1f, alpha: 1.0), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.2))),
+    components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x1f1f1f, alpha: 1.0), primaryText: UIColor(rgb: 0xffffff), linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), dateFillStatic: UIColor(rgb: 0x1f1f1f, alpha: 1.0), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.2)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0x1f1f1f, alpha: 1.0), primaryText: .white, linkHighlight: UIColor(rgb: 0xffffff, alpha: 0.12), dateFillStatic: UIColor(rgb: 0x1f1f1f, alpha: 1.0), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.2))),
     unreadBarFillColor: UIColor(rgb: 0x1b1b1b), //!!!
     unreadBarStrokeColor: UIColor(rgb: 0x000000),
     unreadBarTextColor: UIColor(rgb: 0xb2b2b2), //!!!
@@ -231,7 +231,7 @@ private let inputPanel = PresentationThemeChatInputPanel(
 )
 
 private let inputMediaPanel = PresentationThemeInputMediaPanel(
-    panelSerapatorColor: UIColor(rgb: 0x000000),
+    panelSeparatorColor: UIColor(rgb: 0x000000),
     panelIconColor: UIColor(rgb: 0x808080),
     panelHighlightedIconBackgroundColor: UIColor(rgb: 0x000000), //!!!
     stickersBackgroundColor: UIColor(rgb: 0x000000),
@@ -244,7 +244,7 @@ private let inputMediaPanel = PresentationThemeInputMediaPanel(
 )
 
 private let inputButtonPanel = PresentationThemeInputButtonPanel(
-    panelSerapatorColor: UIColor(rgb: 0x000000),
+    panelSeparatorColor: UIColor(rgb: 0x000000),
     panelBackgroundColor: UIColor(rgb: 0x141414),
     buttonFillColor: UIColor(rgb: 0x5A5A5A),
     buttonStrokeColor: UIColor(rgb: 0x0C0C0C),

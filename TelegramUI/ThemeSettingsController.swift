@@ -278,7 +278,7 @@ public func themeSettingsController(account: Account) -> ViewController {
         pushControllerImpl?(ThemeGridController(account: account))
     }, openAccentColor: { color in
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(ThemeAccentColorActionSheet(theme: presentationData.theme, strings: presentationData.strings, currentValue: color, applyValue: { color in
+        presentControllerImpl?(ThemeAccentColorActionSheet(account: account, currentValue: color, applyValue: { color in
             let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
                 return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: color, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
             }).start()

@@ -597,7 +597,17 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     
     var addressIndex = 0
     for address in contactData.addresses {
-        entries.append(.address(entries.count, addressIndex, presentationData.theme, localizedGenericContactFieldLabel(label: address.label, strings: presentationData.strings), address, nil, selecting ? !state.excludedComponents.contains(.address(address)) : nil))
+        let signal = geocodeLocation(dictionary: address.dictionary)
+        |> mapToSignal { coordinates -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
+            if let (latitude, longitude) = coordinates {
+                let resource = MapSnapshotMediaResource(latitude: latitude, longitude: longitude, width: 90, height: 90)
+                return chatMapSnapshotImage(account: account, resource: resource)
+            } else {
+                return .single({ _ in return nil })
+            }
+        }
+        
+        entries.append(.address(entries.count, addressIndex, presentationData.theme, localizedGenericContactFieldLabel(label: address.label, strings: presentationData.strings), address, signal, selecting ? !state.excludedComponents.contains(.address(address)) : nil))
         addressIndex += 1
     }
     

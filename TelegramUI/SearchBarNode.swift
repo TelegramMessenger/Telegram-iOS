@@ -60,6 +60,22 @@ private class SearchBarTextField: UITextField {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override var keyboardAppearance: UIKeyboardAppearance {
+        get {
+            return super.keyboardAppearance
+        }
+        set {
+            let resigning = self.isFirstResponder
+            if resigning {
+                self.resignFirstResponder()
+            }
+            super.keyboardAppearance = newValue
+            if resigning {
+                self.becomeFirstResponder()
+            }
+        }
+    }
+    
     override func textRect(forBounds bounds: CGRect) -> CGRect {
         if bounds.size.width.isZero {
             return CGRect(origin: CGPoint(), size: CGSize())
@@ -197,8 +213,8 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         didSet {
             if self.activity != oldValue {
                 if self.activity {
-                    if self.activityIndicator == nil {
-                        let activityIndicator = ActivityIndicator(type: .custom(self.theme.inputIcon, 13.0, 1.0, false))
+                    if self.activityIndicator == nil, let theme = self.theme {
+                        let activityIndicator = ActivityIndicator(type: .custom(theme.inputIcon, 13.0, 1.0, false))
                         self.activityIndicator = activityIndicator
                         self.addSubnode(activityIndicator)
                         if let (boundingSize, leftInset, rightInset) = self.validLayout {
@@ -225,56 +241,39 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    private var theme: SearchBarNodeTheme
-    private var strings: PresentationStrings
+    private var theme: SearchBarNodeTheme?
+    private var strings: PresentationStrings?
     
     init(theme: SearchBarNodeTheme, strings: PresentationStrings) {
-        self.theme = theme
-        self.strings = strings
-        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.background
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = theme.separator
         
         self.textBackgroundNode = ASImageNode()
         self.textBackgroundNode.isLayerBacked = false
         self.textBackgroundNode.displaysAsynchronously = false
         self.textBackgroundNode.displayWithoutProcessing = true
-        self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill)
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
         
         self.textField = SearchBarTextField()
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .search
         self.textField.font = Font.regular(14.0)
-        self.textField.textColor = theme.primaryText
         
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
         self.clearButton.displaysAsynchronously = false
-        self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
         self.clearButton.isHidden = true
-        
-        switch theme.keyboard {
-            case .light:
-                self.textField.keyboardAppearance = .default
-            case .dark:
-                self.textField.keyboardAppearance = .dark
-        }
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
-        self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.accent), for: [])
         self.cancelButton.displaysAsynchronously = false
         
         super.init()
@@ -297,15 +296,32 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
+        
+        self.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
     func updateThemeAndStrings(theme: SearchBarNodeTheme, strings: PresentationStrings) {
-        if self.theme !== theme {
+        if self.theme !== theme || self.strings !== strings {
             self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.accent), for: [])
+        }
+        if self.theme !== theme {
             self.backgroundNode.backgroundColor = theme.background
             self.separatorNode.backgroundColor = theme.separator
             self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill)
+            self.textField.textColor = theme.primaryText
+            self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
+            self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
             
+            switch theme.keyboard {
+                case .light:
+                    self.textField.keyboardAppearance = .default
+                case .dark:
+                    self.textField.keyboardAppearance = .dark
+            }
+            
+            if let activityIndicator = self.activityIndicator {
+                activityIndicator.type = .custom(theme.inputIcon, 13.0, 1.0, false)
+            }
         }
         
         self.theme = theme

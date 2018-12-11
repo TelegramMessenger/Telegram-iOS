@@ -109,5 +109,12 @@ class FormBlockItemNode<Item: FormControllerItem>: ASDisplayNode, FormController
     
     func selected() {
     }
+    
+    var preventsTouchesToOtherItems: Bool {
+        return false
+    }
+    
+    func touchesToOtherItemsPrevented() {
+    }
 }
 

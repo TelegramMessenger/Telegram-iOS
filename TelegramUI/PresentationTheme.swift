@@ -720,7 +720,7 @@ public final class PresentationThemeChatInputPanel {
 }
 
 public final class PresentationThemeInputMediaPanel {
-    public let panelSerapatorColor: UIColor
+    public let panelSeparatorColor: UIColor
     public let panelIconColor: UIColor
     public let panelHighlightedIconBackgroundColor: UIColor
     public let stickersBackgroundColor: UIColor
@@ -731,8 +731,8 @@ public final class PresentationThemeInputMediaPanel {
     public let stickersSearchControlColor: UIColor
     public let gifsBackgroundColor: UIColor
     
-    public init(panelSerapatorColor: UIColor, panelIconColor: UIColor, panelHighlightedIconBackgroundColor: UIColor, stickersBackgroundColor: UIColor, stickersSectionTextColor: UIColor, stickersSearchBackgroundColor: UIColor, stickersSearchPlaceholderColor: UIColor, stickersSearchPrimaryColor: UIColor, stickersSearchControlColor: UIColor, gifsBackgroundColor: UIColor) {
-        self.panelSerapatorColor = panelSerapatorColor
+    public init(panelSeparatorColor: UIColor, panelIconColor: UIColor, panelHighlightedIconBackgroundColor: UIColor, stickersBackgroundColor: UIColor, stickersSectionTextColor: UIColor, stickersSearchBackgroundColor: UIColor, stickersSearchPlaceholderColor: UIColor, stickersSearchPrimaryColor: UIColor, stickersSearchControlColor: UIColor, gifsBackgroundColor: UIColor) {
+        self.panelSeparatorColor = panelSeparatorColor
         self.panelIconColor = panelIconColor
         self.panelHighlightedIconBackgroundColor = panelHighlightedIconBackgroundColor
         self.stickersBackgroundColor = stickersBackgroundColor
@@ -746,7 +746,7 @@ public final class PresentationThemeInputMediaPanel {
 }
 
 public final class PresentationThemeInputButtonPanel {
-    public let panelSerapatorColor: UIColor
+    public let panelSeparatorColor: UIColor
     public let panelBackgroundColor: UIColor
     public let buttonFillColor: UIColor
     public let buttonStrokeColor: UIColor
@@ -754,8 +754,8 @@ public final class PresentationThemeInputButtonPanel {
     public let buttonHighlightedStrokeColor: UIColor
     public let buttonTextColor: UIColor
     
-    public init(panelSerapatorColor: UIColor, panelBackgroundColor: UIColor, buttonFillColor: UIColor, buttonStrokeColor: UIColor, buttonHighlightedFillColor: UIColor, buttonHighlightedStrokeColor: UIColor, buttonTextColor: UIColor) {
-        self.panelSerapatorColor = panelSerapatorColor
+    public init(panelSeparatorColor: UIColor, panelBackgroundColor: UIColor, buttonFillColor: UIColor, buttonStrokeColor: UIColor, buttonHighlightedFillColor: UIColor, buttonHighlightedStrokeColor: UIColor, buttonTextColor: UIColor) {
+        self.panelSeparatorColor = panelSeparatorColor
         self.panelBackgroundColor = panelBackgroundColor
         self.buttonFillColor = buttonFillColor
         self.buttonStrokeColor = buttonStrokeColor

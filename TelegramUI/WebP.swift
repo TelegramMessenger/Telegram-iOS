@@ -1,6 +1,7 @@
 import UIKit
 import SwiftSignalKit
 import LegacyComponents
+import Display
 
 private func scaleImage(_ image: UIImage, dimensions: CGSize) -> UIImage? {
     if #available(iOSApplicationExtension 10.0, *) {
@@ -22,7 +23,14 @@ func convertToWebP(image: UIImage, targetSize: CGSize?, quality: CGFloat) -> Sig
     }
     
     return Signal { subscriber in
-        if let data = try? UIImage.convert(toWebP: image, quality: quality * 100.0) {
+        let context = DrawingContext(size: image.size, scale: 0.0, clear: true)
+        context.withFlippedContext({ context in
+            if let cgImage = image.cgImage {
+                context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: image.size.width, height: image.size.height))
+            }
+        })
+        let processedImage = context.generateImage()!
+        if let data = try? UIImage.convert(toWebP: processedImage, quality: quality * 100.0) {
             subscriber.putNext(data)
         }
         subscriber.putCompletion()

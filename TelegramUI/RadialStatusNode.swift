@@ -125,7 +125,11 @@ public enum RadialStatusNodeState: Equatable {
 }
 
 public final class RadialStatusNode: ASControlNode {
-    private var backgroundNodeColor: UIColor
+    var backgroundNodeColor: UIColor {
+        didSet {
+            self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), animated: false, completion: {})
+        }
+    }
     
     private(set) var state: RadialStatusNodeState = .none
     

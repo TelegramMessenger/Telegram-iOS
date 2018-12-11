@@ -148,7 +148,7 @@ public final class TelegramApplicationContext {
        
         if let account = account {
             self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
-            |> then(updatedPresentationData(postbox: account.postbox)))
+            |> then(updatedPresentationData(postbox: account.postbox, applicationBindings: applicationBindings)))
             self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings) |> then(updatedAutomaticMediaDownloadSettings(postbox: account.postbox)))
         } else {
             self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData))

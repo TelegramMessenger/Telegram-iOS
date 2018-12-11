@@ -412,7 +412,7 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
         }
         items.append(ActionSheetButtonItem(title: presentationData.strings.MessageTimer_Custom, color: .accent, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()
-            presentControllerImpl?(PeerBanTimeoutController(theme: presentationData.theme, strings: presentationData.strings, currentValue: Int32(Date().timeIntervalSince1970), applyValue: { value in
+            presentControllerImpl?(PeerBanTimeoutController(account: account, currentValue: Int32(Date().timeIntervalSince1970), applyValue: { value in
                 applyValue(value)
             }), nil)
         }))

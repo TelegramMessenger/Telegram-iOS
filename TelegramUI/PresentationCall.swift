@@ -232,7 +232,7 @@ public final class PresentationCall {
         self.isOutgoing = isOutgoing
         self.peer = peer
         
-        self.ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: currentNetworkType, updatedNetworkType: updatedNetworkType, serializedData: serializedData, dataSaving: dataSaving)
+        self.ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: currentNetworkType, updatedNetworkType: updatedNetworkType, serializedData: serializedData, dataSaving: dataSaving, logPath: "")
         
         var didReceiveAudioOutputs = false
         self.sessionStateDisposable = (callSessionManager.callState(internalId: internalId)

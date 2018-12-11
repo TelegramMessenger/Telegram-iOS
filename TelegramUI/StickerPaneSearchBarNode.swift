@@ -58,6 +58,22 @@ private class StickerPaneSearchBarTextField: UITextField {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    override var keyboardAppearance: UIKeyboardAppearance {
+        get {
+            return super.keyboardAppearance
+        }
+        set {
+            let resigning = self.isFirstResponder
+            if resigning {
+                self.resignFirstResponder()
+            }
+            super.keyboardAppearance = newValue
+            if resigning {
+                self.becomeFirstResponder()
+            }
+        }
+    }
     
     override func textRect(forBounds bounds: CGRect) -> CGRect {
         if bounds.size.width.isZero {
@@ -159,7 +175,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         didSet {
             if self.activity != oldValue {
                 if self.activity {
-                    if self.activityIndicator == nil {
+                    if self.activityIndicator == nil, let theme = self.theme {
                         let activityIndicator = ActivityIndicator(type: .custom(theme.chat.inputMediaPanel.stickersSearchControlColor, 13.0, 1.0, false))
                         self.activityIndicator = activityIndicator
                         self.addSubnode(activityIndicator)
@@ -177,57 +193,38 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var theme: PresentationTheme?
     
-    private var theme: PresentationTheme
-    private var strings: PresentationStrings
-    
-    init(theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
-        self.strings = strings
-        
+    override init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        //self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = theme.chat.inputMediaPanel.panelSerapatorColor
         
         self.textBackgroundNode = ASImageNode()
         self.textBackgroundNode.isLayerBacked = false
         self.textBackgroundNode.displaysAsynchronously = false
         self.textBackgroundNode.displayWithoutProcessing = true
-        self.textBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.chat.inputMediaPanel.stickersSearchBackgroundColor)
         
         self.iconNode = ASImageNode()
         self.iconNode.isUserInteractionEnabled = false
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = generateLoupeIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor)
         
         self.textField = StickerPaneSearchBarTextField()
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .done
         self.textField.font = Font.regular(14.0)
-        self.textField.textColor = theme.chat.inputMediaPanel.stickersSearchPrimaryColor
         
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
         self.clearButton.displaysAsynchronously = false
-        self.clearButton.setImage(generateClearIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor), for: [])
         self.clearButton.isHidden = true
-        
-        switch theme.chatList.searchBarKeyboardColor {
-            case .light:
-                self.textField.keyboardAppearance = .default
-            case .dark:
-                self.textField.keyboardAppearance = .dark
-        }
         
         self.cancelButton = ASButtonNode()
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
-        self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor), for: [])
         self.cancelButton.displaysAsynchronously = false
         
         super.init()
@@ -250,6 +247,31 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        
+        if let activityIndicator = self.activityIndicator {
+            activityIndicator.type = .custom(theme.chat.inputMediaPanel.stickersSearchControlColor, 13.0, 1.0, false)
+        }
+        self.separatorNode.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
+        self.textBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.chat.inputMediaPanel.stickersSearchBackgroundColor)
+        self.textField.textColor = theme.chat.inputMediaPanel.stickersSearchPrimaryColor
+        self.iconNode.image = generateLoupeIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor)
+        self.clearButton.setImage(generateClearIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor), for: [])
+        self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor), for: [])
+        
+        switch theme.chatList.searchBarKeyboardColor {
+            case .light:
+                self.textField.keyboardAppearance = .default
+            case .dark:
+                self.textField.keyboardAppearance = .dark
+        }
+        
+        if let (boundingSize, leftInset, rightInset) = self.validLayout {
+            self.updateLayout(boundingSize: boundingSize, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+        }
     }
     
     func updateLayout(boundingSize: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {

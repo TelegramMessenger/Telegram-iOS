@@ -68,7 +68,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     private let bottomStripeNode: ASDisplayNode
     
     private let textClippingNode: ASDisplayNode
-    private let textNode: ASEditableTextNode
+    private let textNode: EditableTextNode
     private let measureTextNode: TextNode
     
     private let limitTextNode: TextNode
@@ -93,7 +93,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         self.textClippingNode = ASDisplayNode()
         self.textClippingNode.clipsToBounds = true
         
-        self.textNode = ASEditableTextNode()
+        self.textNode = EditableTextNode()
         self.measureTextNode = TextNode()
         
         self.limitTextNode = TextNode()

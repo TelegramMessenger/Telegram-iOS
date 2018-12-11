@@ -14,9 +14,7 @@ func legacyLocationPickerController(account: Account, selfPeer: Peer, peer: Peer
     let controller = TGLocationPickerController(context: legacyController.context, intent: TGLocationPickerControllerDefaultIntent)!
     controller.peer = makeLegacyPeer(selfPeer)
     controller.receivingPeer = makeLegacyPeer(peer)
-    let listTheme = theme.list
-    let searchTheme = theme.rootController.activeNavigationSearchBar
-    controller.pallete = TGLocationPallete(backgroundColor: listTheme.plainBackgroundColor, selectionColor: listTheme.itemHighlightedBackgroundColor, separatorColor: listTheme.itemPlainSeparatorColor, textColor: listTheme.itemPrimaryTextColor, secondaryTextColor: listTheme.itemSecondaryTextColor, accentColor: listTheme.itemAccentColor, destructiveColor: listTheme.itemDestructiveColor, locationColor: UIColor(rgb: 0x008df2), liveLocationColor: UIColor(rgb: 0xff6464), iconColor: searchTheme.backgroundColor, sectionHeaderBackgroundColor: theme.chatList.sectionHeaderFillColor, sectionHeaderTextColor: theme.chatList.sectionHeaderTextColor, searchBarPallete: TGSearchBarPallete(dark: theme.overallDarkAppearance, backgroundColor: searchTheme.inputFillColor, highContrastBackgroundColor: searchTheme.inputFillColor, textColor: searchTheme.inputTextColor, placeholderColor: searchTheme.inputPlaceholderTextColor, clearIcon: generateClearIcon(color: theme.rootController.activeNavigationSearchBar.inputClearButtonColor), barBackgroundColor: searchTheme.backgroundColor, barSeparatorColor: searchTheme.separatorColor, plainBackgroundColor: searchTheme.backgroundColor, accentColor: searchTheme.accentColor, accentContrastColor: searchTheme.backgroundColor, menuBackgroundColor: searchTheme.backgroundColor, segmentedControlBackgroundImage: nil, segmentedControlSelectedImage: nil, segmentedControlHighlightedImage: nil, segmentedControlDividerImage: nil), avatarPlaceholder: nil)
+    controller.pallete = legacyLocationPalette(from: theme)
     let namespacesWithEnabledLiveLocation: Set<PeerId.Namespace> = Set([
         Namespaces.Peer.CloudChannel,
         Namespaces.Peer.CloudGroup,
@@ -86,5 +84,11 @@ func legacyLocationPickerController(account: Account, selfPeer: Peer, peer: Peer
             })
         })
     }
+    let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak controller] presentationData in
+        if let controller = controller  {
+            controller.pallete = legacyLocationPalette(from: presentationData.theme)
+        }
+    })
+    legacyController.disposables.add(presentationDisposable)
     return legacyController
 }

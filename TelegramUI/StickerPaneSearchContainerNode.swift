@@ -135,8 +135,6 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, theme: 
 
 final class StickerPaneSearchContainerNode: ASDisplayNode {
     private let account: Account
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
     private let controllerInteraction: ChatControllerInteraction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
     
@@ -160,19 +158,16 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, cancel: @escaping () -> Void) {
         self.account = account
-        self.theme = theme
-        self.strings = strings
         self.controllerInteraction = controllerInteraction
         self.inputNodeInteraction = inputNodeInteraction
         
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
         
         self.trendingPane = ChatMediaInputTrendingPane(account: account, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
             return inputNodeInteraction?.previewedStickerPackItem == .pack(item)
         })
         
-        self.searchBar = StickerPaneSearchBarNode(theme: theme, strings: strings)
+        self.searchBar = StickerPaneSearchBarNode()
         
         self.gridNode = GridNode()
         
@@ -180,12 +175,10 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.notFoundNode.displayWithoutProcessing = true
         self.notFoundNode.displaysAsynchronously = false
         self.notFoundNode.clipsToBounds = false
-        self.notFoundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/StickersNotFoundIcon"), color: theme.list.freeMonoIcon)
         
         self.notFoundLabel = ImmediateTextNode()
         self.notFoundLabel.displaysAsynchronously = false
         self.notFoundLabel.isUserInteractionEnabled = false
-        self.notFoundLabel.attributedText = NSAttributedString(string: strings.Stickers_NoStickersFound, font: Font.medium(14.0), textColor: theme.list.freeTextColor)
         self.notFoundNode.addSubnode(self.notFoundLabel)
         
         self.gridNode.isHidden = true
@@ -209,7 +202,6 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
             self?.searchBar.deactivate(clear: false)
         }
         
-        self.searchBar.placeholderString = NSAttributedString(string: strings.Stickers_Search, font: Font.regular(14.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
         self.searchBar.cancel = {
             cancel()
         }
@@ -371,10 +363,20 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         
         self._ready.set(self.trendingPane.ready)
         self.trendingPane.activate()
+        
+        self.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
     deinit {
         self.searchDisposable.dispose()
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
+        self.notFoundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/StickersNotFoundIcon"), color: theme.list.freeMonoIcon)
+        self.notFoundLabel.attributedText = NSAttributedString(string: strings.Stickers_NoStickersFound, font: Font.medium(14.0), textColor: theme.list.freeTextColor)
+        self.searchBar.updateThemeAndStrings(theme: theme, strings: strings)
+        self.searchBar.placeholderString = NSAttributedString(string: strings.Stickers_Search, font: Font.regular(14.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition) {

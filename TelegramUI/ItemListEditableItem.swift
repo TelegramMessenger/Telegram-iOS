@@ -18,7 +18,7 @@ final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognizer {
     override func reset() {
         super.reset()
         
-        validatedGesture = false
+        self.validatedGesture = false
     }
     
     func becomeCancelled() {
@@ -34,19 +34,19 @@ final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognizer {
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         let location = touches.first!.location(in: self.view)
-        let translation = CGPoint(x: location.x - firstLocation.x, y: location.y - firstLocation.y)
+        let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
         
-        if !validatedGesture {
+        if !self.validatedGesture {
             if !self.allowAnyDirection && translation.x > 0.0 {
                 self.state = .failed
             } else if abs(translation.y) > 4.0 && abs(translation.y) > abs(translation.x) * 2.5 {
                 self.state = .failed
             } else if abs(translation.x) > 4.0 && abs(translation.y) * 2.5 < abs(translation.x) {
-                validatedGesture = true
+                self.validatedGesture = true
             }
         }
         
-        if validatedGesture {
+        if self.validatedGesture {
             self.lastVelocity = self.velocity(in: self.view)
             super.touchesMoved(touches, with: event)
         }
@@ -172,7 +172,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         switch recognizer.state {
             case .began:
                 if let leftRevealNode = self.leftRevealNode {
-                    let revealSize = leftRevealNode.calculatedSize
+                    let revealSize = leftRevealNode.bounds.size
                     let location = recognizer.location(in: self.view)
                     if location.x < revealSize.width {
                         recognizer.becomeCancelled()
@@ -180,7 +180,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
                         self.initialRevealOffset = self.revealOffset
                     }
                 } else if let rightRevealNode = self.rightRevealNode {
-                    let revealSize = rightRevealNode.calculatedSize
+                    let revealSize = rightRevealNode.bounds.size
                     let location = recognizer.location(in: self.view)
                     if location.x > size.width - revealSize.width {
                         recognizer.becomeCancelled()
@@ -217,7 +217,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
                 
                 if let leftRevealNode = self.leftRevealNode {
                     let velocity = recognizer.velocity(in: self.view)
-                    let revealSize = leftRevealNode.calculatedSize
+                    let revealSize = leftRevealNode.bounds.size
                     var reveal = false
                     if abs(velocity.x) < 100.0 {
                         if self.initialRevealOffset.isZero && self.revealOffset > 0.0 {
@@ -252,7 +252,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
                     }
                 } else if let rightRevealNode = self.rightRevealNode {
                     let velocity = recognizer.velocity(in: self.view)
-                    let revealSize = rightRevealNode.calculatedSize
+                    let revealSize = rightRevealNode.bounds.size
                     var reveal = false
                     if abs(velocity.x) < 100.0 {
                         if self.initialRevealOffset.isZero && self.revealOffset < 0.0 {
@@ -289,11 +289,12 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
             revealNode.setOptions(self.revealOptions.left)
             self.leftRevealNode = revealNode
             
-            if let (size, _, rightInset) = self.validLayout {
-                let revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
+            if let (size, leftInset, _) = self.validLayout {
+                var revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
+                revealSize.width += leftInset
                 
                 revealNode.frame = CGRect(origin: CGPoint(x: min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
-                revealNode.updateRevealOffset(offset: 0.0, rightInset: rightInset, transition: .immediate)
+                revealNode.updateRevealOffset(offset: 0.0, sideInset: leftInset, transition: .immediate)
             }
             
             self.addSubnode(revealNode)
@@ -311,10 +312,11 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
             self.rightRevealNode = revealNode
             
             if let (size, _, rightInset) = self.validLayout {
-                let revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
+                var revealSize = revealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
+                revealSize.width += rightInset
                 
-                revealNode.frame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width - rightInset), y: 0.0), size: revealSize)
-                revealNode.updateRevealOffset(offset: 0.0, rightInset: rightInset, transition: .immediate)
+                revealNode.frame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
+                revealNode.updateRevealOffset(offset: 0.0, sideInset: -rightInset, transition: .immediate)
             }
             
             self.addSubnode(revealNode)
@@ -325,29 +327,31 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         self.validLayout = (size, leftInset, rightInset)
         
         if let leftRevealNode = self.leftRevealNode {
-            let revealSize = leftRevealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
-            leftRevealNode.frame = CGRect(origin: CGPoint(x: leftInset + min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
+            var revealSize = leftRevealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
+            revealSize.width += leftInset
+            leftRevealNode.frame = CGRect(origin: CGPoint(x: min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
         }
         
         if let rightRevealNode = self.rightRevealNode {
-            let revealSize = rightRevealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
-            rightRevealNode.frame = CGRect(origin: CGPoint(x: size.width - rightInset + max(self.revealOffset, -revealSize.width - rightInset), y: 0.0), size: revealSize)
+            var revealSize = rightRevealNode.measure(CGSize(width: CGFloat.greatestFiniteMagnitude, height: size.height))
+            revealSize.width += rightInset
+            rightRevealNode.frame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
         }
     }
     
     func updateRevealOffsetInternal(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.revealOffset = offset
-        guard let (size, _, rightInset) = self.validLayout else {
+        guard let (size, leftInset, rightInset) = self.validLayout else {
             return
         }
         
         if let leftRevealNode = self.leftRevealNode {
-            let revealSize = leftRevealNode.calculatedSize
+            let revealSize = leftRevealNode.bounds.size
             
             let revealFrame = CGRect(origin: CGPoint(x: min(self.revealOffset - revealSize.width, 0.0), y: 0.0), size: revealSize)
             //let revealNodeOffset = max(-self.revealOffset, revealSize.width)
             let revealNodeOffset = -self.revealOffset
-            leftRevealNode.updateRevealOffset(offset: revealNodeOffset, rightInset: rightInset, transition: transition)
+            leftRevealNode.updateRevealOffset(offset: revealNodeOffset, sideInset: leftInset, transition: transition)
             
             if CGFloat(offset).isLessThanOrEqualTo(0.0) {
                 self.leftRevealNode = nil
@@ -359,11 +363,11 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
             }
         }
         if let rightRevealNode = self.rightRevealNode {
-            let revealSize = rightRevealNode.calculatedSize
+            let revealSize = rightRevealNode.bounds.size
             
             let revealFrame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
-            let revealNodeOffset = -max(self.revealOffset, -revealSize.width - rightInset)
-            rightRevealNode.updateRevealOffset(offset: revealNodeOffset, rightInset: rightInset, transition: transition)
+            let revealNodeOffset = -max(self.revealOffset, -revealSize.width)
+            rightRevealNode.updateRevealOffset(offset: revealNodeOffset, sideInset: -rightInset, transition: transition)
             
             if CGFloat(0.0).isLessThanOrEqualTo(offset) {
                 self.rightRevealNode = nil
@@ -410,10 +414,10 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
             if value {
                 if self.rightRevealNode == nil {
                     self.setupAndAddRightRevealNode()
-                    if let rightRevealNode = self.rightRevealNode, rightRevealNode.isNodeLoaded, let (_, _, rightInset) = self.validLayout {
+                    if let rightRevealNode = self.rightRevealNode, rightRevealNode.isNodeLoaded, let _ = self.validLayout {
                         rightRevealNode.layout()
-                        let revealSize = rightRevealNode.calculatedSize
-                        self.updateRevealOffsetInternal(offset: -revealSize.width - rightInset, transition: transition)
+                        let revealSize = rightRevealNode.bounds.size
+                        self.updateRevealOffsetInternal(offset: -revealSize.width, transition: transition)
                     }
                 }
             } else if !self.revealOffset.isZero {

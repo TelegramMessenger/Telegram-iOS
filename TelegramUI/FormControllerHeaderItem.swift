@@ -58,4 +58,11 @@ final class FormControllerHeaderItemNode: ASDisplayNode, FormControllerItemNode 
         
         return height
     }
+    
+    var preventsTouchesToOtherItems: Bool {
+        return false
+    }
+    
+    func touchesToOtherItemsPrevented() {
+    }
 }

@@ -299,7 +299,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                 uploadedAvatar.set(uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource))
                 updateState { current in
                     var current = current
-                    current.avatar = .image(representation)
+                    current.avatar = .image(representation, false)
                     return current
                 }
             }

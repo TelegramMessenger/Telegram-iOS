@@ -582,7 +582,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                 if methods.isEmpty {
                     openNewCard()
                 } else {
-                    strongSelf.present(BotCheckoutPaymentMethodSheetController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, currentMethod: strongSelf.currentPaymentMethod, methods: methods, applyValue: { method in
+                    strongSelf.present(BotCheckoutPaymentMethodSheetController(account: strongSelf.account, currentMethod: strongSelf.currentPaymentMethod, methods: methods, applyValue: { method in
                         applyPaymentMethod(method)
                     }, newCard: {
                         openNewCard()
@@ -593,7 +593,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
         
         openShippingMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let shippingOptions = strongSelf.currentValidatedFormInfo?.shippingOptions, !shippingOptions.isEmpty {
-                strongSelf.present(BotCheckoutPaymentShippingOptionSheetController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, currency: paymentFormValue.invoice.currency, options: shippingOptions, currentId: strongSelf.currentShippingOptionId, applyValue: { id in
+                strongSelf.present(BotCheckoutPaymentShippingOptionSheetController(account: strongSelf.account, currency: paymentFormValue.invoice.currency, options: shippingOptions, currentId: strongSelf.currentShippingOptionId, applyValue: { id in
                     if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
                         strongSelf.currentShippingOptionId = id
                         strongSelf.paymentFormAndInfo.set(.single((paymentFormValue, currentFormInfo, strongSelf.currentValidatedFormInfo, strongSelf.currentShippingOptionId, strongSelf.currentPaymentMethod)))

@@ -3,22 +3,28 @@ import Display
 import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
-import Photos
+import TelegramCore
 
 final class ThemeAutoNightTimeSelectionActionSheet: ActionSheetController {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
+    private var presentationDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
         return self._ready
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, currentValue: Int32, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(account: Account, currentValue: Int32, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let theme = presentationData.theme
+        let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        
+        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+            }
+        })
         
         self._ready.set(.single(true))
         
@@ -49,6 +55,10 @@ final class ThemeAutoNightTimeSelectionActionSheet: ActionSheetController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDisposable?.dispose()
     }
 }
 

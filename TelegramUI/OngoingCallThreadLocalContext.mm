@@ -128,6 +128,7 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
     NSTimeInterval _callConnectTimeout;
     NSTimeInterval _callPacketTimeout;
     int32_t _dataSavingMode;
+    NSString *_logPath;
     
     tgvoip::VoIPController *_controller;
     
@@ -213,7 +214,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     return tgvoip::VoIPController::GetConnectionMaxLayer();
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving logPath:(NSString * _Nonnull)logPath {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -226,6 +227,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         _callPacketTimeout = 10.0;
         _dataSavingMode = callControllerDataSavingForType(dataSaving);
         _networkType = networkType;
+        _logPath = logPath;
         
         _controller = new tgvoip::VoIPController();
         _controller->implData = (void *)((intptr_t)_contextId);
@@ -286,7 +288,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     }
     
     tgvoip::VoIPController::Config config(_callConnectTimeout, _callPacketTimeout, _dataSavingMode, false, true, true);
-    config.logFilePath = "";
+    config.logFilePath = _logPath.length > 0 ? std::string(_logPath.UTF8String) : "";
     config.statsDumpFilePath = "";
     
     if (_controller != nil) {

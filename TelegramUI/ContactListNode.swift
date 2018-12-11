@@ -160,7 +160,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     interaction.activateSearch()
                 })
             case let .permissionInfo(theme, strings):
-                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied)
+                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied, style: .plain)
             case let .permissionEnable(theme, text):
                 return ContactListActionItem(theme: theme, title: text, icon: nil, header: nil, action: {
                     interaction.authorize()

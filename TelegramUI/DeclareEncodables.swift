@@ -30,6 +30,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InstantPageStoredDetailsState.self, f: { InstantPageStoredDetailsState(decoder: $0) })
     declareEncodable(WatchPresetSettings.self, f: { WatchPresetSettings(decoder: $0) })
     declareEncodable(WebSearchSettings.self, f: { WebSearchSettings(decoder: $0) })
+    declareEncodable(RecentWebSearchQueryItem.self, f: { RecentWebSearchQueryItem(decoder: $0) })
     return
 }()
 

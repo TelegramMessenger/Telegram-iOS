@@ -138,6 +138,11 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
     return controller
 }
 
+func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuSheetPallete {
+    let sheetTheme = theme.actionSheet
+    return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
+}
+
 func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void) -> ViewController {
     
     let legacyController = LegacyController(presentation: .custom, theme: theme)
@@ -169,6 +174,13 @@ func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allow
             }
         }
     }
-   
+    
+    let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak legacyController] presentationData in
+        if let legacyController = legacyController, let controller = legacyController.legacyController as? TGMenuSheetController  {
+            controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme)
+        }
+    })
+    legacyController.disposables.add(presentationDisposable)
+    
     return legacyController
 }

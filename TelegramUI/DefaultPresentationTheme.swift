@@ -260,10 +260,10 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         shareButtonForegroundColor: accentColor,
         mediaOverlayControlBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.6),
         mediaOverlayControlForegroundColor: UIColor(rgb: 0xffffff, alpha: 1.0),
-        actionButtonsIncomingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.5)),
+        actionButtonsIncomingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8), withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)),
         actionButtonsIncomingStrokeColor: UIColor(rgb: 0x3996ee),
         actionButtonsIncomingTextColor: UIColor(rgb: 0x3996ee),
-        actionButtonsOutgoingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.5)),
+        actionButtonsOutgoingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8), withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)),
         actionButtonsOutgoingStrokeColor: UIColor(rgb: 0x3996ee),
         actionButtonsOutgoingTextColor: UIColor(rgb: 0x3996ee),
         selectionControlBorderColor: UIColor(rgb: 0xC7C7CC),
@@ -324,7 +324,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
     )
     
     let inputMediaPanel = PresentationThemeInputMediaPanel(
-        panelSerapatorColor: UIColor(rgb: 0xBEC2C6),
+        panelSeparatorColor: UIColor(rgb: 0xBEC2C6),
         panelIconColor: UIColor(rgb: 0x858e99),
         panelHighlightedIconBackgroundColor: UIColor(rgb: 0x858e99, alpha: 0.2),
         stickersBackgroundColor: UIColor(rgb: 0xe8ebf0),
@@ -337,7 +337,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
     )
     
     let inputButtonPanel = PresentationThemeInputButtonPanel(
-        panelSerapatorColor: UIColor(rgb: 0xBEC2C6),
+        panelSeparatorColor: UIColor(rgb: 0xBEC2C6),
         panelBackgroundColor: UIColor(rgb: 0xdee2e6),
         buttonFillColor: .white,
         buttonStrokeColor: UIColor(rgb: 0xc3c7c9),

@@ -89,7 +89,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             }
 
             dismissInput()
-            present(ProxyServerActionSheetController(account: account, theme: presentationData.theme, strings: presentationData.strings, server: server), nil)
+            present(ProxyServerActionSheetController(account: account, server: server), nil)
         case let .confirmationCode(code):
             if let topController = navigationController?.topViewController as? ChangePhoneNumberCodeController {
                 topController.applyCode(code)

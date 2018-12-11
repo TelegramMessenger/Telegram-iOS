@@ -440,7 +440,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.collectionListSeparator = ASDisplayNode()
         self.collectionListSeparator.isLayerBacked = true
-        self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSerapatorColor
+        self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
         
         self.collectionListContainer = CollectionListContainerNode()
         self.collectionListContainer.clipsToBounds = true
@@ -766,8 +766,14 @@ final class ChatMediaInputNode: ChatInputNode {
             self.strings = strings
             
             self.collectionListPanel.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
-            self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSerapatorColor
-            self.backgroundColor = theme.chat.inputMediaPanel.gifsBackgroundColor
+            self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
+            self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
+            
+            self.stickerSearchContainerNode?.updateThemeAndStrings(theme: theme, strings: strings)
+            
+            self.stickerPane.updateThemeAndStrings(theme: theme, strings: strings)
+            self.gifPane.updateThemeAndStrings(theme: theme, strings: strings)
+            self.trendingPane.updateThemeAndStrings(theme: theme, strings: strings)
             
             self.themeAndStringsPromise.set(.single((theme, strings)))
         }

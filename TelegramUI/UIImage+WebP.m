@@ -78,6 +78,7 @@
 + (NSData *)convertToWebP:(UIImage *)image quality:(CGFloat)quality error:(NSError **)error {
     WebPPreset preset = WEBP_PRESET_DEFAULT;
     CGImageRef webPImageRef = image.CGImage;
+        
     size_t webPBytesPerRow = CGImageGetBytesPerRow(webPImageRef);
     
     size_t webPImageWidth = CGImageGetWidth(webPImageRef);
@@ -100,9 +101,6 @@
     }
     
     config.method = 6;
-    //if (configBlock) {
-     //   configBlock(&config);
-    //}
     
     if (!WebPValidateConfig(&config)) {
         NSMutableDictionary *errorDetail = [NSMutableDictionary dictionary];
@@ -128,7 +126,8 @@
     pic.height = (int)webPImageHeight;
     pic.colorspace = WEBP_YUV420;
     
-    WebPPictureImportRGBA(&pic, webPImageData, (int)webPBytesPerRow);
+    WebPPictureImportBGRA(&pic, webPImageData, (int)webPBytesPerRow);
+    //WebPPictureImportRGBA(&pic, webPImageData, (int)webPBytesPerRow);
     WebPPictureARGBToYUVA(&pic, WEBP_YUV420);
     WebPCleanupTransparentArea(&pic);
     

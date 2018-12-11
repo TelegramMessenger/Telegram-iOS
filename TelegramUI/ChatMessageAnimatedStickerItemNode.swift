@@ -387,6 +387,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             strongSelf.replyBackgroundNode = updatedReplyBackgroundNode
                             strongSelf.addSubnode(updatedReplyBackgroundNode)
                             updatedReplyBackgroundNode.image = replyBackgroundImage
+                        } else {
+                            strongSelf.replyBackgroundNode?.image = replyBackgroundImage
                         }
                     } else if let replyBackgroundNode = strongSelf.replyBackgroundNode {
                         replyBackgroundNode.removeFromSupernode()

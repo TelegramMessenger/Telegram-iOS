@@ -12,7 +12,11 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
 private let callLogsLimit = 20
 
 private func callLogsPath(account: Account) -> String {
-    let path = account.basePath + "/calls"
+    return account.basePath + "/calls"
+}
+
+private func cleanupCallLogs(account: Account) {
+    let path = callLogsPath(account: account)
     let fileManager = FileManager.default
     if !fileManager.fileExists(atPath: path, isDirectory: nil) {
         try? fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
@@ -39,7 +43,6 @@ private func callLogsPath(account: Account) -> String {
     if count > callLogsLimit, let oldest = oldest {
         try? fileManager.removeItem(atPath: oldest.0.path)
     }
-    return path
 }
 
 private let setupLogs: Bool = {
@@ -145,7 +148,7 @@ final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving) {
+    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, logPath: String) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
@@ -163,7 +166,7 @@ final class OngoingCallContext {
                         break
                 }
             }
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving))
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), logPath: logPath)
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))

@@ -1,5 +1,6 @@
 import Foundation
 import Display
+import SwiftSignalKit
 import LegacyComponents
 
 public enum LegacyControllerPresentation {
@@ -318,6 +319,8 @@ public class LegacyController: ViewController {
     }
     private var enableContainerLayoutUpdates = false
     
+    var disposables = DisposableSet()
+    
     public init(presentation: LegacyControllerPresentation, theme: PresentationTheme? = nil, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
         self.presentation = presentation
@@ -340,6 +343,7 @@ public class LegacyController: ViewController {
     }
     
     deinit {
+        self.disposables.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {

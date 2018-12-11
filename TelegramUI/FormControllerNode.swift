@@ -141,8 +141,35 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
         self.scrollNode.backgroundColor = nil
         self.scrollNode.isOpaque = false
         self.scrollNode.delegate = self
-        
         self.addSubnode(self.scrollNode)
+        
+        self.scrollNode.view.delaysContentTouches = true
+        self.scrollNode.touchesPrevented = { [weak self] position in
+            guard let strongSelf = self else {
+                return false
+            }
+            
+            for i in 0 ..< strongSelf.itemNodes.count {
+                if strongSelf.itemNodes[i].preventsTouchesToOtherItems {
+                    if let node = strongSelf.itemNodeAtPoint(position), node === strongSelf.itemNodes[i]  {
+                        return false
+                    }
+                    strongSelf.itemNodes[i].touchesToOtherItemsPrevented()
+                    return true
+                }
+            }
+            
+            return false
+        }
+    }
+    
+    func itemNodeAtPoint(_ point: CGPoint) -> (ASDisplayNode & FormControllerItemNode)? {
+        for node in self.itemNodes {
+            if node.frame.contains(point) {
+                return node
+            }
+        }
+        return nil
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -375,5 +402,9 @@ class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: View
         if let layoutState = self.layoutState, let innerState = self.innerState {
             self.stateUpdated(state: FormControllerState(layoutState: layoutState, presentationState: self.internalState.presentationState, innerState: innerState), transition: transition)
         }
+    }
+    
+    func scrollToItemNode(_ itemNode: ASDisplayNode & FormControllerItemNode) {
+        self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: max(0.0, min(itemNode.frame.minY, self.scrollNode.view.contentSize.height - self.scrollNode.view.frame.height)))
     }
 }

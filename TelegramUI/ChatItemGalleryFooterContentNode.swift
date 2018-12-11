@@ -712,7 +712,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                                     if availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: item).count > 1 {
                                         preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Conversation_FileOpenIn, action: { [weak self] in
                                             if let strongSelf = self {
-                                                let openInController = OpenInActionSheetController(postbox: strongSelf.account.postbox, applicationContext: strongSelf.account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: item, additionalAction: nil, openUrl: { [weak self] url in
+                                                let openInController = OpenInActionSheetController(account: strongSelf.account, item: item, additionalAction: nil, openUrl: { [weak self] url in
                                                     if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
                                                         openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: presentationData, applicationContext: applicationContext, navigationController: nil, dismissInput: {})
                                                     }
@@ -823,7 +823,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     if availableOpenInOptions(applicationContext: self.account.telegramApplicationContext, item: item).count > 1 {
                         preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Conversation_FileOpenIn, action: { [weak self] in
                             if let strongSelf = self {
-                                let openInController = OpenInActionSheetController(postbox: strongSelf.account.postbox, applicationContext: strongSelf.account.telegramApplicationContext, theme: presentationData.theme, strings: presentationData.strings, item: item, additionalAction: nil, openUrl: { [weak self] url in
+                                let openInController = OpenInActionSheetController(account: strongSelf.account, item: item, additionalAction: nil, openUrl: { [weak self] url in
                                     if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
                                         openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: presentationData, applicationContext: applicationContext, navigationController: nil, dismissInput: {})
                                     }

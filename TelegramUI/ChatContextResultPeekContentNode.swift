@@ -33,6 +33,15 @@ final class ChatContextResultPeekContent: PeekControllerContent {
         return ChatContextResultPeekNode(account: self.account, contextResult: self.contextResult)
     }
     
+    func topAccessoryNode() -> ASDisplayNode? {
+        let arrowNode = ASImageNode()
+        if let image = UIImage(bundleImageName: "Peek/Arrow") {
+            arrowNode.image = image
+            arrowNode.frame = CGRect(origin: CGPoint(), size: image.size)
+        }
+        return arrowNode
+    }
+    
     func isEqual(to: PeekControllerContent) -> Bool {
         if let to = to as? ChatContextResultPeekContent {
             return self.contextResult == to.contextResult
@@ -265,7 +274,7 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         if !self.ticking {
             self.ticking = true
         }
-        
+    
         return croppedImageDimensions
     }
 }

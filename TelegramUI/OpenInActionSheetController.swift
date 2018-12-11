@@ -12,19 +12,26 @@ public struct OpenInControllerAction {
 }
 
 final class OpenInActionSheetController: ActionSheetController {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
+    private var presentationDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
         return self._ready
     }
     
-    init(postbox: Postbox, applicationContext: TelegramApplicationContext, theme: PresentationTheme, strings: PresentationStrings, item: OpenInItem, additionalAction: OpenInControllerAction? = nil, openUrl: @escaping (String) -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(account: Account, item: OpenInItem, additionalAction: OpenInControllerAction? = nil, openUrl: @escaping (String) -> Void) {
+        let applicationContext = account.telegramApplicationContext
+        let presentationData = applicationContext.currentPresentationData.with { $0 }
+        let theme = presentationData.theme
+        let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        
+        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+            }
+        })
         
         self._ready.set(.single(true))
         
@@ -48,7 +55,7 @@ final class OpenInActionSheetController: ActionSheetController {
         }
         
         var items: [ActionSheetItem] = []
-        items.append(OpenInActionSheetItem(postbox: postbox, applicationContext: applicationContext, strings: strings, options: availableOpenInOptions(applicationContext: applicationContext, item: item), invokeAction: invokeActionImpl))
+        items.append(OpenInActionSheetItem(postbox: account.postbox, applicationContext: applicationContext, strings: strings, options: availableOpenInOptions(applicationContext: applicationContext, item: item), invokeAction: invokeActionImpl))
         
         if let action = additionalAction {
             items.append(ActionSheetButtonItem(title: action.title, action: { [weak self] in
@@ -69,6 +76,10 @@ final class OpenInActionSheetController: ActionSheetController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDisposable?.dispose()
     }
 }
 

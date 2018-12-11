@@ -68,6 +68,8 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
     
     func update(presentationInterfaceState: ChatPresentationInterfaceState) {
         if let search = presentationInterfaceState.search {
+            self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationInterfaceState.theme), strings: presentationInterfaceState.strings)
+            
             switch search.domain {
                 case .everything:
                     self.searchBar.prefixString = nil

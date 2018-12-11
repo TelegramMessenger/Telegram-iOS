@@ -928,7 +928,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
                 } else {
                     text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle).0
                 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
+                presentControllerImpl?(textAlertController(account: account, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
                     updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peer.id, isBlocked: value).start())
                 })]), nil)
             }

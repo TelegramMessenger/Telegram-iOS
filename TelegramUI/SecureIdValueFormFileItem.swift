@@ -12,6 +12,10 @@ enum SecureIdValueFormFileItemLabel {
     case text(String)
 }
 
+private enum RevealOptionKey: Int32 {
+    case delete
+}
+
 final class SecureIdValueFormFileItem: FormControllerItem {
     let account: Account
     let context: SecureIdAccessContext
@@ -20,8 +24,9 @@ final class SecureIdValueFormFileItem: FormControllerItem {
     let title: String
     let label: SecureIdValueFormFileItemLabel
     let activated: () -> Void
+    let deleted: () -> Void
     
-    init(account: Account, context: SecureIdAccessContext, document: SecureIdVerificationDocument?, placeholder: UIImage?, title: String, label: SecureIdValueFormFileItemLabel, activated: @escaping () -> Void) {
+    init(account: Account, context: SecureIdAccessContext, document: SecureIdVerificationDocument?, placeholder: UIImage?, title: String, label: SecureIdValueFormFileItemLabel, activated: @escaping () -> Void, deleted: @escaping () -> Void) {
         self.account = account
         self.context = context
         self.document = document
@@ -29,6 +34,7 @@ final class SecureIdValueFormFileItem: FormControllerItem {
         self.title = title
         self.label = label
         self.activated = activated
+        self.deleted = deleted
     }
     
     func node() -> ASDisplayNode & FormControllerItemNode {
@@ -46,7 +52,7 @@ final class SecureIdValueFormFileItem: FormControllerItem {
     }
 }
 
-final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFileItem> {
+final class SecureIdValueFormFileItemNode: FormEditableBlockItemNode<SecureIdValueFormFileItem> {
     private let titleNode: ImmediateTextNode
     private let labelNode: ImmediateTextNode
     let imageNode: TransformImageNode
@@ -113,9 +119,13 @@ final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFi
             }
             self.imageNode.isHidden = false
             self.placeholderNode.isHidden = true
+            
+            self.setRevealOptions((left: [], right: [ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: .none, color: theme.list.itemDisclosureActions.destructive.fillColor, textColor: theme.list.itemDisclosureActions.destructive.foregroundColor)]))
         } else {
             self.imageNode.isHidden = true
             self.placeholderNode.isHidden = false
+            
+            self.setRevealOptions((left: [], right: []))
         }
         
         let progressState: RadialStatusNodeState
@@ -126,9 +136,11 @@ final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFi
         }
         self.statusNode.transitionToState(progressState, completion: {})
         
+        let revealOffset = self.revealOffset
+        
         let imageSize = CGSize(width: 60.0, height: 44.0)
         let progressSize: CGFloat = 32.0
-        let imageFrame = CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: imageSize)
+        let imageFrame = CGRect(origin: CGPoint(x: 10.0 + revealOffset, y: 10.0), size: imageSize)
         transition.updateFrame(node: self.imageNode, frame: imageFrame)
         if let image = self.placeholderNode.image {
             transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.width - image.size.width) / 2.0), y: imageFrame.minY + floor((imageFrame.height - image.size.height) / 2.0)), size: image.size))
@@ -164,8 +176,8 @@ final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFi
         let labelSize = self.labelNode.updateLayout(CGSize(width: width - leftInset - 16.0, height: CGFloat.greatestFiniteMagnitude))
         
         return (FormControllerItemPreLayout(aligningInset: 0.0), { params in
-            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 14.0), size: titleSize))
-            let labelFrame = CGRect(origin: CGPoint(x: leftInset, y: 36.0), size: labelSize)
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset, y: 14.0), size: titleSize))
+            let labelFrame = CGRect(origin: CGPoint(x: leftInset + revealOffset, y: 36.0), size: labelSize)
             transition.updateFrame(node: self.labelNode, frame: labelFrame)
             
             return max(64.0, labelFrame.maxY + 8.0)
@@ -174,5 +186,34 @@ final class SecureIdValueFormFileItemNode: FormBlockItemNode<SecureIdValueFormFi
     
     override func selected() {
         self.item?.activated()
+    }
+    
+    override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        if let _ = self.item {
+            let progressSize: CGFloat = 32.0
+            let imageFrame = CGRect(origin: CGPoint(x: 10.0 + offset, y: self.imageNode.frame.minY), size: self.imageNode.frame.size)
+            transition.updateFrame(node: self.imageNode, frame: imageFrame)
+            if let image = self.placeholderNode.image {
+                transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.width - image.size.width) / 2.0), y: self.placeholderNode.frame.minY), size: image.size))
+            }
+            transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: imageFrame.minX + floor((imageFrame.width - progressSize) / 2.0), y: self.statusNode.frame.minY), size: self.statusNode.frame.size))
+            
+            let leftInset: CGFloat = 92.0
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + offset, y: self.titleNode.frame.minY), size: self.titleNode.frame.size))
+            transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: leftInset + offset, y: self.labelNode.frame.minY), size: self.labelNode.frame.size))
+        }
+    }
+    
+    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        if let item = self.item {
+            switch option.key {
+                case RevealOptionKey.delete.rawValue:
+                    item.deleted()
+                default:
+                    break
+            }
+        }
     }
 }

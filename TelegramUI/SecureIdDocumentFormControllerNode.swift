@@ -49,6 +49,7 @@ final class SecureIdDocumentFormParams {
     fileprivate let context: SecureIdAccessContext
     fileprivate let addFile: (SecureIdAddFileTarget) -> Void
     fileprivate let openDocument: (SecureIdVerificationDocument) -> Void
+    fileprivate let deleteDocument: (SecureIdVerificationDocument) -> Void
     fileprivate let updateText: (SecureIdDocumentFormTextField, String) -> Void
     fileprivate let selectNextInputItem: (SecureIdDocumentFormEntry) -> Void
     fileprivate let endEditing: () -> Void
@@ -56,11 +57,12 @@ final class SecureIdDocumentFormParams {
     fileprivate let scanPassport: () -> Void
     fileprivate let deleteValue: () -> Void
     
-    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (SecureIdAddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, endEditing: @escaping () -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, scanPassport: @escaping () -> Void, deleteValue: @escaping () -> Void) {
+    fileprivate init(account: Account, context: SecureIdAccessContext, addFile: @escaping (SecureIdAddFileTarget) -> Void, openDocument: @escaping (SecureIdVerificationDocument) -> Void, deleteDocument: @escaping (SecureIdVerificationDocument) -> Void, updateText: @escaping (SecureIdDocumentFormTextField, String) -> Void, selectNextInputItem: @escaping (SecureIdDocumentFormEntry) -> Void, endEditing: @escaping () -> Void, activateSelection: @escaping (SecureIdDocumentFormSelectionField) -> Void, scanPassport: @escaping () -> Void, deleteValue: @escaping () -> Void) {
         self.account = account
         self.context = context
         self.addFile = addFile
         self.openDocument = openDocument
+        self.deleteDocument = deleteDocument
         self.updateText = updateText
         self.selectNextInputItem = selectNextInputItem
         self.endEditing = endEditing
@@ -1802,6 +1804,8 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
             case let .scan(index, document, error):
                 return SecureIdValueFormFileItem(account: params.account, context: params.context, document: document, placeholder: nil, title: strings.Passport_Scans_ScanIndex("\(index + 1)").0, label: error.flatMap(SecureIdValueFormFileItemLabel.error) ?? .timestamp, activated: {
                     params.openDocument(document)
+                }, deleted: {
+                    params.deleteDocument(document)
                 })
             case let .addScan(hasAny):
                 return FormControllerActionItem(type: .accent, title: hasAny ? strings.Passport_Scans_UploadNew : strings.Passport_Scans_Upload, fullTopInset: true, activated: {
@@ -2027,6 +2031,10 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     } else {
                         params.addFile(.selfie)
                     }
+                }, deleted: {
+                    if let document = document {
+                        params.deleteDocument(document)
+                    }
                 })
             case let .frontSide(_, type, document, error):
                 let label: SecureIdValueFormFileItemLabel
@@ -2061,6 +2069,10 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     } else {
                         params.addFile(.frontSide(type))
                     }
+                }, deleted: {
+                    if let document = document {
+                        params.deleteDocument(document)
+                    }
                 })
             case let .backSide(_, type, document, error):
                 let label: SecureIdValueFormFileItemLabel
@@ -2077,6 +2089,10 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     } else {
                         params.addFile(.backSide(type))
                     }
+                }, deleted: {
+                    if let document = document {
+                        params.deleteDocument(document)
+                    }
                 })
             case let .documentsInfo(category):
                 let text: String
@@ -2092,6 +2108,8 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
             case let .translation(index, document, error):
                 return SecureIdValueFormFileItem(account: params.account, context: params.context, document: document, placeholder: nil, title: strings.Passport_Scans_ScanIndex("\(index + 1)").0, label: error.flatMap(SecureIdValueFormFileItemLabel.error) ?? .timestamp, activated: {
                     params.openDocument(document)
+                }, deleted: {
+                    params.deleteDocument(document)
                 })
             case let .addTranslation(hasAny):
                 return FormControllerActionItem(type: .accent, title: hasAny ? strings.Passport_Scans_UploadNew : strings.Passport_Scans_Upload, fullTopInset: true, activated: {
@@ -2128,6 +2146,8 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
     var completedWithValues: (([SecureIdValueWithContext]?) -> Void)?
     var dismiss: (() -> Void)?
     
+    var initiallyScrollTo: SecureIdDocumentFormScrollToSubject?
+    
     private let actionDisposable = MetaDisposable()
     private let hiddenItemDisposable = MetaDisposable()
     
@@ -2153,6 +2173,10 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         }, openDocument: { [weak self] document in
             if let strongSelf = self {
                 strongSelf.openDocument(document: document)
+            }
+        }, deleteDocument: { [weak self] document in
+            if let strongSelf = self {
+                strongSelf.deleteDocument(document: document)
             }
         }, updateText: { [weak self] field, value in
             if let strongSelf = self, var innerState = strongSelf.innerState {
@@ -2336,7 +2360,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                             }
                         }
                         
-                        let controller = DateSelectionActionSheetController(theme: strongSelf.theme, strings: strongSelf.strings, title: title, currentValue: current ?? Int32(Date().timeIntervalSince1970), minimumDate: minimumDate, maximumDate: maximumDate, emptyTitle: emptyTitle, applyValue: { value in
+                        let controller = DateSelectionActionSheetController(account: strongSelf.account, title: title, currentValue: current ?? Int32(Date().timeIntervalSince1970), minimumDate: minimumDate, maximumDate: maximumDate, emptyTitle: emptyTitle, applyValue: { value in
                             if let strongSelf = self, var innerState = strongSelf.innerState {
                                 innerState.documentState.updateDateField(type: field, value: value.flatMap(SecureIdDate.init))
                                 var valueKey: SecureIdValueKey?
@@ -2872,6 +2896,14 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         self.present(controller, nil)
     }
     
+    private func deleteDocument(document: SecureIdVerificationDocument) {
+        guard var innerState = self.innerState else {
+            return
+        }
+        innerState = removeDocumentWithId(innerState, id: document.id)
+        self.updateInnerState(transition: .animated(duration: 0.2, curve: .spring), with: innerState)
+    }
+    
     private func presentGallery(document: SecureIdVerificationDocument) {
         guard let innerState = self.innerState else {
             return
@@ -3005,5 +3037,29 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             }
             return nil
         }))
+    }
+    
+    override func didAppear() {
+        if let scrollTo = self.initiallyScrollTo {
+            self.scrollTo(scrollTo)
+        }
+    }
+    
+    func scrollTo(_ subject: SecureIdDocumentFormScrollToSubject) {
+        self.enumerateItemsAndEntries { entry, itemNode -> Bool in
+            switch subject {
+                case .selfie:
+                    if case .selfie = entry {
+                        self.scrollToItemNode(itemNode)
+                        return false
+                    }
+                case .translation:
+                    if case .translationsHeader = entry {
+                        self.scrollToItemNode(itemNode)
+                        return false
+                    }
+            }
+            return true
+        }
     }
 }

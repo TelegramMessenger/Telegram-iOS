@@ -31,14 +31,20 @@ enum BotCheckoutPaymentMethod: Equatable {
 }
 
 final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
-    private let theme: PresentationTheme
-    private let strings: PresentationStrings
+    private var presentationDisposable: Disposable?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void) {
-        self.theme = theme
-        self.strings = strings
+    init(account: Account, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void) {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let theme = presentationData.theme
+        let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
+        
+        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+            }
+        })
         
         var items: [ActionSheetItem] = []
         
@@ -90,6 +96,10 @@ final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDisposable?.dispose()
     }
 }
 

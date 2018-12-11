@@ -236,7 +236,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
             self.theme = theme
             self.strings = strings
             
-            self.sectionHeaderNode.title = strings.DialogList_RecentTitlePeople
+            self.sectionHeaderNode.title = strings.DialogList_RecentTitlePeople.uppercased()
             self.sectionHeaderNode.updateTheme(theme: theme)
         }
     }

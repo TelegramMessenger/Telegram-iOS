@@ -119,6 +119,7 @@ class ItemListAddressItemNode: ListViewItemNode {
         self.textNode.contentsScale = UIScreen.main.scale
         
         self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -130,6 +131,7 @@ class ItemListAddressItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: ItemListAddressItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let makeImageLayout = self.imageNode.asyncLayout()
         
         let currentItem = self.item
         
@@ -160,8 +162,13 @@ class ItemListAddressItemNode: ListViewItemNode {
             let baseColor = item.theme.list.itemPrimaryTextColor
             let string = stringWithAppliedEntities(item.text, entities: [], baseColor: baseColor, linkColor: item.theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, fixedFont: textFixedFont)
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset - 98.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let contentSize = CGSize(width: params.width, height: textLayout.size.height + 39.0)
+            
+            let imageSide = min(90.0, contentSize.height - 18.0)
+            let imageSize = CGSize(width: imageSide, height: imageSide)
+            let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
+            
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             return (nodeLayout, { [weak self] animation in
                 if let strongSelf = self {
@@ -173,6 +180,11 @@ class ItemListAddressItemNode: ListViewItemNode {
                     }
                     
                     strongSelf.item = item
+                    if let signal = item.imageSignal {
+                        strongSelf.imageNode.setSignal(signal)
+                    } else {
+                        strongSelf.imageNode.clearContents()
+                    }
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
@@ -183,6 +195,7 @@ class ItemListAddressItemNode: ListViewItemNode {
                     
                     let _ = labelApply()
                     let _ = textApply()
+                    let _ = imageApply()
                     
                     if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {
                         let selectionFrame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: selectionWidth, height: nodeLayout.contentSize.height))
@@ -206,6 +219,7 @@ class ItemListAddressItemNode: ListViewItemNode {
                     
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 11.0), size: labelLayout.size)
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 31.0), size: textLayout.size)
+                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: params.width - imageSize.width - rightInset, y: floorToScreenPixels((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
                     
                     let leftInset: CGFloat
                     let style = ItemListStyle.plain

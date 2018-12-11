@@ -5,6 +5,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private let nameFont = Font.medium(14.0)
+
+private let inlineBotPrefixFont = Font.regular(14.0)
+private let inlineBotNameFont = nameFont
+
 class ChatMessageStickerItemNode: ChatMessageItemView {
     let imageNode: TransformImageNode
     var progressNode: RadialProgressNode?
@@ -19,6 +24,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     private let fetchDisposable = MetaDisposable()
     
+    private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var replyInfoNode: ChatMessageReplyInfoNode?
     private var replyBackgroundNode: ASImageNode?
@@ -101,6 +107,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
         
+        let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentReplyBackgroundNode = self.replyBackgroundNode
         let currentShareButtonNode = self.shareButtonNode
@@ -231,27 +238,50 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
             
+            var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
             var updatedReplyBackgroundNode: ASImageNode?
             var replyBackgroundImage: UIImage?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
+            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+           
             for attribute in item.message.attributes {
-                if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
-                    
-                    if let currentReplyBackgroundNode = currentReplyBackgroundNode {
-                        updatedReplyBackgroundNode = currentReplyBackgroundNode
+                if let attribute = attribute as? InlineBotMessageAttribute {
+                    var inlineBotNameString: String?
+                    if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
+                        inlineBotNameString = bot.username
                     } else {
-                        updatedReplyBackgroundNode = ASImageNode()
+                        inlineBotNameString = attribute.title
                     }
                     
-                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
-                    replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
+                    if let inlineBotNameString = inlineBotNameString {
+                        let inlineBotNameColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                        
+                        let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
+                        let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
+                        let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)"), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                        
+                        viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    }
+                }
+                if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
+
+                    replyInfoApply = makeReplyInfoLayout(item.presentationData.theme, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
+            }
+            
+            if replyInfoApply != nil || viaBotApply != nil {
+                if let currentReplyBackgroundNode = currentReplyBackgroundNode {
+                    updatedReplyBackgroundNode = currentReplyBackgroundNode
+                } else {
+                    updatedReplyBackgroundNode = ASImageNode()
+                }
+                
+                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
             }
             
             var updatedShareButtonBackground: UIImage?
@@ -338,10 +368,26 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.replyBackgroundNode = updatedReplyBackgroundNode
                             strongSelf.addSubnode(updatedReplyBackgroundNode)
                             updatedReplyBackgroundNode.image = replyBackgroundImage
+                        } else {
+                            strongSelf.replyBackgroundNode?.image = replyBackgroundImage
                         }
                     } else if let replyBackgroundNode = strongSelf.replyBackgroundNode {
                         replyBackgroundNode.removeFromSupernode()
                         strongSelf.replyBackgroundNode = nil
+                    }
+                    
+                    if let (viaBotLayout, viaBotApply) = viaBotApply {
+                        let viaBotNode = viaBotApply()
+                        if strongSelf.viaBotNode == nil {
+                            strongSelf.viaBotNode = viaBotNode
+                            strongSelf.addSubnode(viaBotNode)
+                        }
+                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 10.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 10.0)), y: 8.0), size: viaBotLayout.size)
+                        viaBotNode.frame = viaBotFrame
+                        strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: viaBotFrame.minX - 4.0, y: viaBotFrame.minY - 2.0), size: CGSize(width: viaBotFrame.size.width + 8.0, height: viaBotFrame.size.height + 5.0))
+                    } else if let viaBotNode = strongSelf.viaBotNode {
+                        viaBotNode.removeFromSupernode()
+                        strongSelf.viaBotNode = nil
                     }
                     
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
@@ -350,9 +396,18 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.addSubnode(replyInfoNode)
                         }
-                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 10.0) : (params.width - params.rightInset - replyInfoSize.width - layoutConstants.bubble.edgeInset - 10.0)), y: 8.0), size: replyInfoSize)
+                        var viaBotSize = CGSize()
+                        if let viaBotNode = strongSelf.viaBotNode {
+                            viaBotSize = viaBotNode.frame.size
+                        }
+                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 10.0) : (params.width - params.rightInset - max(replyInfoSize.width, viaBotSize.width) - layoutConstants.bubble.edgeInset - 10.0)), y: 8.0 + viaBotSize.height), size: replyInfoSize)
+                        if let viaBotNode = strongSelf.viaBotNode {
+                            if replyInfoFrame.minX < viaBotNode.frame.minX {
+                                viaBotNode.frame = viaBotNode.frame.offsetBy(dx: replyInfoFrame.minX - viaBotNode.frame.minX, dy: 0.0)
+                            }
+                        }
                         replyInfoNode.frame = replyInfoFrame
-                        strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - 2.0), size: CGSize(width: replyInfoFrame.size.width + 8.0, height: replyInfoFrame.size.height + 5.0))
+                        strongSelf.replyBackgroundNode?.frame = CGRect(origin: CGPoint(x: replyInfoFrame.minX - 4.0, y: replyInfoFrame.minY - viaBotSize.height - 2.0), size: CGSize(width: max(replyInfoFrame.size.width, viaBotSize.width) + 8.0, height: replyInfoFrame.size.height + viaBotSize.height + 5.0))
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
                         replyInfoNode.removeFromSupernode()
                         strongSelf.replyInfoNode = nil
@@ -408,6 +463,31 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
                                 }
                                 return
+                            }
+                            
+                            if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
+                                if let item = self.item {
+                                    for attribute in item.message.attributes {
+                                        if let attribute = attribute as? InlineBotMessageAttribute {
+                                            var botAddressName: String?
+                                            if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
+                                                botAddressName = addressName
+                                            } else {
+                                                botAddressName = attribute.title
+                                            }
+                                            
+                                            if let botAddressName = botAddressName {
+                                                item.controllerInteraction.updateInputState { textInputState in
+                                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                                }
+                                                item.controllerInteraction.updateInputMode { _ in
+                                                    return .text
+                                                }
+                                            }
+                                            return
+                                        }
+                                    }
+                                }
                             }
                             
                             if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {

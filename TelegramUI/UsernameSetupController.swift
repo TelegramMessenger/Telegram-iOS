@@ -96,7 +96,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                             case .available:
                                 string = NSAttributedString(string: text, textColor: theme.list.freeTextSuccessColor)
                             case .invalid, .taken:
-                                string = NSAttributedString(string: text, textColor: theme.list.freeTextSuccessColor)
+                                string = NSAttributedString(string: text, textColor: theme.list.freeTextErrorColor)
                         }
                     case .checking:
                         string = NSAttributedString(string: text, textColor: theme.list.freeTextColor)

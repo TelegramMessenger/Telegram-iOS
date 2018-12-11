@@ -20,13 +20,17 @@ final class TrendingPaneInteraction {
 private final class TrendingPaneEntry: Identifiable, Comparable {
     let index: Int
     let info: StickerPackCollectionInfo
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let topItems: [StickerPackItem]
     let installed: Bool
     let unread: Bool
     
-    init(index: Int, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool, unread: Bool) {
+    init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool) {
         self.index = index
         self.info = info
+        self.theme = theme
+        self.strings = strings
         self.topItems = topItems
         self.installed = installed
         self.unread = unread
@@ -43,6 +47,12 @@ private final class TrendingPaneEntry: Identifiable, Comparable {
         if lhs.info != rhs.info {
             return false
         }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.topItems != rhs.topItems {
             return false
         }
@@ -56,8 +66,8 @@ private final class TrendingPaneEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: TrendingPaneInteraction) -> ListViewItem {
-        return MediaInputPaneTrendingItem(account: account, theme: theme, strings: strings, interaction: interaction, info: self.info, topItems: self.topItems, installed: self.installed, unread: self.unread)
+    func item(account: Account, interaction: TrendingPaneInteraction) -> ListViewItem {
+        return MediaInputPaneTrendingItem(account: account, theme: self.theme, strings: self.strings, interaction: interaction, info: self.info, topItems: self.topItems, installed: self.installed, unread: self.unread)
     }
 }
 
@@ -68,22 +78,22 @@ private struct TrendingPaneTransition {
     let initial: Bool
 }
 
-private func preparedTransition(from fromEntries: [TrendingPaneEntry], to toEntries: [TrendingPaneEntry], account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: TrendingPaneInteraction, initial: Bool) -> TrendingPaneTransition {
+private func preparedTransition(from fromEntries: [TrendingPaneEntry], to toEntries: [TrendingPaneEntry], account: Account, interaction: TrendingPaneInteraction, initial: Bool) -> TrendingPaneTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     
     return TrendingPaneTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
 }
 
-private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>) -> [TrendingPaneEntry] {
+private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, theme: PresentationTheme, strings: PresentationStrings) -> [TrendingPaneEntry] {
     var result: [TrendingPaneEntry] = []
     var index = 0
     for item in trendingEntries {
         if !installedPacks.contains(item.info.id) {
-            result.append(TrendingPaneEntry(index: index, info: item.info, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread))
+            result.append(TrendingPaneEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread))
             index += 1
         }
     }
@@ -137,10 +147,6 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         }
         self.isActivated = true
         
-        let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
-        let strings = presentationData.strings
-        
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 let _ = (loadedStickerPack(postbox: strongSelf.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
@@ -160,7 +166,8 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     return .complete()
                 } |> deliverOnMainQueue).start(completed: {
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: theme, strings: strings, type: .success), nil)
+                        let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
                     }
                 })
             }
@@ -179,8 +186,8 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)
         let account = self.account
-        self.disposable = (combineLatest(account.viewTracker.featuredStickerPacks(), account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
-        |> map { trendingEntries, view -> TrendingPaneTransition in
+        self.disposable = (combineLatest(account.viewTracker.featuredStickerPacks(), account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]), account.telegramApplicationContext.presentationData)
+        |> map { trendingEntries, view, presentationData -> TrendingPaneTransition in
             var installedPacks = Set<ItemCollectionId>()
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
                 if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
@@ -189,10 +196,10 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     }
                 }
             }
-            let entries = trendingPaneEntries(trendingEntries: trendingEntries, installedPacks: installedPacks)
+            let entries = trendingPaneEntries(trendingEntries: trendingEntries, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings)
             let previous = previousEntries.swap(entries)
             
-            return preparedTransition(from: previous ?? [], to: entries, account: account, theme: presentationData.theme, strings: presentationData.strings, interaction: interaction, initial: previous == nil)
+            return preparedTransition(from: previous ?? [], to: entries, account: account, interaction: interaction, initial: previous == nil)
         }
         |> deliverOnMainQueue).start(next: { [weak self] transition in
             guard let strongSelf = self else {

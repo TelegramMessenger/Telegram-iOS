@@ -712,8 +712,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             
                            
                             if item.editing.editable {
-                            strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
-                            strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
+                                strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                                strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                             } else {
                                 strongSelf.setRevealOptions((left: [], right: []))
                             }

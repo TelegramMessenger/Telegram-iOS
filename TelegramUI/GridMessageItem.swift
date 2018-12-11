@@ -200,7 +200,7 @@ final class GridMessageItemNode: GridItemNode {
         super.init()
         
         self.addSubnode(self.imageNode)
-        self.imageNode.addSubnode(videoAccessoryNode)
+        self.imageNode.addSubnode(self.videoAccessoryNode)
     }
     
     deinit {

@@ -366,7 +366,7 @@ private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting,
     }
 }
 
-public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData, NoError> {
+public func updatedPresentationData(postbox: Postbox, applicationBindings: TelegramApplicationBindings) -> Signal<PresentationData, NoError> {
     let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.presentationThemeSettings, PreferencesKeys.localizationSettings]))
     return postbox.combinedView(keys: [preferencesKey])
     |> mapToSignal { view -> Signal<PresentationData, NoError> in
@@ -377,64 +377,71 @@ public func updatedPresentationData(postbox: Postbox) -> Signal<PresentationData
             themeSettings = PresentationThemeSettings.defaultSettings
         }
         
-        return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
-        |> distinctUntilChanged
-        |> map { shouldSwitch in
-            let themeValue: PresentationTheme
-            let effectiveTheme: PresentationThemeReference
-            var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
-            if shouldSwitch {
-                effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
-                switch effectiveChatWallpaper {
-                    case .builtin, .color:
-                        switch themeSettings.automaticThemeSwitchSetting.theme {
-                            case .nightAccent:
-                                effectiveChatWallpaper = .color(0x18222d)
-                            case .nightGrayscale:
-                                effectiveChatWallpaper = .color(0x000000)
+        return applicationBindings.applicationInForeground
+        |> mapToSignal({ inForeground  -> Signal<PresentationData, NoError> in
+            if inForeground {
+                return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
+                |> distinctUntilChanged
+                |> map { shouldSwitch in
+                    let themeValue: PresentationTheme
+                    let effectiveTheme: PresentationThemeReference
+                    var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
+                    if shouldSwitch {
+                        effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
+                        switch effectiveChatWallpaper {
+                            case .builtin, .color:
+                                switch themeSettings.automaticThemeSwitchSetting.theme {
+                                    case .nightAccent:
+                                        effectiveChatWallpaper = .color(0x18222d)
+                                    case .nightGrayscale:
+                                        effectiveChatWallpaper = .color(0x000000)
+                                    default:
+                                        break
+                                }
                             default:
                                 break
                         }
-                    default:
-                        break
+                    } else {
+                        effectiveTheme = themeSettings.theme
+                    }
+                    switch effectiveTheme {
+                        case let .builtin(reference):
+                            switch reference {
+                                case .dayClassic:
+                                    themeValue = defaultPresentationTheme
+                                case .nightGrayscale:
+                                    themeValue = defaultDarkPresentationTheme
+                                case .nightAccent:
+                                    themeValue = defaultDarkAccentPresentationTheme
+                                case .day:
+                                    themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor)
+                            }
+                    }
+                    
+                    let localizationSettings: LocalizationSettings?
+                    if let current = (view.views[preferencesKey] as! PreferencesView).values[PreferencesKeys.localizationSettings] as? LocalizationSettings {
+                        localizationSettings = current
+                    } else {
+                        localizationSettings = nil
+                    }
+                    
+                    let stringsValue: PresentationStrings
+                    if let localizationSettings = localizationSettings {
+                        stringsValue = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
+                    } else {
+                        stringsValue = defaultPresentationStrings
+                    }
+                    
+                    let dateTimeFormat = currentDateTimeFormat()
+                    let nameDisplayOrder = currentPersonNameDisplayOrder()
+                    let nameSortOrder = currentPersonNameSortOrder()
+                    
+                    return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
                 }
             } else {
-                effectiveTheme = themeSettings.theme
+                return .complete()
             }
-            switch effectiveTheme {
-                case let .builtin(reference):
-                    switch reference {
-                        case .dayClassic:
-                            themeValue = defaultPresentationTheme
-                        case .nightGrayscale:
-                            themeValue = defaultDarkPresentationTheme
-                        case .nightAccent:
-                            themeValue = defaultDarkAccentPresentationTheme
-                        case .day:
-                            themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor)
-                    }
-            }
-            
-            let localizationSettings: LocalizationSettings?
-            if let current = (view.views[preferencesKey] as! PreferencesView).values[PreferencesKeys.localizationSettings] as? LocalizationSettings {
-                localizationSettings = current
-            } else {
-                localizationSettings = nil
-            }
-            
-            let stringsValue: PresentationStrings
-            if let localizationSettings = localizationSettings {
-                stringsValue = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
-            } else {
-                stringsValue = defaultPresentationStrings
-            }
-            
-            let dateTimeFormat = currentDateTimeFormat()
-            let nameDisplayOrder = currentPersonNameDisplayOrder()
-            let nameSortOrder = currentPersonNameSortOrder()
-            
-            return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
-        }
+        })
     }
 }
 

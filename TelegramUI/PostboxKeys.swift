@@ -39,3 +39,19 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let watchPresetSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.watchPresetSettings.rawValue)
     public static let webSearchSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.webSearchSettings.rawValue)
 }
+
+private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
+    case instantPageStoredState = 0
+}
+
+public struct ApplicationSpecificItemCacheCollectionId {
+    public static let instantPageStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.instantPageStoredState.rawValue)
+}
+
+private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
+    case webSearchRecentQueries = 0
+}
+
+public struct ApplicationSpecificOrderedItemListCollectionId {
+    public static let webSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.webSearchRecentQueries.rawValue)
+}

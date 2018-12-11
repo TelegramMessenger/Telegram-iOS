@@ -19,6 +19,7 @@ enum WebSearchMode: Int32 {
 
 struct WebSearchInterfaceInnerState: Equatable {
     let mode: WebSearchMode
+    let query: String
     let selectionState: WebSearchSelectionState
 }
 
@@ -37,13 +38,13 @@ struct WebSearchInterfaceState: Equatable {
     }
     
     func withUpdatedMode(_ mode: WebSearchMode) -> WebSearchInterfaceState {
-        return WebSearchInterfaceState(state: WebSearchInterfaceInnerState(mode: mode, selectionState: self.state?.selectionState ?? WebSearchSelectionState(selectedIds: [])), presentationData: self.presentationData)
+        return WebSearchInterfaceState(state: WebSearchInterfaceInnerState(mode: mode, query: self.state?.query ?? "", selectionState: self.state?.selectionState ?? WebSearchSelectionState(selectedIds: [])), presentationData: self.presentationData)
     }
     
-    func withUpdatedSelectionState(_ selectionState: WebSearchSelectionState) -> WebSearchInterfaceState {
-        return WebSearchInterfaceState(state: WebSearchInterfaceInnerState(mode: self.state?.mode ?? .images, selectionState: selectionState), presentationData: self.presentationData)
+    func withUpdatedQuery(_ query: String) -> WebSearchInterfaceState {
+        return WebSearchInterfaceState(state: WebSearchInterfaceInnerState(mode: self.state?.mode ?? .images, query: query, selectionState: self.state?.selectionState ?? WebSearchSelectionState(selectedIds: [])), presentationData: self.presentationData)
     }
-    
+
     func withToggledSelectedMessages(_ ids: [String], value: Bool) -> WebSearchInterfaceState {
         var selectedIds = Set<String>()
         if let selectionState = self.state?.selectionState {
@@ -56,7 +57,7 @@ struct WebSearchInterfaceState: Equatable {
                 selectedIds.remove(id)
             }
         }
-        return WebSearchInterfaceState(state: WebSearchInterfaceInnerState(mode: self.state?.mode ?? .images, selectionState: WebSearchSelectionState(selectedIds: selectedIds)), presentationData: self.presentationData)
+        return WebSearchInterfaceState(state: WebSearchInterfaceInnerState(mode: self.state?.mode ?? .images, query: self.state?.query ?? "", selectionState: WebSearchSelectionState(selectedIds: selectedIds)), presentationData: self.presentationData)
     }
     
     func withUpdatedPresentationData(_ presentationData: PresentationData) -> WebSearchInterfaceState {

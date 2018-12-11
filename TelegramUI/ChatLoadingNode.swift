@@ -6,6 +6,7 @@ import TelegramCore
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     private let activityIndicator: ActivityIndicator
+    private let offset: CGPoint
     
     init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper) {
         self.backgroundNode = ASImageNode()
@@ -18,6 +19,11 @@ final class ChatLoadingNode: ASDisplayNode {
         
         let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: chatWallpaper)
         self.activityIndicator = ActivityIndicator(type: .custom(serviceColor.primaryText, 22.0, 2.0, false), speed: .regular)
+        if serviceColor.primaryText != .white {
+            self.offset = CGPoint(x: 0.5, y: 0.5)
+        } else {
+            self.offset = CGPoint()
+        }
         
         super.init()
         
@@ -33,7 +39,7 @@ final class ChatLoadingNode: ASDisplayNode {
         }
         
         let activitySize = self.activityIndicator.measure(size)
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - activitySize.width) / 2.0), y: displayRect.minY + floor((displayRect.height - activitySize.height) / 2.0)), size: activitySize))
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - activitySize.width) / 2.0) + self.offset.x, y: displayRect.minY + floor((displayRect.height - activitySize.height) / 2.0) + self.offset.y), size: activitySize))
     }
 }
 

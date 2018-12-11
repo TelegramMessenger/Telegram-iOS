@@ -62,4 +62,11 @@ final class FormControllerTextItemNode: ASDisplayNode, FormControllerItemNode {
         
         return textSize.height + 14.0
     }
+    
+    var preventsTouchesToOtherItems: Bool {
+        return false
+    }
+    
+    func touchesToOtherItemsPrevented() {
+    }
 }

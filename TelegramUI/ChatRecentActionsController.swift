@@ -12,6 +12,7 @@ final class ChatRecentActionsController: TelegramController {
     private let account: Account
     private let peer: Peer
     private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
     
     private var interaction: ChatRecentActionsInteraction!
     private var panelInteraction: ChatPanelInterfaceInteraction!
@@ -100,10 +101,35 @@ final class ChatRecentActionsController: TelegramController {
         self.titleView.pressed = { [weak self] in
             self?.openFilterSetup()
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+            
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
+                }
+            }
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func updateThemeAndStrings() {
+        self.titleView.color = self.presentationData.theme.rootController.navigationBar.primaryTextColor
+        self.updateTitle()
+        
+        let rightButton = ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.activateSearch)))
+        self.navigationItem.setRightBarButton(rightButton.buttonItem, animated: false)
+        
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
     }
     
     override func loadDisplayNode() {

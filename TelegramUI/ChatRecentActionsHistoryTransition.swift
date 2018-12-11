@@ -80,6 +80,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
         if lhs.id != rhs.id {
             return false
         }
+        if lhs.presentationData !== rhs.presentationData {
+            return false
+        }
         if lhs.entry != rhs.entry {
             return false
         }

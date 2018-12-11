@@ -39,7 +39,7 @@ private struct StickerPackPreviewGridTransaction {
 final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let account: Account
     private let openShare: () -> Void
-    private let presentationData: PresentationData
+    private var presentationData: PresentationData
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -82,24 +82,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.openShare = openShare
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        let theme = self.presentationData.theme
-        let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
-        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-        
-        let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.actionSheet.opaqueItemHighlightedBackgroundColor.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
-        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-        
-        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
-        let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemHighlightedBackgroundColor)
-        
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
         self.wrappingScrollNode.view.delaysContentTouches = false
@@ -110,8 +92,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         self.cancelButtonNode = ASButtonNode()
         self.cancelButtonNode.displaysAsynchronously = false
-        self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
-        self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
@@ -119,32 +99,26 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.contentBackgroundNode = ASImageNode()
         self.contentBackgroundNode.displaysAsynchronously = false
         self.contentBackgroundNode.displayWithoutProcessing = true
-        self.contentBackgroundNode.image = roundedBackground
         
         self.contentGridNode = GridNode()
         
         self.installActionButtonNode = HighlightTrackingButtonNode()
         self.installActionButtonNode.displaysAsynchronously = false
         self.installActionButtonNode.titleNode.displaysAsynchronously = false
-        self.installActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
-        self.installActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
         
         self.contentTitleNode = ImmediateTextNode()
         self.contentTitleNode.displaysAsynchronously = false
         self.contentTitleNode.maximumNumberOfLines = 1
         
         self.contentShareButtonNode = HighlightableButtonNode()
-        self.contentShareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.presentationData.theme.actionSheet.controlAccentColor), for: [])
         self.contentShareButtonNode.isHidden = true
         
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
-        self.contentSeparatorNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemSeparatorColor
         
         self.installActionSeparatorNode = ASDisplayNode()
         self.installActionSeparatorNode.isLayerBacked = true
         self.installActionSeparatorNode.displaysAsynchronously = false
-        self.installActionSeparatorNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemSeparatorColor
         
         super.init()
         
@@ -165,8 +139,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.wrappingScrollNode.view.delegate = self
         self.addSubnode(self.wrappingScrollNode)
         
-        self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
-        
         self.wrappingScrollNode.addSubnode(self.cancelButtonNode)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         
@@ -186,7 +158,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
         }
         
-        self.contentTitleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
         self.contentTitleNode.highlightAttributeAction = { attributes in
             if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] {
                 return NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)
@@ -215,34 +186,34 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
                     return strongSelf.account.postbox.transaction { transaction -> Bool in
                         return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                        }
-                        |> deliverOnMainQueue
-                        |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
-                            if let strongSelf = self {
-                                var menuItems: [PeekControllerMenuItem] = []
-                                if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {                            
-                                    if strongSelf.sendSticker != nil {
-                                        menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
-                                            if let strongSelf = self {
-                                                strongSelf.sendSticker?(.standalone(media: item.file))
-                                            }
-                                        }))
-                                    }
-                                    menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
-                                            if let strongSelf = self {
-                                                if isStarred {
-                                                    let _ = removeSavedSticker(postbox: strongSelf.account.postbox, mediaId: item.file.fileId).start()
-                                                } else {
-                                                    let _ = addSavedSticker(postbox: strongSelf.account.postbox, network: strongSelf.account.network, file: item.file).start()
-                                                }
-                                            }
-                                        }))
-                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: {}))
+                    }
+                    |> deliverOnMainQueue
+                    |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                        if let strongSelf = self {
+                            var menuItems: [PeekControllerMenuItem] = []
+                            if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
+                                if strongSelf.sendSticker != nil {
+                                    menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                        if let strongSelf = self {
+                                            strongSelf.sendSticker?(.standalone(media: item.file))
+                                        }
+                                    }))
                                 }
-                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: .pack(item), menu: menuItems))
-                            } else {
-                                return nil
+                                menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                        if let strongSelf = self {
+                                            if isStarred {
+                                                let _ = removeSavedSticker(postbox: strongSelf.account.postbox, mediaId: item.file.fileId).start()
+                                            } else {
+                                                let _ = addSavedSticker(postbox: strongSelf.account.postbox, network: strongSelf.account.network, file: item.file).start()
+                                            }
+                                        }
+                                    }))
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: {}))
                             }
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: .pack(item), menu: menuItems))
+                        } else {
+                            return nil
+                        }
                     }
                 }
             }
@@ -265,6 +236,50 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 strongSelf.updatePreviewingItem(item: item, animated: true)
             }
         }, activateBySingleTap: true))
+        
+        self.updatePresentationData(self.presentationData)
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        let theme = presentationData.theme
+        let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemHighlightedBackgroundColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: presentationData.theme.actionSheet.opaqueItemBackgroundColor)
+        let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: presentationData.theme.actionSheet.opaqueItemHighlightedBackgroundColor)
+        
+        self.contentBackgroundNode.image = roundedBackground
+        self.contentShareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: presentationData.theme.actionSheet.controlAccentColor), for: [])
+        
+        self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
+        self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
+        
+        self.installActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
+        self.installActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        
+        self.contentSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        self.installActionSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        
+        self.cancelButtonNode.setTitle(presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+        
+        self.contentTitleNode.linkHighlightColor = presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
+        
+        if let (layout, navigationBarHeight) = self.containerLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

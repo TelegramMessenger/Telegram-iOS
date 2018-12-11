@@ -451,7 +451,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     var hasActions = false
                     for media in updatedMessages[0].media {
                         if media is TelegramMediaAction || media is TelegramMediaExpiredContent {
-                            hasActions = true
+                            if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
+                            } else {
+                                hasActions = true
+                            }
                             break
                         }
                     }
@@ -1078,6 +1081,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 openAddContact(account: strongSelf.account, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
                     self?.present(controller, in: .window(.root), with: arguments)
                 })
+            }
+        }, rateCall: { [weak self] message in
+            if let strongSelf = self {
+                let controller = callRatingController(account: strongSelf.account, report: ReportCallRating(id: 0, accessHash: 0), present: { [weak self] controller in
+                    if let strongSelf = self {
+                        strongSelf.present(controller, in: .window(.root))
+                    }
+                })
+                strongSelf.present(controller, in: .window(.root))
             }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
@@ -2565,7 +2577,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 strongSelf.chatDisplayNode.dismissInput()
                 
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
-                    let controller = ChatSecretAutoremoveTimerActionSheetController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, currentValue: peer.messageAutoremoveTimeout == nil ? 0 : peer.messageAutoremoveTimeout!, applyValue: { value in
+                    let controller = ChatSecretAutoremoveTimerActionSheetController(account: strongSelf.account, currentValue: peer.messageAutoremoveTimeout == nil ? 0 : peer.messageAutoremoveTimeout!, applyValue: { value in
                         if let strongSelf = self {
                             let _ = setSecretChatMessageAutoremoveTimeoutInteractively(account: strongSelf.account, peerId: peer.id, timeout: value == 0 ? nil : value).start()
                         }
@@ -3655,6 +3667,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
             strongSelf.present(legacyController, in: .window(.root))
             controller.present(in: emptyController, sourceView: nil, animated: true)
+            
+            let presentationDisposable = strongSelf.account.telegramApplicationContext.presentationData.start(next: { [weak controller] presentationData in
+                if let controller = controller {
+                    controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme)
+                }
+            })
+            legacyController.disposables.add(presentationDisposable)
         })
     }
     
@@ -5104,7 +5123,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     
     private func openUrlIn(_ url: String) {
         if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
-            let actionSheet = OpenInActionSheetController(postbox: self.account.postbox, applicationContext: applicationContext, theme: self.presentationData.theme, strings: self.presentationData.strings, item: .url(url: url), openUrl: { [weak self] url in
+            let actionSheet = OpenInActionSheetController(account: self.account, item: .url(url: url), openUrl: { [weak self] url in
                 if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext, let navigationController = strongSelf.navigationController as? NavigationController {
                     openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {
                         self?.chatDisplayNode.dismissInput()

@@ -9,8 +9,8 @@ enum HorizontalPeerItemMode {
     case list
     case actionSheet
 }
-private let badgeFont = Font.regular(14.0)
 
+private let badgeFont = Font.regular(14.0)
 
 final class HorizontalPeerItem: ListViewItem {
     let theme: PresentationTheme
@@ -178,7 +178,7 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                         strongSelf.badgeBackgroundNode.isHidden = false
                         
                         badgeBackgroundWidth = max(badgeLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
-                        let badgeBackgroundFrame = CGRect(x: itemLayout.size.width - badgeBackgroundWidth * 2, y: 0, width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
+                        let badgeBackgroundFrame = CGRect(x: itemLayout.size.width - floorToScreenPixels(badgeBackgroundWidth * 1.8), y: 2.0, width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
                         let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 2.0), size: badgeLayout.size)
                         
                         strongSelf.badgeTextNode.frame = badgeTextFrame
@@ -190,7 +190,6 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                     }
                     
                     let _ = badgeApply()
-                    
                 }
             })
         }

@@ -29,4 +29,6 @@ protocol FormControllerItem {
 }
 
 protocol FormControllerItemNode {
+    var preventsTouchesToOtherItems: Bool { get }
+    func touchesToOtherItemsPrevented()
 }

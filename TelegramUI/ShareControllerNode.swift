@@ -127,7 +127,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.actionButtonNode.titleNode.displaysAsynchronously = false
         self.actionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
         
-        self.inputFieldNode = ShareInputFieldNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.ShareMenu_Comment)
+        self.inputFieldNode = ShareInputFieldNode(theme: ShareInputFieldNodeTheme(presentationTheme: self.presentationData.theme), placeholder: self.presentationData.strings.ShareMenu_Comment)
         self.inputFieldNode.alpha = 0.0
         
         self.actionSeparatorNode = ASDisplayNode()
@@ -229,6 +229,40 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         if #available(iOSApplicationExtension 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
+        let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemHighlightedBackgroundColor)
+        
+        let theme = self.presentationData.theme
+        let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemHighlightedBackgroundColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
+        self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
+        
+        self.contentBackgroundNode.image = roundedBackground
+        self.actionsBackgroundNode.image = halfRoundedBackground
+        self.actionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        self.actionSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        self.cancelButtonNode.setTitle(presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+        
+        self.actionButtonNode.badgeBackgroundColor = presentationData.theme.actionSheet.controlAccentColor
+        self.actionButtonNode.badgeTextColor = presentationData.theme.actionSheet.opaqueItemBackgroundColor
     }
     
     func setActionNodesHidden(_ hidden: Bool, inputField: Bool = false, actions: Bool = false) {

@@ -5,6 +5,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+enum SecureIdDocumentFormScrollToSubject {
+    case selfie
+    case translation
+}
+
 enum SecureIdDocumentFormRequestedData {
     case identity(details: ParsedRequestedPersonalDetails?, document: SecureIdRequestedIdentityDocument?, selfie: Bool, translations: Bool)
     case address(details: Bool, document: SecureIdRequestedAddressDocument?, translations: Bool)
@@ -20,10 +25,11 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
     private let requestOptionalData: Bool
     private let primaryLanguageByCountry: [String: String]
     private var values: [SecureIdValueWithContext]
+    private let scrollTo: SecureIdDocumentFormScrollToSubject?
     
     private var doneItem: UIBarButtonItem?
     
-    init(account: Account, context: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, requestOptionalData: Bool = false, primaryLanguageByCountry: [String: String], values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
+    init(account: Account, context: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, requestOptionalData: Bool = false, scrollTo: SecureIdDocumentFormScrollToSubject? = nil, primaryLanguageByCountry: [String: String], values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
         self.account = account
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.context = context
@@ -32,6 +38,7 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
         self.primaryLanguageByCountry = primaryLanguageByCountry
         self.values = values
         self.updatedValues = updatedValues
+        self.scrollTo = scrollTo
         
         super.init(initParams: SecureIdDocumentFormControllerNodeInitParams(account: account, context: context), presentationData: self.presentationData)
         
@@ -135,7 +142,10 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
             values[value.value.key] = value
         }
         self.controllerNode.updateInnerState(transition: .immediate, with: SecureIdDocumentFormState(requestedData: self.requestedData, values: values, requestOptionalData: self.requestOptionalData, primaryLanguageByCountry: self.primaryLanguageByCountry))
+        
+        self.controllerNode.initiallyScrollTo = self.scrollTo
     }
+
     
     func addDocuments(type: SecureIdAddFileTarget, resources: [TelegramMediaResource], recognizedData: SecureIdRecognizedDocumentData?, removeDocumentId: SecureIdVerificationDocumentId?) {
         self.controllerNode.addDocuments(type: type, resources: resources, recognizedData: recognizedData, removeDocumentId: removeDocumentId)
