@@ -144,7 +144,7 @@
             screenSize.height = tmp;
         }
         
-        if ((int)screenSize.height == 1024 || (int)screenSize.height == 1366)
+        if ((int)screenSize.height == 1024 || (int)screenSize.height == 1194 || (int)screenSize.height == 1366)
         {
             simpleButtonInsetHorizontal = 26.0f;
             simpleButtonInsetVertical = 21.0f;
@@ -221,6 +221,10 @@
     return self;
 }
 
+- (void)setReturnKeyType:(UIReturnKeyType)keyType {
+    _textField.returnKeyType = keyType;
+}
+
 - (CGFloat)titleFontSize
 {
     if (_isComplex)
@@ -234,7 +238,7 @@
         screenSize.height = tmp;
     }
     
-    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1366)
+    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1194 || (int)screenSize.height == 1366)
         return 21.0f;
     else if ((int)screenSize.height == 736 || (int)screenSize.height == 667 || (int)screenSize.height == 812 || (int)screenSize.height == 896)
         return 19.0f;
@@ -255,7 +259,7 @@
         screenSize.height = tmp;
     }
     
-    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1366)
+    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1194 || (int)screenSize.height == 1366)
         return 15.0f;
     
     return 13.0f;
@@ -526,7 +530,7 @@
         screenSize.height = tmp;
     }
     
-    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1366)
+    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1194 || (int)screenSize.height == 1366)
     {
         keyboardOffset = CGFloor((self.frame.size.height - 500.0f) / 2.0f + 119.0f);
         titleOffset = 122.0f;
@@ -594,7 +598,7 @@
     
     CGFloat textFieldWidth = 0.0f;
     
-    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1366)
+    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1194 || (int)screenSize.height == 1366)
     {
         textFieldWidth = 320.0f;
         

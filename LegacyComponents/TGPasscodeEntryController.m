@@ -407,6 +407,7 @@ typedef enum {
                 [self setRightBarButtonItem:_nextItem];
                 _nextItem.enabled = false;
             }
+            [_view setReturnKeyType:UIReturnKeyDone];
             break;
         }
         case TGPasscodeEntryControllerModeSetupSimple:
@@ -416,6 +417,7 @@ typedef enum {
             
             [self setLeftBarButtonItem:nil];
             [self setRightBarButtonItem:[[UIBarButtonItem alloc] initWithTitle:TGLocalized(@"Common.Cancel") style:UIBarButtonItemStylePlain target:self action:@selector(cancelPressed)]];
+            [_view setReturnKeyType:UIReturnKeyNext];
             break;
         }
         case TGPasscodeEntryControllerModeChangeComplexToSimple:
@@ -441,6 +443,7 @@ typedef enum {
                 [self setRightBarButtonItem:_nextItem];
             }
             _nextItem.enabled = false;
+            [_view setReturnKeyType:UIReturnKeyNext];
             
             break;
         }
@@ -505,6 +508,7 @@ typedef enum {
                     _candidatePasscode = passcode;
                     _submode = TGPasscodeEntryControllerSubmodeReenteringNew;
                     [_view setTitle:TGLocalized(@"EnterPasscode.RepeatNewPasscode") errorTitle:[self currentErrorText] isComplex:_mode == TGPasscodeEntryControllerModeSetupComplex animated:true];
+                    [_view setReturnKeyType:UIReturnKeyDone];
                     break;
                 }
                 case TGPasscodeEntryControllerSubmodeReenteringNew:
@@ -544,6 +548,7 @@ typedef enum {
                         _candidatePasscode = nil;
                         _submode = TGPasscodeEntryControllerSubmodeEnteringNew;
                         [_view setTitle:TGLocalized(@"EnterPasscode.EnterNewPasscodeChange") errorTitle:[self currentErrorText] isComplex:_mode == TGPasscodeEntryControllerModeChangeSimpleToComplex || _mode == TGPasscodeEntryControllerModeChangeComplexToComplex animated:true];
+                        [_view setReturnKeyType:UIReturnKeyNext];
                         
                         if (_mode == TGPasscodeEntryControllerModeChangeSimpleToComplex || _mode == TGPasscodeEntryControllerModeChangeComplexToComplex)
                             [self setRightBarButtonItem:_nextItem];
@@ -558,6 +563,7 @@ typedef enum {
                         _candidatePasscode = nil;
                         _submode = TGPasscodeEntryControllerSubmodeEnteringCurrent;
                         [_view setTitle:TGLocalized(@"EnterPasscode.EnterCurrentPasscode") errorTitle:[self currentErrorText] isComplex:_mode == TGPasscodeEntryControllerModeChangeComplexToSimple || _mode == TGPasscodeEntryControllerModeChangeComplexToComplex animated:true];
+                        [_view setReturnKeyType:UIReturnKeyNext];
                     }
                     break;
                 }
@@ -566,6 +572,7 @@ typedef enum {
                     _candidatePasscode = passcode;
                     _submode = TGPasscodeEntryControllerSubmodeReenteringNew;
                     [_view setTitle:TGLocalized(@"EnterPasscode.RepeatNewPasscode") errorTitle:[self currentErrorText] isComplex:_mode == TGPasscodeEntryControllerModeChangeSimpleToComplex || _mode == TGPasscodeEntryControllerModeChangeComplexToComplex animated:true];
+                    [_view setReturnKeyType:UIReturnKeyDone];
                     break;
                 }
                 case TGPasscodeEntryControllerSubmodeReenteringNew:
@@ -581,6 +588,7 @@ typedef enum {
                         _candidatePasscode = nil;
                         _submode = TGPasscodeEntryControllerSubmodeEnteringNew;
                         [_view setTitle:TGLocalized(@"EnterPasscode.EnterNewPasscodeChange") errorTitle:[self currentErrorText] isComplex:_mode == TGPasscodeEntryControllerModeChangeSimpleToComplex || _mode == TGPasscodeEntryControllerModeChangeComplexToComplex animated:true];
+                        [_view setReturnKeyType:UIReturnKeyNext];
                     }
                     break;
                 }

@@ -41,6 +41,8 @@
 @property (nonatomic, copy) void (^openLocation)(TGMessage *message);
 @property (nonatomic, copy) void (^onViewDidAppear)(void);
 
+@property (nonatomic, copy) void (^updateRightBarItem)(UIBarButtonItem *, bool, bool);
+
 @property (nonatomic, readonly) UIButton *directionsButton;
 
 @property (nonatomic, copy) SSignal *(^remainingTimeForMessage)(TGMessage *message);

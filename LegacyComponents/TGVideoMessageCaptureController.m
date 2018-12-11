@@ -203,6 +203,36 @@ typedef enum
     return [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"cam_%x.mp4", (int)arc4random()]]];
 }
 
+- (void)setPallete:(TGModernConversationInputMicPallete *)pallete {
+    _pallete = pallete;
+    
+    if (!_alreadyStarted)
+        return;
+    
+    TGVideoMessageTransitionType type = [self _transitionType];
+    if (type != TGVideoMessageTransitionTypeLegacy && ((UIVisualEffectView *)_blurView).effect != nil)
+    {
+        UIBlurEffect *effect = [UIBlurEffect effectWithStyle:self.pallete.isDark ? UIBlurEffectStyleDark : UIBlurEffectStyleLight];
+        
+        ((UIVisualEffectView *)_blurView).effect = effect;
+    }
+    
+    UIColor *curtainColor = [UIColor whiteColor];
+    if (self.pallete != nil && self.pallete.isDark)
+        curtainColor = [UIColor blackColor];
+    
+    _fadeView.backgroundColor = [curtainColor colorWithAlphaComponent:0.4f];
+    _ringView.accentColor = self.pallete != nil ? self.pallete.buttonColor : TGAccentColor();
+    _controlsView.pallete = self.pallete;
+    _separatorView.backgroundColor = self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2);
+    
+    UIImage *switchImage = TGComponentsImageNamed(@"VideoRecordPositionSwitch");
+    if (self.pallete != nil)
+        switchImage = TGTintedImage(switchImage, self.pallete.buttonColor);
+    
+    [_switchButton setImage:switchImage forState:UIControlStateNormal];
+}
+
 - (void)loadView
 {
     [super loadView];

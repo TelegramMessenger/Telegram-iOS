@@ -21,4 +21,6 @@ typedef enum {
 - (void)becomeFirstResponder;
 - (void)updateBackgroundIfNeeded;
 
+- (void)setReturnKeyType:(UIReturnKeyType)keyType;
+
 @end

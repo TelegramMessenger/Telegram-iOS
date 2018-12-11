@@ -91,7 +91,7 @@
         screenSize.height = tmp;
     }
     
-    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1366)
+    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1194 || (int)screenSize.height == 1366)
         size = CGSizeMake(293.0f, 384.0f);
     else if ((int)screenSize.height == 736)
         size = CGSizeMake(281.0f, 345.0f);
@@ -141,7 +141,7 @@
         screenSize.height = tmp;
     }
     
-    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1366)
+    if ((int)screenSize.height == 1024 || (int)screenSize.height == 1194 || (int)screenSize.height == 1366)
     {
         buttonSize = 81.0f;
         horizontalSecond = 106.0f;

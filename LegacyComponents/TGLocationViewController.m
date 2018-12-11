@@ -161,6 +161,14 @@
     [_frequentUpdatesDisposable dispose];
 }
 
+- (void)tg_setRightBarButtonItem:(UIBarButtonItem *)barButtonItem action:(bool)action animated:(bool)animated {
+    if (self.updateRightBarItem != nil) {
+        self.updateRightBarItem(barButtonItem, action, animated);
+    } else {
+        [self setRightBarButtonItem:barButtonItem animated:animated];
+    }
+}
+
 - (void)setFrequentUpdatesHandle:(id<SDisposable>)disposable
 {
     _frequentUpdatesDisposable = disposable;
@@ -283,7 +291,7 @@
             if (!_didSetRightBarButton)
             {
                 _didSetRightBarButton = true;
-                [self setRightBarButtonItem:_actionsBarItem animated:true];
+                [self tg_setRightBarButtonItem:_actionsBarItem action:false animated:true];
             }
             
             if (actual && self.zoomToFitAllLocationsOnScreen)
@@ -305,7 +313,7 @@
             if (_didSetRightBarButton)
             {
                 _didSetRightBarButton = false;
-                [self setRightBarButtonItem:nil animated:true];
+                [self tg_setRightBarButtonItem:nil action:false animated:true];
             }
         }
     }
@@ -454,13 +462,13 @@
         if (iosMajorVersion() >= 7)
         {
             _actionsBarItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(actionsButtonPressed)];
-            [self setRightBarButtonItem:_actionsBarItem];
+            [self tg_setRightBarButtonItem:_actionsBarItem action:true animated:false];
         }
         else
         {
             NSString *actionsButtonTitle = TGLocalized(@"Common.More");
             _actionsBarItem = [[UIBarButtonItem alloc] initWithTitle:actionsButtonTitle style:UIBarButtonItemStylePlain target:self action:@selector(actionsButtonPressed)];
-            [self setRightBarButtonItem:_actionsBarItem];
+            [self tg_setRightBarButtonItem:_actionsBarItem action:true animated:false];
         }
     }
     

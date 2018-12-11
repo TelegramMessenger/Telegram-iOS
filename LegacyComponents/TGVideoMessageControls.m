@@ -31,7 +31,7 @@ static CGRect viewFrame(UIView *view)
     return result;
 }
 
-@interface TGVideoMessageControls () //<TGModernConversationInputMicButtonDelegate>
+@interface TGVideoMessageControls ()
 {
     UIImageView *_slideToCancelArrow;
     UILabel *_slideToCancelLabel;
@@ -81,10 +81,11 @@ static CGRect viewFrame(UIView *view)
     if (_pallete == nil)
         return;
     
+    [_scrubberView setPallete:pallete];
     _recordIndicatorView.image = TGCircleImage(9.0f, pallete.recordingColor);
     _recordDurationLabel.textColor = pallete.textColor;
     _slideToCancelLabel.textColor = pallete.secondaryTextColor;
-    [_cancelButton setTitleColor:pallete.buttonColor];
+    [_cancelButton setTintColor:pallete.buttonColor];
 }
 
 - (void)setShowRecordingInterface:(bool)show velocity:(CGFloat)velocity
