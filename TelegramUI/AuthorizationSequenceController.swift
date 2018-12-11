@@ -34,8 +34,23 @@ public final class AuthorizationSequenceController: NavigationController {
         super.init(mode: .single, theme: NavigationControllerTheme(navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black, emptyDetailIcon: nil))
         
         self.stateDisposable = (account.postbox.stateView()
-        |> deliverOnMainQueue).start(next: { [weak self] view in
-            self?.updateState(state: view.state ?? UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
+        |> filter { view in
+            if view.state is UnauthorizedAccountState || view.state == nil {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> map { view -> UnauthorizedAccountStateContents in
+            if let state = view.state as? UnauthorizedAccountState {
+                return state.contents
+            } else {
+                return .empty
+            }
+        }
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] state in
+            self?.updateState(state: state)
         })
     }
     
@@ -145,7 +160,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 }
             }
         }
-        controller.updateData(countryCode: countryCode, number: number)
+        controller.updateData(countryCode: countryCode, countryName: nil, number: number)
         return controller
     }
     
@@ -606,28 +621,25 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func updateState(state: PostboxCoding?) {
-        if let state = state as? UnauthorizedAccountState {
-            switch state.contents {
-                case .empty:
-                    if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
-                    } else {
-                        self.setViewControllers([self.splashController()], animated: !self.viewControllers.isEmpty)
-                    }
-                case let .phoneEntry(countryCode, number):
-                    self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
-                case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
-                    self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: defaultCountryCode(), number: ""), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
-                case let .passwordEntry(hint, _, _):
-                    self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint)], animated: !self.viewControllers.isEmpty)
-                case let .passwordRecovery(_, _, _, emailPattern):
-                    self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)
-                case let .awaitingAccountReset(protectedUntil, number):
-                    self.setViewControllers([self.splashController(), self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number)], animated: !self.viewControllers.isEmpty)
-                case let .signUp(_, _, _, firstName, lastName, termsOfService):
-                    self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
-            }
-        } else if let _ = state as? AuthorizedAccountState {
+    private func updateState(state: UnauthorizedAccountStateContents) {
+        switch state {
+            case .empty:
+                if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
+                } else {
+                    self.setViewControllers([self.splashController()], animated: !self.viewControllers.isEmpty)
+                }
+            case let .phoneEntry(countryCode, number):
+                self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
+            case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
+                self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: defaultCountryCode(), number: ""), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
+            case let .passwordEntry(hint, _, _):
+                self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint)], animated: !self.viewControllers.isEmpty)
+            case let .passwordRecovery(_, _, _, emailPattern):
+                self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)
+            case let .awaitingAccountReset(protectedUntil, number):
+                self.setViewControllers([self.splashController(), self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number)], animated: !self.viewControllers.isEmpty)
+            case let .signUp(_, _, _, firstName, lastName, termsOfService):
+                self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
         }
     }
     

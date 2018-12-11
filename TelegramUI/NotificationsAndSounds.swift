@@ -813,7 +813,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         var channels:[PeerId : NotificationExceptionWrapper] = [:]
         if let list = list {
             for (key, value) in list.settings {
-                if  let peer = list.peers[key], !peer.displayTitle.isEmpty, peer.id != account.peerId {
+                if  let peer = list.peers[key], !peer.debugDisplayTitle.isEmpty, peer.id != account.peerId {
                     switch value.muteState {
                     case .default:
                         switch value.messageSound {

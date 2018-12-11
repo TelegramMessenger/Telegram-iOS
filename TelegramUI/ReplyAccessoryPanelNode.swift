@@ -19,7 +19,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     var theme: PresentationTheme
     
-    init(account: Account, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings) {
+    init(account: Account, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.messageId = messageId
         
         self.theme = theme
@@ -62,10 +62,10 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 var authorName = ""
                 var text = ""
                 if let author = message?.author {
-                    authorName = author.displayTitle
+                    authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 if let message = message {
-                    (text, _) = descriptionStringForMessage(message, strings: strings, accountPeerId: account.peerId)
+                    (text, _) = descriptionStringForMessage(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId)
                 }
                 
                 var updatedMediaReference: AnyMediaReference?
@@ -131,7 +131,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 let isMedia: Bool
                 if let message = message {
-                    switch messageContentKind(message, strings: strings, accountPeerId: account.peerId) {
+                    switch messageContentKind(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId) {
                         case .text:
                             isMedia = false
                         default:

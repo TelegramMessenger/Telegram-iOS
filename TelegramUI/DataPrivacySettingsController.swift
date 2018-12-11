@@ -394,7 +394,7 @@ public func dataPrivacyController(account: Account) -> ViewController {
                     return
                 }
                 
-                let _ = updateContactSynchronizationSettingsInteractively(postbox: account.postbox, { settings in
+                let _ = updateContactSettingsInteractively(postbox: account.postbox, { settings in
                     var settings = settings
                     settings.synchronizeDeviceContacts = false
                     return settings
@@ -413,7 +413,7 @@ public func dataPrivacyController(account: Account) -> ViewController {
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
     }, updateSyncContacts: { value in
-        let _ = updateContactSynchronizationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateContactSettingsInteractively(postbox: account.postbox, { settings in
             var settings = settings
             settings.synchronizeDeviceContacts = value
             return settings

@@ -42,7 +42,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
     case add(PresentationTheme, String)
     case restrictedHeader(PresentationTheme, String)
     case bannedHeader(PresentationTheme, String)
-    case peerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Int32, ChannelBlacklistPeerCategory, RenderedChannelParticipant, ItemListPeerItemEditing, Bool, Bool)
+    case peerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Int32, ChannelBlacklistPeerCategory, RenderedChannelParticipant, ItemListPeerItemEditing, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -52,7 +52,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 return ChannelBlacklistSection.restricted.rawValue
             case .bannedHeader:
                 return ChannelBlacklistSection.banned.rawValue
-            case let .peerItem(_, _, _, _, category, _, _, _, _):
+            case let .peerItem(_, _, _, _, _, category, _, _, _, _):
                 switch category {
                     case .restricted:
                         return ChannelBlacklistSection.restricted.rawValue
@@ -70,7 +70,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 return .index(1)
             case .bannedHeader:
                 return .index(2)
-            case let .peerItem(_, _, _, _, _, participant, _, _, _):
+            case let .peerItem(_, _, _, _, _, _, participant, _, _, _):
                 return .peer(participant.peer.id)
         }
     }
@@ -95,8 +95,8 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .peerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsIndex, lhsCategory, lhsParticipant, lhsEditing, lhsEnabled, lhsCanOpen):
-                if case let .peerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsIndex, rhsCategory, rhsParticipant, rhsEditing, rhsEnabled, rhsCanOpen) = rhs {
+            case let .peerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsIndex, lhsCategory, lhsParticipant, lhsEditing, lhsEnabled, lhsCanOpen):
+                if case let .peerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsIndex, rhsCategory, rhsParticipant, rhsEditing, rhsEnabled, rhsCanOpen) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -104,6 +104,9 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
+                    if lhsNameOrder != rhsNameOrder {
                         return false
                     }
                     if lhsIndex != rhsIndex {
@@ -151,7 +154,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 switch rhs {
                     case .add, .restrictedHeader, .bannedHeader:
                         return false
-                    case let .peerItem(_, _, _, _, category, _, _, _, _):
+                    case let .peerItem(_, _, _, _, _, category, _, _, _, _):
                         switch category {
                             case .restricted:
                                 return false
@@ -159,7 +162,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                                 return true
                         }
                 }
-            case let .peerItem(_, _, _, index, category, _, _, _, _):
+            case let .peerItem(_, _, _, _, index, category, _, _, _, _):
                 switch rhs {
                     case .add, .restrictedHeader:
                         return false
@@ -170,7 +173,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                             case .banned:
                                 return false
                         }
-                    case let .peerItem(_, _, _, rhsIndex, _, _, _, _, _):
+                    case let .peerItem(_, _, _, _, rhsIndex, _, _, _, _, _):
                         return index < rhsIndex
                 }
         }
@@ -186,7 +189,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .bannedHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .peerItem(theme, strings, dateTimeFormat, _, _, participant, editing, enabled, canOpen):
+            case let .peerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled, canOpen):
                 var text: ItemListPeerItemText = .none
                 switch participant.participant {
                     case let .member(_, _, _, banInfo):
@@ -196,7 +199,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                     default:
                         break
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: canOpen ? {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: canOpen ? {
                     arguments.openPeer(participant.participant)
                     } : {
                         arguments.openPeerInfo(participant.peer)
@@ -285,7 +288,7 @@ private func channelBlacklistControllerEntries(presentationData: PresentationDat
             if case .creator = participant.participant {
                 editable = false
             }
-            entries.append(.peerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, index, .restricted, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, canOpen))
+            entries.append(.peerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index, .restricted, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, canOpen))
             index += 1
         }
         if !blacklist.banned.isEmpty {
@@ -296,7 +299,7 @@ private func channelBlacklistControllerEntries(presentationData: PresentationDat
             if case .creator = participant.participant {
                 editable = false
             }
-            entries.append(.peerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, index, .banned, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, canOpen))
+            entries.append(.peerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index, .banned, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, canOpen))
             index += 1
         }
     }

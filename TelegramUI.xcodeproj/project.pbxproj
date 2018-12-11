@@ -250,6 +250,7 @@
 		D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD771FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift */; };
 		D056CD7A1FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD791FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift */; };
 		D056CD7C1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D056CD7B1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift */; };
+		D05B077421BFC38600B1D27C /* FFMpeg.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05B077321BFC38600B1D27C /* FFMpeg.framework */; };
 		D05D8B3A2192FC460064586F /* LocalizationListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B392192FC460064586F /* LocalizationListController.swift */; };
 		D05D8B3F2192FC6E0064586F /* LocalizationListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B3E2192FC6E0064586F /* LocalizationListControllerNode.swift */; };
 		D05D8B412192FC8A0064586F /* LocalizationListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B402192FC8A0064586F /* LocalizationListItem.swift */; };
@@ -698,7 +699,6 @@
 		D0EC6D1A1EB9F58800EBF1C3 /* FFMpegMediaFrameSourceContextHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69D161D6B87D30046BCD6 /* FFMpegMediaFrameSourceContextHelpers.swift */; };
 		D0EC6D1B1EB9F58800EBF1C3 /* FFMpegMediaVideoFrameDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69D871D6B87EC0046BCD6 /* FFMpegMediaVideoFrameDecoder.swift */; };
 		D0EC6D1C1EB9F58800EBF1C3 /* FFMpegMediaPassthroughVideoFrameDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69D6F1D6B87DE0046BCD6 /* FFMpegMediaPassthroughVideoFrameDecoder.swift */; };
-		D0EC6D1D1EB9F58800EBF1C3 /* FFMpegPacket.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69D171D6B87D30046BCD6 /* FFMpegPacket.swift */; };
 		D0EC6D1E1EB9F58800EBF1C3 /* MediaPlayerScrubbingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03922A61DF70E3F000F2CE9 /* MediaPlayerScrubbingNode.swift */; };
 		D0EC6D1F1EB9F58800EBF1C3 /* MediaPlayerTimeTextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0177B7F1DFAE18500A5083A /* MediaPlayerTimeTextNode.swift */; };
 		D0EC6D201EB9F58800EBF1C3 /* PeerAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69CDE1D6B87D30046BCD6 /* PeerAvatar.swift */; };
@@ -1049,10 +1049,6 @@
 		D0EC6E921EB9F5B200EBF1C3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452C1D5E340300A7428A /* SwiftSignalKit.framework */; };
 		D0EC6E931EB9F5B200EBF1C3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452D1D5E340300A7428A /* TelegramCore.framework */; };
 		D0EC6E961EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EC6E941EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework */; };
-		D0EC6E981EB9F5D000EBF1C3 /* libavcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F69EA81D6B9BCB0046BCD6 /* libavcodec.a */; };
-		D0EC6E991EB9F5D000EBF1C3 /* libavformat.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F69EA91D6B9BCB0046BCD6 /* libavformat.a */; };
-		D0EC6E9A1EB9F5D000EBF1C3 /* libavutil.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F69EAA1D6B9BCB0046BCD6 /* libavutil.a */; };
-		D0EC6E9B1EB9F5D000EBF1C3 /* libswresample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F69EAB1D6B9BCB0046BCD6 /* libswresample.a */; };
 		D0EC6E9C1EB9F5E600EBF1C3 /* libwebp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F69EA61D6B9BBC0046BCD6 /* libwebp.a */; };
 		D0EC6EA21EB9FAFA00EBF1C3 /* libopus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D03B251DECB26D00220C46 /* libopus.a */; };
 		D0EC6EA31EB9FB7A00EBF1C3 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D075518E1DDA4F9E0073E051 /* SSignalKit.framework */; };
@@ -1569,6 +1565,8 @@
 		D05A32E91E6F143C002760B4 /* RecentSessionsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentSessionsController.swift; sourceTree = "<group>"; };
 		D05A32EB1E6F1462002760B4 /* BlockedPeersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlockedPeersController.swift; sourceTree = "<group>"; };
 		D05A32ED1E6F25A0002760B4 /* ItemListRecentSessionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListRecentSessionItem.swift; sourceTree = "<group>"; };
+		D05B077121BFB9F600B1D27C /* FFMpeg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = FFMpeg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D05B077321BFC38600B1D27C /* FFMpeg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = FFMpeg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D05B724C1E720393000BD3AD /* SelectivePrivacySettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SelectivePrivacySettingsController.swift; sourceTree = "<group>"; };
 		D05B724F1E720597000BD3AD /* PresentationData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationData.swift; sourceTree = "<group>"; };
 		D05BFB5E1EAA22F900909D38 /* PresentationResourceKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationResourceKey.swift; sourceTree = "<group>"; };
@@ -2145,7 +2143,6 @@
 		D0F69CFB1D6B87D30046BCD6 /* TouchDownGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TouchDownGestureRecognizer.swift; sourceTree = "<group>"; };
 		D0F69D021D6B87D30046BCD6 /* MediaPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaPlayer.swift; sourceTree = "<group>"; };
 		D0F69D161D6B87D30046BCD6 /* FFMpegMediaFrameSourceContextHelpers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FFMpegMediaFrameSourceContextHelpers.swift; sourceTree = "<group>"; };
-		D0F69D171D6B87D30046BCD6 /* FFMpegPacket.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FFMpegPacket.swift; sourceTree = "<group>"; };
 		D0F69D1D1D6B87D30046BCD6 /* MediaTrackDecodableFrame.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaTrackDecodableFrame.swift; sourceTree = "<group>"; };
 		D0F69D6F1D6B87DE0046BCD6 /* FFMpegMediaPassthroughVideoFrameDecoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FFMpegMediaPassthroughVideoFrameDecoder.swift; sourceTree = "<group>"; };
 		D0F69D701D6B87DE0046BCD6 /* MediaTrackFrameBuffer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaTrackFrameBuffer.swift; sourceTree = "<group>"; };
@@ -2270,6 +2267,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D05B077421BFC38600B1D27C /* FFMpeg.framework in Frameworks */,
 				D045549A21B2F173007A6DD9 /* libturbojpeg.a in Frameworks */,
 				091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */,
 				D0C45E9F213FFAFD00988156 /* Lottie.framework in Frameworks */,
@@ -2286,10 +2284,6 @@
 				D0EC6EA31EB9FB7A00EBF1C3 /* SSignalKit.framework in Frameworks */,
 				D0EC6EA21EB9FAFA00EBF1C3 /* libopus.a in Frameworks */,
 				D0EC6E9C1EB9F5E600EBF1C3 /* libwebp.a in Frameworks */,
-				D0EC6E981EB9F5D000EBF1C3 /* libavcodec.a in Frameworks */,
-				D0EC6E991EB9F5D000EBF1C3 /* libavformat.a in Frameworks */,
-				D0EC6E9A1EB9F5D000EBF1C3 /* libavutil.a in Frameworks */,
-				D0EC6E9B1EB9F5D000EBF1C3 /* libswresample.a in Frameworks */,
 				D0EC6E961EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework in Frameworks */,
 				D0EC6E8F1EB9F5B200EBF1C3 /* AsyncDisplayKit.framework in Frameworks */,
 				D0EC6E901EB9F5B200EBF1C3 /* Display.framework in Frameworks */,
@@ -3309,6 +3303,8 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D05B077321BFC38600B1D27C /* FFMpeg.framework */,
+				D05B077121BFB9F600B1D27C /* FFMpeg.framework */,
 				D045549921B2F173007A6DD9 /* libturbojpeg.a */,
 				D0C45E9E213FFAFD00988156 /* Lottie.framework */,
 				D02DADBE2138D76F00116225 /* Vision.framework */,
@@ -4145,7 +4141,6 @@
 				D0F69D161D6B87D30046BCD6 /* FFMpegMediaFrameSourceContextHelpers.swift */,
 				D0F69D871D6B87EC0046BCD6 /* FFMpegMediaVideoFrameDecoder.swift */,
 				D0F69D6F1D6B87DE0046BCD6 /* FFMpegMediaPassthroughVideoFrameDecoder.swift */,
-				D0F69D171D6B87D30046BCD6 /* FFMpegPacket.swift */,
 				D03922A61DF70E3F000F2CE9 /* MediaPlayerScrubbingNode.swift */,
 				D0177B7F1DFAE18500A5083A /* MediaPlayerTimeTextNode.swift */,
 			);
@@ -5201,7 +5196,6 @@
 				D01C06AF1FBB461E001561AB /* JoinLinkPreviewController.swift in Sources */,
 				D0EC6D1C1EB9F58800EBF1C3 /* FFMpegMediaPassthroughVideoFrameDecoder.swift in Sources */,
 				D0D9DE0D20EFEA2E00F20B06 /* InstantPageMediaPlaylist.swift in Sources */,
-				D0EC6D1D1EB9F58800EBF1C3 /* FFMpegPacket.swift in Sources */,
 				D01C06B11FBB4643001561AB /* JoinLinkPreviewControllerNode.swift in Sources */,
 				D0EC6D1E1EB9F58800EBF1C3 /* MediaPlayerScrubbingNode.swift in Sources */,
 				D0C0B59B1EE019E5000F4D2C /* ChatSearchNavigationContentNode.swift in Sources */,

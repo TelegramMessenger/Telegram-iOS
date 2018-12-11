@@ -56,7 +56,7 @@ private enum SelectivePrivacyPeersEntryStableId: Hashable {
 }
 
 private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
-    case peerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, ItemListPeerItemEditing, Bool)
+    case peerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, ItemListPeerItemEditing, Bool)
     case addItem(PresentationTheme, String, Bool)
     
     var section: ItemListSectionId {
@@ -70,7 +70,7 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     var stableId: SelectivePrivacyPeersEntryStableId {
         switch self {
-            case let .peerItem(_, _, _, _, peer, _, _):
+            case let .peerItem(_, _, _, _, _, peer, _, _):
                 return .peer(peer.id)
             case .addItem:
                 return .add
@@ -79,8 +79,8 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     static func ==(lhs: SelectivePrivacyPeersEntry, rhs: SelectivePrivacyPeersEntry) -> Bool {
         switch lhs {
-        case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsEditing, lhsEnabled):
-                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsEditing, rhsEnabled) = rhs {
+        case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsPeer, lhsEditing, lhsEnabled):
+                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsPeer, rhsEditing, rhsEnabled) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -94,6 +94,9 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
+                    if lhsNameOrder != rhsNameOrder {
                         return false
                     }
                     if lhsEditing != rhsEditing {
@@ -117,9 +120,9 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     static func <(lhs: SelectivePrivacyPeersEntry, rhs: SelectivePrivacyPeersEntry) -> Bool {
         switch lhs {
-            case let .peerItem(index, _, _, _, _, _, _):
+            case let .peerItem(index, _, _, _, _, _, _, _):
                 switch rhs {
-                    case let .peerItem(rhsIndex, _, _, _, _, _, _):
+                    case let .peerItem(rhsIndex, _, _, _, _, _, _, _):
                         return index < rhsIndex
                     case .addItem:
                         return true
@@ -131,8 +134,8 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     func item(_ arguments: SelectivePrivacyPeersControllerArguments) -> ListViewItem {
         switch self {
-            case let .peerItem(_, theme, strings, dateTimeFormat, peer, editing, enabled):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+            case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removePeer(peerId)
@@ -183,7 +186,7 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
     
     var index: Int32 = 0
     for peer in peers {
-        entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.id == state.peerIdWithRevealedOptions), true))
+        entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.id == state.peerIdWithRevealedOptions), true))
         index += 1
     }
     

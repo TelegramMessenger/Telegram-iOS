@@ -128,8 +128,6 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
         let previousItem = self.item
         
         return { [weak self] item, params, mergedTop, mergedBottom in
-            let baseWidth = params.width - params.leftInset - params.rightInset
-            
             let leftInset: CGFloat = 55.0 + params.leftInset
             let rightInset: CGFloat = 10.0 + params.rightInset
             
@@ -139,7 +137,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
             }
             
             let string = NSMutableAttributedString()
-            string.append(NSAttributedString(string: item.peer.displayTitle, font: primaryFont, textColor: item.theme.list.itemPrimaryTextColor))
+            string.append(NSAttributedString(string: item.peer.debugDisplayTitle, font: primaryFont, textColor: item.theme.list.itemPrimaryTextColor))
             if let addressName = item.peer.addressName, !addressName.isEmpty {
                 string.append(NSAttributedString(string: " @\(addressName)", font: secondaryFont, textColor: item.theme.list.itemSecondaryTextColor))
             }

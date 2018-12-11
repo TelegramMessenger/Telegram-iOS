@@ -541,9 +541,11 @@ public func passcodeEntryController(account: Account, animateIn: Bool = true, co
                 completion(value != nil)
                 dismissImpl?()
             })!
-            controller.touchIdCompletion = {
-                completion(true)
-                dismissImpl?()
+            if passcodeSettings?.enableBiometrics ?? false {
+                controller.touchIdCompletion = {
+                    completion(true)
+                    dismissImpl?()
+                }
             }
             controller.checkCurrentPasscode = { value in
                 if let value = value {
@@ -578,7 +580,9 @@ public func passcodeEntryController(account: Account, animateIn: Bool = true, co
                 }).start()
             }
             legacyController.presentationCompleted = { [weak controller] in
-                controller?.refreshTouchId()
+                if passcodeSettings?.enableBiometrics ?? false {
+                    controller?.refreshTouchId()
+                }
             }
             legacyController.bind(controller: controller)
             legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)

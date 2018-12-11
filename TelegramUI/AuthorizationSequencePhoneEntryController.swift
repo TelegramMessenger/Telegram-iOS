@@ -14,7 +14,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     private let theme: AuthorizationTheme
     private let openUrl: (String) -> Void
     
-    private var currentData: (Int32, String)?
+    private var currentData: (Int32, String?, String)?
     
     var inProgress: Bool = false {
         didSet {
@@ -58,25 +58,25 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.termsDisposable.dispose()
     }
     
-    func updateData(countryCode: Int32, number: String) {
-        self.currentData = (countryCode, number)
+    func updateData(countryCode: Int32, countryName: String?, number: String) {
+        self.currentData = (countryCode, countryName, number)
         if self.isNodeLoaded {
-            self.controllerNode.codeAndNumber = (countryCode, number)
+            self.controllerNode.codeAndNumber = (countryCode, countryName, number)
         }
     }
     
     override public func loadDisplayNode() {
         self.displayNode = AuthorizationSequencePhoneEntryControllerNode(strings: self.strings, theme: self.theme)
-        if let (code, number) = self.currentData {
-            self.controllerNode.codeAndNumber = (code, number)
+        if let (code, name, number) = self.currentData {
+            self.controllerNode.codeAndNumber = (code, name, number)
         }
         self.displayNodeDidLoad()
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
                 let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(authorizationTheme: strongSelf.theme))
-                controller.completeWithCountryCode = { code, _ in
+                controller.completeWithCountryCode = { code, name in
                     if let strongSelf = self, let currentData = strongSelf.currentData {
-                        strongSelf.updateData(countryCode: Int32(code), number: currentData.1)
+                        strongSelf.updateData(countryCode: Int32(code), countryName: name, number: currentData.2)
                         strongSelf.controllerNode.activateInput()
                     }
                 }
@@ -111,7 +111,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     @objc func nextPressed() {
-        let (_, number) = self.controllerNode.codeAndNumber
+        let (_, _, number) = self.controllerNode.codeAndNumber
         if !number.isEmpty {
             self.loginWithNumber?(self.controllerNode.currentNumber)
         } else {

@@ -7,7 +7,7 @@ import TelegramUIPrivateModule
 import Display
 import UIKit
 import VideoToolbox
-
+/*
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     guard let buffer = buffer else {
         return 0
@@ -404,3 +404,4 @@ func streamingVideoThumbnail(postbox: Postbox, fileReference: FileMediaReference
         }
     }
 }
+*/

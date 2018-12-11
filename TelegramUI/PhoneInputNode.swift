@@ -113,23 +113,35 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    var codeAndNumber: (Int32?, String) {
+    private var countryNameForCode: (Int32, String)?
+    
+    var codeAndNumber: (Int32?, String?, String) {
         get {
             var code: Int32?
             if let text = self.countryCodeField.textField.text, text.count <= 4, let number = Int(removePlus(text)) {
                 code = Int32(number)
-                return (code, cleanPhoneNumber(self.numberField.textField.text))
+                var countryName: String?
+                if self.countryNameForCode?.0 == code {
+                    countryName = self.countryNameForCode?.1
+                }
+                return (code, countryName, cleanPhoneNumber(self.numberField.textField.text))
             } else if let text = self.countryCodeField.textField.text {
-                return (nil, cleanPhoneNumber(text + (self.numberField.textField.text ?? "")))
+                return (nil, nil, cleanPhoneNumber(text + (self.numberField.textField.text ?? "")))
             } else {
-                return (nil, "")
+                return (nil, nil, "")
             }
         } set(value) {
-            self.updateNumber("+" + (value.0 == nil ? "" : "\(value.0!)") + value.1)
+            let updatedCountryName = self.countryNameForCode?.0 != value.0 || self.countryNameForCode?.1 != value.1
+            if let code = value.0, let name = value.1 {
+                self.countryNameForCode = (code, name)
+            } else {
+                self.countryNameForCode = nil
+            }
+            self.updateNumber("+" + (value.0 == nil ? "" : "\(value.0!)") + value.2, forceNotifyCountryCodeUpdated: updatedCountryName)
         }
     }
     
-    var countryCodeUpdated: ((String) -> Void)?
+    var countryCodeUpdated: ((String, String?) -> Void)?
     
     var countryCodeTextUpdated: ((String) -> Void)?
     var numberTextUpdated: ((String) -> Void)?
@@ -204,7 +216,7 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.updateNumber(inputText)
     }
     
-    private func updateNumber(_ inputText: String, tryRestoringInputPosition: Bool = true) {
+    private func updateNumber(_ inputText: String, tryRestoringInputPosition: Bool = true, forceNotifyCountryCodeUpdated: Bool = false) {
         let (regionPrefix, text) = self.phoneFormatter.updateText(inputText)
         var realRegionPrefix: String
         let numberText: String
@@ -226,10 +238,14 @@ final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         if realRegionPrefix != self.countryCodeField.textField.text {
             self.countryCodeField.textField.text = realRegionPrefix
         }
-        if self.previousCountryCodeText != realRegionPrefix {
+        if self.previousCountryCodeText != realRegionPrefix || forceNotifyCountryCodeUpdated {
             self.previousCountryCodeText = realRegionPrefix
             let code = removePlus(realRegionPrefix).trimmingCharacters(in: CharacterSet.whitespaces)
-            self.countryCodeUpdated?(code)
+            var countryName: String?
+            if self.countryNameForCode?.0 == Int32(code) {
+                countryName = self.countryNameForCode?.1
+            }
+            self.countryCodeUpdated?(code, countryName)
         }
         self.countryCodeTextUpdated?(realRegionPrefix)
         

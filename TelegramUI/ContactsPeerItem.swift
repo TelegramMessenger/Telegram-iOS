@@ -451,9 +451,16 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
                             } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                                 let string = NSMutableAttributedString()
-                                string.append(NSAttributedString(string: firstName, font: item.sortOrder == .firstLast ? titleBoldFont : titleFont, textColor: textColor))
-                                string.append(NSAttributedString(string: " ", font: titleFont, textColor: textColor))
-                                string.append(NSAttributedString(string: lastName, font: item.sortOrder == .firstLast ? titleFont : titleBoldFont, textColor: textColor))
+                                switch item.displayOrder {
+                                    case .firstLast:
+                                        string.append(NSAttributedString(string: firstName, font: item.sortOrder == .firstLast ? titleBoldFont : titleFont, textColor: textColor))
+                                        string.append(NSAttributedString(string: " ", font: titleFont, textColor: textColor))
+                                        string.append(NSAttributedString(string: lastName, font: item.sortOrder == .firstLast ? titleFont : titleBoldFont, textColor: textColor))
+                                    case .lastFirst:
+                                        string.append(NSAttributedString(string: lastName, font: item.sortOrder == .firstLast ? titleFont : titleBoldFont, textColor: textColor))
+                                        string.append(NSAttributedString(string: " ", font: titleFont, textColor: textColor))
+                                        string.append(NSAttributedString(string: firstName, font: item.sortOrder == .firstLast ? titleBoldFont : titleFont, textColor: textColor))
+                                }
                                 titleAttributedString = string
                             } else if let firstName = user.firstName, !firstName.isEmpty {
                                 titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: textColor)

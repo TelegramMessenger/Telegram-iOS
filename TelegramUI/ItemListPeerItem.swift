@@ -63,6 +63,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
+    let nameDisplayOrder: PresentationPersonNameOrder
     let account: Account
     let peer: Peer
     let aliasHandling: ItemListPeerItemAliasHandling
@@ -82,10 +83,11 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let hasTopStripe: Bool
     let hasTopGroupInset: Bool
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
+        self.nameDisplayOrder = nameDisplayOrder
         self.account = account
         self.peer = peer
         self.aliasHandling = aliasHandling
@@ -332,9 +334,16 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             } else if let user = item.peer as? TelegramUser {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     let string = NSMutableAttributedString()
-                    string.append(NSAttributedString(string: firstName, font: titleFont, textColor: titleColor))
-                    string.append(NSAttributedString(string: " ", font: titleFont, textColor: titleColor))
-                    string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: titleColor))
+                    switch item.nameDisplayOrder {
+                        case .firstLast:
+                            string.append(NSAttributedString(string: firstName, font: titleFont, textColor: titleColor))
+                            string.append(NSAttributedString(string: " ", font: titleFont, textColor: titleColor))
+                            string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: titleColor))
+                        case .lastFirst:
+                            string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: titleColor))
+                            string.append(NSAttributedString(string: " ", font: titleFont, textColor: titleColor))
+                            string.append(NSAttributedString(string: firstName, font: titleFont, textColor: titleColor))
+                    }
                     titleAttributedString = string
                 } else if let firstName = user.firstName, !firstName.isEmpty {
                     titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: titleColor)

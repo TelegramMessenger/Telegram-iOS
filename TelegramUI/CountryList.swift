@@ -73,3 +73,16 @@ let countryCodeToIdAndName: [Int: (String, String)] = {
     }
     return dict
 }()
+
+struct CountryCodeAndId: Hashable {
+    let code: Int
+    let id: String
+}
+
+let countryCodeAndIdToName: [CountryCodeAndId: String] = {
+    var dict: [CountryCodeAndId: String] = [:]
+    for (code, id, name) in phoneCountriesInfo {
+        dict[CountryCodeAndId(code: code, id: id)] = name
+    }
+    return dict
+}()

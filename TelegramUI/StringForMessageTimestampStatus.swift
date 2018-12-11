@@ -7,13 +7,13 @@ enum MessageTimestampStatusFormat {
     case minimal
 }
 
-func stringForMessageTimestampStatus(message: Message, dateTimeFormat: PresentationDateTimeFormat, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
+func stringForMessageTimestampStatus(message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
     var dateText = stringForMessageTimestamp(timestamp: message.timestamp, dateTimeFormat: dateTimeFormat)
     
     var authorTitle: String?
     if let author = message.author as? TelegramUser {
         if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-            authorTitle = author.displayTitle
+            authorTitle = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
         }
     } else {
         if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {

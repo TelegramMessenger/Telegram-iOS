@@ -128,10 +128,6 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
         
         super.init()
         
-        if let webView = self.webView as? WKWebView {
-            //webView.navigationDelegate = self
-        }
-        
         self.view.addSubview(self.webView)
         
         self.statusNodeContainer.addSubnode(self.statusNode)
@@ -170,6 +166,11 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
         let updateFile = self.accountAndFile?.1.media != fileReference.media
         self.accountAndFile = (account, fileReference)
         if updateFile {
+            if fileReference.media.mimeType.hasPrefix("image/") {
+                if let webView = self.webView as? WKWebView {
+                    webView.backgroundColor = .black
+                }
+            }
             self.maybeLoadContent()
             self.setupStatus(account: account, resource: fileReference.media.resource)
         }

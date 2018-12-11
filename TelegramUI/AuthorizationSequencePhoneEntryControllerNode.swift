@@ -117,9 +117,13 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
         
-        self.phoneInputNode.countryCodeUpdated = { [weak self] code in
+        self.phoneInputNode.countryCodeUpdated = { [weak self] code, name in
             if let strongSelf = self {
-                if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
+                if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
+                    let flagString = emojiFlagForISOCountryCode(name as NSString)
+                    let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
+                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.primaryColor, for: [])
+                } else if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
                     let flagString = emojiFlagForISOCountryCode(countryId as NSString)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.primaryColor, for: [])
@@ -171,7 +175,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         return self.phoneAndCountryNode.phoneInputNode.number
     }
     
-    var codeAndNumber: (Int32?, String) {
+    var codeAndNumber: (Int32?, String?, String) {
         get {
             return self.phoneAndCountryNode.phoneInputNode.codeAndNumber
         } set(value) {
@@ -246,7 +250,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
                 return nil
             }
         }
-        self.termsOfServiceNode.tapAttributeAction = { [weak self] attributes in
+        self.termsOfServiceNode.tapAttributeAction = { attributes in
             if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
             }
         }
@@ -254,8 +258,16 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        var insets = layout.insets(options: [.input])
+        var insets = layout.insets(options: [])
         insets.top = navigationBarHeight
+        
+        if let inputHeight = layout.inputHeight {
+            if inputHeight.isEqual(to: layout.standardInputHeight - 44.0) {
+                insets.bottom += layout.standardInputHeight
+            } else {
+                insets.bottom += inputHeight
+            }
+        }
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
             self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(40.0), textColor: self.theme.primaryColor)
@@ -265,13 +277,11 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         let noticeSize = self.noticeNode.measure(CGSize(width: min(274.0, layout.size.width - 28.0), height: CGFloat.greatestFiniteMagnitude))
-        let termsOfServiceSize = self.termsOfServiceNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
         var items: [AuthorizationLayoutItem] = [
             AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
-            AuthorizationLayoutItem(node: self.phoneAndCountryNode, size: CGSize(width: layout.size.width, height: 115.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 44.0, maxValue: 44.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
-            //AuthorizationLayoutItem(node: self.termsOfServiceNode, size: termsOfServiceSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 90.0, maxValue: 90.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.phoneAndCountryNode, size: CGSize(width: layout.size.width, height: 115.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 44.0, maxValue: 44.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0))
         ]
         
         if layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 10.0)), items: items, transition: transition, failIfDoesNotFit: true) {

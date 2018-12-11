@@ -80,7 +80,7 @@ private enum FeedGroupingSection: ItemListSectionId {
 
 private enum FeedGroupingEntry: ItemListNodeEntry {
     case groupHeader(PresentationTheme, String)
-    case peer(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Int, Peer, Bool)
+    case peer(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Int, Peer, Bool)
     case ungroup(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -96,7 +96,7 @@ private enum FeedGroupingEntry: ItemListNodeEntry {
         switch self {
             case .groupHeader:
                 return .index(0)
-            case let .peer(_, _, _, _, peer, _):
+            case let .peer(_, _, _, _, _, peer, _):
                 return .peer(peer.id)
             case .ungroup:
                 return .index(1)
@@ -111,8 +111,8 @@ private enum FeedGroupingEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .peer(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsIndex, lhsPeer, lhsValue):
-                if case let .peer(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsIndex, rhsPeer, rhsValue) = rhs {
+            case let .peer(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsIndex, lhsPeer, lhsValue):
+                if case let .peer(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsIndex, rhsPeer, rhsValue) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -120,6 +120,9 @@ private enum FeedGroupingEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
+                    if lhsNameOrder != rhsNameOrder {
                         return false
                     }
                     if lhsIndex != rhsIndex {
@@ -148,11 +151,11 @@ private enum FeedGroupingEntry: ItemListNodeEntry {
         switch lhs {
             case .groupHeader:
                 return true
-            case let .peer(_, _, _, index, _, _):
+            case let .peer(_, _, _, _, index, _, _):
                 switch rhs {
                     case .groupHeader:
                         return false
-                    case let .peer(_, _, _, rhsIndex, _, _):
+                    case let .peer(_, _, _, _, rhsIndex, _, _):
                         return index < rhsIndex
                     default:
                         return true
@@ -166,8 +169,8 @@ private enum FeedGroupingEntry: ItemListNodeEntry {
         switch self {
             case let .groupHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .peer(theme, strings, dateTimeFormat, _, peer, value):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: value, style: .standard), enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: { value in
+            case let .peer(theme, strings, dateTimeFormat, nameDisplayOrder, _, peer, value):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: value, style: .standard), enabled: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: { value in
                     arguments.togglePeer(peer, value)
                 })
             case let .ungroup(theme, text):
@@ -200,17 +203,19 @@ private final class FeedGroupingState {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
+    let nameDisplayOrder: PresentationPersonNameOrder
     let peers: [FeedGroupingPeerState]
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, peers: [FeedGroupingPeerState]) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peers: [FeedGroupingPeerState]) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
+        self.nameDisplayOrder = nameDisplayOrder
         self.peers = peers
     }
     
     func withUpdatedPeers(_ peers: [FeedGroupingPeerState]) -> FeedGroupingState {
-        return FeedGroupingState(theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, peers: peers)
+        return FeedGroupingState(theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, peers: peers)
     }
 }
 
@@ -220,7 +225,7 @@ private func entriesStateFromState(_ state: FeedGroupingState) -> FeedGroupingEn
         entries.append(.groupHeader(state.theme, "GROUP CHANNELS"))
         var index = 0
         for peer in state.peers {
-            entries.append(.peer(state.theme, state.strings, state.dateTimeFormat, index, peer.peer, peer.included))
+            entries.append(.peer(state.theme, state.strings, state.dateTimeFormat, state.nameDisplayOrder, index, peer.peer, peer.included))
             index += 1
         }
         entries.append(.ungroup(state.theme, "Ungroup All Channels"))
@@ -284,7 +289,7 @@ final class FeedGroupingControllerNode: ViewControllerTracingNode {
         self.blockingOverlay = ASDisplayNode()
         self.blockingOverlay.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
         
-        self._stateValue = FeedGroupingState(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, peers: [])
+        self._stateValue = FeedGroupingState(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: [])
         self.statePromise.set(.single(self._stateValue))
         
         super.init()

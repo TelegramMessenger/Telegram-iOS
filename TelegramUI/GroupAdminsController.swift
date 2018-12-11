@@ -56,7 +56,7 @@ private enum GroupAdminsEntryStableId: Hashable {
 private enum GroupAdminsEntry: ItemListNodeEntry {
     case allAdmins(PresentationTheme, String, Bool)
     case allAdminsInfo(PresentationTheme, String)
-    case peerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, String, Bool, Bool)
+    case peerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, String, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -73,7 +73,7 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
                 return .index(0)
             case .allAdminsInfo:
                 return .index(1)
-            case let .peerItem(_, _, _, _, peer, _, _, _):
+            case let .peerItem(_, _, _, _, _, peer, _, _, _):
                 return .peer(peer.id)
         }
     }
@@ -92,8 +92,8 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsLabel, lhsToggled, lhsEnabled):
-                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsLabel, rhsToggled, rhsEnabled) = rhs {
+            case let .peerItem(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsPeer, lhsLabel, lhsToggled, lhsEnabled):
+                if case let .peerItem(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsPeer, rhsLabel, rhsToggled, rhsEnabled) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -104,6 +104,9 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsDateTimeFormat != rhsDateTimeFormat {
+                        return false
+                    }
+                    if lhsNameOrder != rhsNameOrder {
                         return false
                     }
                     if !lhsPeer.isEqual(rhsPeer) {
@@ -136,9 +139,9 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .peerItem(index, _, _, _, _, _, _, _):
+            case let .peerItem(index, _, _, _, _, _, _, _, _):
                 switch rhs {
-                    case let .peerItem(rhsIndex, _, _, _, _, _, _, _):
+                    case let .peerItem(rhsIndex, _, _, _, _, _, _, _, _):
                         return index < rhsIndex
                     case .allAdmins, .allAdminsInfo:
                         return false
@@ -154,8 +157,8 @@ private enum GroupAdminsEntry: ItemListNodeEntry {
                 })
             case let .allAdminsInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .peerItem(_, theme, strings, dateTimeFormat, peer, label, toggled, enabled):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: toggled, style: .standard), enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: { value in
+            case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, label, toggled, enabled):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: toggled, style: .standard), enabled: enabled, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: { value in
                     arguments.updatePeerIsAdmin(peer.id, value)
                 })
         }
@@ -276,7 +279,7 @@ private func groupAdminsControllerEntries(account: Account, presentationData: Pr
                             }
                     }
                 }
-                entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, label, isAdmin, isEnabled))
+                entries.append(.peerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, label, isAdmin, isEnabled))
                 index += 1
             }
         }

@@ -163,7 +163,7 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
                     return result == .orderedAscending
                 }))
                 sortedPeers = sortedPeers.filter { peer in
-                    return !peer.displayTitle.isEmpty
+                    return !peer.debugDisplayTitle.isEmpty
                 }
                 return { _ in return .mentions(sortedPeers) }
             }

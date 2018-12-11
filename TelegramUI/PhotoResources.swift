@@ -88,9 +88,13 @@ private func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaR
                 
                 return thumbnail
                 |> mapToSignal { thumbnailData in
-                    return fullSizeData
-                    |> map { (fullSizeData, complete) in
-                        return (thumbnailData, fullSizeData, complete)
+                    if let thumbnailData = thumbnailData {
+                        return fullSizeData
+                        |> map { (fullSizeData, complete) in
+                            return (thumbnailData, fullSizeData, complete)
+                        }
+                    } else {
+                        return .single((thumbnailData, nil, false))
                     }
                 }
             }

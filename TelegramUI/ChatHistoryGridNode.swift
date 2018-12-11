@@ -246,22 +246,18 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         
         super.init()
         
-       // self.chatPresentationDataPromise.set(.single(()))
-        
-        
         self.chatPresentationDataPromise.set(account.telegramApplicationContext.presentationData |> map { presentationData in
-            return ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, disableAnimations: presentationData.disableAnimations)
+            return ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         })
         
         self.floatingSections = true
-        //self.preloadPages = false
         
         let messageViewQueue = self.messageViewQueue
         
         let historyViewUpdate = self.chatHistoryLocation
-            |> distinctUntilChanged
-            |> mapToSignal { location in
-                return chatHistoryViewForLocation(location, account: account, chatLocation: .peer(peerId), fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [], orderStatistics: [.locationWithinMonth])
+        |> distinctUntilChanged
+        |> mapToSignal { location in
+            return chatHistoryViewForLocation(location, account: account, chatLocation: .peer(peerId), fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [], orderStatistics: [.locationWithinMonth])
         }
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)
