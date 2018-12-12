@@ -77,7 +77,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         super.init()
         
         self.addSubnode(self.playerNode)
-        //self.addSubnode(self.imageNode)
+        self.addSubnode(self.imageNode)
         
         if let image = webpageContent.image {
             self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image)))

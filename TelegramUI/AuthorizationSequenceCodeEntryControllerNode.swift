@@ -156,7 +156,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         #endif
         self.codeField.textField.returnKeyType = .done
         self.codeField.textField.textColor = self.theme.primaryColor
-        self.codeField.textField.keyboardAppearance = self.theme.keyboardAppearance
+        self.codeField.textField.keyboardAppearance = self.theme.keyboard.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.accentColor
         

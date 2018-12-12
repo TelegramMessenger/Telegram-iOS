@@ -66,7 +66,7 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.codeField.textField.textAlignment = .natural
         self.codeField.textField.isSecureTextEntry = true
         self.codeField.textField.returnKeyType = .done
-        self.codeField.textField.keyboardAppearance = self.theme.keyboardAppearance
+        self.codeField.textField.keyboardAppearance = self.theme.keyboard.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.accentColor
         

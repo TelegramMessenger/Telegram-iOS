@@ -11,14 +11,14 @@ final class ShareInputFieldNodeTheme: Equatable {
     let textColor: UIColor
     let placeholderColor: UIColor
     let clearButtonColor: UIColor
-    let keyboardAppearance: UIKeyboardAppearance
+    let keyboard: PresentationThemeKeyboardColor
     
-    public init(backgroundColor: UIColor, textColor: UIColor, placeholderColor: UIColor, clearButtonColor: UIColor, keyboardAppearance: UIKeyboardAppearance) {
+    public init(backgroundColor: UIColor, textColor: UIColor, placeholderColor: UIColor, clearButtonColor: UIColor, keyboard: PresentationThemeKeyboardColor) {
         self.backgroundColor = backgroundColor
         self.textColor = textColor
         self.placeholderColor = placeholderColor
         self.clearButtonColor = clearButtonColor
-        self.keyboardAppearance = keyboardAppearance
+        self.keyboard = keyboard
     }
     
     public static func ==(lhs: ShareInputFieldNodeTheme, rhs: ShareInputFieldNodeTheme) -> Bool {
@@ -34,7 +34,7 @@ final class ShareInputFieldNodeTheme: Equatable {
         if lhs.clearButtonColor != rhs.clearButtonColor {
             return false
         }
-        if lhs.keyboardAppearance != rhs.keyboardAppearance {
+        if lhs.keyboard != rhs.keyboard {
             return false
         }
         return true
@@ -43,7 +43,7 @@ final class ShareInputFieldNodeTheme: Equatable {
 
 extension ShareInputFieldNodeTheme {
     convenience init(presentationTheme theme: PresentationTheme) {
-        self.init(backgroundColor: theme.actionSheet.inputBackgroundColor, textColor: theme.actionSheet.inputTextColor, placeholderColor: theme.actionSheet.inputPlaceholderColor, clearButtonColor: theme.actionSheet.inputClearButtonColor, keyboardAppearance: .default)
+        self.init(backgroundColor: theme.actionSheet.inputBackgroundColor, textColor: theme.actionSheet.inputTextColor, placeholderColor: theme.actionSheet.inputPlaceholderColor, clearButtonColor: theme.actionSheet.inputClearButtonColor, keyboard: theme.chatList.searchBarKeyboardColor)
     }
 }
 
@@ -85,7 +85,7 @@ final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.textInputNode.clipsToBounds = true
         self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
-        self.textInputNode.keyboardAppearance = theme.keyboardAppearance
+        self.textInputNode.keyboardAppearance = theme.keyboard.keyboardAppearance
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false

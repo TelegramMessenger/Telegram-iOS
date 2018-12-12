@@ -120,7 +120,7 @@ private class SearchBarTextField: UITextField {
     }
 }
 
-final class SearchBarNodeTheme {
+final class SearchBarNodeTheme: Equatable {
     let background: UIColor
     let separator: UIColor
     let inputFill: UIColor
@@ -153,6 +153,37 @@ final class SearchBarNodeTheme {
         self.inputClear = theme.rootController.activeNavigationSearchBar.inputClearButtonColor
         self.accent = theme.rootController.activeNavigationSearchBar.accentColor
         self.keyboard = theme.chatList.searchBarKeyboardColor
+    }
+    
+    public static func ==(lhs: SearchBarNodeTheme, rhs: SearchBarNodeTheme) -> Bool {
+        if lhs.background != rhs.background {
+            return false
+        }
+        if lhs.separator != rhs.separator {
+            return false
+        }
+        if lhs.inputFill != rhs.inputFill {
+            return false
+        }
+        if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.primaryText != rhs.primaryText {
+            return false
+        }
+        if lhs.inputIcon != rhs.inputIcon {
+            return false
+        }
+        if lhs.inputClear != rhs.inputClear {
+            return false
+        }
+        if lhs.accent != rhs.accent {
+            return false
+        }
+        if lhs.keyboard != rhs.keyboard {
+            return false
+        }
+        return true
     }
 }
 
@@ -301,23 +332,17 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func updateThemeAndStrings(theme: SearchBarNodeTheme, strings: PresentationStrings) {
-        if self.theme !== theme || self.strings !== strings {
+        if self.theme != theme || self.strings !== strings {
             self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.accent), for: [])
         }
-        if self.theme !== theme {
+        if self.theme != theme {
             self.backgroundNode.backgroundColor = theme.background
             self.separatorNode.backgroundColor = theme.separator
             self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill)
             self.textField.textColor = theme.primaryText
             self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
             self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
-            
-            switch theme.keyboard {
-                case .light:
-                    self.textField.keyboardAppearance = .default
-                case .dark:
-                    self.textField.keyboardAppearance = .dark
-            }
+            self.textField.keyboardAppearance = theme.keyboard.keyboardAppearance
             
             if let activityIndicator = self.activityIndicator {
                 activityIndicator.type = .custom(theme.inputIcon, 13.0, 1.0, false)

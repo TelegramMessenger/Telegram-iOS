@@ -55,7 +55,7 @@ final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, 
         self.codeField.textField.textAlignment = .center
         self.codeField.textField.attributedPlaceholder = NSAttributedString(string: self.strings.TwoStepAuth_RecoveryCode, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
         self.codeField.textField.returnKeyType = .done
-        self.codeField.textField.keyboardAppearance = self.theme.keyboardAppearance
+        self.codeField.textField.keyboardAppearance = self.theme.keyboard.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.accentColor
         

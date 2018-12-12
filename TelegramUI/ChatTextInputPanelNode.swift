@@ -397,12 +397,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
             tintColor = presentationInterfaceState.theme.list.itemAccentColor
             baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
-            switch presentationInterfaceState.theme.chat.inputPanel.keyboardColor {
-                case .light:
-                    keyboardAppearance = .default
-                case .dark:
-                    keyboardAppearance = .dark
-            }
+            keyboardAppearance = presentationInterfaceState.theme.chat.inputPanel.keyboardColor.keyboardAppearance
         }
         
         let paragraphStyle = NSMutableParagraphStyle()
@@ -580,14 +575,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 }
                 
-                let keyboardAppearance: UIKeyboardAppearance
-                switch interfaceState.theme.chat.inputPanel.keyboardColor {
-                    case .light:
-                        keyboardAppearance = .default
-                    case .dark:
-                        keyboardAppearance = .dark
-                }
-                
+                let keyboardAppearance = interfaceState.theme.chat.inputPanel.keyboardColor.keyboardAppearance
                 if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
                     textInputNode.resignFirstResponder()
                     textInputNode.becomeFirstResponder()

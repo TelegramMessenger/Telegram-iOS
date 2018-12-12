@@ -145,10 +145,12 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         self.emptyResultsTitleNode = ImmediateTextNode()
         self.emptyResultsTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.SharedMedia_SearchNoResults, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.freeTextColor)
         self.emptyResultsTitleNode.textAlignment = .center
+        self.emptyResultsTitleNode.isHidden = true
         
         self.emptyResultsTextNode = ImmediateTextNode()
         self.emptyResultsTextNode.maximumNumberOfLines = 0
         self.emptyResultsTextNode.textAlignment = .center
+        self.emptyResultsTextNode.isHidden = true
         
         super.init()
         

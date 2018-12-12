@@ -11,7 +11,7 @@ public final class AuthorizationTheme {
     let searchBarFillColor: UIColor
     let searchBarPlaceholderColor: UIColor
     let searchBarTextColor: UIColor
-    let keyboardAppearance: UIKeyboardAppearance
+    let keyboard: PresentationThemeKeyboardColor
     let backgroundColor: UIColor
     let primaryColor: UIColor
     let separatorColor: UIColor
@@ -25,7 +25,7 @@ public final class AuthorizationTheme {
     let alertBackgroundColor: UIColor
     let listBackgroundColor: UIColor
     
-    init(statusBarStyle: StatusBarStyle, navigationBarBackgroundColor: UIColor, navigationBarTextColor: UIColor, navigationBarSeparatorColor: UIColor, searchBarBackgroundColor: UIColor, searchBarFillColor: UIColor, searchBarPlaceholderColor: UIColor, searchBarTextColor: UIColor, keyboardAppearance: UIKeyboardAppearance, backgroundColor: UIColor, primaryColor: UIColor, separatorColor: UIColor, itemHighlightedBackgroundColor: UIColor, dotColor: UIColor, startButtonColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disclosureControlColor: UIColor, textPlaceholderColor: UIColor, alertBackgroundColor: UIColor, listBackgroundColor: UIColor) {
+    init(statusBarStyle: StatusBarStyle, navigationBarBackgroundColor: UIColor, navigationBarTextColor: UIColor, navigationBarSeparatorColor: UIColor, searchBarBackgroundColor: UIColor, searchBarFillColor: UIColor, searchBarPlaceholderColor: UIColor, searchBarTextColor: UIColor, keyboard: PresentationThemeKeyboardColor, backgroundColor: UIColor, primaryColor: UIColor, separatorColor: UIColor, itemHighlightedBackgroundColor: UIColor, dotColor: UIColor, startButtonColor: UIColor, accentColor: UIColor, destructiveColor: UIColor, disclosureControlColor: UIColor, textPlaceholderColor: UIColor, alertBackgroundColor: UIColor, listBackgroundColor: UIColor) {
         self.statusBarStyle = statusBarStyle
         self.navigationBarBackgroundColor = navigationBarBackgroundColor
         self.navigationBarTextColor = navigationBarTextColor
@@ -34,7 +34,7 @@ public final class AuthorizationTheme {
         self.searchBarFillColor = searchBarFillColor
         self.searchBarPlaceholderColor = searchBarPlaceholderColor
         self.searchBarTextColor = searchBarTextColor
-        self.keyboardAppearance = keyboardAppearance
+        self.keyboard = keyboard
         self.backgroundColor = backgroundColor
         self.primaryColor = primaryColor
         self.separatorColor = separatorColor
@@ -59,7 +59,7 @@ let defaultLightAuthorizationTheme = AuthorizationTheme(
     searchBarFillColor: UIColor(rgb: 0xe9e9e9),
     searchBarPlaceholderColor: UIColor(rgb: 0x8e8e93),
     searchBarTextColor: .black,
-    keyboardAppearance: .default,
+    keyboard: .light,
     backgroundColor: .white,
     primaryColor: .black,
     separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0),
@@ -83,7 +83,7 @@ let defaultAuthorizationTheme = AuthorizationTheme(
     searchBarFillColor: UIColor(rgb: 0x272728),
     searchBarPlaceholderColor: UIColor(rgb: 0x5e5e5e),
     searchBarTextColor: .white,
-    keyboardAppearance: .dark,
+    keyboard: .dark,
     backgroundColor: .black,
     primaryColor: .white,
     separatorColor: UIColor(rgb: 0x252525),

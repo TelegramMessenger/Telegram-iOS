@@ -675,6 +675,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         if strongSelf.inputSeparator == nil {
                             animateIn = true
                         }
+                        let keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                         switch editingName {
                             case let .personName(firstName, lastName):
                                 if strongSelf.inputSeparator == nil {
@@ -699,8 +700,10 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 }
                                 
                                 strongSelf.inputFirstField?.textColor = item.theme.list.itemPrimaryTextColor
-                                strongSelf.inputFirstField?.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                                 strongSelf.inputFirstField?.attributedPlaceholder = NSAttributedString(string: item.strings.UserInfo_FirstNamePlaceholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
+                                if strongSelf.inputFirstField?.keyboardAppearance != keyboardAppearance {
+                                    strongSelf.inputFirstField?.keyboardAppearance = keyboardAppearance
+                                }
                                 
                                 if strongSelf.inputSecondField == nil {
                                     let inputSecondField = TextFieldNodeView()
@@ -716,8 +719,10 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 }
                                 
                                 strongSelf.inputSecondField?.textColor = item.theme.list.itemPrimaryTextColor
-                                strongSelf.inputSecondField?.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                                 strongSelf.inputSecondField?.attributedPlaceholder = NSAttributedString(string: item.strings.UserInfo_LastNamePlaceholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
+                                if strongSelf.inputSecondField?.keyboardAppearance != keyboardAppearance {
+                                    strongSelf.inputSecondField?.keyboardAppearance = keyboardAppearance
+                                }
                                 
                                 strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 46.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))
                                 strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 12.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 8.0, height: 30.0))
@@ -749,7 +754,6 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                     strongSelf.inputFirstField?.text = title
                                 }
                                 strongSelf.inputFirstField?.textColor = item.theme.list.itemPrimaryTextColor
-                                strongSelf.inputFirstField?.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
                                 let placeholder: String
                                 switch type {
                                     case .group:
@@ -758,6 +762,9 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                         placeholder = item.strings.GroupInfo_ChannelListNamePlaceholder
                                 }
                                 strongSelf.inputFirstField?.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(19.0), textColor: item.theme.list.itemPlaceholderTextColor)
+                                if strongSelf.inputFirstField?.keyboardAppearance != keyboardAppearance {
+                                    strongSelf.inputFirstField?.keyboardAppearance = keyboardAppearance
+                                }
                                 
                                 strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 62.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))
                                 strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 102.0, y: 26.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 102.0 - 8.0, height: 35.0))

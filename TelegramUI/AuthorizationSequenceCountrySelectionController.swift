@@ -75,14 +75,7 @@ final class AuthorizationSequenceCountrySelectionTheme {
     }
     
     convenience init(authorizationTheme: AuthorizationTheme) {
-        let keyboard: PresentationThemeKeyboardColor
-        switch authorizationTheme.keyboardAppearance {
-            case .dark:
-                keyboard = .dark
-            default:
-                keyboard = .light
-        }
-        self.init(statusBar: PresentationThemeStatusBarStyle(authorizationTheme.statusBarStyle), searchBar: SearchBarNodeTheme(background: authorizationTheme.navigationBarBackgroundColor, separator: authorizationTheme.navigationBarSeparatorColor, inputFill: authorizationTheme.searchBarFillColor, primaryText: authorizationTheme.searchBarTextColor, placeholder: authorizationTheme.searchBarPlaceholderColor, inputIcon: authorizationTheme.searchBarPlaceholderColor, inputClear: authorizationTheme.searchBarPlaceholderColor, accent: authorizationTheme.accentColor, keyboard: keyboard), listBackground: authorizationTheme.backgroundColor, listSeparator: authorizationTheme.separatorColor, listAccent: authorizationTheme.accentColor, listPrimary: authorizationTheme.primaryColor, listItemHighlight: authorizationTheme.itemHighlightedBackgroundColor)
+        self.init(statusBar: PresentationThemeStatusBarStyle(authorizationTheme.statusBarStyle), searchBar: SearchBarNodeTheme(background: authorizationTheme.navigationBarBackgroundColor, separator: authorizationTheme.navigationBarSeparatorColor, inputFill: authorizationTheme.searchBarFillColor, primaryText: authorizationTheme.searchBarTextColor, placeholder: authorizationTheme.searchBarPlaceholderColor, inputIcon: authorizationTheme.searchBarPlaceholderColor, inputClear: authorizationTheme.searchBarPlaceholderColor, accent: authorizationTheme.accentColor, keyboard: authorizationTheme.keyboard), listBackground: authorizationTheme.backgroundColor, listSeparator: authorizationTheme.separatorColor, listAccent: authorizationTheme.accentColor, listPrimary: authorizationTheme.primaryColor, listItemHighlight: authorizationTheme.itemHighlightedBackgroundColor)
     }
 }
 
