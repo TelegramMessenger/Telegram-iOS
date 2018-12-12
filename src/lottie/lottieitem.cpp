@@ -278,18 +278,27 @@ void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle
     for (auto &i : mDrawableList) {
         painter->setBrush(i->mBrush);
         VRle rle = i->rle();
-        if (!mask.empty()) rle = rle & mask;
+        if (matteRle.empty()) {
+            if (mask.empty()) {
+                // no mask no matte
+                painter->drawRle(VPoint(), rle);
+            } else {
+                // only mask
+                painter->drawRle(rle, mask);
+            }
 
-        if (rle.empty()) continue;
+        } else {
+            if (!mask.empty()) rle = rle & mask;
 
-        if (!matteRle.empty()) {
+            if (rle.empty()) continue;
             if (matteType() == MatteType::AlphaInv) {
                 rle = rle - matteRle;
+                painter->drawRle(VPoint(), rle);
             } else {
-                rle = rle & matteRle;
+                // render with matteRle as clip.
+                painter->drawRle(rle, matteRle);
             }
         }
-        painter->drawRle(VPoint(), rle);
     }
 }
 
