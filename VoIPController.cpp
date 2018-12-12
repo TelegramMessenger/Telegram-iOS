@@ -3431,6 +3431,8 @@ void VoIPController::UpdateQueuedPackets(){
 }
 
 void VoIPController::SendNopPacket(){
+	if(state!=STATE_ESTABLISHED)
+		return;
 	SendOrEnqueuePacket(PendingOutgoingPacket{
 			/*.seq=*/(firstSentPing=GenerateOutSeq()),
 			/*.type=*/PKT_NOP,
