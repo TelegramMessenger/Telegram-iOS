@@ -163,7 +163,7 @@ public:
     VMatrix                  mCombinedMatrix;
     VPath                    mLocalPath;
     VPath                    mFinalPath;
-    std::future<VRle>        mRleTask;
+    RleShare                 mRleFuture;
     VRle                     mRle;
 };
 

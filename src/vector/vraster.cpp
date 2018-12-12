@@ -244,7 +244,7 @@ static void bboxCb(int x, int y, int w, int h, void *user)
 }
 
 struct RleTask {
-    std::promise<VRle> sender;
+    RleShare           mRlePromise;
     VPath              path;
     VRle               rle;
     float              width;
@@ -348,7 +348,7 @@ class RleTaskScheduler {
 
             if (!success && !_q[i].pop(task)) break;
 
-            task.sender.set_value((task)(outlineRef, stroker));
+            task.mRlePromise->set_value((task)(outlineRef, stroker));
         }
 
         // cleanup
@@ -370,21 +370,18 @@ public:
         for (auto &e : _threads) e.join();
     }
 
-    std::future<VRle> async(RleTask &&task)
+    void async(RleTask &&task)
     {
-        auto receiver = std::move(task.sender.get_future());
         auto i = _index++;
 
         for (unsigned n = 0; n != _count; ++n) {
-            if (_q[(i + n) % _count].try_push(std::move(task))) return receiver;
+            if (_q[(i + n) % _count].try_push(std::move(task))) return;
         }
 
         _q[i % _count].push(std::move(task));
-
-        return receiver;
     }
 
-    std::future<VRle> strokeRle(VPath &&path, VRle &&rle, CapStyle cap, JoinStyle join,
+    void strokeRle(RleShare &promise, VPath &&path, VRle &&rle, CapStyle cap, JoinStyle join,
                                 float width, float meterLimit, const VRect &clip)
     {
         RleTask task;
@@ -396,10 +393,12 @@ public:
         task.width = width;
         task.meterLimit = meterLimit;
         task.clip = clip;
-        return async(std::move(task));
+        task.mRlePromise = promise;
+
+        async(std::move(task));
     }
 
-    std::future<VRle> fillRle(VPath &&path, VRle &&rle, FillRule fillRule, const VRect &clip)
+    void fillRle(RleShare &promise, VPath &&path, VRle &&rle, FillRule fillRule, const VRect &clip)
     {
         RleTask task;
         task.path = std::move(path);
@@ -407,33 +406,33 @@ public:
         task.fillRule = fillRule;
         task.clip = clip;
         task.stroke = false;
-        return async(std::move(task));
+        task.mRlePromise = promise;
+
+        async(std::move(task));
     }
 };
 
 static RleTaskScheduler raster_scheduler;
 
-std::future<VRle> VRaster::generateFillInfo(VPath &&path, VRle &&rle,
-                                            FillRule     fillRule, const VRect &clip)
+void VRaster::generateFillInfo(RleShare &promise, VPath &&path, VRle &&rle,
+                                            FillRule fillRule, const VRect &clip)
 {
     if (path.empty()) {
-        std::promise<VRle> promise;
-        promise.set_value(VRle());
-        return promise.get_future();
+        promise->set_value(VRle());
+        return;
     }
-    return raster_scheduler.fillRle(std::move(path), std::move(rle), fillRule, clip);
+    return raster_scheduler.fillRle(promise, std::move(path), std::move(rle), fillRule, clip);
 }
 
-std::future<VRle> VRaster::generateStrokeInfo(VPath &&path, VRle &&rle, CapStyle cap,
-                                              JoinStyle join, float width,
-                                              float meterLimit, const VRect &clip)
+void VRaster::generateStrokeInfo(RleShare &promise, VPath &&path, VRle &&rle, CapStyle cap,
+                                 JoinStyle join, float width,
+                                 float meterLimit, const VRect &clip)
 {
     if (path.empty()) {
-        std::promise<VRle> promise;
-        promise.set_value(VRle());
-        return promise.get_future();
+        promise->set_value(VRle());
+        return;
     }
-    return raster_scheduler.strokeRle(std::move(path), std::move(rle), cap, join, width, meterLimit, clip);
+    return raster_scheduler.strokeRle(promise, std::move(path), std::move(rle), cap, join, width, meterLimit, clip);
 }
 
 V_END_NAMESPACE

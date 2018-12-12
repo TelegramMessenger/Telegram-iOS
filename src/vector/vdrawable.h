@@ -4,6 +4,7 @@
 #include "vbrush.h"
 #include "vpath.h"
 #include "vrle.h"
+#include "vraster.h"
 
 class VDrawable {
 public:
@@ -40,7 +41,7 @@ public:
     };
     VBrush            mBrush;
     VPath             mPath;
-    std::future<VRle> mRleTask;
+    RleShare          mRleFuture;
     VRle              mRle;
     StrokeInfo        mStroke;
     DirtyFlag         mFlag{DirtyState::All};

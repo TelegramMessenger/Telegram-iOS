@@ -158,14 +158,17 @@ void LOTMaskItem::update(int frameNo, const VMatrix &parentMatrix,
 
     VPath tmp = mFinalPath;
 
-    mRleTask = VRaster::generateFillInfo(std::move(tmp), std::move(mRle));
+    if (!mRleFuture) mRleFuture = std::make_shared<VSharedState<VRle>>();
+
+    mRleFuture->reuse();
+    VRaster::generateFillInfo(mRleFuture, std::move(tmp), std::move(mRle));
     mRle = VRle();
 }
 
 VRle LOTMaskItem::rle()
 {
-    if (mRleTask.valid()) {
-        mRle = mRleTask.get();
+    if (mRleFuture && mRleFuture->valid()) {
+        mRle = mRleFuture->get();
         if (!vCompare(mCombinedAlpha, 1.0f))
             mRle *= (mCombinedAlpha * 255);
         if (mData->mInv) mRle.invert();
