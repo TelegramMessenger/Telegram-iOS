@@ -31,6 +31,7 @@ public:
     void operator*=(int alpha);
 
     void intersect(const VRect &r, VRleSpanCb cb, void *userData) const;
+    void intersect(const VRle &rle, VRleSpanCb cb, void *userData) const;
 
     VRle operator&(const VRle &o) const;
     VRle operator-(const VRle &o) const;
@@ -64,7 +65,9 @@ private:
         mutable VRect           mBbox;
         mutable bool            mBboxDirty = true;
     };
-
+    friend void opIntersectHelper(const VRle::VRleData &obj1,
+                                  const VRle::VRleData &obj2,
+                                  VRle::VRleSpanCb cb, void *userData);
     vcow_ptr<VRleData> d;
 };
 
@@ -154,6 +157,12 @@ inline void VRle::translate(const VPoint &p)
 inline void VRle::intersect(const VRect &r, VRleSpanCb cb, void *userData) const
 {
     d->opIntersect(r, cb, userData);
+}
+
+inline void VRle::intersect(const VRle &r, VRleSpanCb cb, void *userData) const
+{
+    if (empty() || r.empty()) return;
+    opIntersectHelper(d.read(), r.d.read(), cb, userData);
 }
 
 V_END_NAMESPACE

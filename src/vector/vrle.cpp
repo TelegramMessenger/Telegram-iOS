@@ -304,8 +304,15 @@ void VRle::VRleData::opGeneric(const VRle::VRleData &a, const VRle::VRleData &b,
     mBboxDirty = false;
 }
 
-void VRle::VRleData::opIntersect(const VRle::VRleData &obj1,
-                                 const VRle::VRleData &obj2)
+static void  rle_cb(int count, const VRle::Span *spans, void *userData)
+{
+    auto vector = static_cast<std::vector<VRle::Span> *>(userData);
+    copyArrayToVector(spans, count, *vector);
+}
+
+void opIntersectHelper(const VRle::VRleData &obj1,
+                       const VRle::VRleData &obj2,
+                       VRle::VRleSpanCb cb, void *userData)
 {
     VRleHelper                  result, source, clip;
     std::array<VRle::Span, 256> array;
@@ -327,12 +334,19 @@ void VRle::VRleData::opIntersect(const VRle::VRleData &obj1,
     while (source.size) {
         rleIntersectWithRle(&clip, 0, 0, &source, &result);
         if (result.size) {
-            copyArrayToVector(result.spans, result.size, mSpans);
+            cb(result.size, result.spans, userData);
         }
         result.size = 0;
     }
+}
+
+void VRle::VRleData::opIntersect(const VRle::VRleData &obj1,
+                                 const VRle::VRleData &obj2)
+{
+    opIntersectHelper(obj1, obj2, rle_cb, &mSpans);
     updateBbox();
 }
+
 
 #define VMIN(a, b) ((a) < (b) ? (a) : (b))
 #define VMAX(a, b) ((a) > (b) ? (a) : (b))
