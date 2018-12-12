@@ -6,6 +6,7 @@ V_BEGIN_NAMESPACE
 class VPainterImpl {
 public:
     void drawRle(const VPoint &pos, const VRle &rle);
+    void drawRle(const VRle &rle, const VRle &clip);
 
 public:
     VRasterBuffer mBuffer;
@@ -25,6 +26,17 @@ void VPainterImpl::drawRle(const VPoint &pos, const VRle &rle)
     rle.intersect(mSpanData.clipRect(), mSpanData.mUnclippedBlendFunc,
                   &mSpanData);
 }
+
+void VPainterImpl::drawRle(const VRle &rle, const VRle &clip)
+{
+    if (rle.empty() || clip.empty()) return;
+
+    if (!mSpanData.mUnclippedBlendFunc) return;
+
+    rle.intersect(clip, mSpanData.mUnclippedBlendFunc,
+                  &mSpanData);
+}
+
 
 VPainter::~VPainter()
 {
@@ -60,6 +72,12 @@ void VPainter::drawRle(const VPoint &pos, const VRle &rle)
 {
     mImpl->drawRle(pos, rle);
 }
+
+void VPainter::drawRle(const VRle &rle, const VRle &clip)
+{
+    mImpl->drawRle(rle, clip);
+}
+
 
 VRect VPainter::clipBoundingRect() const
 {

@@ -19,6 +19,7 @@ public:
     void  end();
     void  setBrush(const VBrush &brush);
     void  drawRle(const VPoint &pos, const VRle &rle);
+    void  drawRle(const VRle &rle, const VRle &clip);
     VRect clipBoundingRect() const;
 
 private:
