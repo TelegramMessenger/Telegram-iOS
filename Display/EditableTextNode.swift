@@ -7,6 +7,9 @@ public class EditableTextNode : ASEditableTextNode {
             return super.keyboardAppearance
         }
         set {
+            guard newValue != self.keyboardAppearance else {
+                return
+            }
             let resigning = self.isFirstResponder()
             if resigning {
                 self.resignFirstResponder()

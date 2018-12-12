@@ -30,6 +30,9 @@ public final class TextFieldNodeView: UITextField {
             return super.keyboardAppearance
         }
         set {
+            guard newValue != self.keyboardAppearance else {
+                return
+            }
             let resigning = self.isFirstResponder
             if resigning {
                 self.resignFirstResponder()
