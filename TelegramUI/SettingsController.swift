@@ -528,8 +528,6 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }, presentController: { controller in
         presentControllerImpl?(controller, nil)
     }, openLanguage: {
-        //let controller = LanguageSelectionController(account: account)
-        //presentControllerImpl?(controller, nil)
         pushControllerImpl?(LocalizationListController(account: account))
     }, openPassport: {
         let controller = SecureIdAuthController(account: account, mode: .list)

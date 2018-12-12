@@ -377,8 +377,6 @@
 		D0AEAE272080D6970013176E /* StickerPaneSearchBarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AEAE262080D6970013176E /* StickerPaneSearchBarNode.swift */; };
 		D0AEAE292080FD660013176E /* StickerPaneSearchGlobaltem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AEAE282080FD660013176E /* StickerPaneSearchGlobaltem.swift */; };
 		D0AF323A1FB1D8D60097362B /* ChatOverlayNavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32391FB1D8D60097362B /* ChatOverlayNavigationBar.swift */; };
-		D0AF7C461ED84BC500CD8E0F /* LanguageSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF7C451ED84BC500CD8E0F /* LanguageSelectionController.swift */; };
-		D0AF7C4A1ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF7C491ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift */; };
 		D0AFCC791F4C8D2C000720C6 /* InstantPageSlideshowItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AFCC781F4C8D2C000720C6 /* InstantPageSlideshowItem.swift */; };
 		D0AFCC7B1F4C8D39000720C6 /* InstantPageSlideshowItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AFCC7A1F4C8D39000720C6 /* InstantPageSlideshowItemNode.swift */; };
 		D0B2F76220506E2A00D3BFB9 /* MediaInputSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F76120506E2A00D3BFB9 /* MediaInputSettings.swift */; };
@@ -1771,8 +1769,6 @@
 		D0AEAE262080D6970013176E /* StickerPaneSearchBarNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerPaneSearchBarNode.swift; sourceTree = "<group>"; };
 		D0AEAE282080FD660013176E /* StickerPaneSearchGlobaltem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerPaneSearchGlobaltem.swift; sourceTree = "<group>"; };
 		D0AF32391FB1D8D60097362B /* ChatOverlayNavigationBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatOverlayNavigationBar.swift; sourceTree = "<group>"; };
-		D0AF7C451ED84BC500CD8E0F /* LanguageSelectionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LanguageSelectionController.swift; sourceTree = "<group>"; };
-		D0AF7C491ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LanguageSelectionControllerNode.swift; sourceTree = "<group>"; };
 		D0AFCC781F4C8D2C000720C6 /* InstantPageSlideshowItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSlideshowItem.swift; sourceTree = "<group>"; };
 		D0AFCC7A1F4C8D39000720C6 /* InstantPageSlideshowItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSlideshowItemNode.swift; sourceTree = "<group>"; };
 		D0B2F76120506E2A00D3BFB9 /* MediaInputSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputSettings.swift; sourceTree = "<group>"; };
@@ -3443,8 +3439,6 @@
 		D0AF7C441ED84BB000CD8E0F /* Language Selection */ = {
 			isa = PBXGroup;
 			children = (
-				D0AF7C451ED84BC500CD8E0F /* LanguageSelectionController.swift */,
-				D0AF7C491ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift */,
 				D05D8B392192FC460064586F /* LocalizationListController.swift */,
 				D05D8B3E2192FC6E0064586F /* LocalizationListControllerNode.swift */,
 				D05D8B402192FC8A0064586F /* LocalizationListItem.swift */,
@@ -5032,7 +5026,6 @@
 				D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */,
 				D0B37C601F8D286E004252DF /* ThemeSettingsFontSizeItem.swift in Sources */,
 				D0EC6CC01EB9F58800EBF1C3 /* LegacyMediaPickers.swift in Sources */,
-				D0AF7C4A1ED84CE000CD8E0F /* LanguageSelectionControllerNode.swift in Sources */,
 				D0EC6CC11EB9F58800EBF1C3 /* LegacyCamera.swift in Sources */,
 				0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */,
 				D0754D1E1EEDDF6200884F6E /* ChatMessageAttachedContentNode.swift in Sources */,
@@ -5264,7 +5257,6 @@
 				D0EC6D2C1EB9F58800EBF1C3 /* TouchDownGestureRecognizer.swift in Sources */,
 				09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */,
 				D0EC6D2D1EB9F58800EBF1C3 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */,
-				D0AF7C461ED84BC500CD8E0F /* LanguageSelectionController.swift in Sources */,
 				D0B69C3C20EBD8C8003632C7 /* CheckDeviceAccess.swift in Sources */,
 				09C3466D2167D63A00B76780 /* Accessibility.swift in Sources */,
 				D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */,

@@ -201,13 +201,6 @@ public final class ShareController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
-        self.presentationDataDisposable = (self.account.telegramApplicationContext.presentationData
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            if let strongSelf = self {
-                strongSelf.controllerNode.updatePresentationData(presentationData)
-            }
-        })
-        
         switch subject {
             case let .url(text):
                 self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
@@ -302,6 +295,13 @@ public final class ShareController: ViewController {
                 }
             }
             return (peers, accountPeer)
+        })
+        
+        self.presentationDataDisposable = (self.account.telegramApplicationContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self, strongSelf.isNodeLoaded {
+                strongSelf.controllerNode.updatePresentationData(presentationData)
+            }
         })
     }
     
