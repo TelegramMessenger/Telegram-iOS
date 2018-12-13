@@ -8,12 +8,7 @@ extern "C" {
 struct Lottie_Animation_S
 {
     std::unique_ptr<Animation> mAnimation;
-    size_t                     mCurFrame{0};
     std::future<Surface>       mRenderTask;
-    size_t                     mFrameNo{0};
-    size_t                     mArraySize{0};
-    size_t                     mWidth{0};
-    size_t                     mHeight{0};
 };
 
 LOT_EXPORT Lottie_Animation_S *lottie_animation_from_file(const char *path)
@@ -77,9 +72,6 @@ LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation_S 
 {
     if (!animation) return nullptr;
 
-    animation->mFrameNo = frame_num;
-    animation->mWidth = width;
-    animation->mHeight = height;
     return animation->mAnimation->renderTree(frame_num, width, height);
 }
 
