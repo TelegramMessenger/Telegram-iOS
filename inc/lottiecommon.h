@@ -142,7 +142,7 @@ typedef struct LOTNode {
     } mColor;
 
     struct {
-        bool      enable;
+        unsigned char  enable;
         int       width;
         LOTCapStyle  cap;
         LOTJoinStyle join;
