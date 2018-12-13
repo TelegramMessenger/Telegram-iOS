@@ -101,12 +101,12 @@ class LOT_EXPORT Animation {
 public:
 
     /**
-     *  @brief Constructs an animation object from filepath.
+     *  @brief Constructs an animation object from file path.
      *
      *  @param[in] path Lottie resource file path
      *
      *  @return Animation object that can render the contents of the
-     *          lottie resource represented by file path.
+     *          Lottie resource represented by file path.
      *
      *  @internal
      */
@@ -114,13 +114,13 @@ public:
     loadFromFile(const std::string &path);
 
     /**
-     *  @brief Constructs an animation object from json string data.
+     *  @brief Constructs an animation object from JSON string data.
      *
      *  @param[in] jsonData The JSON string data.
      *  @param[in] key the string that will be used to cache the JSON string data.
      *
      *  @return Animation object that can render the contents of the
-     *          lottie resource represented by JSON string data.
+     *          Lottie resource represented by JSON string data.
      *
      *  @internal
      */
@@ -128,9 +128,9 @@ public:
     loadFromData(std::string jsonData, const std::string &key);
 
     /**
-     *  @brief Returns default framerate of the lottie resource.
+     *  @brief Returns default framerate of the Lottie resource.
      *
-     *  @return framerate of the lottie resource
+     *  @return framerate of the Lottie resource
      *
      *  @internal
      *
@@ -138,9 +138,9 @@ public:
     double frameRate() const;
 
     /**
-     *  @brief Returns total number of frames present in the  lottie resource.
+     *  @brief Returns total number of frames present in the Lottie resource.
      *
-     *  @return frame count of the lottie resource.
+     *  @return frame count of the Lottie resource.
      *
      *  @note frame number starts with 0.
      *
@@ -149,7 +149,7 @@ public:
     size_t totalFrame() const;
 
     /**
-     *  @brief Returns default viewport size of the lottie resource.
+     *  @brief Returns default viewport size of the Lottie resource.
      *
      *  @param[out] width  default width of the viewport.
      *  @param[out] height default height of the viewport.
@@ -160,12 +160,12 @@ public:
     void   size(size_t &width, size_t &height) const;
 
     /**
-     *  @brief Returns total animation duration of lottie resource in second.
-     *         it uses totalFrame() and frameRate() to calcualte the duration.
+     *  @brief Returns total animation duration of Lottie resource in second.
+     *         it uses totalFrame() and frameRate() to calculate the duration.
      *         duration = totalFrame() / frameRate().
      *
      *  @return total animation duration in second.
-     *  @retval 0 if the lottie resource has no animation.
+     *  @retval 0 if the Lottie resource has no animation.
      *
      *  @see totalFrame()
      *  @see frameRate()
@@ -177,7 +177,7 @@ public:
     /**
      *  @brief Returns frame number for a given position.
      *         this function helps to map the position value retuned
-     *         by the animator to a frame number in side the lottie resource.
+     *         by the animator to a frame number in side the Lottie resource.
      *         frame_number = lerp(start_frame, endframe, pos);
      *
      *  @param[in] pos normalized position value [0 ... 1]
@@ -198,7 +198,7 @@ public:
      *         to draw into the screen.
      *
      *
-     *  @param[in] frameNo Content corresponds to the frameno needs to be drawn
+     *  @param[in] frameNo Content corresponds to the @p frameNo needs to be drawn
      *  @param[in] surface Surface in which content will be drawn
      *
      *  @return future that will hold the result when rendering finished.
@@ -212,9 +212,9 @@ public:
 
     /**
      *  @brief Renders the content to surface synchronously.
-     *         for performance use the asyn rendering @see render
+     *         for performance use the async rendering @see render
      *
-     *  @param[in] frameNo Content corresponds to the frameno needs to be drawn
+     *  @param[in] frameNo Content corresponds to the @p frameNo needs to be drawn
      *  @param[in] surface Surface in which content will be drawn
      *
      *  @internal
@@ -223,9 +223,9 @@ public:
 
     /**
      *  @brief Returns root layer of the composition updated with
-     *         content of the lottie resource at frame number {frameNo}.
+     *         content of the Lottie resource at frame number @p frameNo.
      *
-     *  @param[in] frameNo Content corresponds to the frameno needs to be extracted.
+     *  @param[in] frameNo Content corresponds to the @p frameNo needs to be extracted.
      *  @param[in] width   content viewbox width
      *  @param[in] height  content viewbox height
      *

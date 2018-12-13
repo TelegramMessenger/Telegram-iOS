@@ -16,9 +16,9 @@ struct Lottie_Animation_S
     size_t                     mHeight{0};
 };
 
-LOT_EXPORT Lottie_Animation_S *lottie_animation_from_file(const char *file)
+LOT_EXPORT Lottie_Animation_S *lottie_animation_from_file(const char *path)
 {
-    if (auto animation = Animation::loadFromFile(file) ) {
+    if (auto animation = Animation::loadFromFile(path) ) {
         Lottie_Animation_S *handle = new Lottie_Animation_S();
         handle->mAnimation = std::move(animation);
         return handle;
@@ -44,11 +44,11 @@ LOT_EXPORT void lottie_animation_destroy(Lottie_Animation_S *animation)
         delete animation;
 }
 
-LOT_EXPORT void lottie_animation_get_size(const Lottie_Animation_S *animation, size_t *w, size_t *h)
+LOT_EXPORT void lottie_animation_get_size(const Lottie_Animation_S *animation, size_t *width, size_t *height)
 {
    if (!animation) return;
 
-   animation->mAnimation->size(*w, *h);
+   animation->mAnimation->size(*width, *height);
 }
 
 LOT_EXPORT double lottie_animation_get_duration(const Lottie_Animation_S *animation)
@@ -73,14 +73,14 @@ LOT_EXPORT double lottie_animation_get_framerate(const Lottie_Animation_S *anima
    return animation->mAnimation->frameRate();
 }
 
-LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation_S *animation, size_t frameNo, size_t w, size_t h)
+LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation_S *animation, size_t frame_num, size_t width, size_t height)
 {
     if (!animation) return nullptr;
 
-    animation->mFrameNo = frameNo;
-    animation->mWidth = w;
-    animation->mHeight = h;
-    return animation->mAnimation->renderTree(frameNo, w, h);
+    animation->mFrameNo = frame_num;
+    animation->mWidth = width;
+    animation->mHeight = height;
+    return animation->mAnimation->renderTree(frame_num, width, height);
 }
 
 LOT_EXPORT void
