@@ -7,3 +7,5 @@ html
 latex
 *.swp
 tmp
+.cproject
+.project
