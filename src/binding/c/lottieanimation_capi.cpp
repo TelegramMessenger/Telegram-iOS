@@ -73,32 +73,6 @@ LOT_EXPORT double lottie_animation_get_framerate(const Lottie_Animation_S *anima
    return animation->mAnimation->frameRate();
 }
 
-LOT_EXPORT void lottie_animation_prepare_frame(Lottie_Animation_S *animation, size_t frameNo, size_t w, size_t h)
-{
-    if (!animation) return;
-
-    animation->mFrameNo = frameNo;
-    animation->mWidth = w;
-    animation->mHeight = h;
-    animation->mArraySize = animation->mAnimation->renderList(frameNo, w, h).size();
-}
-
-LOT_EXPORT size_t lottie_animation_get_node_count(const Lottie_Animation_S *animation)
-{
-   if (!animation) return 0;
-
-   return animation->mArraySize;
-}
-
-LOT_EXPORT const LOTNode* lottie_animation_get_node(const Lottie_Animation_S *animation, size_t idx)
-{
-   if (!animation) return nullptr;
-
-   if (idx >= animation->mArraySize) return nullptr;
-
-   return animation->mAnimation->renderList(animation->mFrameNo, animation->mWidth, animation->mHeight)[idx];
-}
-
 LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation_S *animation, size_t frameNo, size_t w, size_t h)
 {
     if (!animation) return nullptr;

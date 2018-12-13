@@ -88,24 +88,6 @@ bool LOTCompItem::update(int frameNo)
     return true;
 }
 
-void LOTCompItem::buildRenderList()
-{
-    mDrawableList.clear();
-    mRootLayer->renderList(mDrawableList);
-
-    mRenderList.clear();
-    for (auto &i : mDrawableList) {
-        LOTDrawable *lotDrawable = static_cast<LOTDrawable *>(i);
-        lotDrawable->sync();
-        mRenderList.push_back(lotDrawable->mCNode.get());
-    }
-}
-
-const std::vector<LOTNode *> &LOTCompItem::renderList() const
-{
-    return mRenderList;
-}
-
 void LOTCompItem::buildRenderTree()
 {
     mRootLayer->buildLayerNode();

@@ -222,20 +222,6 @@ public:
     void              renderSync(size_t frameNo, Surface surface);
 
     /**
-     *  @brief Returns list of rendering nodes that that represents the
-     *         content of the lottie resource at frame number {frameNo}.
-     *
-     *  @param[in] frameNo Content corresponds to the frameno needs to be extracted.
-     *  @param[in] width   content viewbox width
-     *  @param[in] height  content viewbox height
-     *
-     *  @return render node list.
-     *
-     *  @internal
-     */
-    const std::vector<LOTNode *> &renderList(size_t frameNo, size_t width, size_t height) const;
-
-    /**
      *  @brief Returns root layer of the composition updated with
      *         content of the lottie resource at frame number {frameNo}.
      *

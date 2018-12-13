@@ -20,23 +20,6 @@ LOT_EXPORT double lottie_animation_get_duration(const Lottie_Animation *animatio
 LOT_EXPORT size_t lottie_animation_get_totalframe(const Lottie_Animation *animation);
 LOT_EXPORT double lottie_animation_get_framerate(const Lottie_Animation *animation);
 
-
-/*
- * Request to update the content of the frame $frame_number in to Animation object.
- * frame_number, the content of the animation in that frame number
- * width  , width of the viewbox
- * height , height of the viewbox
- *
- * PS : user must call lottie_animation_get_node_count and  lottie_animation_get_node
- * to get the renderlist.
- */
-LOT_EXPORT size_t lottie_animation_prepare_frame(Lottie_Animation *animation,
-                                                 size_t frameNo,
-                                                 size_t w, size_t h);
-LOT_EXPORT size_t lottie_animation_get_node_count(const Lottie_Animation *animation);
-LOT_EXPORT const LOTNode* lottie_animation_get_node(Lottie_Animation *animation, size_t idx);
-
-
 /*
  * Get the render tree which contains the snapshot of the animation object at frame $frame_number
  * frame_number, the content of the animation in that frame number

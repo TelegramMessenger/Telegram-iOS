@@ -20,8 +20,6 @@ public:
     size_t  frameAtPos(double pos) const {return mModel->frameAtPos(pos);}
     Surface render(size_t frameNo, const Surface &surface);
 
-    const std::vector<LOTNode *> &
-                 renderList(size_t frameNo, const VSize &size);
     const LOTLayerNode *
                  renderTree(size_t frameNo, const VSize &size);
 private:
@@ -30,14 +28,6 @@ private:
     std::unique_ptr<LOTCompItem> mCompItem;
     std::atomic<bool>            mRenderInProgress;
 };
-
-const std::vector<LOTNode *> &AnimationImpl::renderList(size_t frameNo, const VSize &size)
-{
-    if (update(frameNo, size)) {
-       mCompItem->buildRenderList();
-    }
-    return mCompItem->renderList();
-}
 
 const LOTLayerNode *AnimationImpl::renderTree(size_t frameNo, const VSize &size)
 {
@@ -236,12 +226,6 @@ size_t Animation::totalFrame() const
 size_t Animation::frameAtPos(double pos)
 {
     return d->frameAtPos(pos);
-}
-
-const std::vector<LOTNode *> &
-Animation::renderList(size_t frameNo, size_t width, size_t height) const
-{
-    return d->renderList(frameNo, VSize(width, height));
 }
 
 const LOTLayerNode *

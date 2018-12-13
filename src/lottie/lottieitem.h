@@ -36,8 +36,6 @@ public:
    bool update(int frameNo);
    void resize(const VSize &size);
    VSize size() const;
-   const std::vector<LOTNode *>& renderList()const;
-   void buildRenderList();
    void buildRenderTree();
    const LOTLayerNode * renderTree()const;
    bool render(const lottie::Surface &surface);
