@@ -58,9 +58,18 @@ fi
 #CONFIGURE_FLAGS="$CONFIGURE_FLAGS --pkg-config=$PKG_CONFIG"
 
 COMPILE="y"
-LIPO="y"
 
 DEPLOYMENT_TARGET="8.0"
+
+LIBS_HASH=""
+for ARCH in $ARCHS
+do
+	for LIB in "$THIN/$ARCH/lib/"*.a
+	do
+		LIB_DATE=`stat -f "%a,%z" "$LIB"`
+		LIBS_HASH="$LIBS_HASH $ARCH/$LIB:$LIB_DATE"
+	done
+done
 
 if [ "$COMPILE" ]
 then
@@ -168,6 +177,23 @@ then
 		make -j$CORE_COUNT install $EXPORT || exit 1
 		cd "$CWD"
 	done
+fi
+
+UPDATED_LIBS_HASH=""
+for ARCH in $ARCHS
+do
+	for LIB in "$THIN/$ARCH/lib/"*.a
+	do
+		LIB_DATE=`stat -f "%a,%z" "$LIB"`
+		UPDATED_LIBS_HASH="$UPDATED_LIBS_HASH $ARCH/$LIB:$LIB_DATE"
+	done
+done
+
+if [ "$UPDATED_LIBS_HASH" = "$LIBS_HASH" ]
+then
+	echo "Libs aren't changed, skipping lipo"
+else
+	LIPO="y"
 fi
 
 if [ "$LIPO" ]
