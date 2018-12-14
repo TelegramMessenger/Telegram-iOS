@@ -9,6 +9,7 @@ struct Lottie_Animation_S
 {
     std::unique_ptr<Animation> mAnimation;
     std::future<Surface>       mRenderTask;
+    uint32_t                  *mBufferRef;
 };
 
 LOT_EXPORT Lottie_Animation_S *lottie_animation_from_file(const char *path)
@@ -75,6 +76,14 @@ LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation_S 
     return animation->mAnimation->renderTree(frame_num, width, height);
 }
 
+LOT_EXPORT size_t
+lottie_animation_get_frame_at_pos(const Lottie_Animation_S *animation, float pos)
+{
+    if (!animation) return 0;
+
+    return animation->mAnimation->frameAtPos(pos);
+}
+
 LOT_EXPORT void
 lottie_animation_render_async(Lottie_Animation_S *animation,
                               size_t frame_number,
@@ -87,16 +96,19 @@ lottie_animation_render_async(Lottie_Animation_S *animation,
 
     lottie::Surface surface(buffer, width, height, bytes_per_line);
     animation->mRenderTask = animation->mAnimation->render(frame_number, surface);
+    animation->mBufferRef = buffer;
 }
 
-LOT_EXPORT void
+LOT_EXPORT uint32_t *
 lottie_animation_render_flush(Lottie_Animation_S *animation)
 {
-    if (!animation) return;
+    if (!animation) return nullptr;
 
     if (animation->mRenderTask.valid()) {
         animation->mRenderTask.get();
     }
+
+    return animation->mBufferRef;
 }
 
 }

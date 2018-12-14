@@ -136,6 +136,21 @@ LOT_EXPORT const LOTLayerNode * lottie_animation_render_tree(Lottie_Animation *a
                                                              size_t width, size_t height);
 
 /**
+ *  @brief Maps position to frame number and returns it.
+ *
+ *  @param[in] animation Animation object.
+ *  @param[in] pos position in the range [ 0.0 .. 1.0 ].
+ *
+ *  @return mapped frame numbe in the range [ start_frame .. end_frame ].
+ *          @c 0 if the Lottie resource has no animation.
+ *
+ *
+ *  @ingroup Lottie_Animation
+ *  @internal
+ */
+LOT_EXPORT size_t lottie_animation_get_frame_at_pos(const Lottie_Animation *animation, float pos);
+
+/**
  *  @brief Request to render the content of the frame @p frame_num to buffer @p buffer asynchronously.
  *
  *  @param[in] animation Animation object.
@@ -168,10 +183,12 @@ lottie_animation_render_async(Lottie_Animation *animation,
  *  @warning User must call lottie_animation_render_async() and lottie_animation_render_flush()
  *  in pair to get the benefit of async rendering.
  *
+ *  @return the pixel buffer it finished rendering.
+ *
  *  @ingroup Lottie_Animation
  *  @internal
  */
-LOT_EXPORT void
+LOT_EXPORT uint32_t *
 lottie_animation_render_flush(Lottie_Animation *animation);
 
 #ifdef __cplusplus
