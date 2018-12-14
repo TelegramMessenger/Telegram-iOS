@@ -580,6 +580,9 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 statusFrame = statusFrame?.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 
                 var boundingSize: CGSize = textFrameWithoutInsets.size
+                boundingSize.width = max(boundingSize.width, typeLayout.size.width)
+                boundingSize.width = max(boundingSize.width, votersLayout.size.width + 4.0 + (statusSize?.width ?? 0.0))
+                
                 boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
                 

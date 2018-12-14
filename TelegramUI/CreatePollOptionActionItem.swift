@@ -6,12 +6,14 @@ import SwiftSignalKit
 class CreatePollOptionActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
+    let enabled: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, enabled: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
+        self.enabled = enabled
         self.sectionId = sectionId
         self.action = action
     }
@@ -54,7 +56,9 @@ class CreatePollOptionActionItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool = true
+    var selectable: Bool {
+        return self.enabled
+    }
     
     func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
@@ -119,7 +123,7 @@ class CreatePollOptionActionItemNode: ListViewItemNode {
             }
             let leftInset: CGFloat = 60.0 + params.leftInset
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             

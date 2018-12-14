@@ -25,12 +25,25 @@ private enum CreatePollSection: Int32 {
     case options
 }
 
+private enum CreatePollEntryTag: Equatable, ItemListItemTag {
+    case text
+    case option(Int)
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? CreatePollEntryTag {
+            return self == other
+        } else {
+            return false
+        }
+    }
+}
+
 private enum CreatePollEntry: ItemListNodeEntry {
     case textHeader(PresentationTheme, String)
     case text(PresentationTheme, String, String)
     case optionsHeader(PresentationTheme, String)
     case option(PresentationTheme, PresentationStrings, Int, Int, String, String, Bool)
-    case addOption(PresentationTheme, String)
+    case addOption(PresentationTheme, String, Bool)
     case optionsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -50,6 +63,23 @@ private enum CreatePollEntry: ItemListNodeEntry {
                 return 1
             case .optionsHeader:
                 return 2
+            case let .option(_, _, id, _, _, _, _):
+                return 3 + id
+            case .addOption:
+                return 1000
+            case .optionsInfo:
+                return 1001
+        }
+    }
+    
+    private var sortId: Int {
+        switch self {
+            case .textHeader:
+                return 0
+            case .text:
+                return 1
+            case .optionsHeader:
+                return 2
             case let .option(_, _, _, index, _, _, _):
                 return 3 + index
             case .addOption:
@@ -60,7 +90,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
     }
     
     static func <(lhs: CreatePollEntry, rhs: CreatePollEntry) -> Bool {
-        return lhs.stableId < rhs.stableId
+        return lhs.sortId < rhs.sortId
     }
     
     func item(_ arguments: CreatePollControllerArguments) -> ListViewItem {
@@ -70,7 +100,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
             case let .text(theme, placeholder, text):
                 return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { value in
                     arguments.updatePollText(value)
-                }, action: {})
+                }, tag: CreatePollEntryTag.text, action: {})
             case let .optionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .option(theme, strings, id, _, placeholder, text, revealed):
@@ -80,9 +110,9 @@ private enum CreatePollEntry: ItemListNodeEntry {
                     arguments.updateOptionText(id, value)
                 }, delete: {
                     arguments.removeOption(id)
-                }, tag: nil)
-            case let .addOption(theme, title):
-                return CreatePollOptionActionItem(theme: theme, title: title, sectionId: self.section, action: {
+                }, tag: CreatePollEntryTag.option(id))
+            case let .addOption(theme, title, enabled):
+                return CreatePollOptionActionItem(theme: theme, title: title, enabled: enabled, sectionId: self.section, action: {
                     arguments.addOption()
                 })
             case let .optionsInfo(theme, text):
@@ -112,7 +142,7 @@ private func createPollControllerEntries(presentationData: PresentationData, sta
     for i in 0 ..< state.options.count {
         entries.append(.option(presentationData.theme, presentationData.strings, state.options[i].id, i, presentationData.strings.CreatePoll_OptionPlaceholder, state.options[i].text, state.optionIdWithRevealControls == state.options[i].id))
     }
-    entries.append(.addOption(presentationData.theme, presentationData.strings.CreatePoll_AddOption))
+    entries.append(.addOption(presentationData.theme, presentationData.strings.CreatePoll_AddOption, state.options.count < 10))
     entries.append(.optionsInfo(presentationData.theme, presentationData.strings.CreatePoll_OptionsInfo))
     
     return entries
@@ -126,7 +156,6 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
     }
     
     var dismissImpl: (() -> Void)?
-    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -177,7 +206,7 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
         }
     })
     
-    let previousOptionCount = Atomic<Int?>(value: nil)
+    let previousOptionIds = Atomic<[Int]?>(value: nil)
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue)
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CreatePollEntry>, CreatePollEntry.ItemGenerationArguments)) in
@@ -205,10 +234,18 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
             dismissImpl?()
         })
         
-        let previousCount = previousOptionCount.swap(state.options.count)
+        let optionIds = state.options.map { $0.id }
+        let previousIds = previousOptionIds.swap(optionIds)
+        
+        var focusItemTag: ItemListItemTag?
+        if state.nextOptionId == 1 {
+            focusItemTag = CreatePollEntryTag.text
+        } else {
+            focusItemTag = CreatePollEntryTag.option(state.nextOptionId - 1)
+        }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CreatePoll_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: createPollControllerEntries(presentationData: presentationData, state: state), style: .blocks, animateChanges: previousCount != nil && previousCount != state.options.count)
+        let listState = ItemListNodeState(entries: createPollControllerEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: focusItemTag, animateChanges: previousIds != nil && previousIds != optionIds)
         
         return (controllerState, (listState, arguments))
     }
@@ -221,9 +258,6 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
-    }
-    presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window(.root), with: a)
     }
     
     controller.reorderEntry = { fromIndex, toIndex, entries in
