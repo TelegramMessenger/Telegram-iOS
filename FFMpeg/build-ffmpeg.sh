@@ -64,11 +64,14 @@ DEPLOYMENT_TARGET="8.0"
 LIBS_HASH=""
 for ARCH in $ARCHS
 do
-	for LIB in "$THIN/$ARCH/lib/"*.a
-	do
-		LIB_DATE=`stat -f "%a,%z" "$LIB"`
-		LIBS_HASH="$LIBS_HASH $ARCH/$LIB:$LIB_DATE"
-	done
+	if [ -d "$THIN/$ARCH/lib" ]
+	then
+		for LIB in "$THIN/$ARCH/lib/"*.a
+		do
+			LIB_DATE=`stat -f "%a,%z" "$LIB"`
+			LIBS_HASH="$LIBS_HASH $ARCH/$LIB:$LIB_DATE"
+		done
+	fi
 done
 
 if [ "$COMPILE" ]
@@ -182,11 +185,14 @@ fi
 UPDATED_LIBS_HASH=""
 for ARCH in $ARCHS
 do
-	for LIB in "$THIN/$ARCH/lib/"*.a
-	do
-		LIB_DATE=`stat -f "%a,%z" "$LIB"`
-		UPDATED_LIBS_HASH="$UPDATED_LIBS_HASH $ARCH/$LIB:$LIB_DATE"
-	done
+	if [ -d "$THIN/$ARCH/lib" ]
+	then
+		for LIB in "$THIN/$ARCH/lib/"*.a
+		do
+			LIB_DATE=`stat -f "%a,%z" "$LIB"`
+			UPDATED_LIBS_HASH="$UPDATED_LIBS_HASH $ARCH/$LIB:$LIB_DATE"
+		done
+	fi
 done
 
 if [ "$UPDATED_LIBS_HASH" = "$LIBS_HASH" ]
