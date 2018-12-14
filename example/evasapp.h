@@ -31,7 +31,6 @@ public:
     void run();
     Ecore_Evas * ee() const{return mEcoreEvas;}
     Evas * evas() const {return mEvas;}
-    Efl_VG * root() const {return mRoot;}
     void addExitCb(appCb exitcb, void *data) {mExitCb = exitcb; mExitData = data;}
     void addResizeCb(appCb resizecb, void *data) {mResizeCb = resizecb; mResizeData = data;}
     void addKeyCb(appCb keycb, void *data) {mKeyCb = keycb; mKeyData = data;}
@@ -42,8 +41,6 @@ public:
     int           mh;
     Ecore_Evas   *mEcoreEvas;
     Evas         *mEvas;
-    Efl_VG       *mRoot;
-    Evas_Object  *mVg;
     Evas_Object  *mBackground;
     appCb        mResizeCb;
     void        *mResizeData;

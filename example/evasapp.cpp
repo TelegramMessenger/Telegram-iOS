@@ -68,19 +68,12 @@ EvasApp::setup()
     mBackground = evas_object_rectangle_add(mEvas);
     evas_object_color_set(mBackground, 70, 70, 70, 255);
     evas_object_show(mBackground);
-
-    mVg = evas_object_vg_add(mEvas);
-    evas_object_show(mVg);
-
-    mRoot = evas_vg_container_add(mVg);
-    evas_object_vg_root_node_set(mVg, mRoot);
 }
 
 void
 EvasApp::resize(int w, int h)
 {
     evas_object_resize(mBackground, w, h);
-    evas_object_resize(mVg, w, h);
     mw = w;
     mh = h;
 }
