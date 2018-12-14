@@ -552,6 +552,17 @@ public final class PostboxEncoder {
         self.buffer.write(&bytesLength, offset: 0, length: 4)
         self.buffer.write(bytes.memory, offset: 0, length: bytes.length)
     }
+    
+    public func encodeData(_ data: Data, forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Bytes.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var bytesLength: Int32 = Int32(data.count)
+        self.buffer.write(&bytesLength, offset: 0, length: 4)
+        data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+            self.buffer.write(bytes, offset: 0, length: Int(bytesLength))
+        }
+    }
 
     public let sharedWriteBuffer = WriteBuffer()
 }
@@ -1027,6 +1038,38 @@ public final class PostboxDecoder {
         }
     }
     
+    public func decodeOptionalObjectArrayWithDecoderForKey<T>(_ key: StaticString) -> [T]? where T: PostboxCoding {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [T] = []
+            array.reserveCapacity(Int(length))
+            
+            var i: Int32 = 0
+            while i < length {
+                var typeHash: Int32 = 0
+                memcpy(&typeHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var objectLength: Int32 = 0
+                memcpy(&objectLength, self.buffer.memory + self.offset, 4)
+                
+                let innerDecoder = PostboxDecoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false))
+                self.offset += 4 + Int(objectLength)
+                
+                array.append(T(decoder: innerDecoder))
+                
+                i += 1
+            }
+            
+            return array
+        } else {
+            return nil
+        }
+    }
+    
     public func decodeObjectArrayWithCustomDecoderForKey<T>(_ key: StaticString, decoder: (PostboxDecoder) throws -> T) throws -> [T] {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
             var length: Int32 = 0
@@ -1391,6 +1434,21 @@ public final class PostboxDecoder {
             let copyBytes = malloc(Int(length))!
             memcpy(copyBytes, self.buffer.memory.advanced(by: self.offset - Int(length)), Int(length))
             return ReadBuffer(memory: copyBytes, length: Int(length), freeWhenDone: true)
+        } else {
+            return nil
+        }
+    }
+    
+    public func decodeDataForKey(_ key: StaticString) -> Data? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Bytes) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4 + Int(length)
+            var result = Data(count: Int(length))
+            result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+                memcpy(bytes, self.buffer.memory.advanced(by: self.offset - Int(length)), Int(length))
+            }
+            return result
         } else {
             return nil
         }
