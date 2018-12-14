@@ -4950,14 +4950,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         |> deliverOnMainQueue).start(next: { [weak self] peer in
-            if let strongSelf = self, let peer = peer {
-                var navigation = navigation
-                if case .default = navigation {
-                    if let peer = peer as? TelegramUser, peer.botInfo != nil {
-                        navigation = .chat(textInputState: nil, messageId: nil)
+            if let strongSelf = self {
+                if let peer = peer {
+                    var navigation = navigation
+                    if case .default = navigation {
+                        if let peer = peer as? TelegramUser, peer.botInfo != nil {
+                            navigation = .chat(textInputState: nil, messageId: nil)
+                        }
                     }
+                    strongSelf.openResolved(.peer(peer.id, navigation))
+                } else {
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
-                strongSelf.openResolved(.peer(peer.id, navigation))
             }
         }))
     }
