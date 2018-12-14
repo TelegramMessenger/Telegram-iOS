@@ -220,6 +220,10 @@ public final class AccountViewTracker {
     private var nextUpdatedPollDisposableId: Int32 = 0
     private var updatedPollDisposables = DisposableDict<Int32>()
     
+    private var updatedUnsupportedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var nextUpdatedUnsupportedMediaDisposableId: Int32 = 0
+    private var updatedUnsupportedMediaDisposables = DisposableDict<Int32>()
+    
     private var updatedSeenPersonalMessageIds = Set<MessageId>()
     
     private var cachedDataContexts: [PeerId: PeerCachedDataContext] = [:]
@@ -507,6 +511,112 @@ public final class AccountViewTracker {
                         }
                     }
                     self.updatedPollDisposables.set(signal.start(), forKey: disposableId)
+                }
+            }
+        }
+    }
+    
+    public func updateUnsupportedMediaForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.updatedUnsupportedMediaMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil || messageTimestamp! < timestamp - 10 * 60 * 60 {
+                    self.updatedUnsupportedMediaMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedUnsupportedMediaDisposableId
+                    self.nextUpdatedUnsupportedMediaDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = account.postbox.transaction { transaction -> Peer? in
+                            if let peer = transaction.getPeer(peerId) {
+                                return peer
+                            } else {
+                                return nil
+                            }
+                        }
+                        |> mapToSignal { peer -> Signal<Void, NoError> in
+                            guard let peer = peer else {
+                                return .complete()
+                            }
+                            var fetchSignal: Signal<Api.messages.Messages, MTRpcError>?
+                            if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                                fetchSignal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                            } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                if let inputChannel = apiInputChannel(peer) {
+                                    fetchSignal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                                }
+                            }
+                            guard let signal = fetchSignal else {
+                                return .complete()
+                            }
+                            
+                            return signal
+                            |> map { result -> ([Api.Message], [Api.Chat], [Api.User]) in
+                                switch result {
+                                    case let .messages(messages, chats, users):
+                                        return (messages, chats, users)
+                                    case let .messagesSlice(_, messages, chats, users):
+                                        return (messages, chats, users)
+                                    case let .channelMessages(_, _, _, messages, chats, users):
+                                        return (messages, chats, users)
+                                    case .messagesNotModified:
+                                        return ([], [], [])
+                                }
+                            }
+                            |> `catch` { _ in
+                                return Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>.single(([], [], []))
+                            }
+                            |> mapToSignal { messages, chats, users -> Signal<Void, NoError> in
+                                return account.postbox.transaction { transaction -> Void in
+                                    var peers: [Peer] = []
+                                    var peerPresences: [PeerId: PeerPresence] = [:]
+                                    
+                                    for chat in chats {
+                                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                            peers.append(groupOrChannel)
+                                        }
+                                    }
+                                    for user in users {
+                                        let telegramUser = TelegramUser(user: user)
+                                        peers.append(telegramUser)
+                                        if let presence = TelegramUserPresence(apiUser: user) {
+                                            peerPresences[telegramUser.id] = presence
+                                        }
+                                    }
+                                    
+                                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                        return updated
+                                    })
+                                    
+                                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                    
+                                    for message in messages {
+                                        guard let storeMessage = StoreMessage(apiMessage: message) else {
+                                            continue
+                                        }
+                                        guard case let .Id(id) = storeMessage.id else {
+                                            continue
+                                        }
+                                        transaction.updateMessage(id, update: { _ in
+                                            return .update(storeMessage)
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedUnsupportedMediaDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
+                    }
                 }
             }
         }
