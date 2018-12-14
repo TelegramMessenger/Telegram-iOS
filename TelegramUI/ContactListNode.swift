@@ -914,10 +914,10 @@ final class ContactListNode: ASDisplayNode {
                         
                         peers = peers.filter { contact in
                             switch contact {
-                            case let .peer(peer, _):
-                                return !existingPeerIds.contains(peer.id)
-                            default:
-                                return true
+                                case let .peer(peer, _):
+                                    return !existingPeerIds.contains(peer.id)
+                                default:
+                                    return true
                             }
                         }
                         
@@ -1078,6 +1078,13 @@ final class ContactListNode: ASDisplayNode {
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         if let indexNode = self.indexNode, let indexSections = self.indexSections {
+            var insets = layout.insets(options: [.input])
+            if let inputHeight = layout.inputHeight {
+                insets.bottom -= inputHeight
+            }
+            insets.left += layout.safeInsets.left
+            insets.right += layout.safeInsets.right
+            
             let indexNodeFrame = CGRect(origin: CGPoint(x: layout.size.width - insets.right - 20.0, y: insets.top), size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom))
             transition.updateFrame(node: indexNode, frame: indexNodeFrame)
             indexNode.update(size: indexNodeFrame.size, color: self.presentationData.theme.list.itemAccentColor, sections: indexSections, transition: transition)
@@ -1121,6 +1128,13 @@ final class ContactListNode: ASDisplayNode {
                     var insets = layout.insets(options: [.input])
                     insets.left += layout.safeInsets.left
                     insets.right += layout.safeInsets.right
+                    
+                    if let inputHeight = layout.inputHeight {
+                        insets.bottom -= inputHeight
+                    }
+                    
+                    let indexNodeFrame = CGRect(origin: CGPoint(x: layout.size.width - insets.right - 20.0, y: insets.top), size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom))
+                    indexNode.frame = indexNodeFrame
                     
                     indexNode.update(size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom), color: self.presentationData.theme.list.itemAccentColor, sections: transition.indexSections, transition: .immediate)
                 }
