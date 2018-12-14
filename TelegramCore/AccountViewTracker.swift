@@ -52,94 +52,94 @@ private func pendingWebpages(entries: [MessageHistoryEntry]) -> (Set<MessageId>,
 
 private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
-        |> take(1)
-        |> mapToSignal { peer in
-            if let inputPeer = apiInputPeer(peer) {
-                let messages: Signal<Api.messages.Messages, MTRpcError>
-                switch inputPeer {
-                    case let .inputPeerChannel(channelId, accessHash):
-                        messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
-                    default:
-                        messages = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+    |> take(1)
+    |> mapToSignal { peer in
+        if let inputPeer = apiInputPeer(peer) {
+            let messages: Signal<Api.messages.Messages, MTRpcError>
+            switch inputPeer {
+                case let .inputPeerChannel(channelId, accessHash):
+                    messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+                default:
+                    messages = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+            }
+            return messages
+            |> retryRequest
+            |> mapToSignal { result in
+                let messages: [Api.Message]
+                let chats: [Api.Chat]
+                let users: [Api.User]
+                switch result {
+                    case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
+                        messages = apiMessages
+                        chats = apiChats
+                        users = apiUsers
+                    case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
+                        messages = apiMessages
+                        chats = apiChats
+                        users = apiUsers
+                    case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                        messages = apiMessages
+                        chats = apiChats
+                        users = apiUsers
+                    case .messagesNotModified:
+                        messages = []
+                        chats = []
+                        users = []
                 }
-                return messages
-                    |> retryRequest
-                    |> mapToSignal { result in
-                        let messages: [Api.Message]
-                        let chats: [Api.Chat]
-                        let users: [Api.User]
-                        switch result {
-                            case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
-                            case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
-                            case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
-                                messages = apiMessages
-                                chats = apiChats
-                                users = apiUsers
-                            case .messagesNotModified:
-                                messages = []
-                                chats = []
-                                users = []
-                        }
-                        
-                        return account.postbox.transaction { transaction -> Void in
-                            var peers: [Peer] = []
-                            var peerPresences: [PeerId: PeerPresence] = [:]
-                            for chat in chats {
-                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                    peers.append(groupOrChannel)
-                                }
-                            }
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                                if let presence = TelegramUserPresence(apiUser: user) {
-                                    peerPresences[telegramUser.id] = presence
-                                }
-                            }
-                            
-                            for message in messages {
-                                if let storeMessage = StoreMessage(apiMessage: message) {
-                                    var webpage: TelegramMediaWebpage?
-                                    for media in storeMessage.media {
-                                        if let media = media as? TelegramMediaWebpage {
-                                            webpage = media
-                                        }
-                                    }
-                                    
-                                    if let webpage = webpage {
-                                        updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: webpage)
-                                    } else {
-                                        if let previousMessage = transaction.getMessage(messageId) {
-                                            for media in previousMessage.media {
-                                                if let media = media as? TelegramMediaWebpage {
-                                                    updateMessageMedia(transaction: transaction, id: media.webpageId, media: nil)
-                                                    
-                                                    break
-                                                }
-                                            }
-                                        }
-                                    }
-                                    break
-                                }
-                            }
-                            
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            
-                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                
+                return account.postbox.transaction { transaction -> Void in
+                    var peers: [Peer] = []
+                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    for chat in chats {
+                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                            peers.append(groupOrChannel)
                         }
                     }
-            } else {
-                return .complete()
+                    for user in users {
+                        let telegramUser = TelegramUser(user: user)
+                        peers.append(telegramUser)
+                        if let presence = TelegramUserPresence(apiUser: user) {
+                            peerPresences[telegramUser.id] = presence
+                        }
+                    }
+                    
+                    for message in messages {
+                        if let storeMessage = StoreMessage(apiMessage: message) {
+                            var webpage: TelegramMediaWebpage?
+                            for media in storeMessage.media {
+                                if let media = media as? TelegramMediaWebpage {
+                                    webpage = media
+                                }
+                            }
+                            
+                            if let webpage = webpage {
+                                updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: webpage)
+                            } else {
+                                if let previousMessage = transaction.getMessage(messageId) {
+                                    for media in previousMessage.media {
+                                        if let media = media as? TelegramMediaWebpage {
+                                            updateMessageMedia(transaction: transaction, id: media.webpageId, media: nil)
+                                            
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                            break
+                        }
+                    }
+                    
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                        return updated
+                    })
+                    
+                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                }
             }
+        } else {
+            return .complete()
         }
+    }
 }
 
 private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocation, additionalData: [AdditionalMessageHistoryViewData]) -> [AdditionalMessageHistoryViewData] {
@@ -216,6 +216,10 @@ public final class AccountViewTracker {
     private var nextUpdatedViewCountDisposableId: Int32 = 0
     private var updatedViewCountDisposables = DisposableDict<Int32>()
     
+    private var updatedPollMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var nextUpdatedPollDisposableId: Int32 = 0
+    private var updatedPollDisposables = DisposableDict<Int32>()
+    
     private var updatedSeenPersonalMessageIds = Set<MessageId>()
     
     private var cachedDataContexts: [PeerId: PeerCachedDataContext] = [:]
@@ -238,6 +242,7 @@ public final class AccountViewTracker {
     
     deinit {
         self.updatedViewCountDisposables.dispose()
+        self.updatedPollDisposables.dispose()
     }
     
     private func updatePendingWebpages(viewId: Int32, messageIds: Set<MessageId>, localWebpages: [MessageId: (MediaId, String)]) {
@@ -453,6 +458,55 @@ public final class AccountViewTracker {
                         }
                         self.updatedViewCountDisposables.set(signal.start(), forKey: disposableId)
                     }
+                }
+            }
+        }
+    }
+    
+    public func updatePollForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                if messageId.namespace == Namespaces.Message.Cloud {
+                    let messageTimestamp = self.updatedPollMessageIdsAndTimestamps[messageId]
+                    if messageTimestamp == nil || messageTimestamp! < timestamp - 5 * 60 {
+                        self.updatedPollMessageIdsAndTimestamps[messageId] = timestamp
+                        addedMessageIds.append(messageId)
+                    }
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for messageId in addedMessageIds {
+                    let disposableId = self.nextUpdatedPollDisposableId
+                    self.nextUpdatedPollDisposableId += 1
+                    
+                    guard let account = self.account else {
+                        return
+                    }
+                    let signal = (account.postbox.transaction { transaction -> Signal<Void, NoError> in
+                        guard let peer = transaction.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) else {
+                            return .complete()
+                        }
+                        return account.network.request(Api.functions.messages.getPollResults(peer: inputPeer, msgId: messageId.id))
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                            return .single(nil)
+                        }
+                        |> mapToSignal { updates -> Signal<Void, NoError> in
+                            if let updates = updates {
+                                account.stateManager.addUpdates(updates)
+                            }
+                            return .complete()
+                        }
+                    }
+                    |> switchToLatest)
+                    |> afterDisposed { [weak self] in
+                        self?.queue.async {
+                            self?.updatedPollDisposables.set(nil, forKey: disposableId)
+                        }
+                    }
+                    self.updatedPollDisposables.set(signal.start(), forKey: disposableId)
                 }
             }
         }
