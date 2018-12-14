@@ -613,7 +613,7 @@ private enum QueuedWakeup: Int32 {
         let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
         
         #if DEBUG
-        let testingEnvironment = false
+        let testingEnvironment = true
         #else
         let testingEnvironment = false
         #endif

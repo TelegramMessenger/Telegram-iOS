@@ -80,6 +80,7 @@
 "PINNED_GEO" = "%1$@ pinned a map";
 "PINNED_GEOLIVE" = "%1$@ pinned a live location";
 "PINNED_GIF" = "%1$@ pinned a GIF";
+"PINNED_POLL" = "%1$@ pinned a poll";
 
 "MESSAGE_GAME" = "%1$@ invited you to play %2$@";
 "CHANNEL_MESSAGE_GAME" = "%1$@ invited you to play %2$@";
@@ -1760,6 +1761,7 @@
 "Notification.PinnedLocationMessage" = "%@ pinned a map";
 "Notification.PinnedContactMessage" = "%@ pinned a contact";
 "Notification.PinnedDeletedMessage" = "%@ pinned deleted message";
+"Notification.PinnedPollMessage" = "%@ pinned a poll";
 
 "Message.PinnedTextMessage" = "pinned \"%@\"";
 "Message.PinnedPhotoMessage" = "pinned photo";
@@ -1770,6 +1772,7 @@
 "Message.PinnedStickerMessage" = "pinned sticker";
 "Message.PinnedLocationMessage" = "pinned location";
 "Message.PinnedContactMessage" = "pinned contact";
+"Message.PinnedPollMessage" = "pinned poll";
 
 "Notification.PinnedMessage" = "pinned message";
 
@@ -3587,3 +3590,22 @@ Unused sets are archived when you add more.";
 
 "SharedMedia.SearchNoResults" = "No Results";
 "SharedMedia.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"MessagePoll.LabelAnonymous" = "Anonymous Poll";
+"MessagePoll.VotedCount_0" = "%@ voted";
+"MessagePoll.VotedCount_1" = "1 voted";
+"MessagePoll.VotedCount_2" = "2 voted";
+"MessagePoll.VotedCount_3_10" = "%@ voted";
+"MessagePoll.VotedCount_many" = "%@ voted";
+"MessagePoll.VotedCount_any" = "%@ voted";
+"AttachmentMenu.Poll" = "Poll";
+"Conversation.PinnedPoll" = "Pinned Poll";
+
+"CreatePoll.Title" = "New Poll";
+"CreatePoll.Create" = "Send";
+"CreatePoll.TextHeader" = "QUESTION";
+"CreatePoll.TextPlaceholder" = "Ask a question";
+"CreatePoll.OptionsHeader" = "POLL OPTIONS";
+"CreatePoll.OptionPlaceholder" = "Option";
+"CreatePoll.AddOption" = "Add an Option";
+"CreatePoll.OptionsInfo" = "You can add up to 10 options.";
