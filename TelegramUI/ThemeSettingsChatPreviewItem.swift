@@ -103,9 +103,11 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in   
         }, rateCall: { _ in
+        }, requestSelectMessagePollOption: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
-        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings)
+        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings,
+           pollActionState: ChatInterfacePollActionState())
         
         super.init(layerBacked: false, dynamicBounce: false)
         

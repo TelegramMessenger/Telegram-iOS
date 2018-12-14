@@ -142,6 +142,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private let botCallbackAlertMessage = Promise<String?>(nil)
     private var botCallbackAlertMessageDisposable: Disposable?
     
+    private var selectMessagePollOptionDisposables: DisposableDict<MessageId>?
+    private var selectPollOptionFeedback: HapticFeedback?
+    
     private var resolveUrlDisposable: MetaDisposable?
     
     private var contextQueryStates: [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)] = [:]
@@ -1092,6 +1095,45 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 })
                 strongSelf.present(controller, in: .window(.root))
             }
+        }, requestSelectMessagePollOption: { [weak self] id, opaqueIdentifier in
+            guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
+                return
+            }
+            if controllerInteraction.pollActionState.pollMessageIdsInProgress[id] == nil {
+                controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifier
+                strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
+                let disposables: DisposableDict<MessageId>
+                if let current = strongSelf.selectMessagePollOptionDisposables {
+                    disposables = current
+                } else {
+                    disposables = DisposableDict()
+                    strongSelf.selectMessagePollOptionDisposables = disposables
+                }
+                var signal = requestMessageSelectPollOption(account: strongSelf.account, messageId: id, opaqueIdentifier: opaqueIdentifier)
+                #if DEBUG
+                signal = signal |> delay(2.0, queue: .mainQueue())
+                #endif
+                disposables.set((signal
+                |> deliverOnMainQueue).start(error: { _ in
+                    guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
+                        return
+                    }
+                    if controllerInteraction.pollActionState.pollMessageIdsInProgress.removeValue(forKey: id) != nil {
+                        strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
+                    }
+                }, completed: {
+                    guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
+                        return
+                    }
+                    if controllerInteraction.pollActionState.pollMessageIdsInProgress.removeValue(forKey: id) != nil {
+                        strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
+                    }
+                    if strongSelf.selectPollOptionFeedback == nil {
+                        strongSelf.selectPollOptionFeedback = HapticFeedback()
+                    }
+                    strongSelf.selectPollOptionFeedback?.success()
+                }), forKey: id)
+            }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -1099,7 +1141,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }, cancelInteractiveKeyboardGestures: { [weak self] in
             (self?.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
             self?.chatDisplayNode.cancelInteractiveKeyboardGestures()
-        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)
+        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
+           pollActionState: ChatInterfacePollActionState())
         
         self.controllerInteraction = controllerInteraction
         
@@ -1537,6 +1580,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.resolvePeerByNameDisposable?.dispose()
         self.shareStatusDisposable?.dispose()
         self.botCallbackAlertMessageDisposable?.dispose()
+        self.selectMessagePollOptionDisposables?.dispose()
         for (_, info) in self.contextQueryStates {
             info.1.dispose()
         }
@@ -3644,6 +3688,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 self?.presentMapPicker(editingMessage: editMediaOptions != nil)
             }, openContacts: {
                 self?.presentContactPicker()
+            }, openPoll: {
+                self?.presentPollCreation()
             }, sendMessagesWithSignals: { [weak self] signals in
                 if editMediaOptions != nil {
                     self?.editMessageMediaWithLegacySignals(signals!)
@@ -4002,6 +4048,19 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }))
             }
         }))
+    }
+    
+    private func presentPollCreation() {
+        if case let .peer(peerId) = self.chatLocation {
+            self.present(createPollController(account: self.account, peerId: peerId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }
+        
+        /*self.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(text: "If there was a referendum on GB membership of the EU, how would you vote?", options: [
+            TelegramMediaPollOption(text: "To leave the European Union", opaqueIdentifier: "1".data(using: .utf8)!),
+            TelegramMediaPollOption(text: "To remain a member of the European Union", opaqueIdentifier: "2".data(using: .utf8)!),
+            TelegramMediaPollOption(text: "Would not vote", opaqueIdentifier: "3".data(using: .utf8)!),
+            TelegramMediaPollOption(text: "Don't know", opaqueIdentifier: "4".data(using: .utf8)!)
+        ], results: nil)), replyToMessageId: nil, localGroupingKey: nil)])*/
     }
     
     private func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
@@ -4929,14 +4988,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         |> deliverOnMainQueue).start(next: { [weak self] peer in
-            if let strongSelf = self, let peer = peer {
-                var navigation = navigation
-                if case .default = navigation {
-                    if let peer = peer as? TelegramUser, peer.botInfo != nil {
-                        navigation = .chat(textInputState: nil, messageId: nil)
+            if let strongSelf = self {
+                if let peer = peer {
+                    var navigation = navigation
+                    if case .default = navigation {
+                        if let peer = peer as? TelegramUser, peer.botInfo != nil {
+                            navigation = .chat(textInputState: nil, messageId: nil)
+                        }
                     }
+                    strongSelf.openResolved(.peer(peer.id, navigation))
+                } else {
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
-                strongSelf.openResolved(.peer(peer.id, navigation))
             }
         }))
     }
@@ -5025,6 +5088,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
+        self.commitPurposefulAction()
         self.chatDisplayNode.historyNode.disconnect()
         let _ = removePeerChat(postbox: self.account.postbox, peerId: peerId, reportChatSpam: reportChatSpam).start()
         (self.navigationController as? NavigationController)?.popToRoot(animated: true)

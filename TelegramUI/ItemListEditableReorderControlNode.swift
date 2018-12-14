@@ -8,7 +8,9 @@ final class ItemListEditableReorderControlNode: ASDisplayNode {
     
     override init() {
         self.iconNode = ASImageNode()
-        self.iconNode.isLayerBacked = true
+        self.iconNode.displayWithoutProcessing = true
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -24,8 +26,8 @@ final class ItemListEditableReorderControlNode: ASDisplayNode {
                 resultNode = node
             } else {
                 resultNode = ItemListEditableReorderControlNode()
-                resultNode.iconNode.image = image
             }
+            resultNode.iconNode.image = image
             
             return (CGSize(width: 44.0, height: height), {
                 if let image = image {

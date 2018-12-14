@@ -127,6 +127,7 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                         case sticker
                         case location
                         case contact
+                        case poll
                         case deleted
                     }
                     
@@ -182,6 +183,8 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                                 type = .location
                             } else if let _ = media as? TelegramMediaContact {
                                 type = .contact
+                            } else if let _ = media as? TelegramMediaPoll {
+                                type = .poll
                             }
                         }
                     } else {
@@ -221,6 +224,8 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedLocationMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .contact:
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedContactMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        case .poll:
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPollMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .deleted:
                             attributedString = addAttributesToStringWithRanges(strings.PINNED_NOTEXT(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }

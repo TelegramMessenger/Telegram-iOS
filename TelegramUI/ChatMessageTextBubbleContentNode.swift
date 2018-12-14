@@ -116,24 +116,38 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     statusApply = apply
                 }
                 
+                let rawText: String
                 let attributedText: NSAttributedString
                 var messageEntities: [MessageTextEntity]?
-                for attribute in item.message.attributes {
-                    if let attribute = attribute as? TextEntitiesMessageAttribute {
-                        messageEntities = attribute.entities
-                        break
+                
+                var isUnsupportedMedia = false
+                for media in item.message.media {
+                    if let _ = media as? TelegramMediaUnsupported {
+                        isUnsupportedMedia = true
+                    }
+                }
+                
+                if isUnsupportedMedia {
+                    rawText = item.presentationData.strings.Conversation_UnsupportedMedia
+                } else {
+                    rawText = item.message.text
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                            messageEntities = attribute.entities
+                            break
+                        }
                     }
                 }
                 
                 var entities: [MessageTextEntity]?
                 
                 var updatedCachedChatMessageText: CachedChatMessageText?
-                if let cached = currentCachedChatMessageText, cached.matches(text: message.text, inputEntities: messageEntities) {
+                if let cached = currentCachedChatMessageText, cached.matches(text: rawText, inputEntities: messageEntities) {
                     entities = cached.entities
                 } else {
                     entities = messageEntities
                     if let entitiesValue = entities {
-                        if let result = addLocallyGeneratedEntities(message.text, enabledTypes: .all, entities: entitiesValue) {
+                        if let result = addLocallyGeneratedEntities(rawText, enabledTypes: .all, entities: entitiesValue) {
                             entities = result
                         }
                     } else {
@@ -148,22 +162,22 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                            generateEntities = true
                         }
                         if generateEntities {
-                            let parsedEntities = generateTextEntities(message.text, enabledTypes: .all)
+                            let parsedEntities = generateTextEntities(rawText, enabledTypes: .all)
                             if !parsedEntities.isEmpty {
                                 entities = parsedEntities
                             }
                         }
                     }
-                    updatedCachedChatMessageText = CachedChatMessageText(text: message.text, inputEntities: messageEntities, entities: entities)
+                    updatedCachedChatMessageText = CachedChatMessageText(text: rawText, inputEntities: messageEntities, entities: entities)
                 }
                 
                 
                 let bubbleTheme = item.presentationData.theme.theme.chat.bubble
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: item.presentationData.messageFont, linkFont: item.presentationData.messageFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: item.presentationData.messageFont, linkFont: item.presentationData.messageFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)
                 } else {
-                    attributedText = NSAttributedString(string: message.text, font: item.presentationData.messageFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
+                    attributedText = NSAttributedString(string: rawText, font: item.presentationData.messageFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
                 }
                 
                 var cutout: TextNodeCutout?

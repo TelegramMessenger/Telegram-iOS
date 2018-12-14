@@ -86,8 +86,9 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         self.pickerView.locale = Locale(identifier: strings.baseLanguageCode)
         self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         
+        self.pickerView.minimumDate = Date(timeIntervalSince1970: 1376438400.0)
         self.pickerView.maximumDate = Date(timeIntervalSinceNow: 2.0)
-        self.pickerView.minimumDate = Date(timeIntervalSinceNow: 1376438400.0)
+        
         
         super.init(theme: theme)
         

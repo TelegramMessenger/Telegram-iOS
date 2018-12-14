@@ -551,7 +551,7 @@ class WebSearchControllerNode: ASDisplayNode {
             if let results = self.currentProcessedResults?.results {
                 presentLegacyWebSearchGallery(account: self.account, peer: nil, theme: self.theme, results: results, current: currentResult, selectionContext: self.selectionContext, editingContext: self.controllerInteraction.editingContext, updateHiddenMedia: { [weak self] id in
                     self?.hiddenMediaId.set(.single(id))
-                }, transitionHostView: { [weak self] in
+                }, initialLayout: self.containerLayout?.0, transitionHostView: { [weak self] in
                     return self?.gridNode.view
                 }, transitionView: { [weak self] result in
                     return self?.transitionView(for: result)

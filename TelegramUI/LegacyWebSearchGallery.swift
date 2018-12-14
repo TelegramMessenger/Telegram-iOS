@@ -213,8 +213,8 @@ private func galleryItems(account: Account, results: [ChatContextResult], curren
     return (galleryItems, focusItem)
 }
 
-func presentLegacyWebSearchGallery(account: Account, peer: Peer?, theme: PresentationTheme, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, present: (ViewController, Any?) -> Void) {
-    let legacyController = LegacyController(presentation: .custom, theme: theme)
+func presentLegacyWebSearchGallery(account: Account, peer: Peer?, theme: PresentationTheme, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, present: (ViewController, Any?) -> Void) {
+    let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
     legacyController.statusBar.statusBarStyle = .Ignore
     
     let controller = TGModernGalleryController(context: legacyController.context)!
