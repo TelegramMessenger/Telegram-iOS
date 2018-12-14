@@ -351,9 +351,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
         }, rateCall: { _ in
+        }, requestSelectMessagePollOption: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
-        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings)
+        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
+           pollActionState: ChatInterfacePollActionState())
         self.controllerInteraction = controllerInteraction
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in

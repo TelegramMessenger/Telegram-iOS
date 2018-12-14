@@ -6,7 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
@@ -100,6 +100,35 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
             openMap()
         })!
         itemViews.append(locationItem)
+        
+        var canPin = false
+        if let channel = peer as? TelegramChannel {
+            switch channel.info {
+                case .broadcast:
+                    canPin = channel.hasAdminRights([.canEditMessages])
+                case .group:
+                    canPin = channel.hasAdminRights([.canPinMessages])
+            }
+        } else if let group = peer as? TelegramGroup {
+            if group.flags.contains(.adminsEnabled) {
+                switch group.role {
+                    case .creator, .admin:
+                        canPin = true
+                    default:
+                        canPin = false
+                }
+            } else {
+                canPin = true
+            }
+        }
+        
+        if canPin {
+            let pollItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_Poll, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
+                controller?.dismiss(animated: true)
+                openPoll()
+            })!
+            itemViews.append(pollItem)
+        }
     
         let contactItem = TGMenuSheetButtonItemView(title: strings.Conversation_Contact, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
             controller?.dismiss(animated: true)

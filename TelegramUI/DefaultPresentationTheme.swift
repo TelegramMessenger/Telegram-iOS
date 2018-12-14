@@ -219,7 +219,9 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         deliveryFailedFillColor: destructiveColor,
         deliveryFailedForegroundColor: .white,
         incomingMediaPlaceholderColor: UIColor(rgb: 0xe8ecf0),
-        outgoingMediaPlaceholderColor: UIColor(rgb: 0xd2f2b6)
+        outgoingMediaPlaceholderColor: UIColor(rgb: 0xd2f2b6),
+        incomingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0xc8c7cc), radioProgress: UIColor(rgb: 0x007ee5), highlight: UIColor(rgb: 0x007ee5).withAlphaComponent(0.08), separator: UIColor(rgb: 0xc8c7cc), bar: UIColor(rgb: 0x007ee5)),
+        outgoingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0x93d987), radioProgress: UIColor(rgb: 0x3FC33B), highlight: UIColor(rgb: 0x3FC33B).withAlphaComponent(0.08), separator: UIColor(rgb: 0x93d987), bar: UIColor(rgb: 0x3fc33b))
     )
     
     let bubbleDay = PresentationThemeChatBubble(
@@ -273,7 +275,9 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         deliveryFailedFillColor: destructiveColor,
         deliveryFailedForegroundColor: .white,
         incomingMediaPlaceholderColor: UIColor(rgb: 0xffffff).withMultipliedBrightnessBy(0.95),
-        outgoingMediaPlaceholderColor: accentColor.withMultipliedBrightnessBy(0.95)
+        outgoingMediaPlaceholderColor: accentColor.withMultipliedBrightnessBy(0.95),
+        incomingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0xc8c7cc), radioProgress: UIColor(rgb: 0x007ee5), highlight: UIColor(rgb: 0x007ee5).withAlphaComponent(0.12), separator: UIColor(rgb: 0x007ee5).withAlphaComponent(0.5), bar: UIColor(rgb: 0x007ee5)),
+        outgoingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0x93d987), radioProgress: UIColor(rgb: 0x3FC33B), highlight: UIColor(rgb: 0x3FC33B).withAlphaComponent(0.12), separator: UIColor(rgb: 0x3FC33B).withAlphaComponent(0.5), bar: UIColor(rgb: 0x007ee5))
     )
     
     let serviceMessage = PresentationThemeServiceMessage(

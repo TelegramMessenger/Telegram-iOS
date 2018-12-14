@@ -128,6 +128,8 @@ public func messageContentKind(_ message: Message, strings: PresentationStrings,
                 }
             case _ as TelegramMediaAction:
                 return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) ?? "")
+            case let poll as TelegramMediaPoll:
+                return .text(poll.text)
             default:
                 break
         }

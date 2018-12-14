@@ -367,6 +367,10 @@
 		D0A8BBA11F61EE83000F03FD /* UniversalVideoGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A8BBA01F61EE83000F03FD /* UniversalVideoGalleryItem.swift */; };
 		D0AA29AE1F72770D00C050AC /* ChatListItemStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA29AD1F72770D00C050AC /* ChatListItemStrings.swift */; };
 		D0AA840C1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA840B1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift */; };
+		D0AB262921C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */; };
+		D0AB262F21C3D3DE008F6685 /* CreatePollController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262E21C3D3DE008F6685 /* CreatePollController.swift */; };
+		D0AB263121C3DB21008F6685 /* CreatePollOptionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB263021C3DB21008F6685 /* CreatePollOptionItem.swift */; };
+		D0AB263321C3DFEA008F6685 /* CreatePollOptionActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB263221C3DFEA008F6685 /* CreatePollOptionActionItem.swift */; };
 		D0ACCB1A1EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB191EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift */; };
 		D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */; };
 		D0AD02E81FFFDE5F00C1DCFF /* ChatMessageLiveLocationTimerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD02E71FFFDE5F00C1DCFF /* ChatMessageLiveLocationTimerNode.swift */; };
@@ -1761,6 +1765,10 @@
 		D0AB0BB61D67191C002C78E7 /* MtProtoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MtProtoKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphoneos/MtProtoKit.framework"; sourceTree = "<group>"; };
 		D0AB0BB71D67191C002C78E7 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphoneos/SSignalKit.framework"; sourceTree = "<group>"; };
 		D0AB0BBA1D6719B5002C78E7 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessagePollBubbleContentNode.swift; sourceTree = "<group>"; };
+		D0AB262E21C3D3DE008F6685 /* CreatePollController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollController.swift; sourceTree = "<group>"; };
+		D0AB263021C3DB21008F6685 /* CreatePollOptionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollOptionItem.swift; sourceTree = "<group>"; };
+		D0AB263221C3DFEA008F6685 /* CreatePollOptionActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollOptionActionItem.swift; sourceTree = "<group>"; };
 		D0ACCB191EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerKeyPreviewNode.swift; sourceTree = "<group>"; };
 		D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageCallBubbleContentNode.swift; sourceTree = "<group>"; };
 		D0AD02E71FFFDE5F00C1DCFF /* ChatMessageLiveLocationTimerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageLiveLocationTimerNode.swift; sourceTree = "<group>"; };
@@ -3440,6 +3448,16 @@
 			name = "Shared Media Player";
 			sourceTree = "<group>";
 		};
+		D0AB262D21C3D3CE008F6685 /* Poll */ = {
+			isa = PBXGroup;
+			children = (
+				D0AB262E21C3D3DE008F6685 /* CreatePollController.swift */,
+				D0AB263021C3DB21008F6685 /* CreatePollOptionItem.swift */,
+				D0AB263221C3DFEA008F6685 /* CreatePollOptionActionItem.swift */,
+			);
+			name = Poll;
+			sourceTree = "<group>";
+		};
 		D0AF7C441ED84BB000CD8E0F /* Language Selection */ = {
 			isa = PBXGroup;
 			children = (
@@ -4252,6 +4270,7 @@
 				D017494F1E1067C00057C89A /* Hashtag Search */,
 				D0F69E0D1D6B8AB90046BCD6 /* Chat */,
 				D04281F2200E5A70009DDE36 /* Chat Recent Actions */,
+				D0AB262D21C3D3CE008F6685 /* Poll */,
 				D00DE6961E8E8E21003F0D76 /* Share */,
 				D0F69E4E1D6B8BB90046BCD6 /* Media */,
 				D0F69E6C1D6B8C220046BCD6 /* Contacts */,
@@ -4415,6 +4434,7 @@
 				D0B69C3820EBB397003632C7 /* ChatMessageInteractiveInstantVideoNode.swift */,
 				D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */,
 				D018BE57218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift */,
+				D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -5135,6 +5155,7 @@
 				D0EC6CF11EB9F58800EBF1C3 /* GeneratedMediaStoreSettings.swift in Sources */,
 				D0EC6CF21EB9F58800EBF1C3 /* VoiceCallSettings.swift in Sources */,
 				09619B9621A4ABF600493558 /* InstantPageReferenceControllerNode.swift in Sources */,
+				D0AB263321C3DFEA008F6685 /* CreatePollOptionActionItem.swift in Sources */,
 				D0F8C397201774A200236FC5 /* FeedGroupingController.swift in Sources */,
 				D0EC6CF31EB9F58800EBF1C3 /* PresentationThemeSettings.swift in Sources */,
 				D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */,
@@ -5167,6 +5188,7 @@
 				D0EC6CFF1EB9F58800EBF1C3 /* OverlayMediaController.swift in Sources */,
 				D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */,
 				D02C81712177729000CD1006 /* NotificationExceptions.swift in Sources */,
+				D0AB263121C3DB21008F6685 /* CreatePollOptionItem.swift in Sources */,
 				D0EC6D021EB9F58800EBF1C3 /* diag_range.c in Sources */,
 				D0E9BA1A1F05574500F079A4 /* STPPaymentCardTextField.m in Sources */,
 				D0EC6D031EB9F58800EBF1C3 /* opus_header.c in Sources */,
@@ -5835,10 +5857,12 @@
 				D0EC6E551EB9F58900EBF1C3 /* GroupAdminsController.swift in Sources */,
 				D0EC6E561EB9F58900EBF1C3 /* UserInfoController.swift in Sources */,
 				D0EC6E571EB9F58900EBF1C3 /* GroupsInCommonController.swift in Sources */,
+				D0AB262F21C3D3DE008F6685 /* CreatePollController.swift in Sources */,
 				D0EC6E581EB9F58900EBF1C3 /* PeerSelectionController.swift in Sources */,
 				D093D7D92062A9CA00BC3599 /* SecureIdAuthControllerState.swift in Sources */,
 				D0EC6E591EB9F58900EBF1C3 /* PeerSelectionControllerNode.swift in Sources */,
 				D0EC6E5B1EB9F58900EBF1C3 /* CallController.swift in Sources */,
+				D0AB262921C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift in Sources */,
 				D0EC6E5C1EB9F58900EBF1C3 /* CallControllerNode.swift in Sources */,
 				D0F4B0222110972300912B92 /* ContactInfoStrings.swift in Sources */,
 				D0EC6E5D1EB9F58900EBF1C3 /* PrivacyAndSecurityController.swift in Sources */,

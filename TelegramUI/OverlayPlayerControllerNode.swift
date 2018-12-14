@@ -69,9 +69,11 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in   
         }, rateCall: { _ in
+        }, requestSelectMessagePollOption: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
-        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings)
+        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings,
+           pollActionState: ChatInterfacePollActionState())
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)

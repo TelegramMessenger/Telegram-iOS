@@ -41,6 +41,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                 result.removeAll()
                 result.append((message, ChatMessageActionBubbleContentNode.self))
                 return result
+            } else if let _ = media as? TelegramMediaPoll {
+                result.append((message, ChatMessagePollBubbleContentNode.self))
             }
         }
         

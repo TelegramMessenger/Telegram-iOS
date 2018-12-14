@@ -188,7 +188,9 @@ private let bubble = PresentationThemeChatBubble(
     deliveryFailedFillColor: destructiveColor,
     deliveryFailedForegroundColor: .white,
     incomingMediaPlaceholderColor: UIColor(rgb: 0x1e2c3a),
-    outgoingMediaPlaceholderColor: UIColor(rgb: 0x2d5883)
+    outgoingMediaPlaceholderColor: UIColor(rgb: 0x2d5883),
+    incomingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0xc8c7cc), radioProgress: UIColor(rgb: 0x007ee5), highlight: UIColor(rgb: 0x007ee5).withAlphaComponent(0.12), separator: UIColor(rgb: 0x007ee5).withAlphaComponent(0.5), bar: UIColor(rgb: 0x007ee5)),
+    outgoingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0x93d987), radioProgress: UIColor(rgb: 0x3FC33B), highlight: UIColor(rgb: 0x3FC33B).withAlphaComponent(0.12), separator: UIColor(rgb: 0x3FC33B).withAlphaComponent(0.5), bar: UIColor(rgb: 0x007ee5))
 )
 
 private let serviceMessage = PresentationThemeServiceMessage(
