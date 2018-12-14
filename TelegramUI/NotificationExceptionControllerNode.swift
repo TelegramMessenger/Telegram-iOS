@@ -988,19 +988,19 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
-                    
-                    strongSelf.presentationData = presentationData
-                    
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                        strongSelf.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
-                        strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings)))
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
+                    strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings)))
                 }
-            })
+            }
+        })
         
         self.listNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
@@ -1101,61 +1101,3 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         }
     }
 }
-
-
-/*
- 
- let globalSettings = globalValue.modify {$0}
- 
- let isPrivateChat = peerId.namespace == Namespaces.Peer.CloudUser
- 
- 
- let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
- 
- var items: [ActionSheetItem] = []
- 
- 
- //            ActionSheetButtonItem(title: isPrivateChat && globalSettings.privateChats.enabled || !isPrivateChat && globalSettings.groupChats.enabled ? presentationData.strings.UserInfo_NotificationsDefaultEnabled : presentationData.strings.UserInfo_NotificationsDefaultDisabled, color: .accent, action: { [weak actionSheet] in
- //                updatePeerNotificationInterval(peerId, nil)
- //                actionSheet?.dismissAnimated()
- //            }),
- 
- items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsEnable, color: .accent, action: { [weak actionSheet] in
- actionSheet?.dismissAnimated()
- updatePeerNotificationInterval(peerId, 0)
- }))
- 
- items.append(ActionSheetButtonItem(title: presentationData.strings.Notification_Mute1h, color: .accent, action: { [weak actionSheet] in
- actionSheet?.dismissAnimated()
- updatePeerNotificationInterval(peerId, 60 * 60)
- }))
- 
- items.append(ActionSheetButtonItem(title: presentationData.strings.MuteFor_Days(2), color: .accent, action: { [weak actionSheet] in
- actionSheet?.dismissAnimated()
- updatePeerNotificationInterval(peerId, 60 * 60 * 24 * 2)
- }))
- items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDisable, color: .accent, action: { [weak actionSheet] in
- updatePeerNotificationInterval(peerId, Int32.max)
- actionSheet?.dismissAnimated()
- }))
- 
- items.append(ActionSheetButtonItem(title: presentationData.strings.Notifications_ExceptionsChangeSound(localizedPeerNotificationSoundString(strings: presentationData.strings, sound: settings.messageSound)).0, color: .accent, action: { [weak actionSheet] in
- let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: settings.messageSound, defaultSound: isPrivateChat ? globalSettings.privateChats.sound : globalSettings.groupChats.sound, completion: { value in
- updatePeerSound(peerId, value)
- })
- presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
- actionSheet?.dismissAnimated()
- }))
- items.append(ActionSheetButtonItem(title: presentationData.strings.Notifications_ExceptionsResetToDefaults, color: .destructive, action: { [weak actionSheet] in
- updatePeerNotificationInterval(peerId, nil)
- updatePeerSound(peerId, .default)
- actionSheet?.dismissAnimated()
- }))
- 
- actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
- ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
- actionSheet?.dismissAnimated()
- })
- ])])
- presentControllerImpl?(actionSheet, nil)
- */

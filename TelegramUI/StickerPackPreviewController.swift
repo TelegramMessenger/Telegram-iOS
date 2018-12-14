@@ -59,7 +59,7 @@ final class StickerPackPreviewController: ViewController {
         
         self.presentationDataDisposable = (self.account.telegramApplicationContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            if let strongSelf = self {
+            if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })

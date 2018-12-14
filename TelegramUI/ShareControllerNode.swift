@@ -232,6 +232,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
+        guard self.presentationData !== presentationData else {
+            return
+        }
         self.presentationData = presentationData
         
         let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
