@@ -4,7 +4,7 @@ ARCHS="$2"
 
 for ARCH in $ARCHS
 do
-	if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" -o "$ARCH" = "arm64" -o "$ARCH" = "arm7" ]
+	if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" -o "$ARCH" = "arm64" -o "$ARCH" = "armv7" ]
 	then
 		echo "1" >/dev/null
 	else
@@ -58,9 +58,18 @@ fi
 #CONFIGURE_FLAGS="$CONFIGURE_FLAGS --pkg-config=$PKG_CONFIG"
 
 COMPILE="y"
-LIPO="y"
 
 DEPLOYMENT_TARGET="8.0"
+
+LIBS_HASH=""
+for ARCH in $ARCHS
+do
+	for LIB in "$THIN/$ARCH/lib/"*.a
+	do
+		LIB_DATE=`stat -f "%a,%z" "$LIB"`
+		LIBS_HASH="$LIBS_HASH $ARCH/$LIB:$LIB_DATE"
+	done
+done
 
 if [ "$COMPILE" ]
 then
@@ -170,6 +179,23 @@ then
 	done
 fi
 
+UPDATED_LIBS_HASH=""
+for ARCH in $ARCHS
+do
+	for LIB in "$THIN/$ARCH/lib/"*.a
+	do
+		LIB_DATE=`stat -f "%a,%z" "$LIB"`
+		UPDATED_LIBS_HASH="$UPDATED_LIBS_HASH $ARCH/$LIB:$LIB_DATE"
+	done
+done
+
+if [ "$UPDATED_LIBS_HASH" = "$LIBS_HASH" ]
+then
+	echo "Libs aren't changed, skipping lipo"
+else
+	LIPO="y"
+fi
+
 if [ "$LIPO" ]
 then
 	echo "building fat binaries..."
@@ -182,7 +208,7 @@ then
 		cd "$CWD"
 		echo lipo -create `find "$THIN" -name "$LIB"` -output "$FAT/lib/$LIB" 1>&2
 		LIPO_INPUT=`find "$THIN" -name "$LIB"`
-		lipo -create "$LIPO_INPUT" -output "$FAT/lib/$LIB" || exit 1
+		lipo -create $LIPO_INPUT -output "$FAT/lib/$LIB" || exit 1
 	done
 
 	cd "$CWD"
