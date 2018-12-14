@@ -129,6 +129,8 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
             input = .inputMediaGeoPoint(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude))
         }
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
+    } else if let poll = media as? TelegramMediaPoll {
+        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPoll(question: poll.text, answers: poll.options.map({ $0.apiOption })), text), reuploadInfo: nil)))
     } else {
         return nil
     }

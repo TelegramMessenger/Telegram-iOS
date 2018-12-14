@@ -231,6 +231,54 @@ extension Api {
         }
     
     }
+    enum PollResults: TypeConstructorDescription {
+        case pollResults(flags: Int32, results: [Api.PollAnswerVoters]?, totalVoters: Int32?)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .pollResults(let flags, let results, let totalVoters):
+                    if boxed {
+                        buffer.appendInt32(1465219162)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(results!.count))
+                    for item in results! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(totalVoters!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .pollResults(let flags, let results, let totalVoters):
+                return ("pollResults", [("flags", flags), ("results", results), ("totalVoters", totalVoters)])
+    }
+    }
+    
+        static func parse_pollResults(_ reader: BufferReader) -> PollResults? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.PollAnswerVoters]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PollAnswerVoters.self)
+            } }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.PollResults.pollResults(flags: _1!, results: _2, totalVoters: _3)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum ChatParticipant: TypeConstructorDescription {
         case chatParticipant(userId: Int32, inviterId: Int32, date: Int32)
         case chatParticipantCreator(userId: Int32)
@@ -2527,6 +2575,48 @@ extension Api {
         }
     
     }
+    enum PollAnswerVoters: TypeConstructorDescription {
+        case pollAnswerVoters(flags: Int32, option: Buffer, voters: Int32)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .pollAnswerVoters(let flags, let option, let voters):
+                    if boxed {
+                        buffer.appendInt32(997055186)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeBytes(option, buffer: buffer, boxed: false)
+                    serializeInt32(voters, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .pollAnswerVoters(let flags, let option, let voters):
+                return ("pollAnswerVoters", [("flags", flags), ("option", option), ("voters", voters)])
+    }
+    }
+    
+        static func parse_pollAnswerVoters(_ reader: BufferReader) -> PollAnswerVoters? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.PollAnswerVoters.pollAnswerVoters(flags: _1!, option: _2!, voters: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum LangPackLanguage: TypeConstructorDescription {
         case langPackLanguage(flags: Int32, name: String, nativeName: String, langCode: String, baseLangCode: String?, pluralCode: String, stringsCount: Int32, translatedCount: Int32, translationsUrl: String)
     
@@ -3566,6 +3656,7 @@ extension Api {
         case updateLangPackTooLong(langCode: String)
         case updateUserPinnedMessage(userId: Int32, id: Int32)
         case updateChatPinnedMessage(chatId: Int32, id: Int32)
+        case updateMessagePollResults(peer: Api.Peer, msgId: Int32, results: Api.PollResults)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4127,6 +4218,14 @@ extension Api {
                     serializeInt32(chatId, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
+                case .updateMessagePollResults(let peer, let msgId, let results):
+                    if boxed {
+                        buffer.appendInt32(-1021940971)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    results.serialize(buffer, true)
+                    break
     }
     }
     
@@ -4268,6 +4367,8 @@ extension Api {
                 return ("updateUserPinnedMessage", [("userId", userId), ("id", id)])
                 case .updateChatPinnedMessage(let chatId, let id):
                 return ("updateChatPinnedMessage", [("chatId", chatId), ("id", id)])
+                case .updateMessagePollResults(let peer, let msgId, let results):
+                return ("updateMessagePollResults", [("peer", peer), ("msgId", msgId), ("results", results)])
     }
     }
     
@@ -5392,6 +5493,27 @@ extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateChatPinnedMessage(chatId: _1!, id: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_updateMessagePollResults(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.PollResults?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.PollResults
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateMessagePollResults(peer: _1!, msgId: _2!, results: _3!)
             }
             else {
                 return nil
@@ -7267,6 +7389,44 @@ extension Api {
         }
     
     }
+    enum PollAnswer: TypeConstructorDescription {
+        case pollAnswer(text: String, option: Buffer)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .pollAnswer(let text, let option):
+                    if boxed {
+                        buffer.appendInt32(1823064809)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeBytes(option, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .pollAnswer(let text, let option):
+                return ("pollAnswer", [("text", text), ("option", option)])
+    }
+    }
+    
+        static func parse_pollAnswer(_ reader: BufferReader) -> PollAnswer? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PollAnswer.pollAnswer(text: _1!, option: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum SecureData: TypeConstructorDescription {
         case secureData(data: Buffer, dataHash: Buffer, secret: Buffer)
     
@@ -7324,6 +7484,7 @@ extension Api {
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
+        case inputMediaPoll(question: String, answers: [Api.PollAnswer])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -7458,6 +7619,17 @@ extension Api {
                     serializeString(lastName, buffer: buffer, boxed: false)
                     serializeString(vcard, buffer: buffer, boxed: false)
                     break
+                case .inputMediaPoll(let question, let answers):
+                    if boxed {
+                        buffer.appendInt32(1968894382)
+                    }
+                    serializeString(question, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(answers.count))
+                    for item in answers {
+                        item.serialize(buffer, true)
+                    }
+                    break
     }
     }
     
@@ -7491,6 +7663,8 @@ extension Api {
                 return ("inputMediaDocumentExternal", [("flags", flags), ("url", url), ("ttlSeconds", ttlSeconds)])
                 case .inputMediaContact(let phoneNumber, let firstName, let lastName, let vcard):
                 return ("inputMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard)])
+                case .inputMediaPoll(let question, let answers):
+                return ("inputMediaPoll", [("question", question), ("answers", answers)])
     }
     }
     
@@ -7770,6 +7944,22 @@ extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.InputMedia.inputMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, vcard: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputMediaPoll(_ reader: BufferReader) -> InputMedia? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Api.PollAnswer]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PollAnswer.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputMedia.inputMediaPoll(question: _1!, answers: _2!)
             }
             else {
                 return nil
@@ -11617,6 +11807,7 @@ extension Api {
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaDocument(flags: Int32, document: Api.Document?, ttlSeconds: Int32?)
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String, userId: Int32)
+        case messageMediaPoll(flags: Int32, question: String, answers: [Api.PollAnswer], results: Api.PollResults?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11707,6 +11898,19 @@ extension Api {
                     serializeString(vcard, buffer: buffer, boxed: false)
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     break
+                case .messageMediaPoll(let flags, let question, let answers, let results):
+                    if boxed {
+                        buffer.appendInt32(-780816282)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(question, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(answers.count))
+                    for item in answers {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {results!.serialize(buffer, true)}
+                    break
     }
     }
     
@@ -11734,6 +11938,8 @@ extension Api {
                 return ("messageMediaDocument", [("flags", flags), ("document", document), ("ttlSeconds", ttlSeconds)])
                 case .messageMediaContact(let phoneNumber, let firstName, let lastName, let vcard, let userId):
                 return ("messageMediaContact", [("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard), ("userId", userId)])
+                case .messageMediaPoll(let flags, let question, let answers, let results):
+                return ("messageMediaPoll", [("flags", flags), ("question", question), ("answers", answers), ("results", results)])
     }
     }
     
@@ -11916,6 +12122,30 @@ extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.MessageMedia.messageMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, vcard: _4!, userId: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_messageMediaPoll(_ reader: BufferReader) -> MessageMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.PollAnswer]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PollAnswer.self)
+            }
+            var _4: Api.PollResults?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.PollResults
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageMedia.messageMediaPoll(flags: _1!, question: _2!, answers: _3!, results: _4)
             }
             else {
                 return nil

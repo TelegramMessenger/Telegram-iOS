@@ -29,7 +29,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
             return .fail(.generic)
         }
-        if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
+        if let channel = peer as? TelegramChannel, let inputPeer = apiInputPeer(channel) {
             var canManagePin = false
             if case .broadcast = channel.info {
                 canManagePin = channel.hasAdminRights([.canEditMessages])
@@ -50,7 +50,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                         messageId = 0
                 }
                 
-                let request = Api.functions.channels.updatePinnedMessage(flags: flags, channel: inputChannel, id: messageId)
+                let request = Api.functions.messages.updatePinnedMessage(flags: flags, peer: inputPeer, id: messageId)
                 
                 return account.network.request(request)
                 |> mapError { _ -> UpdatePinnedMessageError in
