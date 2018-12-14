@@ -8,6 +8,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     var result: [(Message, AnyClass)] = []
     var skipText = false
     var addFinalText = false
+    var isUnsupportedMedia = false
     
     outer: for message in item.content {
         inner: for media in message.media {
@@ -43,10 +44,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                 return result
             } else if let _ = media as? TelegramMediaPoll {
                 result.append((message, ChatMessagePollBubbleContentNode.self))
+            } else if let _ = media as? TelegramMediaUnsupported {
+                isUnsupportedMedia = true
             }
         }
         
-        if !message.text.isEmpty {
+        if !message.text.isEmpty || isUnsupportedMedia {
             if !skipText {
                 if case .group = item.content {
                     addFinalText = true

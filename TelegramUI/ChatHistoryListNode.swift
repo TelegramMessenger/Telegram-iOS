@@ -324,6 +324,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
     private let pollMessageProcessingManager = ChatMessageThrottledProcessingManager()
+    private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
     
     private var maxVisibleMessageIndexReported: MessageIndex?
@@ -372,6 +373,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.pollMessageProcessingManager.process = { [weak account] messageIds in
             account?.viewTracker.updatePollForMessageIds(messageIds: messageIds)
+        }
+        self.unsupportedMessageProcessingManager.process = { [weak account] messageIds in
+            account?.viewTracker.updateUnsupportedMediaForMessageIds(messageIds: messageIds)
         }
         self.messageMentionProcessingManager.process = { [weak account] messageIds in
             account?.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
@@ -586,6 +590,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         
                         var messageIdsWithViewCount: [MessageId] = []
                         var messageIdsWithPoll: [MessageId] = []
+                        var messageIdsWithUnsupportedMedia: [MessageId] = []
                         var messageIdsWithUnseenPersonalMention: [MessageId] = []
                         for i in (indexRange.0 ... indexRange.1) {
                             switch historyView.filteredEntries[i] {
@@ -611,6 +616,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     for media in message.media {
                                         if let _ = media as? TelegramMediaPoll {
                                             messageIdsWithPoll.append(message.id)
+                                        } else if let _ = media as? TelegramMediaUnsupported {
+                                            messageIdsWithUnsupportedMedia.append(message.id)
                                         }
                                     }
                                     if hasUnconsumedMention && !hasUnconsumedContent {
@@ -651,7 +658,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if !messageIdsWithPoll.isEmpty {
                             strongSelf.pollMessageProcessingManager.add(messageIdsWithPoll)
                         }
-                        
+                        if !messageIdsWithUnsupportedMedia.isEmpty {
+                            strongSelf.unsupportedMessageProcessingManager.add(messageIdsWithUnsupportedMedia)
+                        }
                         if !messageIdsWithUnseenPersonalMention.isEmpty {
                             strongSelf.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
                         }

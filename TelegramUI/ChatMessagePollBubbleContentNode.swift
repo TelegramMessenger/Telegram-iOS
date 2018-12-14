@@ -560,7 +560,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_LabelAnonymous, font: labelsFont, textColor: incoming ? bubbleTheme.incomingSecondaryTextColor : bubbleTheme.outgoingSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let votersString: String
-                if let totalVoters = poll?.results?.totalVoters {
+                if let totalVoters = poll?.results?.totalVoters, totalVoters != 0 {
                     votersString = item.presentationData.strings.MessagePoll_VotedCount(totalVoters)
                 } else {
                     votersString = " "
