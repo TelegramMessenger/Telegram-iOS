@@ -3587,3 +3587,5 @@ Unused sets are archived when you add more.";
 
 "SharedMedia.SearchNoResults" = "No Results";
 "SharedMedia.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"WebSearch.RecentSearchPlaceholder" = "Your recent search queries will appear here";
