@@ -25,6 +25,7 @@
 #import <LegacyComponents/UIImage+TGMediaEditableItem.h>
 #import <LegacyComponents/TGPaintingData.h>
 
+#import "TGPhotoEditorInterfaceAssets.h"
 #import "TGPhotoCaptionInputMixin.h"
 
 @interface TGCameraPhotoPreviewWrapperView : UIView

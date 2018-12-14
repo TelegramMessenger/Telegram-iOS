@@ -922,7 +922,11 @@ static CGFloat transformRotation(CGAffineTransform transform)
 
 - (void)animateTransitionInFromView:(UIView *)fromView toView:(UIView *)toView toViewContentRect:(CGRect)toViewContentRect
 {
-    UIView *fromScrollView = [self findScrollView:fromView];
+    UIView *fromScrollView = nil;
+    if (self.transitionHost != nil)
+        fromScrollView = self.transitionHost();
+    else
+        fromScrollView = [self findScrollView:fromView];
     UIView *fromContainerView = fromScrollView.superview;
     
     CGFloat fromRotationZ = 0.0f;
@@ -1015,7 +1019,11 @@ static CGFloat transformRotation(CGAffineTransform transform)
 
 - (void)animateTransitionOutFromView:(UIView *)fromView fromViewContentRect:(CGRect)fromViewContentRect toView:(UIView *)toView velocity:(CGPoint)velocity
 {
-    UIView *toScrollView = [self findScrollView:toView];
+    UIView *toScrollView = nil;
+    if (self.transitionHost != nil)
+        toScrollView = self.transitionHost();
+    else
+        toScrollView = [self findScrollView:toView];
     UIView *toContainerView = toScrollView.superview;
     
     CGRect toContainerFrame = [toContainerView convertRect:toView.bounds fromView:toView];

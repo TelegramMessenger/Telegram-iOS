@@ -38,6 +38,7 @@
 @property (nonatomic, strong) UIView<TGModernGalleryDefaultFooterAccessoryView> *defaultFooterAccessoryLeftView;
 @property (nonatomic, strong) UIView<TGModernGalleryDefaultFooterAccessoryView> *defaultFooterAccessoryRightView;
 
+- (void)_setItem:(id<TGModernGalleryItem>)item;
 - (void)setItem:(id<TGModernGalleryItem>)item synchronously:(bool)synchronously;
 
 - (SSignal *)readyForTransitionIn;

@@ -901,7 +901,8 @@
     if (itemId == nil)
         return nil;
     
-    return [NSString stringWithFormat:@"%@_%@", _contextId, itemId];
+    return itemId;
+    //return [NSString stringWithFormat:@"%@hm%@", _contextId, itemId];
 }
 
 + (NSString *)_imageUriForItemId:(NSString *)itemId

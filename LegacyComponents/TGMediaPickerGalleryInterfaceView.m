@@ -34,6 +34,7 @@
 #import "TGMediaPickerPhotoStripView.h"
 
 #import "TGMediaPickerScrubberHeaderView.h"
+#import "TGPhotoEditorInterfaceAssets.h"
 
 #import <LegacyComponents/TGMenuView.h>
 #import <LegacyComponents/TGTooltipView.h>

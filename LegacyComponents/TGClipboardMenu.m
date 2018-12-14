@@ -24,7 +24,6 @@
     TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:context dark:false];
     __weak TGMenuSheetController *weakController = controller;
     controller.dismissesByOutsideTap = true;
-    controller.inhibitPopoverPresentation = true;
     controller.forceFullScreen = true;
     controller.hasSwipeGesture = true;
     controller.narrowInLandscape = true;
@@ -99,7 +98,6 @@
     [itemViews addObject:cancelItem];
     
     [controller setItemViews:itemViews animated:false];
-    [controller presentInViewController:parentController sourceView:sourceView animated:true];
     
     return controller;
 

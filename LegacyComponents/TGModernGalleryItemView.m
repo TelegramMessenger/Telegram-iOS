@@ -76,6 +76,11 @@
     return true;
 }
 
+- (void)_setItem:(id<TGModernGalleryItem>)item
+{
+    _item = item;
+}
+
 - (void)setItem:(id<TGModernGalleryItem>)item
 {
     [self setItem:item synchronously:false];

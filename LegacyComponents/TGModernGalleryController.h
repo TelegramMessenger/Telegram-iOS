@@ -6,11 +6,11 @@
 @protocol TGModernGalleryItem;
 @class TGModernGalleryItemView;
 
-typedef enum {
+typedef NS_ENUM(NSUInteger, TGModernGalleryScrollAnimationDirection) {
     TGModernGalleryScrollAnimationDirectionDefault,
     TGModernGalleryScrollAnimationDirectionLeft,
     TGModernGalleryScrollAnimationDirectionRight
-} TGModernGalleryScrollAnimationDirection;
+};
 
 @interface TGModernGalleryController : TGOverlayController
 
@@ -24,7 +24,8 @@ typedef enum {
 @property (nonatomic, assign) bool adjustsStatusBarVisibility;
 @property (nonatomic, assign) bool hasFadeOutTransition;
 @property (nonatomic, assign) bool previewMode;
- 
+
+@property (nonatomic, copy) UIView *(^transitionHost)(void);
 @property (nonatomic, copy) void (^itemFocused)(id<TGModernGalleryItem>);
 @property (nonatomic, copy) UIView *(^beginTransitionIn)(id<TGModernGalleryItem>, TGModernGalleryItemView *);
 @property (nonatomic, copy) void (^startedTransitionIn)();

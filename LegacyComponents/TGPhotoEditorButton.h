@@ -1,4 +1,4 @@
-#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
+#import <UIKit/UIKit.h>
 
 @interface TGPhotoEditorButton : UIControl
 

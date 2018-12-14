@@ -5,6 +5,7 @@
 
 #import "TGModernButton.h"
 #import "TGPhotoEditorButton.h"
+#import "TGPhotoEditorInterfaceAssets.h"
 
 #import "TGMediaAssetsController.h"
 

@@ -1,7 +1,6 @@
 #import <LegacyComponents/TGPhotoEditorButton.h>
 
-typedef enum
-{
+typedef NS_OPTIONS(NSUInteger, TGPhotoEditorTab) {
     TGPhotoEditorNoneTab        = 0,
     TGPhotoEditorCropTab        = 1 << 0,
     TGPhotoEditorStickerTab     = 1 << 1,
@@ -17,7 +16,7 @@ typedef enum
     TGPhotoEditorTintTab        = 1 << 11,
     TGPhotoEditorBlurTab        = 1 << 12,
     TGPhotoEditorCurvesTab      = 1 << 13,
-} TGPhotoEditorTab;
+};
 
 typedef enum
 {

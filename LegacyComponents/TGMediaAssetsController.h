@@ -67,7 +67,7 @@ typedef enum
 @property (nonatomic, copy) void (^singleCompletionBlock)(id<TGMediaEditableItem> item, TGMediaEditingContext *editingContext);
 @property (nonatomic, copy) void (^dismissalBlock)(void);
 
-@property (nonatomic, copy) TGViewController *(^requestSearchController)(void);
+@property (nonatomic, copy) void (^requestSearchController)(void);
 
 @property (nonatomic, readonly) TGMediaAssetsPickerController *pickerController;
 @property (nonatomic, readonly) bool allowGrouping;

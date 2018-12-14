@@ -5276,7 +5276,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(PROJECT_DIR)/../SSignalKit",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
@@ -5401,7 +5401,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(PROJECT_DIR)/../SSignalKit",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
@@ -5428,7 +5428,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(PROJECT_DIR)/../SSignalKit",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
@@ -5507,7 +5507,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(PROJECT_DIR)/../SSignalKit",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
@@ -5727,7 +5727,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(PROJECT_DIR)/../SSignalKit",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;
@@ -5879,7 +5879,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/../../thirdparty/SSignalKit",
+					"$(PROJECT_DIR)/../SSignalKit",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = LegacyComponents/Info.plist;

@@ -13,7 +13,7 @@ typedef void (^TGMediaAvatarPresentImpl)(id<LegacyComponentsContext>, void (^)(U
 @property (nonatomic, copy) void (^didFinishWithDelete)(void);
 @property (nonatomic, copy) void (^didFinishWithView)(void);
 @property (nonatomic, copy) void (^didDismiss)(void);
-@property (nonatomic, copy) TGViewController *(^requestSearchController)(TGMediaAssetsController *);
+@property (nonatomic, copy) void (^requestSearchController)(TGMediaAssetsController *);
 @property (nonatomic, copy) CGRect (^sourceRect)(void);
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia;

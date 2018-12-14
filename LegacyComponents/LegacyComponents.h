@@ -216,6 +216,11 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGModernGalleryScrollView.h>
 #import <LegacyComponents/TGModernGalleryItem.h>
 #import <LegacyComponents/TGModernGalleryItemView.h>
+#import <LegacyComponents/TGModernGalleryImageItem.h>
+#import <LegacyComponents/TGModernGalleryImageItemView.h>
+#import <LegacyComponents/TGModernGalleryImageItemImageView.h>
+#import <LegacyComponents/TGModernGalleryEditableItemView.h>
+#import <LegacyComponents/TGModernGallerySelectableItem.h>
 #import <LegacyComponents/TGModernGalleryDefaultFooterAccessoryView.h>
 #import <LegacyComponents/TGModernGalleryDefaultFooterView.h>
 #import <LegacyComponents/TGModernGalleryDefaultHeaderView.h>
@@ -229,6 +234,11 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGModernGalleryContainerView.h>
 #import <LegacyComponents/TGModernGalleryEmbeddedStickersHeaderView.h>
 #import <LegacyComponents/TGModernGalleryController.h>
+
+#import <LegacyComponents/TGPhotoToolbarView.h>
+#import <LegacyComponents/TGMediaPickerGalleryModel.h>
+#import <LegacyComponents/TGMediaPickerGalleryInterfaceView.h>
+#import <LegacyComponents/TGPhotoEditorController.h>
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 #import <LegacyComponents/PGPhotoEditorValues.h>
