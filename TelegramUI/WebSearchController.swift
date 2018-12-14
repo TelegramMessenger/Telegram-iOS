@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import LegacyComponents
 
 private func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 30) -> Signal<ChatContextResultCollection?, NoError> {
     return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
@@ -30,15 +31,18 @@ final class WebSearchControllerInteraction {
     let setSearchQuery: (String) -> Void
     let deleteRecentQuery: (String) -> Void
     let toggleSelection: ([String], Bool) -> Void
-    let sendSelected: (ChatContextResultCollection) -> Void
+    let sendSelected: (ChatContextResultCollection, ChatContextResult?) -> Void
     var selectionState: WebSearchSelectionState?
+    var hiddenMediaId: String?
+    let editingContext: TGMediaEditingContext
     
-    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping ([String], Bool) -> Void, sendSelected: @escaping (ChatContextResultCollection) -> Void) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping ([String], Bool) -> Void, sendSelected: @escaping (ChatContextResultCollection, ChatContextResult?) -> Void, editingContext: TGMediaEditingContext) {
         self.openResult = openResult
         self.setSearchQuery = setSearchQuery
         self.deleteRecentQuery = deleteRecentQuery
         self.toggleSelection = toggleSelection
         self.sendSelected = sendSelected
+        self.editingContext = editingContext
     }
 }
 
@@ -69,7 +73,7 @@ final class WebSearchController: ViewController {
     
     private var navigationContentNode: WebSearchNavigationContentNode?
     
-    init(account: Account, chatLocation: ChatLocation, configuration: SearchBotsConfiguration, sendSelected: @escaping ([String], ChatContextResultCollection) -> Void) {
+    init(account: Account, chatLocation: ChatLocation, configuration: SearchBotsConfiguration, sendSelected: @escaping ([String], ChatContextResultCollection, TGMediaEditingContext) -> Void) {
         self.account = account
         self.chatLocation = chatLocation
         self.configuration = configuration
@@ -117,8 +121,15 @@ final class WebSearchController: ViewController {
         }
         self.navigationBar?.setContentNode(navigationContentNode, animated: false)
         
-        self.controllerInteraction = WebSearchControllerInteraction(openResult: { result in
-            
+        let editingContext = TGMediaEditingContext()
+        self.controllerInteraction = WebSearchControllerInteraction(openResult: { [weak self] result in
+            if let strongSelf = self {
+                strongSelf.controllerNode.openResult(currentResult: result, present: { [weak self] viewController, arguments in
+                    if let strongSelf = self {
+                        strongSelf.present(viewController, in: .window(.root), with: arguments)
+                    }
+                })
+            }
         }, setSearchQuery: { [weak self] query in
             if let strongSelf = self {
                 strongSelf.navigationContentNode?.setQuery(query)
@@ -133,11 +144,15 @@ final class WebSearchController: ViewController {
             if let strongSelf = self {
                 strongSelf.updateInterfaceState { $0.withToggledSelectedMessages(ids, value: value) }
             }
-        }, sendSelected: { [weak self] collection in
-            if let strongSelf = self, let state = strongSelf.interfaceState.state, !state.selectionState.selectedIds.isEmpty {
-                sendSelected(Array(state.selectionState.selectedIds), collection)
+        }, sendSelected: { [weak self] collection, current in
+            if let strongSelf = self, let state = strongSelf.interfaceState.state {
+                var selectedIds = state.selectionState.selectedIds
+                if let current = current {
+                    selectedIds.insert(current.id)
+                }
+                sendSelected(Array(selectedIds), collection, editingContext)
             }
-        })
+        }, editingContext: editingContext)
     }
     
     required public init(coder aDecoder: NSCoder) {

@@ -111,6 +111,19 @@ struct PresentationResourcesChatList {
         })
     }
     
+    static func recentStatusOnlineIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListRecentStatusOnlineIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 14.0, height: 14.0), rotatedContext: { size, context in
+                let bounds = CGRect(origin: CGPoint(), size: size)
+                context.clear(bounds)
+                context.setFillColor(theme.chatList.backgroundColor.cgColor)
+                context.fillEllipse(in: bounds)
+                context.setFillColor(theme.chatList.unreadBadgeActiveBackgroundColor.cgColor)
+                context.fillEllipse(in: bounds.insetBy(dx: 2.0, dy: 2.0))
+            })
+        })
+    }
+    
     static func badgeBackgroundActive(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListBadgeBackgroundActive.rawValue, { theme in
             return generateBadgeBackgroundImage(theme: theme, active: true)

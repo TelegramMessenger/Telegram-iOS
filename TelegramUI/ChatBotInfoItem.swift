@@ -177,7 +177,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
-    func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+    func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -206,7 +206,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         switch recognizer.state {
             case .ended:
                 var foundTapAction = false
-                let tapAction = self.tapActionAtPoint(recognizer.location(in: self.view))
+                let tapAction = self.tapActionAtPoint(recognizer.location(in: self.view), gesture: .tap)
                 switch tapAction {
                     case .none:
                         break

@@ -683,11 +683,13 @@ final class ContactListNode: ASDisplayNode {
     private var authorizationDisposable: Disposable?
     
     private var authorizationNode: PermissionContentNode
+    private let displayPermissionPlaceholder: Bool
     
-    init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil) {
+    init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true) {
         self.account = account
         self.presentation = presentation
         self.filters = filters
+        self.displayPermissionPlaceholder = displayPermissionPlaceholder
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
@@ -1005,21 +1007,19 @@ final class ContactListNode: ASDisplayNode {
             fixSearchableListNodeScrolling(strongSelf.listNode)
         }
         
-        authorizeImpl = { [weak self] in
-            if let strongSelf = self {
-                let _ = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { status in
-                    switch status {
-                        case .notDetermined:
-                            DeviceAccess.authorizeAccess(to: .contacts)
-                        case .denied, .restricted:
-                            account.telegramApplicationContext.applicationBindings.openSettings()
-                        default:
-                            break
-                    }
-                })
-            }
+        authorizeImpl = {
+            let _ = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { status in
+                switch status {
+                    case .notDetermined:
+                        DeviceAccess.authorizeAccess(to: .contacts)
+                    case .denied, .restricted:
+                        account.telegramApplicationContext.applicationBindings.openSettings()
+                    default:
+                        break
+                }
+            })
         }
         
         openPrivacyPolicyImpl = { [weak self] in
@@ -1133,8 +1133,8 @@ final class ContactListNode: ASDisplayNode {
                     }
                 })
                 
-                self.listNode.isHidden = transition.isEmpty
-                self.authorizationNode.isHidden = !transition.isEmpty
+                self.listNode.isHidden = self.displayPermissionPlaceholder && transition.isEmpty
+                self.authorizationNode.isHidden = !transition.isEmpty || !self.displayPermissionPlaceholder
             }
         }
     }

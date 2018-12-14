@@ -4,6 +4,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
+import LegacyComponents
 
 private struct WebSearchContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -144,12 +145,17 @@ class WebSearchControllerNode: ASDisplayNode {
     private var hasMore = false
     private var isLoadingMore = false
     
+    private let selectionContext = TGMediaSelectionContext()
+    
+    private let hiddenMediaId = Promise<String?>(nil)
+    private var hiddenMediaDisposable: Disposable?
+    
     private let results = ValuePromise<ChatContextResultCollection?>(nil, ignoreRepeated: true)
     
     private let disposable = MetaDisposable()
     private let loadMoreDisposable = MetaDisposable()
     
-    private let recentDisposable = MetaDisposable()
+    private var recentDisposable: Disposable?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -219,7 +225,7 @@ class WebSearchControllerNode: ASDisplayNode {
         }))
         
         let previousRecentItems = Atomic<[WebSearchRecentQueryEntry]?>(value: nil)
-        self.recentDisposable.set((combineLatest(webSearchRecentQueries(postbox: self.account.postbox), self.webSearchInterfaceStatePromise.get())
+        self.recentDisposable = (combineLatest(webSearchRecentQueries(postbox: self.account.postbox), self.webSearchInterfaceStatePromise.get())
         |> deliverOnMainQueue).start(next: { [weak self] queries, interfaceState in
             if let strongSelf = self {
                 var entries: [WebSearchRecentQueryEntry] = []
@@ -236,7 +242,7 @@ class WebSearchControllerNode: ASDisplayNode {
                 let transition = preparedWebSearchRecentTransition(from: previousEntries ?? [], to: entries, account: strongSelf.account, theme: interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction, header: header)
                 strongSelf.enqueueRecentTransition(transition, firstTime: previousEntries == nil)
             }
-        }))
+        })
         
         self.gridNode.visibleItemsUpdated = { [weak self] visibleItems in
             if let strongSelf = self, let bottom = visibleItems.bottom, let entries = strongSelf.currentEntries {
@@ -253,10 +259,26 @@ class WebSearchControllerNode: ASDisplayNode {
         self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
         }
+        
+        self.hiddenMediaDisposable = (self.hiddenMediaId.get()
+        |> deliverOnMainQueue).start(next: { [weak self] id in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction.hiddenMediaId = id
+                
+                strongSelf.gridNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? WebSearchItemNode {
+                        itemNode.updateHiddenMedia()
+                    }
+                }
+            }
+        })
     }
     
     deinit {
+        self.disposable.dispose()
+        self.recentDisposable?.dispose()
         self.loadMoreDisposable.dispose()
+        self.hiddenMediaDisposable?.dispose()
     }
     
     func updatePresentationData(theme: PresentationTheme, strings: PresentationStrings) {
@@ -519,8 +541,79 @@ class WebSearchControllerNode: ASDisplayNode {
     
     @objc private func sendPressed() {
         if let results = self.currentProcessedResults {
-            self.controllerInteraction.sendSelected(results)
+            self.controllerInteraction.sendSelected(results, nil)
         }
         self.cancel?()
+    }
+    
+    func openResult(currentResult: ChatContextResult, present: (ViewController, Any?) -> Void) {
+        if let state = self.webSearchInterfaceState.state, state.mode == .images {
+            if let results = self.currentProcessedResults?.results {
+                presentLegacyWebSearchGallery(account: self.account, peer: nil, theme: self.theme, results: results, current: currentResult, selectionContext: self.selectionContext, editingContext: self.controllerInteraction.editingContext, updateHiddenMedia: { [weak self] id in
+                    self?.hiddenMediaId.set(.single(id))
+                }, transitionHostView: { [weak self] in
+                    return self?.gridNode.view
+                }, transitionView: { [weak self] result in
+                    return self?.transitionView(for: result)
+                }, completed: { [weak self] result in
+                    if let strongSelf = self, let results = strongSelf.currentProcessedResults {
+                        strongSelf.controllerInteraction.sendSelected(results, nil)
+                        strongSelf.cancel?()
+                    }
+                }, present: present)
+            }
+        } else {
+            if let results = self.currentProcessedResults?.results {
+                var entries: [WebSearchGalleryEntry] = []
+                var centralIndex: Int = 0
+                for i in 0 ..< results.count {
+                    entries.append(WebSearchGalleryEntry(result: results[i]))
+                    if results[i] == currentResult {
+                        centralIndex = i
+                    }
+                }
+                
+                let controller = WebSearchGalleryController(account: self.account, entries: entries, centralIndex: centralIndex, replaceRootController: { (controller, _) in
+                    
+                }, baseNavigationController: nil)
+                self.hiddenMediaId.set((controller.hiddenMedia |> deliverOnMainQueue)
+                |> map { entry in
+                    return entry?.result.id
+                })
+                present(controller, WebSearchGalleryControllerPresentationArguments(transitionArguments: { [weak self] entry -> GalleryTransitionArguments? in
+                    if let strongSelf = self {
+                        var transitionNode: WebSearchItemNode?
+                        strongSelf.gridNode.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? WebSearchItemNode, itemNode.item?.result.id == entry.result.id {
+                                transitionNode = itemNode
+                            }
+                        }
+                        if let transitionNode = transitionNode {
+                            return GalleryTransitionArguments(transitionNode: (transitionNode, { [weak transitionNode] in
+                                    return transitionNode?.transitionView().snapshotContentTree(unhide: true)
+                            }), addToTransitionSurface: { view in
+                                if let strongSelf = self {
+                                    strongSelf.gridNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.gridNode.view)
+                                }
+                            })
+                        }
+                    }
+                    return nil
+                }))
+            }
+        }
+    }
+    
+    private func transitionView(for result: ChatContextResult) -> UIView? {
+        var transitionNode: WebSearchItemNode?
+        self.gridNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? WebSearchItemNode, itemNode.item?.result.id == result.id {
+                transitionNode = itemNode
+            }
+        }
+        if let transitionNode = transitionNode {
+            return transitionNode.transitionView()
+        }
+        return nil
     }
 }

@@ -445,7 +445,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         return mediaHidden
     }
     
-    override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         return .none
     }
     

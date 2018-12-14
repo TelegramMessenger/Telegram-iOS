@@ -90,6 +90,8 @@
 		09DD88F321BF907C000766BC /* WebSearchRecentQueryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */; };
 		09DD88F521BF9730000766BC /* WebSearchRecentQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */; };
 		09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */; };
+		09F799FA21C3542D00820234 /* LegacyWebSearchGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */; };
+		09F799FC21C3FF3000820234 /* WebSearchGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
@@ -1178,6 +1180,8 @@
 		09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchRecentQueryItem.swift; sourceTree = "<group>"; };
 		09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchRecentQueries.swift; sourceTree = "<group>"; };
 		09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextAlertController.swift; sourceTree = "<group>"; };
+		09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWebSearchGallery.swift; sourceTree = "<group>"; };
+		09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchGalleryController.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
 		9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExcetionSettingsController.swift; sourceTree = "<group>"; };
@@ -2360,6 +2364,7 @@
 				0962E67E21BA786A00245FD9 /* WebSearchItem.swift */,
 				09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */,
 				09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */,
+				09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */,
 			);
 			name = "Web Search";
 			sourceTree = "<group>";
@@ -3171,6 +3176,7 @@
 				D07ABBAA202A1BD1003671DE /* LegacyWallpaperEditor.swift */,
 				D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */,
 				D097C26B20DD1EA5007BB4B8 /* OverlayStatusController.swift */,
+				09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */,
 			);
 			name = "Legacy Components";
 			sourceTree = "<group>";
@@ -5035,6 +5041,7 @@
 				D01776B51F1D6CCC0044446D /* RadialStatusContentNode.swift in Sources */,
 				D02F4AF01FD4C46D004DFBAE /* SystemVideoContent.swift in Sources */,
 				D0477D1F1F619E0700412B44 /* GalleryVideoDecoration.swift in Sources */,
+				09F799FA21C3542D00820234 /* LegacyWebSearchGallery.swift in Sources */,
 				D01C99781F4F382C00DCFAF6 /* InstantPageSettingsItemTheme.swift in Sources */,
 				D0CAD8FB20AE1D1B00ACD96E /* ChannelMemberCategoryListContext.swift in Sources */,
 				D0EC6CC21EB9F58800EBF1C3 /* LegacyEmptyController.swift in Sources */,
@@ -5585,6 +5592,7 @@
 				D0EC6DD41EB9F58900EBF1C3 /* CommandChatInputContextPanelNode.swift in Sources */,
 				D0EC6DD51EB9F58900EBF1C3 /* CommandChatInputPanelItem.swift in Sources */,
 				D0EC6DD61EB9F58900EBF1C3 /* VerticalListContextResultsChatInputContextPanelNode.swift in Sources */,
+				09F799FC21C3FF3000820234 /* WebSearchGalleryController.swift in Sources */,
 				D0EC6DD71EB9F58900EBF1C3 /* VerticalListContextResultsChatInputPanelItem.swift in Sources */,
 				D0EC6DD81EB9F58900EBF1C3 /* VerticalListContextResultsChatInputPanelButtonItem.swift in Sources */,
 				D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */,

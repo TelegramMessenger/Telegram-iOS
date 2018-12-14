@@ -82,10 +82,10 @@ final class ChatMessageEventLogPreviousMessageContentNode: ChatMessageBubbleCont
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         if self.bounds.contains(point) {
             let contentNodeFrame = self.contentNode.frame
-            return self.contentNode.tapActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY))
+            return self.contentNode.tapActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY), gesture: gesture)
         }
         return .none
     }

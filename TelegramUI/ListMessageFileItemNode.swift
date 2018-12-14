@@ -173,7 +173,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     private var appliedItem: ListMessageItem?
     private var layoutParams: ListViewItemLayoutParams?
     private var contentSizeValue: CGSize?
-    private var currentLeftOffet: CGFloat = 0.0
+    private var currentLeftOffset: CGFloat = 0.0
     
     override var canBeLongTapped: Bool {
         return true
@@ -305,7 +305,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                 updatedTheme = item.theme
             }
             
-            var leftInset: CGFloat = 60.0 + params.leftInset
+            var leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = 8.0 + params.rightInset
             
             var leftOffset: CGFloat = 0.0
@@ -483,7 +483,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                 insets.top += header.height
             }
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: isAudio ? 56.0 : 52.0), insets: insets)
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 56.0), insets: insets)
             
             return (nodeLayout, { animation in
                 if let strongSelf = self {
@@ -500,7 +500,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     strongSelf.appliedItem = item
                     strongSelf.layoutParams = params
                     strongSelf.contentSizeValue = nodeLayout.contentSize
-                    strongSelf.currentLeftOffet = leftOffset
+                    strongSelf.currentLeftOffset = leftOffset
                     
                     if let _ = updatedTheme {
                         strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
@@ -508,7 +508,6 @@ final class ListMessageFileItemNode: ListMessageNode {
                         
                         strongSelf.progressNode.updateTheme(RadialProgressTheme(backgroundColor: item.theme.list.itemAccentColor, foregroundColor: item.theme.list.plainBackgroundColor, icon: nil))
                         strongSelf.linearProgressNode.backgroundColor = item.theme.list.itemAccentColor
-                        
                     }
                     
                     if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {
@@ -552,7 +551,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     
-                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: isAudio ? 32.0 : 29.0), size: descriptionNodeLayout.size))
+                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: 32.0), size: descriptionNodeLayout.size))
                     let _ = descriptionNodeApply()
                     
                     let iconFrame: CGRect
@@ -565,7 +564,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     }
                     transition.updateFrame(node: strongSelf.extensionIconNode, frame:  iconFrame)
                     strongSelf.extensionIconNode.image = extensionIconImage
-                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: leftOffset + 9.0 + floor((42.0 - extensionTextLayout.size.width) / 2.0), y: 5.0 + floor((42.0 - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
+                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: leftOffset + 12.0 + floor((42.0 - extensionTextLayout.size.width) / 2.0), y: 5.0 + floor((42.0 - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
                     
                     let _ = extensionTextApply()
                     
@@ -787,7 +786,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             
             switch maybeFetchStatus {
                 case let .Fetching(_, progress):
-                    let progressFrame = CGRect(x: self.currentLeftOffet + leftInset + 65.0, y: size.height - 2.0, width: floor((size.width - 65.0 - leftInset - rightInset) * CGFloat(progress)), height: 2.0)
+                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 2.0, width: floor((size.width - 65.0 - leftInset - rightInset) * CGFloat(progress)), height: 2.0)
                     if self.linearProgressNode.supernode == nil {
                         self.addSubnode(self.linearProgressNode)
                     }

@@ -44,7 +44,7 @@ final class ComposeControllerNode: ASDisplayNode {
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateChannelActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
                 openCreateNewChannelImpl?()
             })
-        ]))
+        ]), displayPermissionPlaceholder: false)
         
         super.init()
         

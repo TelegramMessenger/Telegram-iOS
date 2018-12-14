@@ -136,7 +136,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
                     
                     let textInputState: ChatTextInputState
                     if let text = text, !text.isEmpty {
-                        let urlString = NSMutableAttributedString(string: "\(text)\n")
+                        let urlString = NSMutableAttributedString(string: "\(url)\n")
                         let textString = NSAttributedString(string: "\(text)")
                         let selectionRange: Range<Int> = urlString.length ..< (urlString.length + textString.length)
                         urlString.append(textString)
