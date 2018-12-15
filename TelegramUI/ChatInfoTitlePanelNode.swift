@@ -21,9 +21,9 @@ private enum ChatInfoTitleButton {
             case .info:
                 return strings.Conversation_Info
             case .mute:
-                return strings.Conversation_Mute
+                return strings.Conversation_TitleMute
             case .unmute:
-                return strings.Conversation_Unmute
+                return strings.Conversation_TitleUnmute
             case .call:
                 return strings.Conversation_Call
             case .report:
