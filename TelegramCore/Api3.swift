@@ -2716,6 +2716,34 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func getOnlines(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ChatOnlines>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1848369232)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.getOnlines", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ChatOnlines? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ChatOnlines?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ChatOnlines
+                        }
+                        return result
+                    })
+                }
+            
+                static func getStatsURL(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsURL>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2080980787)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.getStatsURL", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsURL? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.StatsURL?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.StatsURL
+                        }
+                        return result
+                    })
+                }
             }
             struct channels {
                 static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {

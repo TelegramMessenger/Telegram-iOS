@@ -9,8 +9,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-457104426] = { return Api.InputGeoPoint.parse_inputGeoPointEmpty($0) }
     dict[-206066487] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
-    dict[1991201921] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-304961647] = { return Api.ChatFull.parse_chatFull($0) }
+    dict[478652186] = { return Api.ChatFull.parse_channelFull($0) }
     dict[1465219162] = { return Api.PollResults.parse_pollResults($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-636267638] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
@@ -65,6 +65,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[120753115] = { return Api.Chat.parse_chatForbidden($0) }
     dict[681420594] = { return Api.Chat.parse_channelForbidden($0) }
     dict[-930515796] = { return Api.Chat.parse_channel($0) }
+    dict[1202287072] = { return Api.StatsURL.parse_statsURL($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
     dict[-613092008] = { return Api.ChatInvite.parse_chatInvite($0) }
     dict[1678812626] = { return Api.StickerSetCovered.parse_stickerSetCovered($0) }
@@ -675,6 +676,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1788705589] = { return Api.updates.ChannelDifference.parse_channelDifferenceTooLong($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
+    dict[-264117680] = { return Api.ChatOnlines.parse_chatOnlines($0) }
     dict[488313413] = { return Api.InputAppEvent.parse_inputAppEvent($0) }
     dict[-1148011883] = { return Api.MessageEntity.parse_messageEntityUnknown($0) }
     dict[-100378723] = { return Api.MessageEntity.parse_messageEntityMention($0) }
@@ -798,6 +800,8 @@ struct Api {
             case let _1 as Api.Photo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Chat:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.StatsURL:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChatInvite:
                 _1.serialize(buffer, boxed)
@@ -1226,6 +1230,8 @@ struct Api {
             case let _1 as Api.updates.ChannelDifference:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.AdminLogResults:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ChatOnlines:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputAppEvent:
                 _1.serialize(buffer, boxed)
