@@ -89,7 +89,6 @@ final class WebSearchItemNode: GridItemNode {
             var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
             
             var imageResource: TelegramMediaResource?
-            var stickerFile: TelegramMediaFile?
             var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
@@ -147,7 +146,57 @@ final class WebSearchItemNode: GridItemNode {
             }
             
             if let updateImageSignal = updateImageSignal {
-                self.imageNode.setSignal(updateImageSignal)
+                let editingContext = item.controllerInteraction.editingContext
+                let editedImageSignal = Signal<UIImage?, NoError> { subscriber in
+                    let editableItem = LegacyWebSearchItem(result: item.result, dimensions: CGSize(), thumbnailImage: .complete(), originalImage: .complete())
+                    if let signal = editingContext.thumbnailImageSignal(for: editableItem) {
+                        let disposable = signal.start(next: { next in
+                            if let image = next as? UIImage {
+                                subscriber.putNext(image)
+                            } else {
+                                subscriber.putNext(nil)
+                            }
+                        }, error: { _ in
+                        }, completed: nil)!
+                        
+                        return ActionDisposable {
+                            disposable.dispose()
+                        }
+                    } else {
+                        return EmptyDisposable
+                    }
+                }
+                let editedSignal: Signal<((TransformImageArguments) -> DrawingContext?)?, NoError> = editedImageSignal
+                |> map { image in
+                    if let image = image {
+                        return { arguments in
+                            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                            let drawingRect = arguments.drawingRect
+                            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
+                            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                            
+                            context.withFlippedContext { c in
+                                c.setBlendMode(.copy)
+                                if let cgImage = image.cgImage {
+                                    drawImage(context: c, image: cgImage, orientation: .up, in: fittedRect)
+                                }
+                            }
+                            return context
+                        }
+                    } else {
+                        return nil
+                    }
+                }
+                
+                let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError> = editedSignal
+                |> mapToSignal { result in
+                    if result != nil {
+                        return .single(result!)
+                    } else {
+                        return updateImageSignal
+                    }
+                }
+                self.imageNode.setSignal(imageSignal)
             }
             
             self.currentImageResource = imageResource
@@ -170,10 +219,9 @@ final class WebSearchItemNode: GridItemNode {
                     strongSelf.updateSelectionState(animated: true)
                 }
             })
-            
-            selectionNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
             self.addSubnode(selectionNode)
             self.selectionNode = selectionNode
+            self.setNeedsLayout()
         }
         
         if let item = self.item {
@@ -182,6 +230,18 @@ final class WebSearchItemNode: GridItemNode {
                 self.selectionNode?.updateSelected(selected, animated: animated)
             }
         }
+    }
+    
+    func updateHiddenMedia() {
+        if let item = self.item {
+            self.imageNode.isHidden = item.controllerInteraction.hiddenMediaId == item.result.id
+        }
+    }
+    
+    func transitionView() -> UIView {
+        let view = self.imageNode.view.snapshotContentTree(unhide: true)!
+        view.frame = self.convert(self.bounds, to: nil)
+        return view
     }
     
     override func layout() {
@@ -195,7 +255,8 @@ final class WebSearchItemNode: GridItemNode {
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor))()
         }
         
-        self.selectionNode?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+        let checkSize = CGSize(width: 32.0, height: 32.0)
+        self.selectionNode?.frame = CGRect(origin: CGPoint(x: imageFrame.width - checkSize.width, y: 0.0), size: checkSize)
         let progressDiameter: CGFloat = 40.0
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - progressDiameter) / 2.0), y: floor((imageFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
         
@@ -203,40 +264,26 @@ final class WebSearchItemNode: GridItemNode {
     }
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-//        guard let controllerInteraction = self.controllerInteraction, let message = self.item?.message else {
-//            return
-//        }
-//
-//        switch recognizer.state {
-//        case .ended:
-//            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
-//                switch gesture {
-//                case .tap:
-//                    if let (account, media, _) = self.currentState {
-//                        if let file = media as? TelegramMediaFile {
-//                            if let resourceStatus = self.resourceStatus {
-//                                switch resourceStatus {
-//                                case .Fetching:
-//                                    messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
-//                                case .Local:
-//                                    let _ = controllerInteraction.openMessage(message, .default)
-//                                case .Remote:
-//                                    self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: true).start())
-//                                }
-//                            }
-//                        } else {
-//                            let _ = controllerInteraction.openMessage(message, .default)
-//                        }
-//                    }
-//                case .longTap:
-//                    controllerInteraction.openMessageContextMenu(message, false, self, self.bounds)
-//                default:
-//                    break
-//                }
-//            }
-//        default:
-//            break
-//        }
+        guard let item = self.item else {
+            return
+        }
+
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            item.controllerInteraction.openResult(item.result)
+
+                        case .longTap:
+                            break
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
+        }
     }
 }
 

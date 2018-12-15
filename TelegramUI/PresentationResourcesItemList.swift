@@ -135,4 +135,22 @@ struct PresentationResourcesItemList {
             generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: theme.list.itemAccentColor)
         })
     }
+    
+    static func itemListCloseIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListCloseIconImage.rawValue, { theme in
+            return generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setBlendMode(.copy)
+                context.setStrokeColor(theme.list.disclosureArrowColor.cgColor)
+                context.setLineWidth(2.0)
+                context.setLineCap(.round)
+                context.move(to: CGPoint(x: 1.0, y: 1.0))
+                context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - 1.0))
+                context.strokePath()
+                context.move(to: CGPoint(x: size.width - 1.0, y: 1.0))
+                context.addLine(to: CGPoint(x: 1.0, y: size.height - 1.0))
+                context.strokePath()
+            })
+        })
+    }
 }

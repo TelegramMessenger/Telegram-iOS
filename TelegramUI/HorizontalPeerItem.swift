@@ -22,8 +22,9 @@ final class HorizontalPeerItem: ListViewItem {
     let longTapAction: (Peer) -> Void
     let isPeerSelected: (PeerId) -> Bool
     let customWidth: CGFloat?
+    let presence: PeerPresence?
     let unreadBadge: UnreadSearchBadge?
-    init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, account: Account, peer: Peer, unreadBadge: UnreadSearchBadge?, action: @escaping (Peer) -> Void, longTapAction: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, account: Account, peer: Peer, presence: PeerPresence?, unreadBadge: UnreadSearchBadge?, action: @escaping (Peer) -> Void, longTapAction: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
         self.theme = theme
         self.strings = strings
         self.mode = mode
@@ -33,15 +34,14 @@ final class HorizontalPeerItem: ListViewItem {
         self.longTapAction = longTapAction
         self.isPeerSelected = isPeerSelected
         self.customWidth = customWidth
+        self.presence = presence
         self.unreadBadge = unreadBadge
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = HorizontalPeerItemNode()
-            
             let (nodeLayout, apply) = node.asyncLayout()(self, params)
-            
             node.insets = nodeLayout.insets
             node.contentSize = nodeLayout.contentSize
             
@@ -77,6 +77,7 @@ final class HorizontalPeerItemNode: ListViewItemNode {
     private(set) var peerNode: SelectablePeerNode
     let badgeBackgroundNode: ASImageNode
     let badgeTextNode: TextNode
+    let statusNode: ASImageNode
     private(set) var item: HorizontalPeerItem?
     
     init() {
@@ -86,16 +87,22 @@ final class HorizontalPeerItemNode: ListViewItemNode {
         self.badgeBackgroundNode.displaysAsynchronously = false
         self.badgeBackgroundNode.displayWithoutProcessing = true
         
-        
         self.badgeTextNode = TextNode()
         self.badgeTextNode.isUserInteractionEnabled = false
         self.badgeTextNode.displaysAsynchronously = true
         
+        self.statusNode = ASImageNode()
+        self.statusNode.isLayerBacked = true
+        self.statusNode.displaysAsynchronously = false
+        self.statusNode.displayWithoutProcessing = true
+        self.statusNode.isHidden = true
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.peerNode)
-        addSubnode(badgeBackgroundNode)
-        addSubnode(badgeTextNode)
+        self.addSubnode(self.badgeBackgroundNode)
+        self.addSubnode(self.badgeTextNode)
+        self.addSubnode(self.statusNode)
         self.peerNode.toggleSelection = { [weak self] in
             if let item = self?.item {
                 item.action(item.peer)
@@ -106,7 +113,6 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                 item.longTapAction(item.peer)
             }
         }
-        
     }
     
     override func didLoad() {
@@ -157,13 +163,28 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                 badgeAttributedString = NSAttributedString()
             }
             
+            let currentStatusImage: UIImage?
+            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+            if let presence = item.presence as? TelegramUserPresence {
+                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                switch relativeStatus {
+                    case .online:
+                        currentStatusImage =  PresentationResourcesChatList.recentStatusOnlineIcon(item.theme)
+                    default:
+                        currentStatusImage = nil
+                }
+                
+            } else {
+                currentStatusImage = nil
+            }
+            
             let (badgeLayout, badgeApply) = badgeTextLayout(TextNodeLayoutArguments(attributedString: badgeAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var badgeSize: CGFloat = 0.0
             if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
                 badgeSize += max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
             }
-
+            
             return (itemLayout, { animated in
                 if let strongSelf = self {
                     strongSelf.item = item
@@ -188,6 +209,17 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                         strongSelf.badgeBackgroundNode.image = nil
                         strongSelf.badgeBackgroundNode.isHidden = true
                     }
+                    
+                    if let currentStatusImage = currentStatusImage {
+                        strongSelf.statusNode.image = currentStatusImage
+                        strongSelf.statusNode.isHidden = false
+                        
+                        let statusSize = currentStatusImage.size
+                        strongSelf.statusNode.frame = CGRect(x: itemLayout.size.width - statusSize.width - 18.0, y: itemLayout.size.height - statusSize.height - 18.0, width: statusSize.width, height: statusSize.height)
+                    } else {
+                        strongSelf.statusNode.isHidden = true
+                    }
+
                     
                     let _ = badgeApply()
                 }

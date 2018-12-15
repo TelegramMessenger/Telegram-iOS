@@ -8,6 +8,7 @@ import TelegramCore
 enum NativeVideoContentId: Hashable {
     case message(MessageId, UInt32, MediaId)
     case instantPage(MediaId, MediaId)
+    case contextResult(Int64, String)
     
     static func ==(lhs: NativeVideoContentId, rhs: NativeVideoContentId) -> Bool {
         switch lhs {
@@ -23,6 +24,12 @@ enum NativeVideoContentId: Hashable {
                 } else {
                     return false
                 }
+            case let .contextResult(queryId, resultId):
+                if case .contextResult(queryId, resultId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -32,6 +39,8 @@ enum NativeVideoContentId: Hashable {
                 return messageId.hashValue &* 31 &+ mediaId.hashValue
             case let .instantPage(pageId, mediaId):
                 return pageId.hashValue &* 31 &+ mediaId.hashValue
+            case let .contextResult(queryId, resultId):
+                return queryId.hashValue &* 31 &+ resultId.hashValue
         }
     }
 }

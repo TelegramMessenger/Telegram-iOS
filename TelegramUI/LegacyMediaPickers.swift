@@ -13,7 +13,7 @@ func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, account: Account, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false) {
+func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, account: Account, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, presentWebSearch: (() -> Void)?) {
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
@@ -21,11 +21,11 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, account: 
         controller.hasTimer = true
     }
     controller.dismissalBlock = {
-        
     }
     controller.localMediaCacheEnabled = false
     controller.shouldStoreAssets = storeCreatedAssets
     controller.shouldShowFileTipIfNeeded = showFileTooltip
+    controller.requestSearchController = presentWebSearch
 }
 
 func legacyAssetPicker(applicationContext: TelegramApplicationContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {

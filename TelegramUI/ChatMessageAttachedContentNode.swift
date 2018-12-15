@@ -906,7 +906,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return false
     }
     
-    func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+    func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {

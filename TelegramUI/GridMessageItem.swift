@@ -230,19 +230,18 @@ final class GridMessageItemNode: GridItemNode {
                 self.statusNode.transitionToState(.none, completion: { [weak self] in
                     self?.statusNode.isHidden = true
                 })
-                videoAccessoryNode.isHidden = true
+                self.videoAccessoryNode.isHidden = true
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions
                 self.imageNode.setSignal(mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(item.message), media: file)))
                 
                 if let duration = file.duration {
-                    videoAccessoryNode.setup(stringForDuration(duration))
-                    videoAccessoryNode.isHidden = false
+                    self.videoAccessoryNode.setup(stringForDuration(duration))
+                    self.videoAccessoryNode.isHidden = false
                 } else {
-                    videoAccessoryNode.isHidden = true
+                    self.videoAccessoryNode.isHidden = true
                 }
-                
                 
                 self.resourceStatus = nil
                 self.fetchStatusDisposable.set((messageMediaFileStatus(account: account, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in

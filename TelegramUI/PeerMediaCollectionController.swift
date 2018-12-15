@@ -115,6 +115,9 @@ public class PeerMediaCollectionController: TelegramController {
                 }
             }, openPeerMention: { _ in
             }, openMessageContextMenu: { [weak self] message, _, _, _ in
+                var messageIds = Set<MessageId>()
+                messageIds.insert(message.id)
+                
                 if let strongSelf = self, strongSelf.isNodeLoaded {
                     if let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
                         let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
@@ -123,6 +126,18 @@ public class PeerMediaCollectionController: TelegramController {
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                                         navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(strongSelf.peerId), messageId: message.id)
+                                    }
+                                }),
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuForward, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    if let strongSelf = self {
+                                        strongSelf.forwardMessages(messageIds)
+                                    }
+                                }),
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, color: .destructive, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    if let strongSelf = self {
+                                        strongSelf.deleteMessages(messageIds)
                                     }
                                 })
                             ]), ActionSheetItemGroup(items: [
@@ -246,63 +261,8 @@ public class PeerMediaCollectionController: TelegramController {
         }, setupEditMessage: { _ in
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: { [weak self] in
-            if let strongSelf = self {
-                if let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                    strongSelf.messageContextDisposable.set((combineLatest(chatAvailableMessageActions(postbox: strongSelf.account.postbox, accountPeerId: strongSelf.account.peerId, messageIds: messageIds), strongSelf.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { actions, peer in
-                        if let strongSelf = self, let peer = peer, !actions.options.isEmpty {
-                            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                            var items: [ActionSheetItem] = []
-                            var personalPeerName: String?
-                            var isChannel = false
-                            if let user = peer as? TelegramUser {
-                                personalPeerName = user.compactDisplayTitle
-                            } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                                isChannel = true
-                            }
-                            
-                            if actions.options.contains(.deleteGlobally) {
-                                let globalTitle: String
-                                if isChannel {
-                                    globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-                                } else if let personalPeerName = personalPeerName {
-                                    globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).0
-                                } else {
-                                    globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
-                                }
-                                items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    if let strongSelf = self {
-                                        strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                        let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
-                                    }
-                                }))
-                            }
-                            if actions.options.contains(.deleteLocally) {
-                                var localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-                                if strongSelf.account.peerId == strongSelf.peerId {
-                                    if messageIds.count == 1 {
-                                        localOptionText = strongSelf.presentationData.strings.Conversation_Moderate_Delete
-                                    } else {
-                                        localOptionText = strongSelf.presentationData.strings.Conversation_DeleteManyMessages
-                                    }
-                                }
-                                items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    if let strongSelf = self {
-                                        strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                        let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
-                                    }
-                                }))
-                            }
-                            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                })
-                                ])])
-                            strongSelf.present(actionSheet, in: .window(.root))
-                        }
-                    }))
-                }
+            if let strongSelf = self, let messageIds = strongSelf.interfaceState.selectionState?.selectedIds {
+                strongSelf.deleteMessages(messageIds)
             }
         }, reportSelectedMessages: { [weak self] in
             if let strongSelf = self, let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
@@ -315,37 +275,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let forwardMessageIdsSet = strongSelf.interfaceState.selectionState?.selectedIds {
-                    let forwardMessageIds = Array(forwardMessageIdsSet).sorted()
-                    
-                    let controller = PeerSelectionController(account: strongSelf.account)
-                    controller.peerSelected = { [weak controller] peerId in
-                        if let strongSelf = self, let _ = controller {
-                            let _ = (strongSelf.account.postbox.transaction({ transaction -> Void in
-                                transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                                    if let currentState = currentState as? ChatInterfaceState {
-                                        return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
-                                    } else {
-                                        return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
-                                    }
-                                })
-                            }) |> deliverOnMainQueue).start(completed: {
-                                if let strongSelf = self {
-                                    strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
-                                    
-                                    let ready = ValuePromise<Bool>()
-                                    
-                                    strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                                        if let strongController = controller {
-                                            strongController.dismiss()
-                                        }
-                                    }))
-                                    
-                                    (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
-                                }
-                            })
-                        }
-                    }
-                    strongSelf.present(controller, in: .window(.root))
+                    strongSelf.forwardMessages(forwardMessageIdsSet)
                 }
             }
         }, forwardMessages: { _ in
@@ -647,5 +577,98 @@ public class PeerMediaCollectionController: TelegramController {
                 })
             }
         }))
+    }
+    
+    func forwardMessages(_ messageIds: Set<MessageId>) {
+        let forwardMessageIds = Array(messageIds).sorted()
+        
+        let controller = PeerSelectionController(account: self.account)
+        controller.peerSelected = { [weak self, weak controller] peerId in
+            if let strongSelf = self, let _ = controller {
+                let _ = (strongSelf.account.postbox.transaction({ transaction -> Void in
+                    transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
+                        if let currentState = currentState as? ChatInterfaceState {
+                            return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
+                        } else {
+                            return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
+                        }
+                    })
+                }) |> deliverOnMainQueue).start(completed: {
+                    if let strongSelf = self {
+                        strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
+                        
+                        let ready = ValuePromise<Bool>()
+                        
+                        strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                            if let strongController = controller {
+                                strongController.dismiss()
+                            }
+                        }))
+                        
+                        (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                    }
+                })
+            }
+        }
+        self.present(controller, in: .window(.root))
+    }
+    
+    func deleteMessages(_ messageIds: Set<MessageId>) {
+        if !messageIds.isEmpty {
+            self.messageContextDisposable.set((combineLatest(chatAvailableMessageActions(postbox: self.account.postbox, accountPeerId: self.account.peerId, messageIds: messageIds), self.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { [weak self] actions, peer in
+                if let strongSelf = self, let peer = peer, !actions.options.isEmpty {
+                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                    var items: [ActionSheetItem] = []
+                    var personalPeerName: String?
+                    var isChannel = false
+                    if let user = peer as? TelegramUser {
+                        personalPeerName = user.compactDisplayTitle
+                    } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                        isChannel = true
+                    }
+                    
+                    if actions.options.contains(.deleteGlobally) {
+                        let globalTitle: String
+                        if isChannel {
+                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                        } else if let personalPeerName = personalPeerName {
+                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).0
+                        } else {
+                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                        }
+                        items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
+                                let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                            }
+                        }))
+                    }
+                    if actions.options.contains(.deleteLocally) {
+                        var localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                        if strongSelf.account.peerId == strongSelf.peerId {
+                            if messageIds.count == 1 {
+                                localOptionText = strongSelf.presentationData.strings.Conversation_Moderate_Delete
+                            } else {
+                                localOptionText = strongSelf.presentationData.strings.Conversation_DeleteManyMessages
+                            }
+                        }
+                        items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
+                                let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                            }
+                        }))
+                    }
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                        ])])
+                    strongSelf.present(actionSheet, in: .window(.root))
+                }
+            }))
+        }
     }
 }

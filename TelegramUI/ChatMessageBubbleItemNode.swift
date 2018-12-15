@@ -226,7 +226,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     return .waitForSingleTap
                 }
                 for contentNode in strongSelf.contentNodes {
-                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY))
+                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap)
                     switch tapAction {
                         case .none:
                             break
@@ -1575,7 +1575,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             }
                             var foundTapAction = false
                             loop: for contentNode in self.contentNodes {
-                                let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY))
+                                let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
                                 switch tapAction {
                                     case .none, .ignore:
                                         break
@@ -1634,7 +1634,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         selectAll = true
                                     }
                                     tapMessage = contentNode.item?.message
-                                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY))
+                                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)
                                     switch tapAction {
                                         case .none, .ignore:
                                             break

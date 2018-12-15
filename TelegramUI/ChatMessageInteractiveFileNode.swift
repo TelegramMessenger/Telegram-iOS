@@ -449,9 +449,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width, y: fittedLayoutSize.height - statusSize.height + 10.0), size: statusSize)
                     }
                     
-                    if let statusFrameValue = statusFrame, descriptionFrame.intersects(statusFrameValue) {
+                    if let statusFrameValue = statusFrame, descriptionFrame.intersects(statusFrameValue)  {
                         fittedLayoutSize.height += 10.0
                         statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 10.0)
+                    }
+                    if let statusFrameValue = statusFrame, let iconFrame = iconFrame, iconFrame.intersects(statusFrameValue) {
+                        fittedLayoutSize.height += 15.0
+                        statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
                     }
                     
                     if isAudio && !isVoice {

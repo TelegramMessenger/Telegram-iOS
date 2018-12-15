@@ -70,6 +70,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     let offsetContainer: ASDisplayNode
     let backgroundNode: ASImageNode
     let textNode: TextNode
+    private var linkHighlightingNode: LinkHighlightingNode?
     
     var currentTextAndEntities: (String, [MessageTextEntity])?
     
@@ -98,7 +99,28 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     override func didLoad() {
         super.didLoad()
         
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapGesture(_:))))
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { [weak self] point in
+            if let strongSelf = self {
+                let tapAction = strongSelf.tapActionAtPoint(point, gesture: .tap)
+                switch tapAction {
+                    case .none:
+                        break
+                    case .ignore:
+                        return .fail
+                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .call, .openMessage:
+                        return .waitForSingleTap
+                }
+            }
+            
+            return .waitForDoubleTap
+        }
+        recognizer.highlight = { [weak self] point in
+            if let strongSelf = self {
+                strongSelf.updateTouchesAtPoint(point)
+            }
+        }
+        self.view.addGestureRecognizer(recognizer)
     }
     
     func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
@@ -177,7 +199,49 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
-    func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+    func updateTouchesAtPoint(_ point: CGPoint?) {
+        if let item = self.item {
+            var rects: [CGRect]?
+            if let point = point {
+                let textNodeFrame = self.textNode.frame
+                if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                    let possibleNames: [String] = [
+                        TelegramTextAttributes.URL,
+                        TelegramTextAttributes.PeerMention,
+                        TelegramTextAttributes.PeerTextMention,
+                        TelegramTextAttributes.BotCommand,
+                        TelegramTextAttributes.Hashtag
+                    ]
+                    for name in possibleNames {
+                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                            rects = self.textNode.attributeRects(name: name, at: index)
+                            break
+                        }
+                    }
+                }
+            }
+            
+            if let rects = rects {
+                let linkHighlightingNode: LinkHighlightingNode
+                if let current = self.linkHighlightingNode {
+                    linkHighlightingNode = current
+                } else {
+                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.theme.chat.bubble.incomingLinkHighlightColor)
+                    self.linkHighlightingNode = linkHighlightingNode
+                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
+                }
+                linkHighlightingNode.frame = self.textNode.frame
+                linkHighlightingNode.updateRects(rects)
+            } else if let linkHighlightingNode = self.linkHighlightingNode {
+                self.linkHighlightingNode = nil
+                linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                    linkHighlightingNode?.removeFromSupernode()
+                })
+            }
+        }
+    }
+    
+    func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -202,39 +266,48 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         }
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
             case .ended:
-                var foundTapAction = false
-                let tapAction = self.tapActionAtPoint(recognizer.location(in: self.view))
-                switch tapAction {
-                    case .none:
-                        break
-                    case let .url(url, concealed):
-                        foundTapAction = true
-                        if let controllerInteraction = self.controllerInteraction {
-                            controllerInteraction.openUrl(url, concealed, nil)
-                        }
-                    case let .peerMention(peerId, _):
-                        foundTapAction = true
-                        if let controllerInteraction = self.controllerInteraction {
-                            controllerInteraction.openPeer(peerId, .chat(textInputState: nil, messageId: nil), nil)
-                        }
-                    case let .textMention(name):
-                        foundTapAction = true
-                        if let controllerInteraction = self.controllerInteraction {
-                            controllerInteraction.openPeerMention(name)
-                        }
-                    case let .botCommand(command):
-                        foundTapAction = true
-                        if let controllerInteraction = self.controllerInteraction {
-                            controllerInteraction.sendBotCommand(nil, command)
-                        }
-                    default:
-                        break
-                }
-                if !foundTapAction {
-                    self.controllerInteraction?.clickThroughMessage()
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            let tapAction = self.tapActionAtPoint(location, gesture: gesture)
+                            switch tapAction {
+                                case .none, .ignore:
+                                    break
+                                case let .url(url, concealed):
+                                    self.item?.controllerInteraction.openUrl(url, concealed, nil)
+                                case let .peerMention(peerId, _):
+                                    self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, messageId: nil), nil)
+                                case let .textMention(name):
+                                    self.item?.controllerInteraction.openPeerMention(name)
+                                case let .hashtag(peerName, hashtag):
+                                    self.item?.controllerInteraction.openHashtag(peerName, hashtag)
+                                default:
+                                    break
+                            }
+                        case .longTap, .doubleTap:
+                            if let item = self.item, self.backgroundNode.frame.contains(location) {
+                                let tapAction = self.tapActionAtPoint(location, gesture: gesture)
+                                switch tapAction {
+                                    case .none, .ignore:
+                                        break
+                                    case let .url(url, _):
+                                        item.controllerInteraction.longTap(.url(url))
+                                    case let .peerMention(peerId, mention):
+                                        item.controllerInteraction.longTap(.peerMention(peerId, mention))
+                                    case let .textMention(name):
+                                        item.controllerInteraction.longTap(.mention(name))
+                                    case let .hashtag(_, hashtag):
+                                        item.controllerInteraction.longTap(.hashtag(hashtag))
+                                    default:
+                                        break
+                                }
+                            }
+                        default:
+                            break
+                    }
                 }
             default:
                 break

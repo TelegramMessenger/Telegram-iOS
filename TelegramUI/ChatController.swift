@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import TelegramCore
 import SafariServices
 import MobileCoreServices
+import LegacyComponents
 
 public enum ChatControllerPeekActions {
     case standard
@@ -3793,11 +3794,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any]) -> Void) {
-        let _ = (self.account.postbox.transaction { transaction -> GeneratedMediaStoreSettings in
+        let _ = (self.account.postbox.transaction { transaction -> (GeneratedMediaStoreSettings, SearchBotsConfiguration) in
             let entry = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
-            return entry ?? GeneratedMediaStoreSettings.defaultSettings
+            let configuration = currentSearchBotsConfiguration(transaction: transaction)
+            return (entry ?? GeneratedMediaStoreSettings.defaultSettings, configuration)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] settings in
+        |> deliverOnMainQueue).start(next: { [weak self] settings, searchBotsConfiguration in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
@@ -3812,7 +3814,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     legacyController.bind(controller: controller)
                     legacyController.deferScreenEdgeGestures = [.top]
                     
-                    configureLegacyAssetPicker(controller, account: strongSelf.account, peer: peer)
+                    configureLegacyAssetPicker(controller, account: strongSelf.account, peer: peer, presentWebSearch: { [weak self] in
+                        if let strongSelf = self {
+                            let controller = WebSearchController(account: strongSelf.account, chatLocation: .peer(peer.id), configuration: searchBotsConfiguration, sendSelected: { (resuls, collection, editingContext) in
+                                
+                            })
+                            strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        }
+                    })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()
                     controller.completionBlock = { [weak legacyController] signals in
                         if let legacyController = legacyController {
@@ -3846,19 +3855,45 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         |> deliverOnMainQueue).start(next: { [weak self] configuration in
             if let strongSelf = self {
-                let controller = WebSearchController(account: strongSelf.account, chatLocation: strongSelf.chatLocation, configuration: configuration, sendSelected: { [weak self] ids, collection in
+                let controller = WebSearchController(account: strongSelf.account, chatLocation: strongSelf.chatLocation, configuration: configuration, sendSelected: { [weak self] ids, collection, editingContext in
                     if let strongSelf = self {
+                        var results: [ChatContextResult] = []
                         for id in ids {
                             var result: ChatContextResult?
                             for r in collection.results {
                                 if r.id == id {
                                     result = r
+                                    results.append(r)
                                     break
                                 }
                             }
-                            if let result = result {
-                                strongSelf.enqueueChatContextResult(collection, result, includeViaBot: false)
+                        }
+                        
+                        if !results.isEmpty {
+                            var signals: [Any] = []
+                            for result in results {
+                                let editableItem = LegacyWebSearchItem(result: result, dimensions: CGSize(), thumbnailImage: .complete(), originalImage: .complete())
+                                if editingContext.adjustments(for: editableItem) != nil {
+                                    if let imageSignal = editingContext.imageSignal(for: editableItem) {
+                                        let signal = imageSignal.map { image -> Any in
+                                            if let image = image as? UIImage {
+                                                let dict: [AnyHashable: Any] = [
+                                                    "type": "editedPhoto",
+                                                    "image": image
+                                                ]
+                                                return legacyAssetPickerItemGenerator()(dict, nil, nil, nil)
+                                            } else {
+                                                return SSignal.complete()
+                                            }
+                                        }
+                                        signals.append(signal)
+                                    }
+                                } else {
+                                    strongSelf.enqueueChatContextResult(collection, result, includeViaBot: false)
+                                }
                             }
+                            
+                            strongSelf.enqueueMediaMessages(signals: signals)
                         }
                     }
                 })
@@ -4086,11 +4121,14 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         |> deliverOnMainQueue).start(next: { [weak self] settings in
             if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                let controller = legacyPasteMenu(account: strongSelf.account, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
-                    self?.enqueueMediaMessages(signals: signals)
-                })
                 strongSelf.chatDisplayNode.dismissInput()
-                strongSelf.present(controller, in: .window(.root))
+                let _ = presentLegacyPasteMenu(account: strongSelf.account, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
+                    self?.enqueueMediaMessages(signals: signals)
+                }, present: { [weak self] controller, arguments in
+                    if let strongSelf = self {
+                        strongSelf.present(controller, in: .window(.root), with: arguments)
+                    }
+                }, initialLayout: strongSelf.validLayout)
             }
         })
     }
@@ -5050,6 +5088,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
+        self.commitPurposefulAction()
         self.chatDisplayNode.historyNode.disconnect()
         let _ = removePeerChat(postbox: self.account.postbox, peerId: peerId, reportChatSpam: reportChatSpam).start()
         (self.navigationController as? NavigationController)?.popToRoot(animated: true)

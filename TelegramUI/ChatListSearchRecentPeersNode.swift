@@ -29,16 +29,16 @@ enum UnreadSearchBadge : Equatable {
     
     var count: Int32 {
         switch self {
-        case let .muted(count), let .unmuted(count):
-            return count
+            case let .muted(count), let .unmuted(count):
+                return count
         }
     }
     var isMuted: Bool {
         switch self {
-        case .muted:
-            return true
-        case .unmuted:
-            return false
+            case .muted:
+                return true
+            case .unmuted:
+                return false
         }
     }
 }
@@ -46,6 +46,7 @@ enum UnreadSearchBadge : Equatable {
 private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
     let index: Int
     let peer: Peer
+    let presence: PeerPresence?
     let unreadBadge: UnreadSearchBadge?
     let itemCustomWidth: CGFloat?
     var stableId: PeerId {
@@ -62,6 +63,13 @@ private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
         if !lhs.peer.isEqual(rhs.peer) {
             return false
         }
+        if let lhsPresence = lhs.presence, let rhsPresence = rhs.presence {
+            if !lhsPresence.isEqual(to: rhsPresence) {
+                return false
+            }
+        } else if (lhs.presence != nil) != (rhs.presence != nil) {
+            return false
+        }
         if lhs.unreadBadge != rhs.unreadBadge {
             return false
         }
@@ -73,7 +81,7 @@ private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool) -> ListViewItem {
-        return HorizontalPeerItem(theme: theme, strings: strings, mode: mode, account: account, peer: self.peer, unreadBadge: self.unreadBadge, action: peerSelected, longTapAction: { peer in
+        return HorizontalPeerItem(theme: theme, strings: strings, mode: mode, account: account, peer: self.peer, presence: self.presence, unreadBadge: self.unreadBadge, action: peerSelected, longTapAction: { peer in
             peerLongTapped(peer)
         }, isPeerSelected: isPeerSelected, customWidth: itemCustomWidth)
     }
@@ -114,7 +122,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private let isPeerSelected: (PeerId) -> Bool
     
     private let disposable = MetaDisposable()
-    private let itemCustomWidthValuePromise:ValuePromise<CGFloat?> = ValuePromise(nil, ignoreRepeated: true)
+    private let itemCustomWidthValuePromise: ValuePromise<CGFloat?> = ValuePromise(nil, ignoreRepeated: true)
 
     private var items: [ListViewItem] = []
     private var queuedTransitions: [ChatListSearchRecentNodeTransition] = []
@@ -140,8 +148,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         let peersDisposable = DisposableSet()
         
-        
-        let recent: Signal<([Peer], [PeerId : UnreadSearchBadge]), NoError> = recentPeers(account: account)
+        let recent: Signal<([Peer], [PeerId: UnreadSearchBadge], [PeerId : PeerPresence]), NoError> = recentPeers(account: account)
             |> filter { value -> Bool in
                 switch value {
                     case .disabled:
@@ -151,47 +158,51 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 }
             } |> mapToSignal { recent in
             switch recent {
-            case .disabled:
-                return .single(([], [:]))
-            case let .peers(peers):
-                return combineLatest(peers.filter { !$0.isDeleted }.map {account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<([Peer], [PeerId: UnreadSearchBadge]), NoError> in
-                    return account.postbox.unreadMessageCountsView(items: peerViews.map {.peer($0.peerId)}) |> map { values in
-                        
-                        var peers:[Peer] = []
-                        var unread:[PeerId: UnreadSearchBadge] = [:]
-                        for peerView in peerViews {
-                            if let peer = peerViewMainPeer(peerView) {
-                                var isMuted: Bool = false
-                                if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                                    switch notificationSettings.muteState {
-                                        case .muted:
-                                            isMuted = true
-                                        default:
-                                            break
+                case .disabled:
+                    return .single(([], [:], [:]))
+                case let .peers(peers):
+                    return combineLatest(peers.filter { !$0.isDeleted }.map {account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<([Peer], [PeerId: UnreadSearchBadge], [PeerId: PeerPresence]), NoError> in
+                        return account.postbox.unreadMessageCountsView(items: peerViews.map {.peer($0.peerId)}) |> map { values in
+                            var peers: [Peer] = []
+                            var unread: [PeerId: UnreadSearchBadge] = [:]
+                            var presences: [PeerId: PeerPresence] = [:]
+                            for peerView in peerViews {
+                                if let peer = peerViewMainPeer(peerView) {
+                                    var isMuted: Bool = false
+                                    if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                        switch notificationSettings.muteState {
+                                            case .muted:
+                                                isMuted = true
+                                            default:
+                                                break
+                                        }
                                     }
+                                    
+                                    let unreadCount = values.count(for: .peer(peerView.peerId))
+                                    if let unreadCount = unreadCount, unreadCount > 0 {
+                                        unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
+                                    }
+                                    
+                                    if let presence = peerView.peerPresences[peer.id] {
+                                        presences[peer.id] = presence
+                                    }
+                                    
+                                    peers.append(peer)
                                 }
-                                
-                                let unreadCount = values.count(for: .peer(peerView.peerId))
-                                if let unreadCount = unreadCount, unreadCount > 0 {
-                                    unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
-                                }
-                                
-                                peers.append(peer)
                             }
+                            return (peers, unread, presences)
                         }
-                        return (peers, unread)
                     }
-                }
             }
         }
         
         let previous: Atomic<[ChatListSearchRecentPeersEntry]> = Atomic(value: [])
         let firstTime:Atomic<Bool> = Atomic(value: true)
-        peersDisposable.add(combineLatest(recent |> deliverOnMainQueue, itemCustomWidthValuePromise.get() |> deliverOnMainQueue).start(next: { [weak self] peers, itemCustomWidth in
+        peersDisposable.add((combineLatest(recent, self.itemCustomWidthValuePromise.get()) |> deliverOnMainQueue).start(next: { [weak self] peers, itemCustomWidth in
             if let strongSelf = self {
                 var entries: [ChatListSearchRecentPeersEntry] = []
                 for peer in peers.0 {
-                    entries.append(ChatListSearchRecentPeersEntry(index: entries.count, peer: peer, unreadBadge: peers.1[peer.id], itemCustomWidth: itemCustomWidth))
+                    entries.append(ChatListSearchRecentPeersEntry(index: entries.count, peer: peer, presence: peers.2[peer.id], unreadBadge: peers.1[peer.id], itemCustomWidth: itemCustomWidth))
                 }
                 
                 let animated = !firstTime.swap(false)
@@ -265,7 +276,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 92.0, height: size.width)
         self.listView.position = CGPoint(x: size.width / 2.0, y: 92.0 / 2.0 + 29.0)
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: size.width), insets: insets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-        itemCustomWidthValuePromise.set(itemCustomWidth)
+        self.itemCustomWidthValuePromise.set(itemCustomWidth)
     }
     
     func viewAndPeerAtPoint(_ point: CGPoint) -> (UIView, PeerId)? {

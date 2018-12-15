@@ -172,15 +172,18 @@ func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuSheetPallet
     return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
 }
 
-func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void) -> ViewController {
-    
-    let legacyController = LegacyController(presentation: .custom, theme: theme)
-    legacyController.statusBar.statusBarStyle = .Hide
+func presentLegacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
+    let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
+    legacyController.statusBar.statusBarStyle = .Ignore
     legacyController.controllerLoaded = { [weak legacyController] in
         legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
     }
-    let baseController = TGViewController(context: legacyController.context)!
-    legacyController.bind(controller: baseController)
+    
+    let emptyController = LegacyEmptyController(context: legacyController.context)!
+    let navigationController = makeLegacyNavigationController(rootController: emptyController)
+    navigationController.setNavigationBarHidden(true, animated: false)
+    legacyController.bind(controller: navigationController)
+    
     var hasTimer = false
     if (peer is TelegramUser) && peer.id != account.peerId {
         hasTimer = true
@@ -188,20 +191,15 @@ func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allow
     let recipientName = peer.displayTitle
     
     legacyController.enableSizeClassSignal = true
-    legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
-        if let strongLegacyController = legacyController, let baseController = baseController {
-            let controller = TGClipboardMenu.present(inParentController: baseController, context: strongLegacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, completed: { selectionContext, editingContext, currentItem in
-                let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: legacyAssetPickerItemGenerator())
-                sendMessagesWithSignals(signals)
-            }, dismissed: {
-                if let strongLegacyController = legacyController {
-                    strongLegacyController.dismiss()
-                }
-            }, sourceView: baseController.view, sourceRect: nil)
-            controller?.customRemoveFromParentViewController = { [weak legacyController] in
-                legacyController?.dismiss()
-            }
-        }
+
+    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, recipientName: recipientName, completed: { selectionContext, editingContext, currentItem in
+        let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: legacyAssetPickerItemGenerator())
+        sendMessagesWithSignals(signals)
+    }, dismissed: { [weak legacyController] in
+        legacyController?.dismiss()
+    }, sourceView: emptyController.view, sourceRect: nil)!
+    controller.customRemoveFromParentViewController = { [weak legacyController] in
+        legacyController?.dismiss()
     }
     
     let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak legacyController] presentationData in
@@ -210,6 +208,9 @@ func legacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allow
         }
     })
     legacyController.disposables.add(presentationDisposable)
+    
+    present(legacyController, nil)
+    controller.present(in: emptyController, sourceView: nil, animated: true)
     
     return legacyController
 }

@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import Postbox
 import TelegramCore
 
 private final class CallRatingContentActionNode: HighlightableButtonNode {
@@ -320,8 +321,19 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     }
 }
 
-private func rateCallAndSendLogs(account: Account, report: ReportCallRating, starsCount: Int, comment: String, includeLogs: Bool) {
-    let _ = rateCall(account: account, report: report, starsCount: Int32(starsCount), comment: comment).start()
+private func rateCallAndSendLogs(account: Account, report: ReportCallRating, starsCount: Int, comment: String, includeLogs: Bool) -> Signal<Void, NoError> {
+    var signal = rateCall(account: account, report: report, starsCount: Int32(starsCount), comment: comment)
+    if includeLogs {
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 4244000)
+//        signal = signal
+//        |> then(
+//            enqueueMessages(account: account, peerId: peerId, messages: EnqueueMessage.message(text: "", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
+//            |> map { _ -> Void in
+//                    
+//            }
+//        )
+    }
+    return signal
 }
 
 func callRatingController(account: Account, report: ReportCallRating, present: @escaping (ViewController) -> Void) -> AlertController {
@@ -338,13 +350,13 @@ func callRatingController(account: Account, report: ReportCallRating, present: @
         if let contentNode = contentNode, let rating = contentNode.rating {
             if rating < 4 {
                 let controller = textAlertController(account: account, title: strings.Call_ReportIncludeLog, text: strings.Call_ReportIncludeLogDescription, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Call_ReportSkip, action: {
-                    rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: false)
+                    let _ = rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: false).start()
                 }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Call_ReportSend, action: {
-                    rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: true)
+                    let _ = rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: true).start()
                 })])
                 present(controller)
             } else {
-                rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: false)
+                let _ = rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: false).start
             }
         }
     })]

@@ -104,7 +104,8 @@ class PermissionInfoItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
-    
+    private let closeButton: HighlightableButtonNode
+
     let badgeNode: ASImageNode
     let labelNode: TextNode
     let titleNode: TextNode
@@ -140,6 +141,10 @@ class PermissionInfoItemNode: ListViewItemNode {
         
         self.textNode = TextNode()
         self.textNode.isUserInteractionEnabled = false
+        
+        self.closeButton = HighlightableButtonNode()
+        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.displaysAsynchronously = false
     
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -147,6 +152,7 @@ class PermissionInfoItemNode: ListViewItemNode {
         self.addSubnode(self.labelNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.closeButton)
     }
     
     func asyncLayout() -> (_ item: PermissionInfoItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors?) -> (ListViewItemNodeLayout, () -> Void) {
@@ -163,10 +169,13 @@ class PermissionInfoItemNode: ListViewItemNode {
             var updatedTheme: PresentationTheme?
             var updatedBadgeImage: UIImage?
             
+            var updatedCloseIcon: UIImage?
+            
             let badgeDiameter: CGFloat = 20.0
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
                 updatedBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.theme.list.itemDestructiveColor)
+                updatedCloseIcon = PresentationResourcesItemList.itemListCloseIconImage(item.theme)
             }
             
             let insets: UIEdgeInsets
@@ -256,6 +265,15 @@ class PermissionInfoItemNode: ListViewItemNode {
                         bottomStripeInset = leftInset
                     }
                     
+                    if let item = strongSelf.item {
+                        switch (item.subject, item.type) {
+                            case (.contacts, _), (.notifications, .unreachable):
+                                strongSelf.closeButton.isHidden = false
+                            default:
+                                strongSelf.closeButton.isHidden = true
+                        }
+                    }
+                    
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
@@ -267,6 +285,10 @@ class PermissionInfoItemNode: ListViewItemNode {
                         strongSelf.badgeNode.image = updateBadgeImage
                     }
                     
+                    if let updatedCloseIcon = updatedCloseIcon {
+                        strongSelf.closeButton.setImage(updatedCloseIcon, for: [])
+                    }
+                    
                     strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 16.0), size: CGSize(width: badgeDiameter, height: badgeDiameter))
                     
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.midX - labelLayout.size.width / 2.0, y: strongSelf.badgeNode.frame.minY + 1.0), size: labelLayout.size)
@@ -274,6 +296,8 @@ class PermissionInfoItemNode: ListViewItemNode {
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.maxX + 8.0, y: 16.0), size: titleLayout.size)
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + 9.0), size: textLayout.size)
+                    
+                    strongSelf.closeButton.frame = CGRect(x: params.width - rightInset - 20.0, y: 2.0, width: 32.0, height: 32.0)
                 }
             })
         }

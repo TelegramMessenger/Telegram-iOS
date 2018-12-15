@@ -382,7 +382,7 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                     }
                     attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                 case let .customText(text, entities):
-                    attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, fixedFont: titleFont)
+                    attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, fixedFont: titleFont, underlineLinks: false)
                 case let .botDomainAccessGranted(domain):
                     attributedString = NSAttributedString(string: strings.AuthSessions_Message(domain).0, font: titleFont, textColor: primaryTextColor)
                 case let .botSentSecureValues(types):
@@ -661,9 +661,9 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
 
-    override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.labelNode.frame
-        if let (index, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)) {
+        if let (index, attributes) = self.labelNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)), gesture == .tap {
             if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let attributeText = self.labelNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {

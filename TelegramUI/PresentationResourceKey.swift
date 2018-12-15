@@ -52,6 +52,8 @@ enum PresentationResourceKey: Int32 {
     
     case itemListCloudFetchIcon
     
+    case itemListCloseIconImage
+    
     case chatListLockTopLockedImage
     case chatListLockBottomLockedImage
     case chatListLockTopUnlockedImage
@@ -66,6 +68,7 @@ enum PresentationResourceKey: Int32 {
     case chatListMutedIcon
     case chatListVerifiedIcon
     case chatListSecretIcon
+    case chatListRecentStatusOnlineIcon
 
     case chatTitleLockIcon
     case chatTitleMuteIcon

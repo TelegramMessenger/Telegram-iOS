@@ -544,14 +544,15 @@ final class ChatListNode: ListView {
             if previousState.editing != state.editing {
                 disableAnimations = false
             } else {
-                var previousPinnedCount = 0
-                var updatedPinnedCount = 0
+                var previousPinnedChats: [PeerId] = []
+                var updatedPinnedChats: [PeerId] = []
+                
                 var didIncludeRemovingPeerId = false
                 if let previous = previousView {
                     for entry in previous.filteredEntries {
                         if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _) = entry {
                             if index.pinningIndex != nil {
-                                previousPinnedCount += 1
+                                previousPinnedChats.append(index.messageIndex.id.peerId)
                             }
                             if index.messageIndex.id.peerId == removingPeerId {
                                 didIncludeRemovingPeerId = true
@@ -563,14 +564,14 @@ final class ChatListNode: ListView {
                 for entry in processedView.filteredEntries {
                     if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _) = entry {
                         if index.pinningIndex != nil {
-                            updatedPinnedCount += 1
+                            updatedPinnedChats.append(index.messageIndex.id.peerId)
                         }
                         if index.messageIndex.id.peerId == removingPeerId {
                             doesIncludeRemovingPeerId = true
                         }
                     }
                 }
-                if previousPinnedCount != updatedPinnedCount {
+                if previousPinnedChats != updatedPinnedChats {
                     disableAnimations = false
                 }
                 if previousState.selectedPeerIds != state.selectedPeerIds {
@@ -580,6 +581,7 @@ final class ChatListNode: ListView {
                     disableAnimations = false
                 }
             }
+        
             
             var searchMode = false
             if case .peers = mode {

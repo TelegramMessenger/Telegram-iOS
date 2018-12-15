@@ -210,7 +210,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
             return .ignore
         } else if self.bounds.contains(point), let item = self.item {
