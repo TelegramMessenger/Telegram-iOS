@@ -303,7 +303,11 @@
 "Conversation.StatusTyping" = "typing";
 "Conversation.Call" = "Call";
 "Conversation.Mute" = "Mute";
+"ChatList.Mute" = "Mute";
+"Conversation.TitleMute" = "Mute";
 "Conversation.Unmute" = "Unmute";
+"ChatList.Unmute" = "Unmute";
+"Conversation.TitleUnmute" = "Unmute";
 "Conversation.Edit" = "Edit";
 "Conversation.Info" = "Info";
 "Conversation.Search" = "Search";

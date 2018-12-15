@@ -7,9 +7,6 @@ url=../Display.git
 [submodule "submodules/HockeySDK-iOS"]
 	path = submodules/HockeySDK-iOS
 	url = git@github.com:peter-iakovlev/HockeySDK-iOS.git
-[submodule "submodules/LegacyComponents"]
-	path = submodules/LegacyComponents
-url=../LegacyComponents.git
 [submodule "submodules/libtgvoip"]
 	path = submodules/libtgvoip
 url=git@github.com:peter-iakovlev/libtgvoip.git
