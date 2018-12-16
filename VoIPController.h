@@ -561,6 +561,7 @@ namespace tgvoip{
 		void SendNopPacket();
 		void TickJitterBufferAngCongestionControl();
 		void ResetUdpAvailability();
+		std::string GetPacketTypeString(unsigned char type);
 
 		int state;
 		std::map<int64_t, Endpoint> endpoints;
