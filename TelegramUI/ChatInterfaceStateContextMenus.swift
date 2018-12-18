@@ -430,7 +430,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 })))
             }
             
-            if let activePoll = activePoll {
+            if let _ = activePoll, messages[0].forwardInfo == nil {
                 actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_StopPoll, action: {
                     interfaceInteraction.requestStopPollInMessage(messages[0].id)
                 })))
@@ -575,7 +575,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                     }
                 }
                 if id.peerId == accountPeerId {
-                    optionsMap[id]!.insert(.forward)
+                    if !(message.flags.isSending || message.flags.contains(.Failed)) {
+                        optionsMap[id]!.insert(.forward)
+                    }
                     optionsMap[id]!.insert(.deleteLocally)
                 } else if let peer = transaction.getPeer(id.peerId) {
                     var isAction = false
@@ -603,7 +605,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         }
                         if !message.containsSecretMedia && !isAction {
                             if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
-                                optionsMap[id]!.insert(.forward)
+                                if !(message.flags.isSending || message.flags.contains(.Failed)) {
+                                    optionsMap[id]!.insert(.forward)
+                                }
                             }
                         }
                         
@@ -617,7 +621,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                     } else if let group = peer as? TelegramGroup {
                         if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia {
                             if !isAction {
-                                optionsMap[id]!.insert(.forward)
+                                if !(message.flags.isSending || message.flags.contains(.Failed)) {
+                                    optionsMap[id]!.insert(.forward)
+                                }
                             }
                         }
                         optionsMap[id]!.insert(.deleteLocally)
@@ -643,7 +649,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         }
                     } else if let user = peer as? TelegramUser {
                         if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
-                            optionsMap[id]!.insert(.forward)
+                            if !(message.flags.isSending || message.flags.contains(.Failed)) {
+                                optionsMap[id]!.insert(.forward)
+                            }
                         }
                         optionsMap[id]!.insert(.deleteLocally)
                         if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {

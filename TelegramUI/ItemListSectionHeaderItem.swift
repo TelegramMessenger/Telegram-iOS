@@ -3,15 +3,25 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+enum ItemListSectionHeaderAccessoryTextColor {
+    case generic
+    case destructive
+}
+
+struct ItemListSectionHeaderAccessoryText: Equatable {
+    let value: String
+    let color: ItemListSectionHeaderAccessoryTextColor
+}
+
 class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
-    let accessoryText: String
+    let accessoryText: ItemListSectionHeaderAccessoryText?
     let sectionId: ItemListSectionId
     
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: String, accessoryText: String = "", sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, text: String, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.text = text
         self.accessoryText = accessoryText
@@ -86,7 +96,18 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
             let leftInset: CGFloat = 15.0 + params.leftInset
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (accessoryLayout, accessoryApply) = makeAccessoryTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.accessoryText, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var accessoryTextString: NSAttributedString?
+            if let accessoryText = item.accessoryText {
+                let color: UIColor
+                switch accessoryText.color {
+                    case .generic:
+                        color = item.theme.list.sectionHeaderTextColor
+                    case .destructive:
+                        color = item.theme.list.freeTextErrorColor
+                }
+                accessoryTextString = NSAttributedString(string: accessoryText.value, font: titleFont, textColor: color)
+            }
+            let (accessoryLayout, accessoryApply) = makeAccessoryTextLayout(TextNodeLayoutArguments(attributedString: accessoryTextString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             var insets = UIEdgeInsets()
