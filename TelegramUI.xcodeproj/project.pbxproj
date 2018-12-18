@@ -459,7 +459,6 @@
 		D0CFBB971FD8B0F700B65C0D /* ChatBubbleInstantVideoDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CFBB961FD8B0F700B65C0D /* ChatBubbleInstantVideoDecoration.swift */; };
 		D0D4345C1F97CEAA00CC1806 /* ProxyServerSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D4345B1F97CEAA00CC1806 /* ProxyServerSettingsController.swift */; };
 		D0D9DE0D20EFEA2E00F20B06 /* InstantPageMediaPlaylist.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D9DE0C20EFEA2E00F20B06 /* InstantPageMediaPlaylist.swift */; };
-		D0DE5803205AEB7600C356A8 /* include in Resources */ = {isa = PBXBuildFile; fileRef = D0DE5802205AEB7600C356A8 /* include */; };
 		D0DE5805205B202500C356A8 /* ScreenCaptureDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE5804205B202500C356A8 /* ScreenCaptureDetection.swift */; };
 		D0DE66061F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE66051F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift */; };
 		D0DFD5E21FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DFD5E11FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift */; };
@@ -1936,7 +1935,6 @@
 		D0DC35451DE35805000195EB /* MentionChatInputPanelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MentionChatInputPanelItem.swift; sourceTree = "<group>"; };
 		D0DC35491DE366CD000195EB /* CommandChatInputContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CommandChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D0DC354B1DE366DE000195EB /* CommandChatInputPanelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CommandChatInputPanelItem.swift; sourceTree = "<group>"; };
-		D0DE5802205AEB7600C356A8 /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; name = include; path = "third-party/FFmpeg-iOS/include"; sourceTree = SOURCE_ROOT; };
 		D0DE5804205B202500C356A8 /* ScreenCaptureDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureDetection.swift; sourceTree = "<group>"; };
 		D0DE66051F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryHiddenMediaManager.swift; sourceTree = "<group>"; };
 		D0DE76F61D91BA3D002B8809 /* GridHoleItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridHoleItem.swift; sourceTree = "<group>"; };
@@ -3789,22 +3787,6 @@
 			name = Commands;
 			sourceTree = "<group>";
 		};
-		D0DE5800205AEB5E00C356A8 /* Dependencies */ = {
-			isa = PBXGroup;
-			children = (
-				D0DE5801205AEB6700C356A8 /* FFmpeg */,
-			);
-			name = Dependencies;
-			sourceTree = "<group>";
-		};
-		D0DE5801205AEB6700C356A8 /* FFmpeg */ = {
-			isa = PBXGroup;
-			children = (
-				D0DE5802205AEB7600C356A8 /* include */,
-			);
-			name = FFmpeg;
-			sourceTree = "<group>";
-		};
 		D0DE772C1D934DCB002B8809 /* List Items */ = {
 			isa = PBXGroup;
 			children = (
@@ -4763,7 +4745,6 @@
 		D0FC40811D5B8E7400261D9D /* TelegramUI */ = {
 			isa = PBXGroup;
 			children = (
-				D0DE5800205AEB5E00C356A8 /* Dependencies */,
 				D07551891DDA4C7C0073E051 /* Legacy Components */,
 				D0F69E911D6B8C8E0046BCD6 /* Utils */,
 				D0B4AF891EC1132400D51FF6 /* Calls */,
@@ -4961,7 +4942,6 @@
 				D0E9BA961F056F4C00F079A4 /* stp_card_applepay@3x.png in Resources */,
 				D0F9720F1FFE4BD5002595C8 /* notification.caf in Resources */,
 				09310D33213ED5FC0020033A /* anim_group.json in Resources */,
-				D0DE5803205AEB7600C356A8 /* include in Resources */,
 				D0E9BA9A1F056F4C00F079A4 /* stp_card_cvc@3x.png in Resources */,
 				D0E9BA921F056F4C00F079A4 /* stp_card_amex@3x.png in Resources */,
 				D0E9BA9F1F056F4C00F079A4 /* stp_card_diners_template@2x.png in Resources */,

@@ -1,14 +1,6 @@
 module TelegramUIPrivateModule {
-    //private header "../../third-party/FFmpeg-iOS/include/libavcodec/avcodec.h"
-    //private header "../../third-party/FFmpeg-iOS/include/libavformat/avformat.h"
-    //private header "../../third-party/FFmpeg-iOS/include/libavformat/avio.h"
-    //private header "../../third-party/FFmpeg-iOS/include/libavutil/avutil.h"
-    //private header "../../third-party/FFmpeg-iOS/include/libavutil/pixdesc.h"  
-    //private header "../../third-party/FFmpeg-iOS/include/libswresample/swresample.h"
-
     header "../../third-party/opusenc/opusenc.h"
     header "../TGDataItem.h"
-    header "../FFMpegSwResample.h"
     header "../FastBlur.h"
     header "../UIImage+WebP.h"
     header "../RingBuffer.h"
