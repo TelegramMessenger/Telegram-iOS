@@ -4,6 +4,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private let maxTextLength = 255
+private let maxOptionLength = 100
+
 private final class CreatePollControllerArguments {
     let updatePollText: (String) -> Void
     let updateOptionText: (Int, String) -> Void
@@ -44,7 +47,7 @@ private enum CreatePollEntryTag: Equatable, ItemListItemTag {
 }
 
 private enum CreatePollEntry: ItemListNodeEntry {
-    case textHeader(PresentationTheme, String, String)
+    case textHeader(PresentationTheme, String, ItemListSectionHeaderAccessoryText)
     case text(PresentationTheme, String, String, Int)
     case optionsHeader(PresentationTheme, String)
     case option(PresentationTheme, PresentationStrings, Int, Int, String, String, Bool, Bool)
@@ -109,7 +112,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
             case let .optionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .option(theme, strings, id, _, placeholder, text, revealed, hasNext):
-                return CreatePollOptionItem(theme: theme, strings: strings, id: id, placeholder: placeholder, value: text, maxLength: 256, editing: CreatePollOptionItemEditing(editable: true, hasActiveRevealControls: revealed), sectionId: self.section, setItemIdWithRevealedOptions: { id, fromId in
+                return CreatePollOptionItem(theme: theme, strings: strings, id: id, placeholder: placeholder, value: text, maxLength: maxOptionLength, editing: CreatePollOptionItemEditing(editable: true, hasActiveRevealControls: revealed), sectionId: self.section, setItemIdWithRevealedOptions: { id, fromId in
                     arguments.setItemIdWithRevealedOptions(id, fromId)
                 }, updated: { value in
                     arguments.updateOptionText(id, value)
@@ -146,9 +149,10 @@ private struct CreatePollControllerState: Equatable {
 private func createPollControllerEntries(presentationData: PresentationData, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration) -> [CreatePollEntry] {
     var entries: [CreatePollEntry] = []
     
-    var textLimitText = ""
-    if state.text.count >= Int(limitsConfiguration.maxMediaCaptionLength) * 70 / 100 {
-        textLimitText = "\(Int(limitsConfiguration.maxMediaCaptionLength) - state.text.count)"
+    var textLimitText = ItemListSectionHeaderAccessoryText(value: "", color: .generic)
+    if state.text.count >= Int(maxTextLength) * 70 / 100 {
+        let remainingCount = Int(maxTextLength) - state.text.count
+        textLimitText = ItemListSectionHeaderAccessoryText(value: "\(remainingCount)", color: remainingCount < 0 ? .destructive : .generic)
     }
     entries.append(.textHeader(presentationData.theme, presentationData.strings.CreatePoll_TextHeader, textLimitText))
     entries.append(.text(presentationData.theme, presentationData.strings.CreatePoll_TextPlaceholder, state.text, Int(limitsConfiguration.maxMediaCaptionLength)))
@@ -166,7 +170,7 @@ private func createPollControllerEntries(presentationData: PresentationData, sta
     return entries
 }
 
-public func createPollController(account: Account, peerId: PeerId) -> ViewController {
+public func createPollController(account: Account, peerId: PeerId, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
     let statePromise = ValuePromise(CreatePollControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePollControllerState())
     let updateState: ((CreatePollControllerState) -> CreatePollControllerState) -> Void = { f in
@@ -175,6 +179,7 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
+    var ensureTextVisibleImpl: (() -> Void)?
     var ensureOptionVisibleImpl: ((Int) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -191,6 +196,7 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
             state.text = value
             return state
         }
+        ensureTextVisibleImpl?()
     }, updateOptionText: { id, value in
         updateState { state in
             var state = state
@@ -201,6 +207,7 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
             }
             return state
         }
+        ensureOptionVisibleImpl?(id)
     }, moveToNextOption: { id in
         updateState { state in
             var state = state
@@ -257,10 +264,16 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
         if state.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             enabled = false
         }
+        if state.text.count > maxTextLength {
+            enabled = false
+        }
         var hasNonEmptyOptions = false
         for option in state.options {
             if !option.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 hasNonEmptyOptions = true
+            }
+            if option.text.count > maxOptionLength {
+                enabled = false
             }
         }
         if !hasNonEmptyOptions {
@@ -276,7 +289,7 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
                     options.append(TelegramMediaPollOption(text: optionText, opaqueIdentifier: "\(i)".data(using: .utf8)!))
                 }
             }
-            let _ = enqueueMessages(account: account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), text: state.text.trimmingCharacters(in: .whitespacesAndNewlines), options: options, results: TelegramMediaPollResults(voters: nil, totalVoters: nil), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil)]).start()
+            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), text: state.text.trimmingCharacters(in: .whitespacesAndNewlines), options: options, results: TelegramMediaPollResults(voters: nil, totalVoters: nil), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil))
             dismissImpl?()
         })
         
@@ -332,6 +345,27 @@ public func createPollController(account: Account, peerId: PeerId) -> ViewContro
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
+    }
+    ensureTextVisibleImpl = { [weak controller] in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let _ = controller.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListItemNode {
+                    if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.text) {
+                        resultItemNode = itemNode as? ListViewItemNode
+                        return true
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode)
+            }
+        })
     }
     ensureOptionVisibleImpl = { [weak controller] id in
         controller?.afterLayout({

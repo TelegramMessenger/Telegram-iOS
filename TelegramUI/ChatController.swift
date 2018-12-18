@@ -4109,7 +4109,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     
     private func presentPollCreation() {
         if case let .peer(peerId) = self.chatLocation {
-            self.present(createPollController(account: self.account, peerId: peerId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            self.present(createPollController(account: self.account, peerId: peerId, completion: { [weak self] message in
+                self?.sendMessages([message])
+            }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     

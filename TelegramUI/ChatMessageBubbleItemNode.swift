@@ -431,6 +431,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     tmpWidth = baseWidth - 32.0
                 }
             }
+            
+            var deliveryFailedInset: CGFloat = 0.0
+            if item.content.firstMessage.flags.contains(.Failed) {
+                deliveryFailedInset += 24.0
+            }
+            
+            tmpWidth -= deliveryFailedInset
+            
             let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
             
             var contentPropertiesAndPrepareLayouts: [(Message, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))))] = []
@@ -459,8 +467,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var authorNameString: String?
             let authorIsAdmin: Bool
             switch content {
-                case let .message(_, _, _, isAdmin):
-                    authorIsAdmin = isAdmin
+                case let .message(message, _, _, isAdmin):
+                    if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                        authorIsAdmin = false
+                    } else {
+                        authorIsAdmin = isAdmin
+                    }
                 case .group:
                     authorIsAdmin = false
             }
@@ -1048,11 +1060,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var contentVerticalOffset: CGFloat = 0.0
             if minimalContentSize.height > calculatedBubbleHeight + 2.0 {
                 contentVerticalOffset = floorToScreenPixels((minimalContentSize.height - calculatedBubbleHeight) / 2.0)
-            }
-            
-            var deliveryFailedInset: CGFloat = 0.0
-            if item.content.firstMessage.flags.contains(.Failed) {
-                deliveryFailedInset += 24.0
             }
             
             let backgroundFrame: CGRect

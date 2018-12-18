@@ -151,21 +151,6 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         }
     }
     
-    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        var updatedText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
-        if let item = self.item {
-            if updatedText.count > item.maxLength {
-                updatedText = String(updatedText[..<updatedText.index(updatedText.startIndex, offsetBy: item.maxLength)])
-                if textField.text != updatedText {
-                    textField.text = updatedText
-                    self.textFieldTextChanged(textField)
-                    return false
-                }
-            }
-        }
-        return true
-    }
-    
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         if let item = self.item {
             if let next = item.next {
@@ -210,8 +195,9 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
             
             let textLength = item.value.count
             let displayTextLimit = textLength > item.maxLength * 70 / 100
+            let remainingCount = item.maxLength - textLength
             
-            let (textLimitLayout, textLimitApply) = makeTextLimitLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(item.maxLength - textLength)", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            let (textLimitLayout, textLimitApply) = makeTextLimitLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(remainingCount)", font: Font.regular(13.0), textColor: remainingCount < 0 ? item.theme.list.itemDestructiveColor : item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             return (layout, { [weak self] in
                 if let strongSelf = self {

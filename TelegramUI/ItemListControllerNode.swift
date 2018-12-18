@@ -93,7 +93,31 @@ final class ItemListNodeVisibleEntries<Entry: ItemListNodeEntry>: Sequence {
     }
 }
 
-class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNode, UIScrollViewDelegate {
+final class ItemListControllerNodeView: UITracingLayerView {
+    var onLayout: (() -> Void)?
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        self.onLayout?()
+    }
+    
+    private var inHitTest = false
+    var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.inHitTest {
+            return super.hitTest(point, with: event)
+        } else {
+            self.inHitTest = true
+            let result = self.hitTestImpl?(point, event)
+            self.inHitTest = false
+            return result
+        }
+    }
+}
+
+class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollViewDelegate {
     private var _ready = ValuePromise<Bool>()
     public var ready: Signal<Bool, NoError> {
         return self._ready.get()
@@ -141,6 +165,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
         self.listNode = ListView()
         
         super.init()
+        
+        self.setViewBlock({
+            return ItemListControllerNodeView()
+        })
         
         self.backgroundColor = nil
         self.isOpaque = false
@@ -203,6 +231,23 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
     
     override func didLoad() {
         super.didLoad()
+        
+        (self.view as? ItemListControllerNodeView)?.onLayout = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if !strongSelf.afterLayoutActions.isEmpty {
+                let afterLayoutActions = strongSelf.afterLayoutActions
+                strongSelf.afterLayoutActions = []
+                for f in afterLayoutActions {
+                    f()
+                }
+            }
+        }
+        
+        (self.view as? ItemListControllerNodeView)?.hitTestImpl = { [weak self] point, event in
+            return self?.hitTest(point, with: event)
+        }
     }
     
     func animateIn() {

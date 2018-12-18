@@ -36,57 +36,57 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     var isVideo = false
                     inner: for attribute in fileMedia.attributes {
                         switch attribute {
-                        case .Animated:
-                            isAnimated = true
-                            break inner
-                        case let .Audio(isVoice, _, title, performer, _):
-                            if isVoice {
-                                messageText = strings.Message_Audio
+                            case .Animated:
+                                isAnimated = true
                                 break inner
-                            } else {
-                                let descriptionString: String
-                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                    descriptionString = title + " — " + performer
-                                } else if let title = title, !title.isEmpty {
-                                    descriptionString = title
-                                } else if let performer = performer, !performer.isEmpty {
-                                    descriptionString = performer
-                                } else if let fileName = fileMedia.fileName {
-                                    descriptionString = fileName
+                            case let .Audio(isVoice, _, title, performer, _):
+                                if isVoice {
+                                    messageText = strings.Message_Audio
+                                    break inner
                                 } else {
-                                    descriptionString = strings.Message_Audio
-                                }
-                                messageText = descriptionString
-                                break inner
-                            }
-                        case let .Sticker(displayText, _, _):
-                            if displayText.isEmpty {
-                                messageText = strings.Message_Sticker
-                                break inner
-                            } else {
-                                messageText = strings.Message_StickerText(displayText).0
-                                break inner
-                            }
-                        case let .Video(_, _, flags):
-                            if flags.contains(.instantRoundVideo) {
-                                messageText = strings.Message_VideoMessage
-                                break inner
-                            } else {
-                                if message.text.isEmpty {
-                                    isVideo = true
-                                } else if #available(iOSApplicationExtension 9.0, *) {
-                                    if !fileMedia.isAnimated {
-                                        messageText = "📹 \(messageText)"
+                                    let descriptionString: String
+                                    if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+                                        descriptionString = title + " — " + performer
+                                    } else if let title = title, !title.isEmpty {
+                                        descriptionString = title
+                                    } else if let performer = performer, !performer.isEmpty {
+                                        descriptionString = performer
+                                    } else if let fileName = fileMedia.fileName {
+                                        descriptionString = fileName
+                                    } else {
+                                        descriptionString = strings.Message_Audio
                                     }
+                                    messageText = descriptionString
                                     break inner
                                 }
-                            }
-                        default:
-                            if !message.text.isEmpty {
-                                messageText = "📎 \(messageText)"
-                                break inner
-                            }
-                            break
+                            case let .Sticker(displayText, _, _):
+                                if displayText.isEmpty {
+                                    messageText = strings.Message_Sticker
+                                    break inner
+                                } else {
+                                    messageText = strings.Message_StickerText(displayText).0
+                                    break inner
+                                }
+                            case let .Video(_, _, flags):
+                                if flags.contains(.instantRoundVideo) {
+                                    messageText = strings.Message_VideoMessage
+                                    break inner
+                                } else {
+                                    if message.text.isEmpty {
+                                        isVideo = true
+                                    } else if #available(iOSApplicationExtension 9.0, *) {
+                                        if !fileMedia.isAnimated {
+                                            messageText = "📹 \(messageText)"
+                                        }
+                                        break inner
+                                    }
+                                }
+                            default:
+                                if !message.text.isEmpty {
+                                    messageText = "📎 \(messageText)"
+                                    break inner
+                                }
+                                break
                         }
                     }
                     if isAnimated {
@@ -139,7 +139,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = text
                     }
                 case let poll as TelegramMediaPoll:
-                    messageText = poll.text
+                    messageText = "📊 \(strings.Message_Poll)"
                 default:
                     break
             }
