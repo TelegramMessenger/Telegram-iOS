@@ -68,9 +68,32 @@
 
 - (void)didReceiveRemoteNotification:(NSDictionary *)remoteNotification withCompletion:(void (^)(WKUserNotificationInterfaceType))completionHandler
 {
-    NSString *titleText = remoteNotification[@"aps"][@"alert"][@"title"];
-    NSString *bodyText = remoteNotification[@"aps"][@"alert"][@"body"];
-    [self processMessageWithUserInfo:remoteNotification defaultTitle:titleText defaultBody:bodyText completion:completionHandler];
+    NSString *titleText = nil;
+    NSString *bodyText = nil;
+    if ([remoteNotification[@"aps"] respondsToSelector:@selector(objectForKey:)]) {
+        NSDictionary *aps = remoteNotification[@"aps"];
+        if ([aps[@"alert"] respondsToSelector:@selector(objectForKey:)]) {
+            NSDictionary *alert = aps[@"alert"];
+            if ([alert[@"body"] respondsToSelector:@selector(characterAtIndex:)]) {
+                bodyText = alert[@"body"];
+                if ([alert[@"title"] respondsToSelector:@selector(characterAtIndex:)]) {
+                    titleText = alert[@"title"];
+                }
+            }
+        } else if ([aps[@"alert"] respondsToSelector:@selector(characterAtIndex:)]) {
+            NSString *alert = aps[@"alert"];
+            NSUInteger colonLocation = [alert rangeOfString:@": "].location;
+            if (colonLocation != NSNotFound) {
+                titleText = [alert substringToIndex:colonLocation];
+                bodyText = [alert substringFromIndex:colonLocation + 2];
+            } else {
+                bodyText = alert;
+            }
+        }
+    }
+    if (bodyText != nil) {
+        [self processMessageWithUserInfo:remoteNotification defaultTitle:titleText defaultBody:bodyText completion:completionHandler];
+    }
 }
 
 - (void)processMessageWithUserInfo:(NSDictionary *)userInfo defaultTitle:(NSString *)defaultTitle defaultBody:(NSString *)defaultBody completion:(void (^)(WKUserNotificationInterfaceType))completionHandler

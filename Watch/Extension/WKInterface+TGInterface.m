@@ -229,7 +229,11 @@
         return;
     }
     
-    objc_setAssociatedObject(self, @selector(region), @[ [NSValue valueWithMKCoordinate:region.center], [NSValue valueWithMKCoordinateSpan:region.span] ], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    NSValue *center = [NSValue valueWithMKCoordinate:region.center];
+    NSValue *span = [NSValue valueWithMKCoordinateSpan:region.span];
+    if (center != nil && span != nil) {
+        objc_setAssociatedObject(self, @selector(region), @[ center, span ], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
     [self tg_setRegion:region];
 }
 

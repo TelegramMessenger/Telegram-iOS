@@ -3643,3 +3643,5 @@ Unused sets are archived when you add more.";
 "Conversation.StopPoll" = "Stop Poll";
 "Conversation.StopPollConfirmationTitle" = "If you stop this poll now, nobody will be able to vote in it anymore. This action cannot be undone.";
 "Conversation.StopPollConfirmation" = "Stop Poll";
+
+"AttachmentMenu.WebSearch" = "Web Search";
