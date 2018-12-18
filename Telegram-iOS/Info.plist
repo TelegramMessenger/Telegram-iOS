@@ -42,6 +42,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>tg</string>
+				<string>$(APP_SPECIFIC_URL_SCHEME)</string>
 			</array>
 		</dict>
 		<dict>

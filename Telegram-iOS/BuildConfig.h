@@ -10,5 +10,6 @@
 @property (nonatomic, readonly) bool isInternalBuild;
 @property (nonatomic, readonly) bool isAppStoreBuild;
 @property (nonatomic, readonly) int64_t appStoreId;
+@property (nonatomic, strong, readonly) NSString * _Nonnull appSpecificUrlScheme;
 
 @end

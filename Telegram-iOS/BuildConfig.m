@@ -35,4 +35,8 @@
     return APP_CONFIG_APPSTORE_ID;
 }
 
+- (NSString *)appSpecificUrlScheme {
+    return @(APP_SPECIFIC_URL_SCHEME);
+}
+
 @end
