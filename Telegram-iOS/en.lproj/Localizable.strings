@@ -401,6 +401,7 @@
 "Message.Audio" = "Voice Message";
 "Message.ForwardedMessage" = "Forwarded Message\nFrom: %@";
 "Message.Animation" = "GIF";
+"Message.Poll" = "Poll";
 
 // Conversation Profile
 "ConversationProfile.ErrorCreatingConversation" = "An error occurred";
@@ -3604,7 +3605,7 @@ Unused sets are archived when you add more.";
 
 "MessagePoll.LabelAnonymous" = "Anonymous Poll";
 "MessagePoll.LabelClosed" = "Final Results";
-"MessagePoll.VotedCount_0" = "%@ voted";
+"MessagePoll.VotedCount_0" = "No votes";
 "MessagePoll.VotedCount_1" = "1 voted";
 "MessagePoll.VotedCount_2" = "2 voted";
 "MessagePoll.VotedCount_3_10" = "%@ voted";
