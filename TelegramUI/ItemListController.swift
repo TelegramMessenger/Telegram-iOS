@@ -155,6 +155,14 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         return self._ready
     }
     
+    var experimentalSnapScrollToItem: Bool = false {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
+            }
+        }
+    }
+    
     var enableInteractiveDismiss = false {
         didSet {
             if self.isNodeLoaded {
@@ -392,6 +400,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         displayNode.visibleEntriesUpdated = self.visibleEntriesUpdated
         displayNode.visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
         displayNode.reorderEntry = self.reorderEntry
+        displayNode.listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
         self.displayNode = displayNode
         super.displayNodeDidLoad()
         self._ready.set((self.displayNode as! ItemListControllerNode<Entry>).ready)
