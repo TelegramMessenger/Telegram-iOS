@@ -176,6 +176,19 @@ public class UnauthorizedAccount {
                     return false
             }
         })
+        
+        network.context.performBatchUpdates({
+            var datacenterIds: [Int] = [1, 2]
+            if !testingEnvironment {
+                datacenterIds.append(contentsOf: [4])
+            }
+            for id in datacenterIds {
+                if network.context.authInfoForDatacenter(withId: id) == nil {
+                    network.context.authInfoForDatacenter(withIdRequired: id, isCdn: false)
+                }
+            }
+            network.context.beginExplicitBackupAddressDiscovery()
+        })
     }
     
     public func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {
