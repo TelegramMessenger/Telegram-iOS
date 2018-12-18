@@ -497,7 +497,7 @@ private enum QueuedWakeup: Int32 {
             return managedCleanupAccounts(networkArguments: networkArguments, accountManager: manager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
         }).start()
         
-        let applicationBindings = TelegramApplicationBindings(isMainApp: true, containerPath: appGroupUrl.path, openUrl: { url in
+        let applicationBindings = TelegramApplicationBindings(isMainApp: true, containerPath: appGroupUrl.path, appSpecificScheme: BuildConfig.shared().appSpecificUrlScheme, openUrl: { url in
             var parsedUrl = URL(string: url)
             if let parsed = parsedUrl {
                 if parsed.scheme == nil || parsed.scheme!.isEmpty {

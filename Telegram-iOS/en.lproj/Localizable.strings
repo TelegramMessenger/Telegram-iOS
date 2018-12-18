@@ -270,7 +270,9 @@
 "Compose.TokenListPlaceholder" = "Whom would you like to message?";
 "Compose.NewMessage" = "New Message";
 "Compose.NewGroup" = "New Group";
+"Compose.NewGroupTitle" = "New Group";
 "Compose.NewEncryptedChat" = "New Secret Chat";
+"Compose.NewEncryptedChatTitle" = "New Secret Chat";
 "Compose.Create" = "Create";
 
 // Contacts
@@ -395,6 +397,7 @@
 "Message.Contact" = "Contact";
 "Message.File" = "File";
 "Message.Sticker" = "Sticker";
+"Message.StickerText" = "Sticker %@";
 "Message.Audio" = "Voice Message";
 "Message.ForwardedMessage" = "Forwarded Message\nFrom: %@";
 "Message.Animation" = "GIF";
@@ -583,6 +586,7 @@
 "ChatSettings.AutomaticAudioDownload" = "AUTOMATIC AUDIO DOWNLOAD";
 "ChatSettings.PrivateChats" = "Private Chats";
 "ChatSettings.Groups" = "Groups";
+"ChatSettings.Cache" = "Storage Usage";
 
 // Usage
 "Cache.Title" = "Storage Usage";
@@ -736,6 +740,7 @@
 
 "PrivacySettings.PrivacyTitle" = "PRIVACY";
 "PrivacySettings.LastSeen" = "Last Seen";
+"PrivacySettings.LastSeenTitle" = "Last Seen";
 "PrivacySettings.LastSeenEverybody" = "Everybody";
 "PrivacySettings.LastSeenContacts" = "My Contacts";
 "PrivacySettings.LastSeenNobody" = "Nobody";
@@ -3598,6 +3603,7 @@ Unused sets are archived when you add more.";
 "WebSearch.RecentSearchPlaceholder" = "Your recent search queries will appear here";
 
 "MessagePoll.LabelAnonymous" = "Anonymous Poll";
+"MessagePoll.LabelClosed" = "Final Results";
 "MessagePoll.VotedCount_0" = "%@ voted";
 "MessagePoll.VotedCount_1" = "1 voted";
 "MessagePoll.VotedCount_2" = "2 voted";
@@ -3614,4 +3620,23 @@ Unused sets are archived when you add more.";
 "CreatePoll.OptionsHeader" = "POLL OPTIONS";
 "CreatePoll.OptionPlaceholder" = "Option";
 "CreatePoll.AddOption" = "Add an Option";
-"CreatePoll.OptionsInfo" = "You can add up to 10 options.";
+
+"CreatePoll.AddMoreOptions_0" = "You can add %@ more options.";
+"CreatePoll.AddMoreOptions_1" = "You can add 1 more option.";
+"CreatePoll.AddMoreOptions_2" = "You can add 2 more options.";
+"CreatePoll.AddMoreOptions_3_10" = "You can add %@ more options.";
+"CreatePoll.AddMoreOptions_many" = "You can add %@ more options.";
+"CreatePoll.AddMoreOptions_any" = "You can add %@ more options.";
+"CreatePoll.AllOptionsAdded" = "You have added the maximum number of options.";
+
+"CreatePoll.CancelConfirmation" = "Are you sure you want to discard this poll?";
+
+"ForwardedPolls_1" = "Forwarded poll";
+"ForwardedPolls_2" = "2 forwarded polls";
+"ForwardedPolls_3_10" = "%@ forwarded polls";
+"ForwardedPolls_any" = "%@ forwarded polls";
+"ForwardedPolls_many" = "%@ forwarded polls";
+"ForwardedPolls_0" = "%@ forwarded polls";
+
+"Conversation.UnvotePoll" = "Unvote";
+"Conversation.StopPoll" = "Stop Poll";

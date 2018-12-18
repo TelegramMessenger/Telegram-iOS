@@ -117,7 +117,7 @@ class ShareRootController: UIViewController {
             
             setupSharedLogger(logsPath)
             
-            let applicationBindings = TelegramApplicationBindings(isMainApp: false, containerPath: appGroupUrl.path, openUrl: { _ in
+            let applicationBindings = TelegramApplicationBindings(isMainApp: false, containerPath: appGroupUrl.path, appSpecificScheme: BuildConfig.shared().appSpecificUrlScheme, openUrl: { _ in
             }, openUniversalUrl: { _, completion in
                 completion.completion(false)
                 return
@@ -186,6 +186,7 @@ class ShareRootController: UIViewController {
                 |> introduceError(ShareAuthorizationError.self)
                 |> map { dataAndSettings, data -> (Account, PostboxAccessChallengeData) in
                     accountCache = (account, accountManager)
+                    updateLegacyLocalization(strings: dataAndSettings.presentationData.strings)
                     account.applicationContext = TelegramApplicationContext(applicationBindings: applicationBindings, accountManager: accountManager, account: account, initialPresentationDataAndSettings: dataAndSettings, postbox: account.postbox)
                     return (account, (data.views[.accessChallengeData] as! AccessChallengeDataView).data)
                 }

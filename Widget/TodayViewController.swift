@@ -145,7 +145,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         for peer in peers {
             let peerView = PeerView(account: account, peer: peer, tapped: { [weak self] in
                 if let strongSelf = self {
-                    if let url = URL(string: "tg://localpeer?id=\(peer.id.toInt64())") {
+                    if let url = URL(string: "\(BuildConfig.shared().appSpecificUrlScheme)://localpeer?id=\(peer.id.toInt64())") {
                         strongSelf.extensionContext?.open(url, completionHandler: nil)
                     }
                 }
