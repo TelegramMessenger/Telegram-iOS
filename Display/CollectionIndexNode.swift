@@ -45,7 +45,12 @@ public final class CollectionIndexNode: ASDisplayNode {
         let maxHeight = size.height - verticalInset * 2.0
         
         let maxItemCount = min(sections.count, Int(floor(maxHeight / itemHeight)))
-        let skipCount = Int(ceil(CGFloat(sections.count) / CGFloat(maxItemCount)))
+        let skipCount: Int
+        if sections.isEmpty {
+            skipCount = 1
+        } else {
+            skipCount = Int(ceil(CGFloat(sections.count) / CGFloat(maxItemCount)))
+        }
         let actualCount: CGFloat = ceil(CGFloat(sections.count) / CGFloat(skipCount))
         
         let totalHeight = actualCount * itemHeight
