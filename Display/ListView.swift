@@ -61,7 +61,7 @@ final class ListViewBackingView: UIView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let target = self.target {
+        if !self.isHidden, let target = self.target {
             if target.limitHitTestToNodes, !target.internalHitTest(point, with: event) {
                 return nil
             }
