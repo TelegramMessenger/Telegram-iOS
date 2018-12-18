@@ -352,11 +352,11 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
             let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
             
-            node.updateSelectionState(animated: false)
-            node.updateHighlightedState(animated: false)
-            
             node.contentSize = layout.contentSize
             node.insets = layout.insets
+            
+            node.updateSelectionState(animated: false)
+            node.updateHighlightedState(animated: false)
             
             Queue.mainQueue().async {
                 completion(node, {

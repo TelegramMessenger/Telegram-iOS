@@ -12,8 +12,17 @@ private func requestContextResults(account: Account, botId: PeerId, query: Strin
         var collection = existingResults
         if let existingResults = existingResults, let results = results {
             var newResults: [ChatContextResult] = []
-            newResults.append(contentsOf: existingResults.results)
-            newResults.append(contentsOf: results.results)
+            var existingIds = Set<String>()
+            for result in existingResults.results {
+                newResults.append(result)
+                existingIds.insert(result.id)
+            }
+            for result in results.results {
+                if !existingIds.contains(result.id) {
+                    newResults.append(result)
+                    existingIds.insert(result.id)
+                }
+            }
             collection = ChatContextResultCollection(botId: existingResults.botId, peerId: existingResults.peerId, query: existingResults.query, geoPoint: existingResults.geoPoint, queryId: results.queryId, nextOffset: results.nextOffset, presentation: existingResults.presentation, switchPeer: existingResults.switchPeer, results: newResults, cacheTimeout: existingResults.cacheTimeout)
         } else {
             collection = results

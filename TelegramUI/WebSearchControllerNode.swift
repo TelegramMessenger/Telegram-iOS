@@ -508,8 +508,17 @@ class WebSearchControllerNode: ASDisplayNode {
                 }
                 strongSelf.isLoadingMore = false
                 var results: [ChatContextResult] = []
-                results.append(contentsOf: currentProcessedResults.results)
-                results.append(contentsOf: nextResults.results)
+                var existingIds = Set<String>()
+                for result in currentProcessedResults.results {
+                    results.append(result)
+                    existingIds.insert(result.id)
+                }
+                for result in nextResults.results {
+                    if !existingIds.contains(result.id) {
+                        results.append(result)
+                        existingIds.insert(result.id)
+                    }
+                }
                 let mergedResults = ChatContextResultCollection(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, geoPoint: currentProcessedResults.geoPoint, queryId: nextResults.queryId, nextOffset: nextResults.nextOffset, presentation: currentProcessedResults.presentation, switchPeer: currentProcessedResults.switchPeer, results: results, cacheTimeout: currentProcessedResults.cacheTimeout)
                 strongSelf.currentProcessedResults = mergedResults
                 strongSelf.results.set(mergedResults)
