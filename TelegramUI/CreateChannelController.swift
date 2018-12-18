@@ -135,7 +135,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                     arguments.changeProfilePhoto()
                 })
             case let .descriptionSetup(theme, text, value):
-                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: 255, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
@@ -292,8 +292,9 @@ public func createChannelController(account: Account) -> ViewController {
             
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
-            mixin.requestSearchController = { _ in
+            mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(completion: { result in
+                    assetsController?.dismiss()
                     completedImpl(result)
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

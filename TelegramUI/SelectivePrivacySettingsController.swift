@@ -689,7 +689,7 @@ func selectivePrivacySettingsController(account: Account, kind: SelectivePrivacy
             let title: String
             switch kind {
                 case .presence:
-                    title = presentationData.strings.PrivacySettings_LastSeen
+                    title = presentationData.strings.PrivacySettings_LastSeenTitle
                 case .groupInvitations:
                     title = presentationData.strings.Privacy_GroupsAndChannels
                 case .voiceCalls:

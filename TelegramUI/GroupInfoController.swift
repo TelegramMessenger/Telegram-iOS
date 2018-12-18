@@ -514,7 +514,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     arguments.presentController(channelVisibilityController(account: arguments.account, peerId: arguments.peerId, mode: .generic), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 })
             case let .groupDescriptionSetup(theme, placeholder, text):
-                return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: 255, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
@@ -1248,8 +1248,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
-                mixin.requestSearchController = { _ in
+                mixin.requestSearchController = { assetsController in
                     let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(completion: { result in
+                        assetsController?.dismiss()
                         completedImpl(result)
                     }))
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

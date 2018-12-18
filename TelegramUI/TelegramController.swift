@@ -76,10 +76,10 @@ public class TelegramController: ViewController {
     override public var navigationHeight: CGFloat {
         var height = super.navigationHeight
         if let _ = self.mediaAccessoryPanel {
-            height += 36.0
+            height += MediaNavigationAccessoryHeaderNode.minimizedHeight
         }
         if let _ = self.locationBroadcastAccessoryPanel {
-            height += 36.0
+            height += MediaNavigationAccessoryHeaderNode.minimizedHeight
         }
         return height
     }

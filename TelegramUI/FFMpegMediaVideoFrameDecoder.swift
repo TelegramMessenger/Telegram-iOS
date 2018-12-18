@@ -155,12 +155,12 @@ final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         
         base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1)!
         if bytesPerRowUV == frame.lineSize[1] * 2 {
-            memcpy(base, dstPlane, bytesPerRowUV * Int(frame.height) / 2)
+            memcpy(base, dstPlane, Int(frame.height / 2) * bytesPerRowUV)
         } else {
             var dest = base
             var src = dstPlane
             let linesize = Int(frame.lineSize[1]) * 2
-            for _ in 0 ..< Int(frame.height) / 2 {
+            for _ in 0 ..< Int(frame.height / 2) {
                 memcpy(dest, src, linesize)
                 dest = dest.advanced(by: bytesPerRowUV)
                 src = src.advanced(by: linesize)

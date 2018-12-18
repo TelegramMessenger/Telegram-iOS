@@ -13,6 +13,18 @@ final class GalleryNavigationCheckNode: ASDisplayNode {
         self.addSubnode(self.checkNode)
     }
     
+    var isChecked: Bool {
+        return self.checkNode.isChecked
+    }
+    
+    func setIsChecked(_ isChecked: Bool, animated: Bool) {
+        self.checkNode.setIsChecked(isChecked, animated: animated)
+    }
+    
+    func addTarget(target: AnyObject?, action: Selector) {
+        self.checkNode.addTarget(target: target, action: action)
+    }
+    
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: 39.0, height: 39.0)
     }

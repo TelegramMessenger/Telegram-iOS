@@ -43,7 +43,6 @@ final class WebSearchItemNode: GridItemNode {
     private var checkNode: CheckNode?
     
     private var currentImageResource: TelegramMediaResource?
-    private var currentVideoFile: TelegramMediaFile?
     private var currentDimensions: CGSize?
     
     private(set) var item: WebSearchItem?
@@ -88,7 +87,6 @@ final class WebSearchItemNode: GridItemNode {
             var thumbnailDimensions: CGSize?
             var thumbnailResource: TelegramMediaResource?
             var imageResource: TelegramMediaResource?
-            var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
                 case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
@@ -98,9 +96,9 @@ final class WebSearchItemNode: GridItemNode {
                         imageResource = thumbnail.resource
                     }
                     imageDimensions = content?.dimensions
-                    if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
-                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
-                        imageResource = nil
+                    if type == "gif", let imageResource = imageResource, let content = content, let dimensions = content.dimensions {
+                        thumbnailResource = imageResource
+                        thumbnailDimensions = dimensions
                     }
                 case let .internalReference(_, _, _, _, _, image, file, _):
                     if let image = image {
@@ -122,12 +120,14 @@ final class WebSearchItemNode: GridItemNode {
                     }
             }
             
+            var representations: [TelegramMediaImageRepresentation] = []
+            if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
+                representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource))
+            }
             if let imageResource = imageResource, let imageDimensions = imageDimensions {
-                var representations: [TelegramMediaImageRepresentation] = []
-                if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
-                    representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource))
-                }
                 representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
+            }
+            if !representations.isEmpty {
                 let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, reference: nil, partialReference: nil)
                 updateImageSignal =  mediaGridMessagePhoto(account: item.account, photoReference: .standalone(media: tmpImage))
             } else {
@@ -189,7 +189,6 @@ final class WebSearchItemNode: GridItemNode {
             }
             
             self.currentImageResource = imageResource
-            self.currentVideoFile = videoFile
             self.currentDimensions = imageDimensions
             if let _ = imageDimensions {
                 self.setNeedsLayout()

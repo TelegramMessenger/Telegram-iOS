@@ -9,16 +9,20 @@ import Postbox
 class WebSearchVideoGalleryItem: GalleryItem {
     let account: Account
     let presentationData: PresentationData
+    let result: ChatContextResult
     let content: UniversalVideoContent
+    let controllerInteraction: WebSearchGalleryControllerInteraction?
     
-    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent) {
+    init(account: Account, presentationData: PresentationData, result: ChatContextResult, content: UniversalVideoContent, controllerInteraction: WebSearchGalleryControllerInteraction?) {
         self.account = account
         self.presentationData = presentationData
+        self.result = result
         self.content = content
+        self.controllerInteraction = controllerInteraction
     }
     
     func node() -> GalleryItemNode {
-        let node = WebSearchVideoGalleryItemNode(account: self.account, presentationData: self.presentationData)
+        let node = WebSearchVideoGalleryItemNode(account: self.account, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction)
         node.setupItem(self)
         return node
     }
@@ -42,6 +46,7 @@ private struct FetchControls {
 final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let account: Account
     private let strings: PresentationStrings
+    private let controllerInteraction: WebSearchGalleryControllerInteraction?
     
     fileprivate let _ready = Promise<Void>()
     
@@ -58,7 +63,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var requiresDownload = false
     
-    private var item: WebSearchVideoGalleryItem?
+    var item: WebSearchVideoGalleryItem?
     
     private let statusDisposable = MetaDisposable()
     
@@ -68,12 +73,13 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
-    init(account: Account, presentationData: PresentationData) {
+    init(account: Account, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) {
         self.account = account
         self.strings = presentationData.strings
+        self.controllerInteraction = controllerInteraction
     
         self.footerContentNode = WebSearchGalleryFooterContentNode(account: account, presentationData: presentationData)
-    
+        
         self.statusButtonNode = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
         
@@ -83,6 +89,15 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusButtonNode.addTarget(self, action: #selector(statusButtonPressed), forControlEvents: .touchUpInside)
         
         self.addSubnode(self.statusButtonNode)
+        
+        self.footerContentNode.cancel = {
+            controllerInteraction?.dismiss(true)
+        }
+        self.footerContentNode.send = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
+                controllerInteraction?.send(item.result)
+            }
+        }
     }
     
     deinit {
@@ -212,7 +227,6 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.zoomableContent = (videoSize, videoNode)
             
-            
             videoNode.playbackCompleted = { [weak videoNode] in
                 Queue.mainQueue().async {
                     //item.playbackCompleted()
@@ -234,9 +248,10 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if self.isCentral != isCentral {
             self.isCentral = isCentral
             
-            if let videoNode = self.videoNode {
+            if let videoNode = self.videoNode, videoNode.ownsContentNode {
                 if isCentral {
-                } else if videoNode.ownsContentNode {
+                    videoNode.play()
+                } else {
                     videoNode.pause()
                 }
             }

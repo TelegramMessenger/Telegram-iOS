@@ -162,7 +162,7 @@ private enum SettingsEntry: ItemListNodeEntry {
             case let .userInfoNotice(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .bioText(theme, currentText, placeholder):
-                return ItemListMultilineInputItem(theme: theme, text: currentText, placeholder: placeholder, maxLength: 70, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: currentText, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 70, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateBioText(currentText, updatedText)
                 }, action: {
                     
@@ -454,12 +454,12 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                     }
                     updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource) |> deliverOnMainQueue).start(next: { result in
                         switch result {
-                        case .complete:
-                            updateState {
-                                $0.withUpdatedUpdatingAvatar(nil)
-                            }
-                        case .progress:
-                            break
+                            case .complete:
+                                updateState {
+                                    $0.withUpdatedUpdatingAvatar(nil)
+                                }
+                            case .progress:
+                                break
                         }
                     }))
                 }
@@ -467,8 +467,9 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
-            mixin.requestSearchController = { _ in
+            mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(completion: { result in
+                    assetsController?.dismiss()
                     completedImpl(result)
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

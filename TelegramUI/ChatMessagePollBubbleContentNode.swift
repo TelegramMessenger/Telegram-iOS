@@ -557,10 +557,16 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let textInsets = UIEdgeInsets(top: 2.0, left: 0.0, bottom: 5.0, right: 0.0)
                 
                 let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
-                let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_LabelAnonymous, font: labelsFont, textColor: incoming ? bubbleTheme.incomingSecondaryTextColor : bubbleTheme.outgoingSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let typeText: String
+                if let poll = poll, poll.isClosed {
+                    typeText = item.presentationData.strings.MessagePoll_LabelClosed
+                } else {
+                    typeText = item.presentationData.strings.MessagePoll_LabelAnonymous
+                }
+                let (typeLayout, typeApply) = makeTypeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: typeText, font: labelsFont, textColor: incoming ? bubbleTheme.incomingSecondaryTextColor : bubbleTheme.outgoingSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let votersString: String
-                if let totalVoters = poll?.results?.totalVoters, totalVoters != 0 {
+                if let totalVoters = poll?.results.totalVoters, totalVoters != 0 {
                     votersString = item.presentationData.strings.MessagePoll_VotedCount(totalVoters)
                 } else {
                     votersString = " "
@@ -591,7 +597,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     var optionVoterCount: [Int: Int32] = [:]
                     var maxOptionVoterCount: Int32 = 0
                     var totalVoterCount: Int32 = 0
-                    if let results = poll.results, let voters = results.voters, let totalVoters = results.totalVoters {
+                    if let voters = poll.results.voters, let totalVoters = poll.results.totalVoters {
                         totalVoterCount = totalVoters
                         for i in 0 ..< poll.options.count {
                             inner: for optionVoters in voters {
@@ -620,6 +626,24 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         let result = makeLayout(item.account.peerId, item.presentationData, item.message, option, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, result.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
                         pollOptionsFinalizeLayouts.append(result.1)
+                    }
+                }
+                
+                boundingSize.width = max(boundingSize.width, min(270.0, constrainedSize.width))
+                
+                var canVote = false
+                if item.message.id.namespace == Namespaces.Message.Cloud, let poll = poll, poll.pollId.namespace == Namespaces.Media.CloudPoll {
+                    var hasVoted = false
+                    if let voters = poll.results.voters {
+                        for voter in voters {
+                            if voter.selected {
+                                hasVoted = true
+                                break
+                            }
+                        }
+                    }
+                    if !hasVoted {
+                        canVote = true
                     }
                 }
                 
@@ -693,31 +717,12 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                         }
                                         
                                         item.controllerInteraction.requestSelectMessagePollOption(item.message.id, option.opaqueIdentifier)
-                                        
-                                        /*let counts: [Int32] = [
-                                            51,
-                                            29,
-                                            7,
-                                            13
-                                        ]
-                                        let voters: [TelegramMediaPollOptionVoters] = zip(poll.options, counts).map { option, count in
-                                            return TelegramMediaPollOptionVoters(selected: option.opaqueIdentifier == "1".data(using: .utf8)!, opaqueIdentifier: option.opaqueIdentifier, count: count)
-                                        }
-                                        let totalVotersCount = voters.map({ $0.count }).reduce(0, +)
-                                        
-                                        let updatedMessage = item.message.withUpdatedMedia([TelegramMediaPoll(text: poll.text, options: poll.options, results: TelegramMediaPollResults(voters: voters, totalVoters: totalVotersCount))])
-                                        let updatedItem = ChatMessageBubbleContentItem(account: item.account, controllerInteraction: item.controllerInteraction, message: updatedMessage, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData)
-                                        
-                                        let continueLayout = strongSelf.asyncLayoutContent()(updatedItem, layoutConstants, .linear(top: .Neighbour, bottom: .Neighbour), nil, CGSize())
-                                        let finalizeLayout = continueLayout.3(constrainedSize, position)
-                                        let sizeAndApply = finalizeLayout.1(boundingWidth)
-                                        sizeAndApply.1(.System(duration: 0.3), false)*/
                                     }
                                 }
                                 optionNode.frame = CGRect(origin: CGPoint(x: layoutConstants.bubble.borderInset, y: verticalOffset), size: size)
                                 verticalOffset += size.height
                                 updatedOptionNodes.append(optionNode)
-                                optionNode.isUserInteractionEnabled = item.message.id.namespace == Namespaces.Message.Cloud && poll?.results?.voters == nil && item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] == nil
+                                optionNode.isUserInteractionEnabled = canVote && item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] == nil
                             }
                             for optionNode in strongSelf.optionNodes {
                                 if !updatedOptionNodes.contains(where: { $0 === optionNode }) {
@@ -754,7 +759,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             let _ = votersApply()
                             strongSelf.votersNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: verticalOffset + optionsVotersSpacing), size: votersLayout.size)
                             if animation.isAnimated, let previousPoll = previousPoll, let poll = poll {
-                                if previousPoll.results?.totalVoters == nil && poll.results?.totalVoters != nil {
+                                if previousPoll.results.totalVoters == nil && poll.results.totalVoters != nil {
                                     strongSelf.votersNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                                 }
                             }

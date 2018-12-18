@@ -92,7 +92,7 @@
 		09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */; };
 		09F799FA21C3542D00820234 /* LegacyWebSearchGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */; };
 		09F799FC21C3FF3000820234 /* WebSearchGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */; };
-		09F79A0121C8116C00820234 /* CountBadgeNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0021C8116C00820234 /* CountBadgeNode.swift */; };
+		09F79A0121C8116C00820234 /* WebSearchBadgeNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0021C8116C00820234 /* WebSearchBadgeNode.swift */; };
 		09F79A0321C8225600820234 /* WebSearchVideoGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0221C8225600820234 /* WebSearchVideoGalleryItem.swift */; };
 		09F79A0721C829BC00820234 /* GalleryNavigationCheckNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0621C829BC00820234 /* GalleryNavigationCheckNode.swift */; };
 		09F79A0921C829C700820234 /* GalleryNavigationRecipientNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */; };
@@ -1192,7 +1192,7 @@
 		09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextAlertController.swift; sourceTree = "<group>"; };
 		09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWebSearchGallery.swift; sourceTree = "<group>"; };
 		09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchGalleryController.swift; sourceTree = "<group>"; };
-		09F79A0021C8116C00820234 /* CountBadgeNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountBadgeNode.swift; sourceTree = "<group>"; };
+		09F79A0021C8116C00820234 /* WebSearchBadgeNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchBadgeNode.swift; sourceTree = "<group>"; };
 		09F79A0221C8225600820234 /* WebSearchVideoGalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchVideoGalleryItem.swift; sourceTree = "<group>"; };
 		09F79A0621C829BC00820234 /* GalleryNavigationCheckNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryNavigationCheckNode.swift; sourceTree = "<group>"; };
 		09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryNavigationRecipientNode.swift; sourceTree = "<group>"; };
@@ -2385,7 +2385,7 @@
 				09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */,
 				09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */,
 				09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */,
-				09F79A0021C8116C00820234 /* CountBadgeNode.swift */,
+				09F79A0021C8116C00820234 /* WebSearchBadgeNode.swift */,
 				09F79A0621C829BC00820234 /* GalleryNavigationCheckNode.swift */,
 				09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */,
 				09F79A0A21C832F400820234 /* WebSearchGalleryFooterContentNode.swift */,
@@ -5864,7 +5864,7 @@
 				D09250061FE5371D003F693F /* GlobalExperimentalSettings.swift in Sources */,
 				D0A24D281F92C27100584D24 /* DefaultDarkAccentPresentationTheme.swift in Sources */,
 				D025A4231F79344500563950 /* FetchManager.swift in Sources */,
-				09F79A0121C8116C00820234 /* CountBadgeNode.swift in Sources */,
+				09F79A0121C8116C00820234 /* WebSearchBadgeNode.swift in Sources */,
 				D0CB27CF20C17A4A001ACF93 /* TermsOfServiceController.swift in Sources */,
 				D00BDA1F1EE5B69200C64C5E /* ChannelAdminController.swift in Sources */,
 				D0EC6E501EB9F58900EBF1C3 /* ChannelAdminsController.swift in Sources */,

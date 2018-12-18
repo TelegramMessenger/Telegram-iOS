@@ -6,7 +6,7 @@ import AsyncDisplayKit
 import TelegramCore
 import LegacyComponents
 
-private func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 30) -> Signal<ChatContextResultCollection?, NoError> {
+private func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
     return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
     |> mapToSignal { results -> Signal<ChatContextResultCollection?, NoError> in
         var collection = existingResults
@@ -19,7 +19,13 @@ private func requestContextResults(account: Account, botId: PeerId, query: Strin
             collection = results
         }
         if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset {
-            return requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection)
+            let nextResults = requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection)
+            if collection.results.count > 10 {
+                return .single(collection)
+                |> then(nextResults)
+            } else {
+                return nextResults
+            }
         } else {
             return .single(collection)
         }
@@ -52,7 +58,7 @@ final class WebSearchControllerInteraction {
     let toggleSelection: (ChatContextResult, Bool) -> Void
     let sendSelected: (ChatContextResult?) -> Void
     let avatarCompleted: (UIImage) -> Void
-    var selectionState: TGMediaSelectionContext?
+    let selectionState: TGMediaSelectionContext?
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     

@@ -5,7 +5,21 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
-import SafariServices
+import LegacyComponents
+
+final class WebSearchGalleryControllerInteraction {
+    let dismiss: (Bool) -> Void
+    let send: (ChatContextResult) -> Void
+    let selectionState: TGMediaSelectionContext?
+    let editingState: TGMediaEditingContext
+    
+    init(dismiss: @escaping (Bool) -> Void, send: @escaping (ChatContextResult) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+        self.dismiss = dismiss
+        self.send = send
+        self.selectionState = selectionState
+        self.editingState = editingState
+    }
+}
 
 struct WebSearchGalleryEntry: Equatable {
     let result: ChatContextResult
@@ -14,16 +28,16 @@ struct WebSearchGalleryEntry: Equatable {
         return lhs.result == rhs.result
     }
     
-    func item(account: Account, presentationData: PresentationData) -> GalleryItem {
+    func item(account: Account, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) -> GalleryItem {
         switch self.result {
             case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
                 if let content = content, type == "gif", let thumbnailResource = thumbnail?.resource, let dimensions = content.dimensions {
                     let fileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
-                    return WebSearchVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: fileReference, streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true))
+                    return WebSearchVideoGalleryItem(account: account, presentationData: presentationData, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: fileReference, streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
                 }
             case let .internalReference(_, _, _, _, _, _, file, _):
                 if let file = file {
-                    return WebSearchVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: .standalone(media: file), streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true))
+                    return WebSearchVideoGalleryItem(account: account, presentationData: presentationData, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: .standalone(media: file), streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
                 }
         }
         preconditionFailure()
@@ -47,6 +61,7 @@ class WebSearchGalleryController: ViewController {
     
     private let account: Account
     private var presentationData: PresentationData
+    private var controllerInteraction: WebSearchGalleryControllerInteraction?
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -75,7 +90,7 @@ class WebSearchGalleryController: ViewController {
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    init(account: Account, peer: Peer?, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    init(account: Account, peer: Peer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
         self.account = account
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
@@ -84,6 +99,13 @@ class WebSearchGalleryController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
+        self.controllerInteraction = WebSearchGalleryControllerInteraction(dismiss: { [weak self] animated in
+            self?.dismiss(forceAway: false)
+        }, send: { [weak self] current in
+            sendCurrent(current)
+            self?.dismiss(forceAway: true)
+        }, selectionState: selectionState, editingState: editingState)
+        
         if let title = peer?.displayTitle {
             let recipientNode = GalleryNavigationRecipientNode(color: .white, title: title)
             let leftItem = UIBarButtonItem(customDisplayNode: recipientNode)
@@ -91,6 +113,7 @@ class WebSearchGalleryController: ViewController {
         }
         
         let checkNode = GalleryNavigationCheckNode(theme: self.presentationData.theme)
+        checkNode.addTarget(target: self, action: #selector(self.checkPressed))
         let rightItem = UIBarButtonItem(customDisplayNode: checkNode)
         self.navigationItem.rightBarButtonItem = rightItem
         self.checkNode = checkNode
@@ -105,7 +128,7 @@ class WebSearchGalleryController: ViewController {
                 strongSelf.centralEntryIndex = centralIndex
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
-                        $0.item(account: account, presentationData: strongSelf.presentationData)
+                        $0.item(account: account, presentationData: strongSelf.presentationData, controllerInteraction: strongSelf.controllerInteraction)
                     }), centralItemIndex: centralIndex, keepFirst: false)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
@@ -140,11 +163,16 @@ class WebSearchGalleryController: ViewController {
         self.centralItemAttributesDisposable.dispose()
     }
     
-    @objc func donePressed() {
-        self.dismiss(forceAway: false)
+    @objc func checkPressed() {
+        if let checkNode = self.checkNode, let controllerInteraction = self.controllerInteraction, let centralItemNode = self.galleryNode.pager.centralItemNode() as? WebSearchVideoGalleryItemNode, let item = centralItemNode.item {
+            let legacyItem = LegacyWebSearchItem(result: item.result)
+            
+            checkNode.setIsChecked(!checkNode.isChecked, animated: true)
+            controllerInteraction.selectionState?.setItem(legacyItem, selected: checkNode.isChecked)
+        }
     }
     
-    private func dismiss(forceAway: Bool) {
+    private func dismiss(forceAway: Bool, animated: Bool = true) {
         var animatedOutNode = true
         var animatedOutInterface = false
         
@@ -155,22 +183,27 @@ class WebSearchGalleryController: ViewController {
             }
         }
         
-        if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? WebSearchGalleryControllerPresentationArguments {
-            if !self.entries.isEmpty {
-                if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]), !forceAway {
-                    animatedOutNode = false
-                    centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
-                        animatedOutNode = true
-                        completion()
-                    })
+        if animated {
+            if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? WebSearchGalleryControllerPresentationArguments {
+                if !self.entries.isEmpty {
+                    if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]), !forceAway {
+                        animatedOutNode = false
+                        centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
+                            animatedOutNode = true
+                            completion()
+                        })
+                    }
                 }
             }
-        }
-        
-        self.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
+            
+            self.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
+                animatedOutInterface = true
+                completion()
+            })
+        } else {
             animatedOutInterface = true
             completion()
-        })
+        }
     }
     
     override func loadDisplayNode() {
@@ -207,14 +240,14 @@ class WebSearchGalleryController: ViewController {
         }
         
         self.galleryNode.pager.replaceItems(self.entries.map({
-            $0.item(account: account, presentationData: self.presentationData)
+            $0.item(account: account, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction)
         }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {
-                var hiddenItem: WebSearchGalleryEntry?
+                var item: WebSearchGalleryEntry?
                 if let index = index {
-                    hiddenItem = strongSelf.entries[index]
+                    item = strongSelf.entries[index]
                     
                     if let node = strongSelf.galleryNode.pager.centralItemNode() {
                         strongSelf.centralItemTitle.set(node.title())
@@ -222,9 +255,13 @@ class WebSearchGalleryController: ViewController {
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
                         strongSelf.centralItemFooterContentNode.set(node.footerContent())
                     }
+                    
+                    if let checkNode = strongSelf.checkNode, let controllerInteraction = strongSelf.controllerInteraction, let selectionState = controllerInteraction.selectionState, let item = item {
+                        checkNode.setIsChecked(selectionState.isIdentifierSelected(item.result.id), animated: false)
+                    }
                 }
                 if strongSelf.didSetReady {
-                    strongSelf._hiddenMedia.set(.single(hiddenItem))
+                    strongSelf._hiddenMedia.set(.single(item))
                 }
             }
         }
@@ -246,12 +283,17 @@ class WebSearchGalleryController: ViewController {
             self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
             self.centralItemFooterContentNode.set(centralItemNode.footerContent())
             
-            if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
+            let item = self.entries[centralItemNode.index]
+            if let transitionArguments = presentationArguments.transitionArguments(item) {
                 nodeAnimatesItself = true
                 centralItemNode.activateAsInitial()
                 
                 if presentationArguments.animated {
                     centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                }
+                
+                if let checkNode = self.checkNode, let controllerInteraction = self.controllerInteraction, let selectionState = controllerInteraction.selectionState {
+                    checkNode.setIsChecked(selectionState.isIdentifierSelected(item.result.id), animated: false)
                 }
         
                 self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))

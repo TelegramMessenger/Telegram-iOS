@@ -17,6 +17,8 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
     }
     
     let result: ChatContextResult
+    private(set) var thumbnailResource: TelegramMediaResource?
+    private(set) var imageResource: TelegramMediaResource?
     let dimensions: CGSize
     let thumbnailImage: Signal<UIImage, NoError>
     let originalImage: Signal<UIImage, NoError>
@@ -30,8 +32,10 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
         self.progress = .complete()
     }
     
-    init(result: ChatContextResult, dimensions: CGSize, thumbnailImage: Signal<UIImage, NoError>, originalImage: Signal<UIImage, NoError>, progress: Signal<Float, NoError>) {
+    init(result: ChatContextResult, thumbnailResource: TelegramMediaResource?, imageResource: TelegramMediaResource?, dimensions: CGSize, thumbnailImage: Signal<UIImage, NoError>, originalImage: Signal<UIImage, NoError>, progress: Signal<Float, NoError>) {
         self.result = result
+        self.thumbnailResource = thumbnailResource
+        self.imageResource = imageResource
         self.dimensions = dimensions
         self.thumbnailImage = thumbnailImage
         self.originalImage = originalImage
@@ -216,9 +220,9 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             }
         case let .internalReference(_, _, _, _, _, image, _, _):
             if let image = image {
-                if let largestRepresentation = largestImageRepresentation(image.representations) {
-                    imageDimensions = largestRepresentation.dimensions
-                    imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 1000.0, height: 800.0))?.resource
+                if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 1000.0, height: 800.0)) {
+                    imageDimensions = imageRepresentation.dimensions
+                    imageResource = imageRepresentation.resource
                 }
                 if let thumbnailRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0)) {
                     thumbnailDimensions = thumbnailRepresentation.dimensions
@@ -266,7 +270,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             }
         }
         
-        return LegacyWebSearchItem(result: result, dimensions: imageDimensions, thumbnailImage: thumbnailSignal, originalImage: originalSignal, progress: progressSignal)
+        return LegacyWebSearchItem(result: result, thumbnailResource: thumbnailResource, imageResource: imageResource, dimensions: imageDimensions, thumbnailImage: thumbnailSignal, originalImage: originalSignal, progress: progressSignal)
     } else {
         return nil
     }
@@ -363,4 +367,41 @@ func presentLegacyWebSearchGallery(account: Account, peer: Peer?, theme: Present
         legacyController?.dismiss()
     }
     present(legacyController, nil)
+}
+
+func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionContext, _ editingState: TGMediaEditingContext, enqueueChatContextResult: (ChatContextResult) -> Void, enqueueMediaMessages: ([Any]) -> Void)
+{
+    var results: [ChatContextResult] = []
+    for item in selectionState.selectedItems() {
+        if let item = item as? LegacyWebSearchItem {
+            results.append(item.result)
+        }
+    }
+    
+    if !results.isEmpty {
+        var signals: [Any] = []
+        for result in results {
+            let editableItem = LegacyWebSearchItem(result: result)
+            if editingState.adjustments(for: editableItem) != nil {
+                if let imageSignal = editingState.imageSignal(for: editableItem) {
+                    let signal = imageSignal.map { image -> Any in
+                        if let image = image as? UIImage {
+                            let dict: [AnyHashable: Any] = [
+                                "type": "editedPhoto",
+                                "image": image
+                            ]
+                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil) as Any
+                        } else {
+                            return SSignal.complete()
+                        }
+                    }
+                    signals.append(signal as Any)
+                }
+            } else {
+                enqueueChatContextResult(result)
+            }
+        }
+        
+        enqueueMediaMessages(signals)
+    }
 }

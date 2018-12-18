@@ -268,7 +268,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: Set(messages.map { $0.id })))
     |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
         var canEdit = false
-        var restrictEdit: Bool = false
         if messages[0].id.namespace == Namespaces.Message.Cloud && !isAction {
             let message = messages[0]
             
@@ -317,6 +316,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         hasUneditableAttributes = true
                         break
                     } else if let _ = media as? TelegramMediaMap {
+                        hasUneditableAttributes = true
+                        break
+                    } else if let _ = media as? TelegramMediaPoll {
                         hasUneditableAttributes = true
                         break
                     }
@@ -396,6 +398,27 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
+        var activePoll: TelegramMediaPoll?
+        for media in message.media {
+            if let poll = media as? TelegramMediaPoll, !poll.isClosed {
+                activePoll = poll
+            }
+        }
+        
+        if let activePoll = activePoll, let voters = activePoll.results.voters {
+            var hasSelected = false
+            for result in voters {
+                if result.selected {
+                    hasSelected = true
+                }
+            }
+            if hasSelected {
+                actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_UnvotePoll, action: {
+                    interfaceInteraction.requestUnvoteInMessage(messages[0].id)
+                })))
+            }
+        }
+        
         if data.canPin {
             if chatPresentationInterfaceState.pinnedMessage?.id != messages[0].id {
                 actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_Pin, action: {
@@ -404,6 +427,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             } else {
                 actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_Unpin, action: {
                     interfaceInteraction.unpinMessage()
+                })))
+            }
+            
+            if let activePoll = activePoll {
+                actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_StopPoll, action: {
+                    interfaceInteraction.requestStopPollInMessage(messages[0].id)
                 })))
             }
         }

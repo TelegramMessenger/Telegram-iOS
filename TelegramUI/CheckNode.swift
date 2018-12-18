@@ -10,9 +10,9 @@ enum CheckNodeStyle {
 }
 
 final class CheckNode: ASDisplayNode {
-    private let strokeColor: UIColor
-    private let fillColor: UIColor
-    private let foregroundColor: UIColor
+    private var strokeColor: UIColor
+    private var fillColor: UIColor
+    private var foregroundColor: UIColor
     private let checkStyle: CheckNodeStyle
     
     private var checkView: TGCheckButtonView?

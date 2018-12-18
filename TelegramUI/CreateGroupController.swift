@@ -311,8 +311,9 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
             
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
-            mixin.requestSearchController = { _ in
+            mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(completion: { result in
+                    assetsController?.dismiss()
                     completedImpl(result)
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -357,7 +358,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroup), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroupTitle), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
             
             return (controllerState, (listState, arguments))

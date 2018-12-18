@@ -14,24 +14,30 @@ class CreatePollOptionItem: ListViewItem, ItemListItem {
     let id: Int
     let placeholder: String
     let value: String
+    let maxLength: Int
     let editing: CreatePollOptionItemEditing
     let sectionId: ItemListSectionId
     let setItemIdWithRevealedOptions: (Int?, Int?) -> Void
     let updated: (String) -> Void
+    let next: (() -> Void)?
     let delete: () -> Void
+    let focused: () -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, id: Int, placeholder: String, value: String, editing: CreatePollOptionItemEditing, sectionId: ItemListSectionId, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, updated: @escaping (String) -> Void, delete: @escaping () -> Void, tag: ItemListItemTag?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, id: Int, placeholder: String, value: String, maxLength: Int, editing: CreatePollOptionItemEditing, sectionId: ItemListSectionId, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, updated: @escaping (String) -> Void, next: (() -> Void)?, delete: @escaping () -> Void, focused: @escaping () -> Void, tag: ItemListItemTag?) {
         self.theme = theme
         self.strings = strings
         self.id = id
         self.placeholder = placeholder
         self.value = value
+        self.maxLength = maxLength
         self.editing = editing
         self.sectionId = sectionId
         self.setItemIdWithRevealedOptions = setItemIdWithRevealedOptions
         self.updated = updated
+        self.next = next
         self.delete = delete
+        self.focused = focused
         self.tag = tag
     }
     
@@ -79,6 +85,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
     private let bottomStripeNode: ASDisplayNode
     
     private let textNode: TextFieldNode
+    private let textLimitNode: TextNode
     private let editableControlNode: ItemListEditableControlNode
     private let reorderControlNode: ItemListEditableReorderControlNode
     
@@ -105,11 +112,15 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         
         self.textNode = TextFieldNode()
         
+        self.textLimitNode = TextNode()
+        self.textLimitNode.isUserInteractionEnabled = false
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.textNode)
         self.addSubnode(self.editableControlNode)
         self.addSubnode(self.reorderControlNode)
+        self.addSubnode(self.textLimitNode)
         
         self.editableControlNode.tapped = { [weak self] in
             if let strongSelf = self {
@@ -140,9 +151,40 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         }
     }
     
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        var updatedText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
+        if let item = self.item {
+            if updatedText.count > item.maxLength {
+                updatedText = String(updatedText[..<updatedText.index(updatedText.startIndex, offsetBy: item.maxLength)])
+                if textField.text != updatedText {
+                    textField.text = updatedText
+                    self.textFieldTextChanged(textField)
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if let item = self.item {
+            if let next = item.next {
+                next()
+            } else {
+                textField.resignFirstResponder()
+            }
+        }
+        return false
+    }
+    
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.item?.focused()
+    }
+    
     func asyncLayout() -> (_ item: CreatePollOptionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
+        let makeTextLimitLayout = TextNode.asyncLayout(self.textLimitNode)
         
         let currentItem = self.item
         
@@ -165,6 +207,11 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
             let layoutSize = layout.size
             
             let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
+            
+            let textLength = item.value.count
+            let displayTextLimit = textLength > item.maxLength * 70 / 100
+            
+            let (textLimitLayout, textLimitApply) = makeTextLimitLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(item.maxLength - textLength)", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
@@ -208,9 +255,15 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     if strongSelf.textNode.textField.autocorrectionType != autocorrectionType {
                         strongSelf.textNode.textField.autocorrectionType = autocorrectionType
                     }
-                    /*if strongSelf.textNode.textField.returnKeyType != item.returnKeyType {
-                        strongSelf.textNode.textField.returnKeyType = item.returnKeyType
-                    }*/
+                    let returnKeyType: UIReturnKeyType
+                    if let _ = item.next {
+                        returnKeyType = .next
+                    } else {
+                        returnKeyType = .done
+                    }
+                    if strongSelf.textNode.textField.returnKeyType != returnKeyType {
+                        strongSelf.textNode.textField.returnKeyType = returnKeyType
+                    }
                     
                     if let currentText = strongSelf.textNode.textField.text {
                         if currentText != item.value {
@@ -256,9 +309,13 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + 6.0 + revealOffset, y: 0.0), size: controlSizeAndApply.0)
                     strongSelf.editableControlNode.frame = editableControlFrame
                     
-                    let _ = reorderSizeAndApply.1()
+                    let _ = reorderSizeAndApply.1(displayTextLimit)
                     let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderSizeAndApply.0.width, y: 0.0), size: reorderSizeAndApply.0)
                     strongSelf.reorderControlNode.frame = reorderControlFrame
+                    
+                    let _ = textLimitApply()
+                    strongSelf.textLimitNode.frame = CGRect(origin: CGPoint(x: reorderControlFrame.minX + floor((reorderControlFrame.width - textLimitLayout.size.width) / 2.0) - 4.0 - UIScreenPixel, y: floor(reorderControlFrame.midY + 2.0)), size: textLimitLayout.size)
+                    strongSelf.textLimitNode.isHidden = !displayTextLimit
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     

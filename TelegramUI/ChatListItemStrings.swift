@@ -64,7 +64,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 messageText = strings.Message_Sticker
                                 break inner
                             } else {
-                                messageText = displayText + " " + strings.Message_Sticker
+                                messageText = strings.Message_StickerText(displayText).0
                                 break inner
                             }
                         case let .Video(_, _, flags):

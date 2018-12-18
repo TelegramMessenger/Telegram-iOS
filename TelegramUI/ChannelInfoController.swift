@@ -318,7 +318,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     arguments.openChannelTypeSetup()
                 })
             case let .channelDescriptionSetup(theme, placeholder, value):
-                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: 255, sectionId: self.section, style: .plain, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .plain, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     
@@ -673,8 +673,9 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
-                mixin.requestSearchController = { _ in
+                mixin.requestSearchController = { assetsController in
                     let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(completion: { result in
+                        assetsController?.dismiss()
                         completedImpl(result)
                     }))
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

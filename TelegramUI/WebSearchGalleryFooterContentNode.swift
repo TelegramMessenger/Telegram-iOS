@@ -14,7 +14,9 @@ final class WebSearchGalleryFooterContentNode: GalleryFooterContentNode {
     private let cancelButton: HighlightableButtonNode
     private let sendButton: HighlightableButtonNode
     
-
+    var cancel: (() -> Void)?
+    var send: (() -> Void)?
+    
     init(account: Account, presentationData: PresentationData) {
         self.account = account
         self.theme = presentationData.theme
@@ -72,10 +74,10 @@ final class WebSearchGalleryFooterContentNode: GalleryFooterContentNode {
     }
     
     @objc func cancelButtonPressed() {
-       
+       self.cancel?()
     }
     
     @objc func sendButtonPressed() {
-        
+        self.send?()
     }
 }
