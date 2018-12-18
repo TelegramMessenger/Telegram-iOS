@@ -420,7 +420,7 @@ private extension Bool {
     }
 }
 
-extension JSON {
+/*extension JSON {
     private init?(apiJson: Api.JSONValue, root: Bool) {
         switch (apiJson, root) {
             case (.jsonNull, false):
@@ -482,3 +482,4 @@ private func apiJson(_ json: JSON, root: Bool) -> Api.JSONValue? {
 func apiJson(_ json: JSON) -> Api.JSONValue? {
     return apiJson(json, root: true)
 }
+*/

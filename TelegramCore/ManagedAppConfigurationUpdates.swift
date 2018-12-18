@@ -10,7 +10,8 @@ import Foundation
 #endif
 
 func managedAppConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    let poll = Signal<Void, NoError> { subscriber in
+    return .complete()
+    /*let poll = Signal<Void, NoError> { subscriber in
         return (network.request(Api.functions.help.getAppConfig())
         |> retryRequest
         |> mapToSignal { result -> Signal<Void, NoError> in
@@ -25,5 +26,5 @@ func managedAppConfigurationUpdates(postbox: Postbox, network: Network) -> Signa
             }
         }).start()
     }
-    return (poll |> then(.complete() |> suspendAwareDelay(12.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+    return (poll |> then(.complete() |> suspendAwareDelay(12.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart*/
 }

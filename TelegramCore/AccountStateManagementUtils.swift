@@ -1241,13 +1241,8 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                         langCode = langPackDifference.langCode
                 }
                 updatedState.updateLangPack(langCode: langCode, difference: difference)
-            case let .updateMessagePollResults(peer, msgId, results):
-                let min: Bool
-                switch results {
-                    case let .pollResults(pollResults):
-                        min = (pollResults.flags & (1 << 0)) != 0
-                }
-                updatedState.updateMessagePollResults(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), results: TelegramMediaPollResults(apiResults: results), min: min)
+            case let .updateMessagePoll(flags, peer, msgId, poll, results):
+                updatedState.updateMessagePoll(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), poll: poll, results: results)
             default:
                 break
         }
@@ -1895,7 +1890,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePollResults, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2104,7 +2099,7 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                     }
                     return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
                 })
-            case let .UpdateMessagePollResults(id, results, min):
+            case let .UpdateMessagePoll(id, apiPoll, results):
                 transaction.updateMessage(id, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
@@ -2113,7 +2108,21 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                     var media = currentMessage.media
                     loop: for j in 0 ..< media.count {
                         if let poll = media[j] as? TelegramMediaPoll {
-                            media[j] = poll.withUpdatedResults((results, min))
+                            var updatedPoll = poll
+                            if let apiPoll = apiPoll {
+                                switch apiPoll {
+                                    case let .poll(id, flags, question, answers):
+                                        updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0)
+                                }
+                            }
+                            
+                            let resultsMin: Bool
+                            switch results {
+                                case let .pollResults(pollResults):
+                                    resultsMin = (pollResults.flags & (1 << 0)) != 0
+                            }
+                            updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
+                            media[j] = updatedPoll
                             break loop
                         }
                     }

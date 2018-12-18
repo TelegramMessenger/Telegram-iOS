@@ -109,33 +109,45 @@ extension TelegramMediaPollResults {
 }
 
 public final class TelegramMediaPoll: Media, Equatable {
-    public let id: MediaId? = nil
+    public var id: MediaId? {
+        return self.pollId
+    }
+    public let pollId: MediaId
     public let peerIds: [PeerId] = []
     
     public let text: String
     public let options: [TelegramMediaPollOption]
-    public let results: TelegramMediaPollResults?
+    public let results: TelegramMediaPollResults
+    public let isClosed: Bool
     
-    public init(text: String, options: [TelegramMediaPollOption], results: TelegramMediaPollResults?) {
+    public init(pollId: MediaId, text: String, options: [TelegramMediaPollOption], results: TelegramMediaPollResults, isClosed: Bool) {
+        self.pollId = pollId
         self.text = text
         self.options = options
         self.results = results
+        self.isClosed = isClosed
     }
     
     public init(decoder: PostboxDecoder) {
+        if let idBytes = decoder.decodeBytesForKeyNoCopy("i") {
+            self.pollId = MediaId(idBytes)
+        } else {
+            self.pollId = MediaId(namespace: Namespaces.Media.LocalPoll, id: 0)
+        }
         self.text = decoder.decodeStringForKey("t", orElse: "")
         self.options = decoder.decodeObjectArrayWithDecoderForKey("os")
-        self.results = decoder.decodeObjectForKey("rs", decoder: { TelegramMediaPollResults(decoder: $0) }) as? TelegramMediaPollResults
+        self.results = decoder.decodeObjectForKey("rs", decoder: { TelegramMediaPollResults(decoder: $0) }) as? TelegramMediaPollResults ?? TelegramMediaPollResults(voters: nil, totalVoters: nil)
+        self.isClosed = decoder.decodeInt32ForKey("ic", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        let buffer = WriteBuffer()
+        self.pollId.encodeToBuffer(buffer)
+        encoder.encodeBytes(buffer, forKey: "i")
         encoder.encodeString(self.text, forKey: "t")
         encoder.encodeObjectArray(self.options, forKey: "os")
-        if let results = self.results {
-            encoder.encodeObject(results, forKey: "rs")
-        } else {
-            encoder.encodeNil(forKey: "rs")
-        }
+        encoder.encodeObject(results, forKey: "rs")
+        encoder.encodeInt32(self.isClosed ? 1 : 0, forKey: "ic")
     }
     
     public func isEqual(to other: Media) -> Bool {
@@ -150,6 +162,9 @@ public final class TelegramMediaPoll: Media, Equatable {
     }
     
     public static func ==(lhs: TelegramMediaPoll, rhs: TelegramMediaPoll) -> Bool {
+        if lhs.pollId != rhs.pollId {
+            return false
+        }
         if lhs.text != rhs.text {
             return false
         }
@@ -159,28 +174,27 @@ public final class TelegramMediaPoll: Media, Equatable {
         if lhs.results != rhs.results {
             return false
         }
+        if lhs.isClosed != rhs.isClosed {
+            return false
+        }
         return true
     }
     
-    func withUpdatedResults(_ results: (TelegramMediaPollResults, Bool)?) -> TelegramMediaPoll {
-        let updatedResults: TelegramMediaPollResults?
-        if let (results, min) = results {
-            if min, let currentResults = self.results, let currentVoters = currentResults.voters, let updatedVoters = results.voters {
-                var selectedOpaqueIdentifiers = Set<Data>()
-                for voters in currentVoters {
-                    if voters.selected {
-                        selectedOpaqueIdentifiers.insert(voters.opaqueIdentifier)
-                    }
+    func withUpdatedResults(_ results: TelegramMediaPollResults, min: Bool) -> TelegramMediaPoll {
+        let updatedResults: TelegramMediaPollResults
+        if min, let currentVoters = self.results.voters, let updatedVoters = results.voters {
+            var selectedOpaqueIdentifiers = Set<Data>()
+            for voters in currentVoters {
+                if voters.selected {
+                    selectedOpaqueIdentifiers.insert(voters.opaqueIdentifier)
                 }
-                updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
-                    return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count)
-                }), totalVoters: results.totalVoters)
-            } else {
-                updatedResults = results
             }
+            updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
+                return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count)
+            }), totalVoters: results.totalVoters)
         } else {
-            updatedResults = nil
+            updatedResults = results
         }
-        return TelegramMediaPoll(text: self.text, options: self.options, results: updatedResults)
+        return TelegramMediaPoll(pollId: self.pollId, text: self.text, options: self.options, results: updatedResults, isClosed: self.isClosed)
     }
 }
