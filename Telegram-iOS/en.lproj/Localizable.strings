@@ -20,6 +20,11 @@
 "MESSAGE_PHOTOS" = "%1$@ sent you %2$@ photos";
 "MESSAGES" = "%1$@ sent you %2$@ messages";
 
+"MESSAGE_POLL" = "%1$@ sent you a poll";
+"CHANNEL_MESSAGE_POLL" = "%1$@ posted a poll";
+"CHAT_MESSAGE_POLL" = "%1$@ sent a poll to the group %2$@";
+"PINNED_POLL" = "%1$@ pinned a poll";
+
 "CHAT_MESSAGE_TEXT" = "%1$@@%2$@: %3$@";
 "CHAT_MESSAGE_NOTEXT" = "%1$@ sent a message to the group %2$@";
 "CHAT_MESSAGE_PHOTO" = "%1$@ sent a photo to the group %2$@";
@@ -80,7 +85,6 @@
 "PINNED_GEO" = "%1$@ pinned a map";
 "PINNED_GEOLIVE" = "%1$@ pinned a live location";
 "PINNED_GIF" = "%1$@ pinned a GIF";
-"PINNED_POLL" = "%1$@ pinned a poll";
 
 "MESSAGE_GAME" = "%1$@ invited you to play %2$@";
 "CHANNEL_MESSAGE_GAME" = "%1$@ invited you to play %2$@";
@@ -401,7 +405,6 @@
 "Message.Audio" = "Voice Message";
 "Message.ForwardedMessage" = "Forwarded Message\nFrom: %@";
 "Message.Animation" = "GIF";
-"Message.Poll" = "Poll";
 
 // Conversation Profile
 "ConversationProfile.ErrorCreatingConversation" = "An error occurred";
@@ -3605,6 +3608,7 @@ Unused sets are archived when you add more.";
 
 "MessagePoll.LabelAnonymous" = "Anonymous Poll";
 "MessagePoll.LabelClosed" = "Final Results";
+"MessagePoll.NoVotes" = "No votes";
 "MessagePoll.VotedCount_0" = "%@ votes";
 "MessagePoll.VotedCount_1" = "1 vote";
 "MessagePoll.VotedCount_2" = "2 votes";
