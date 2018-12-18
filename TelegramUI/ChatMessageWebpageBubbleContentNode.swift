@@ -226,7 +226,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (file, [])
                     }
                 } else if let image = mainMedia as? TelegramMediaImage {
-                    if let type = webpage.type, ["photo", "video", "embed", "gif", "telegram_album"].contains(type) {
+                    if let type = webpage.type, ["photo", "video", "embed", "gif", "document", "telegram_album"].contains(type) {
                         var flags = ChatMessageAttachedContentNodeMediaFlags()
                         if webpage.instantPage != nil, let largest = largestImageRepresentation(image.representations) {
                             if largest.dimensions.width >= 256.0 {

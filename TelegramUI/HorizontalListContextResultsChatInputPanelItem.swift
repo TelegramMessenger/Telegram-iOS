@@ -195,8 +195,6 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
-//messageFileMediaResourceStatus(account: account, file: file, message: message, isRecentActions: isRecentActions)
-
 
             var imageResource: TelegramMediaResource?
             var stickerFile: TelegramMediaFile?

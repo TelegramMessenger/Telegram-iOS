@@ -120,6 +120,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
+        
+        self.toolbarBackgroundNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.toolbarSeparatorNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        self.segmentedControl?.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -139,10 +143,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             controlSize.width = min(layout.size.width, max(200.0, controlSize.width))
             transition.updateFrame(view: segmentedControl, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: layout.size.height - toolbarHeight + floor((44.0 - controlSize.height) / 2.0)), size: controlSize))
         }
-        
-        
-        
-      
         
         var insets = layout.insets(options: [.input])
         insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)

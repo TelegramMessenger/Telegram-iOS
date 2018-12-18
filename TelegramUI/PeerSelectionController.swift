@@ -60,6 +60,20 @@ public final class PeerSelectionController: ViewController {
                 strongSelf.peerSelectionNode.scrollToTop()
             }
         }
+        
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
+                }
+            }
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -68,6 +82,14 @@ public final class PeerSelectionController: ViewController {
     
     deinit {
         self.openMessageFromSearchDisposable.dispose()
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.title = self.presentationData.strings.Conversation_ForwardTitle
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
     
     override public func loadDisplayNode() {

@@ -443,13 +443,13 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     func transitionOut(to node: SearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         let targetTextBackgroundFrame = node.convert(node.backgroundNode.frame, to: self)
         
-        let duration: Double = 0.5
+        let duration: Double = transition.isAnimated ? 0.5 : 0.0
         let timingFunction = kCAMediaTimingFunctionSpring
         
         node.isHidden = true
         self.clearButton.isHidden = true
         self.textField.text = ""
-        
+    
         var backgroundCompleted = false
         var separatorCompleted = false
         var textBackgroundCompleted = false

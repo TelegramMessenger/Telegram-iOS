@@ -201,6 +201,7 @@ public final class AvatarNode: ASDisplayNode {
     }
     
     public func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) {
+        var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
         if let overrideImage = overrideImage {
@@ -209,6 +210,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                 case let .image(image):
                     representation = image
+                    synchronousLoad = false
                 case .savedMessagesIcon:
                     representation = nil
                     icon = .savedMessagesIcon

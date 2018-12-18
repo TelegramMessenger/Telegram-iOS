@@ -72,11 +72,11 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
             }
             
             if let text = self.titleString?.string {
-                titleString = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+                self.titleString = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
             }
             
             if let text = self.textString?.string {
-                textString = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
+                self.textString = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
             
             self.updateWebpage()
@@ -101,6 +101,16 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 authorName = self.strings.Channel_NotificationLoading
                 text = self.url
             case let .Loaded(content):
+                if let contentText = content.text {
+                    text = contentText
+                } else {
+                    if let file = content.file, let mediaKind = mediaContentKind(file) {
+                        text = stringForMediaKind(mediaKind, strings: self.strings).0
+                    } else if let _ = content.image {
+                        text = stringForMediaKind(.image, strings: self.strings).0
+                    }
+                }
+                
                 if let title = content.title {
                     authorName = title
                 } else if let websiteName = content.websiteName {
@@ -108,7 +118,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 } else {
                     authorName = content.displayUrl
                 }
-                text = content.text ?? ""
+            
         }
         
         self.titleString = NSAttributedString(string: authorName, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)

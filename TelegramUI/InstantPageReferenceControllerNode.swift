@@ -1,6 +1,7 @@
 import Foundation
 import Display
 import AsyncDisplayKit
+import Postbox
 import TelegramCore
 import SafariServices
 
@@ -188,8 +189,13 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
         if self.contentNode == nil || self.contentNode?.frame.width != width {
             self.contentNode?.removeFromSupernode()
             
+            var media: [MediaId: Media] = [:]
+            if case let .Loaded(content) = self.webPage.content, let instantPage = content.instantPage  {
+                media = instantPage.media
+            }
+            
             let sideInset: CGFloat = 16.0
-            let (_, items, contentSize) = layoutTextItemWithString(self.item.attributedString, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: sideInset, y: sideInset))
+            let (_, items, contentSize) = layoutTextItemWithString(self.item.attributedString, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: sideInset, y: sideInset), media: media, webpage: self.webPage)
             let contentNode = InstantPageContentNode(account: self.account, strings: self.presentationData.strings, theme: self.theme, items: items, contentSize: CGSize(width: width, height: contentSize.height), inOverlayPanel: true, openMedia: { _ in }, longPressMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in })
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleAreaHeight), size: CGSize(width: width, height: contentSize.height)))
             self.contentContainerNode.insertSubnode(contentNode, at: 0)

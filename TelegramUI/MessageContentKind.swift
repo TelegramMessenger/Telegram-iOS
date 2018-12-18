@@ -71,77 +71,84 @@ public enum MessageContentKind: Equatable {
 
 public func messageContentKind(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> MessageContentKind {
     for media in message.media {
-        switch media {
-            case let expiredMedia as TelegramMediaExpiredContent:
-                switch expiredMedia.data {
-                    case .image:
-                        return .expiredImage
-                    case .file:
-                        return .expiredVideo
-                }
-            case _ as TelegramMediaImage:
-                return .image
-            case let file as TelegramMediaFile:
-                var fileName: String = ""
-                for attribute in file.attributes {
-                    switch attribute {
-                        case let .Sticker(text, _, _):
-                            return .sticker(text)
-                        case let .FileName(name):
-                            fileName = name
-                        case let .Audio(isVoice, _, title, performer, _):
-                            if isVoice {
-                                return .audioMessage
-                            } else {
-                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                    return .file(title + " — " + performer)
-                                } else if let title = title, !title.isEmpty {
-                                    return .file(title)
-                                } else if let performer = performer, !performer.isEmpty {
-                                    return .file(performer)
-                                }
-                            }
-                        case let .Video(_, _, flags):
-                            if file.isAnimated {
-                                return .animation
-                            } else {
-                                if flags.contains(.instantRoundVideo) {
-                                    return .videoMessage
-                                } else {
-                                    return .video
-                                }
-                            }
-                        default:
-                            break
-                    }
-                }
-                return .file(fileName)
-            case _ as TelegramMediaContact:
-                return .contact
-            case let game as TelegramMediaGame:
-                return .game(game.title)
-            case let location as TelegramMediaMap:
-                if location.liveBroadcastingTimeout != nil {
-                    return .liveLocation
-                } else {
-                    return .location
-                }
-            case _ as TelegramMediaAction:
-                return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) ?? "")
-            case let poll as TelegramMediaPoll:
-                return .text(poll.text)
-            default:
-                break
+        if let kind = mediaContentKind(media, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId) {
+            return kind
         }
     }
     return .text(message.text)
 }
- 
-func descriptionStringForMessage(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> (String, Bool) {
-    if !message.text.isEmpty {
-        return (message.text, false)
+
+public func mediaContentKind(_ media: Media, message: Message? = nil, strings: PresentationStrings? = nil, nameDisplayOrder: PresentationPersonNameOrder? = nil, accountPeerId: PeerId? = nil) -> MessageContentKind? {
+    switch media {
+        case let expiredMedia as TelegramMediaExpiredContent:
+            switch expiredMedia.data {
+            case .image:
+                return .expiredImage
+            case .file:
+                return .expiredVideo
+            }
+        case _ as TelegramMediaImage:
+            return .image
+        case let file as TelegramMediaFile:
+            var fileName: String = ""
+            for attribute in file.attributes {
+                switch attribute {
+                case let .Sticker(text, _, _):
+                    return .sticker(text)
+                case let .FileName(name):
+                    fileName = name
+                case let .Audio(isVoice, _, title, performer, _):
+                    if isVoice {
+                        return .audioMessage
+                    } else {
+                        if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+                            return .file(title + " — " + performer)
+                        } else if let title = title, !title.isEmpty {
+                            return .file(title)
+                        } else if let performer = performer, !performer.isEmpty {
+                            return .file(performer)
+                        }
+                    }
+                case let .Video(_, _, flags):
+                    if file.isAnimated {
+                        return .animation
+                    } else {
+                        if flags.contains(.instantRoundVideo) {
+                            return .videoMessage
+                        } else {
+                            return .video
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+            return .file(fileName)
+        case _ as TelegramMediaContact:
+            return .contact
+        case let game as TelegramMediaGame:
+            return .game(game.title)
+        case let location as TelegramMediaMap:
+            if location.liveBroadcastingTimeout != nil {
+                return .liveLocation
+            } else {
+                return .location
+            }
+        case _ as TelegramMediaAction:
+            if let message = message, let strings = strings, let nameDisplayOrder = nameDisplayOrder, let accountPeerId = accountPeerId {
+                return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId) ?? "")
+            } else {
+                return nil
+            }
+        case let poll as TelegramMediaPoll:
+            return .text(poll.text)
+        default:
+            return nil
     }
-    switch messageContentKind(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId) {
+}
+
+func stringForMediaKind(_ kind: MessageContentKind, strings: PresentationStrings) -> (String, Bool) {
+    switch kind {
         case let .text(text):
             return (text, false)
         case .image:
@@ -179,4 +186,11 @@ func descriptionStringForMessage(_ message: Message, strings: PresentationString
         case .expiredVideo:
             return (strings.Message_VideoExpired, true)
     }
+}
+ 
+func descriptionStringForMessage(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> (String, Bool) {
+    if !message.text.isEmpty {
+        return (message.text, false)
+    }
+    return stringForMediaKind(messageContentKind(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId), strings: strings)
 }

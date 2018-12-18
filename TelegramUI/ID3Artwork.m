@@ -71,11 +71,18 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
     uint32_t pos = 0;
     while (pos < size) {
         const uint8_t * const frameBytes = ptr + pos;
+        if (ID3TagOffset + pos + 4 >= data.length) {
+            return nil;
+        }
         uint32_t frameSize = frameSizeForBytes(frameBytes, version);
+        if (ID3TagOffset + pos + frameSize >= data.length) {
+            return nil;
+        }
         
         if (isArtworkFrame(frameBytes, version)) {
             uint32_t frameOffset = frameOffsetForVersion(version);
             const uint8_t *ptr = frameBytes + frameOffset;
+            uint32_t start = ID3TagOffset + pos + frameOffset;
             
             bool isJpg = false;
             uint32_t imageOffset = UINT32_MAX;
@@ -91,7 +98,6 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
             }
             
             if (imageOffset != UINT32_MAX) {
-                uint32_t start = ID3TagOffset + pos + frameOffset;
                 if (isJpg) {
                     NSMutableData *jpgData = [[NSMutableData alloc] initWithCapacity:frameSize + 1024];
                     uint8_t previousByte = 0xff;
@@ -103,11 +109,7 @@ NSData * _Nullable albumArtworkData(NSData * _Nonnull data) {
                             return nil;
                         }
                         uint8_t byte = (uint8_t)ptr[offset];
-//                        if (byte == 0x00 && previousByte == 0xff) {
-//                            skippedBytes++;
-//                        } else {
-                            [jpgData appendBytes:&byte length:1];
-//                        }
+                        [jpgData appendBytes:&byte length:1];
                         if (byte == 0xd9 && previousByte == 0xff) {
                             break;
                         }

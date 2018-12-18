@@ -16,14 +16,14 @@ struct WebSearchGalleryEntry: Equatable {
     
     func item(account: Account, presentationData: PresentationData) -> GalleryItem {
         switch self.result {
-            case let .externalReference(queryId, id, type, _, _, url, content, thumbnail, _):
+            case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
                 if let content = content, type == "gif", let thumbnailResource = thumbnail?.resource, let dimensions = content.dimensions {
                     let fileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
-                    return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: fileReference, streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true), originData: nil, indexData: nil, contentInfo: nil, caption: NSAttributedString(), credit: nil, performAction: { _ in }, openActionOptions: { _ in })
+                    return WebSearchVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: fileReference, streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true))
                 }
-            case let .internalReference(queryId, id, _, _, _, _, file, _):
+            case let .internalReference(_, _, _, _, _, _, file, _):
                 if let file = file {
-                    return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: .standalone(media: file), streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true), originData: nil, indexData: nil, contentInfo: nil, caption: NSAttributedString(), credit: nil, performAction: { _ in }, openActionOptions: { _ in })
+                    return WebSearchVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: .standalone(media: file), streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true))
                 }
         }
         preconditionFailure()
@@ -31,9 +31,11 @@ struct WebSearchGalleryEntry: Equatable {
 }
 
 final class WebSearchGalleryControllerPresentationArguments {
+    let animated: Bool
     let transitionArguments: (WebSearchGalleryEntry) -> GalleryTransitionArguments?
     
-    init(transitionArguments: @escaping (WebSearchGalleryEntry) -> GalleryTransitionArguments?) {
+    init(animated: Bool = true, transitionArguments: @escaping (WebSearchGalleryEntry) -> GalleryTransitionArguments?) {
+        self.animated = animated
         self.transitionArguments = transitionArguments
     }
 }
@@ -63,6 +65,8 @@ class WebSearchGalleryController: ViewController {
     private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
     private let centralItemAttributesDisposable = DisposableSet();
     
+    private var checkNode: GalleryNavigationCheckNode?
+    
     private let _hiddenMedia = Promise<WebSearchGalleryEntry?>(nil)
     var hiddenMedia: Signal<WebSearchGalleryEntry?, NoError> {
         return self._hiddenMedia.get()
@@ -71,7 +75,7 @@ class WebSearchGalleryController: ViewController {
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    init(account: Account, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    init(account: Account, peer: Peer?, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.account = account
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
@@ -80,8 +84,16 @@ class WebSearchGalleryController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
-        let backItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: self, action: #selector(self.donePressed))
-        self.navigationItem.leftBarButtonItem = backItem
+        if let title = peer?.displayTitle {
+            let recipientNode = GalleryNavigationRecipientNode(color: .white, title: title)
+            let leftItem = UIBarButtonItem(customDisplayNode: recipientNode)
+            self.navigationItem.leftBarButtonItem = leftItem
+        }
+        
+        let checkNode = GalleryNavigationCheckNode(theme: self.presentationData.theme)
+        let rightItem = UIBarButtonItem(customDisplayNode: checkNode)
+        self.navigationItem.rightBarButtonItem = rightItem
+        self.checkNode = checkNode
         
         self.statusBar.statusBarStyle = .White
         
@@ -236,8 +248,12 @@ class WebSearchGalleryController: ViewController {
             
             if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
                 nodeAnimatesItself = true
-                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                centralItemNode.activateAsInitial()
                 
+                if presentationArguments.animated {
+                    centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                }
+        
                 self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))
             }
         }
