@@ -122,7 +122,7 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
     } else if let map = media as? TelegramMediaMap {
         let input: Api.InputMedia
         if let liveBroadcastingTimeout = map.liveBroadcastingTimeout {
-            input = .inputMediaGeoLive(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), period: liveBroadcastingTimeout)
+            input = .inputMediaGeoLive(flags: 0, geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), period: liveBroadcastingTimeout)
         } else if let venue = map.venue {
             input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
         } else {
@@ -130,7 +130,8 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         }
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else if let poll = media as? TelegramMediaPoll {
-        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPoll(question: poll.text, answers: poll.options.map({ $0.apiOption })), text), reuploadInfo: nil)))
+        let inputPoll = Api.InputMedia.inputMediaPoll(poll: Api.Poll.poll(id: 0, flags: 0, question: poll.text, answers: poll.options.map({ $0.apiOption })))
+        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil)))
     } else {
         return nil
     }

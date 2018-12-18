@@ -144,7 +144,7 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                     flags |= Int32(1 << 14)
                 }
                 
-                return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, geoPoint: nil))
+                return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities))
                     |> map { result -> Api.Updates? in
                         return result
                     }
@@ -198,13 +198,7 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
     }
     |> mapToSignal { inputPeer -> Signal<Void, NoError> in
         if let inputPeer = inputPeer {
-            var flags: Int32 = 0
-            if coordinate != nil {
-                flags |= 1 << 13
-            } else {
-                flags |= 1 << 12
-            }
-            return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: nil, replyMarkup: nil, entities: nil, geoPoint:  coordinate.flatMap { Api.InputGeoPoint.inputGeoPoint(lat: $0.latitude, long: $0.longitude) }))
+            return network.request(Api.functions.messages.editGeoLive(flags: coordinate == nil ? (1 << 0) : 0, peer: inputPeer, id: messageId.id, geoPoint: coordinate.flatMap({ Api.InputGeoPoint.inputGeoPoint(lat: $0.latitude, long: $0.longitude) })))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                 return .single(nil)
@@ -234,3 +228,4 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
         }
     }
 }
+

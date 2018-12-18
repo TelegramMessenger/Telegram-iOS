@@ -320,8 +320,11 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                     parsedFlags.insert(.shippingAddressRequested)
                 }
                 return (TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, flags: parsedFlags), nil)
-            case let .messageMediaPoll(_, question, answers, results):
-                return (TelegramMediaPoll(text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), results: results.flatMap(TelegramMediaPollResults.init(apiResults:))), nil)
+            case let .messageMediaPoll(poll, results):
+                switch poll {
+                    case let .poll(id, flags, question, answers):
+                        return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0), nil)
+                }
         }
     }
     

@@ -26,6 +26,8 @@ public struct Namespaces {
         public static let CloudGame: Int32 = 11
         public static let CloudInvoice: Int32 = 12
         public static let LocalWebpage: Int32 = 13
+        public static let LocalPoll: Int32 = 14
+        public static let CloudPoll: Int32 = 15
     }
     
     public struct Peer {
