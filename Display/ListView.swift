@@ -2283,12 +2283,20 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                                 }
                             }
                         case .visible:
-                            if itemNode.apparentFrame.maxY > self.visibleSize.height - self.insets.bottom {
-                                offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
-                            } else if itemNode.apparentFrame.minY < self.insets.top {
-                                offset = self.insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top
+                            if itemNode.apparentFrame.size.height > self.visibleSize.height - self.insets.top - self.insets.bottom {
+                                if itemNode.apparentFrame.maxY > self.visibleSize.height - self.insets.bottom {
+                                    offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
+                                } else {
+                                    offset = 0.0
+                                }
                             } else {
-                                offset = 0.0
+                                if itemNode.apparentFrame.maxY > self.visibleSize.height - self.insets.bottom {
+                                    offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
+                                } else if itemNode.apparentFrame.minY < self.insets.top {
+                                    offset = self.insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top
+                                } else {
+                                    offset = 0.0
+                                }
                             }
                     }
                     
@@ -2504,32 +2512,35 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 var temporaryPreviousNodes: [ListViewItemNode] = []
                 var previousUpperBound: CGFloat?
                 var previousLowerBound: CGFloat?
-                for (previousNode, previousFrame) in previousApparentFrames {
-                    if previousNode.supernode == nil {
-                        temporaryPreviousNodes.append(previousNode)
-                        previousNode.frame = previousFrame
-                        if previousUpperBound == nil || previousUpperBound! > previousFrame.minY {
-                            previousUpperBound = previousFrame.minY
-                        }
-                        if previousLowerBound == nil || previousLowerBound! < previousFrame.maxY {
-                            previousLowerBound = previousFrame.maxY
-                        }
-                    } else {
-                        if previousNode.canBeUsedAsScrollToItemAnchor {
-                            offset = previousNode.apparentFrame.minY - previousFrame.minY
+                if case .visible = scrollToItem.position {
+                } else {
+                    for (previousNode, previousFrame) in previousApparentFrames {
+                        if previousNode.supernode == nil {
+                            temporaryPreviousNodes.append(previousNode)
+                            previousNode.frame = previousFrame
+                            if previousUpperBound == nil || previousUpperBound! > previousFrame.minY {
+                                previousUpperBound = previousFrame.minY
+                            }
+                            if previousLowerBound == nil || previousLowerBound! < previousFrame.maxY {
+                                previousLowerBound = previousFrame.maxY
+                            }
+                        } else {
+                            if previousNode.canBeUsedAsScrollToItemAnchor {
+                                offset = previousNode.apparentFrame.minY - previousFrame.minY
+                            }
                         }
                     }
-                }
                 
-                if offset == nil {
-                    let updatedUpperBound = self.itemNodes[0].apparentFrame.minY
-                    let updatedLowerBound = max(self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY, self.visibleSize.height)
-                    
-                    switch scrollToItem.directionHint {
-                        case .Up:
-                            offset = updatedLowerBound - (previousUpperBound ?? 0.0)
-                        case .Down:
-                            offset = updatedUpperBound - (previousLowerBound ?? self.visibleSize.height)
+                    if offset == nil {
+                        let updatedUpperBound = self.itemNodes[0].apparentFrame.minY
+                        let updatedLowerBound = max(self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY, self.visibleSize.height)
+                        
+                        switch scrollToItem.directionHint {
+                            case .Up:
+                                offset = updatedLowerBound - (previousUpperBound ?? 0.0)
+                            case .Down:
+                                offset = updatedUpperBound - (previousLowerBound ?? self.visibleSize.height)
+                        }
                     }
                 }
                 
