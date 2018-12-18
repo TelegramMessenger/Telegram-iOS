@@ -3605,12 +3605,12 @@ Unused sets are archived when you add more.";
 
 "MessagePoll.LabelAnonymous" = "Anonymous Poll";
 "MessagePoll.LabelClosed" = "Final Results";
-"MessagePoll.VotedCount_0" = "No votes";
-"MessagePoll.VotedCount_1" = "1 voted";
-"MessagePoll.VotedCount_2" = "2 voted";
-"MessagePoll.VotedCount_3_10" = "%@ voted";
-"MessagePoll.VotedCount_many" = "%@ voted";
-"MessagePoll.VotedCount_any" = "%@ voted";
+"MessagePoll.VotedCount_0" = "%@ votes";
+"MessagePoll.VotedCount_1" = "1 vote";
+"MessagePoll.VotedCount_2" = "2 votes";
+"MessagePoll.VotedCount_3_10" = "%@ votes";
+"MessagePoll.VotedCount_many" = "%@ votes";
+"MessagePoll.VotedCount_any" = "%@ votes";
 "AttachmentMenu.Poll" = "Poll";
 "Conversation.PinnedPoll" = "Pinned Poll";
 
@@ -3641,3 +3641,5 @@ Unused sets are archived when you add more.";
 
 "Conversation.UnvotePoll" = "Unvote";
 "Conversation.StopPoll" = "Stop Poll";
+"Conversation.StopPollConfirmationTitle" = "If you stop this poll now, nobody will be able to vote in it anymore. This action cannot be undone.";
+"Conversation.StopPollConfirmation" = "Stop Poll";
