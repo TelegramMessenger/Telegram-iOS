@@ -88,6 +88,7 @@
 @property (nonatomic, copy) bool (^shouldPaste)();
 @property (nonatomic, copy) ASEditableTextNodeTargetForAction *(^targetForActionImpl)(SEL);
 @property (nonatomic, copy) bool (^shouldReturn)();
+@property (nonatomic, copy) void (^backspaceWhileEmpty)();
 
 @end
 
@@ -176,6 +177,16 @@
 - (void)handlePlainReturn:(id)__unused sender {
   if (_shouldReturn) {
     _shouldReturn();
+  }
+}
+
+- (void)deleteBackward {
+  bool notify = self.text.length == 0;
+  [super deleteBackward];
+  if (notify) {
+    if (_backspaceWhileEmpty) {
+      _backspaceWhileEmpty();
+    }
   }
 }
 
@@ -332,6 +343,14 @@
       }
     }
     return true;
+  };
+  textView.backspaceWhileEmpty = ^{
+    __strong ASEditableTextNode *strongSelf = weakSelf;
+    if (strongSelf != nil) {
+      if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeBackspaceWhileEmpty:)]) {
+        [strongSelf->_delegate editableTextNodeBackspaceWhileEmpty:strongSelf];
+      }
+    }
   };
   _textKitComponents.textView = textView;
   _textKitComponents.textView.scrollEnabled = _scrollEnabled;
@@ -941,6 +960,35 @@
 - (CGRect)layoutManager:(NSLayoutManager *)layoutManager boundingBoxForControlGlyphAtIndex:(NSUInteger)glyphIndex forTextContainer:(NSTextContainer *)textContainer proposedLineFragment:(CGRect)proposedRect glyphPosition:(CGPoint)glyphPosition characterIndex:(NSUInteger)characterIndex
 {
   return [_wordKerner layoutManager:layoutManager boundingBoxForControlGlyphAtIndex:glyphIndex forTextContainer:textContainer proposedLineFragment:proposedRect glyphPosition:glyphPosition characterIndex:characterIndex];
+}
+
+- (BOOL)layoutManager:(NSLayoutManager *)layoutManager shouldSetLineFragmentRect:(inout CGRect *)lineFragmentRect lineFragmentUsedRect:(inout CGRect *)lineFragmentUsedRect baselineOffset:(inout CGFloat *)baselineOffset inTextContainer:(NSTextContainer *)textContainer forGlyphRange:(NSRange)glyphRange {
+  CGFloat fontLineHeight;
+  UIFont *baseFont = _baseFont;
+  if (_typingAttributes[NSFontAttributeName] != nil) {
+    baseFont = _typingAttributes[NSFontAttributeName];
+  }
+  if (baseFont == nil) {
+    fontLineHeight = 20.0;
+  } else {
+    CGFloat fontAscent = baseFont.ascender;
+    CGFloat fontDescent = ABS(baseFont.descender);
+    fontLineHeight = floor(fontAscent + fontDescent);
+  }
+  CGFloat lineHeight = fontLineHeight * 1.0;
+  CGFloat baselineNudge = (lineHeight - fontLineHeight) * 0.6f;
+  
+  CGRect rect = *lineFragmentRect;
+  rect.size.height = lineHeight;
+  
+  CGRect usedRect = *lineFragmentUsedRect;
+  usedRect.size.height = MAX(lineHeight, usedRect.size.height);
+  
+  *lineFragmentRect = rect;
+  *lineFragmentUsedRect = usedRect;
+  *baselineOffset = *baselineOffset + baselineNudge;
+  
+  return true;
 }
 
 #pragma mark - Geometry

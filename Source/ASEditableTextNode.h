@@ -57,6 +57,7 @@ NS_ASSUME_NONNULL_BEGIN
  @default true
  */
 @property (nonatomic) BOOL scrollEnabled;
+@property (nonatomic, strong) UIFont *baseFont;
 
 /**
   @abstract Access to underlying UITextView for more configuration options.
@@ -212,6 +213,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)editableTextNodeShouldPaste:(ASEditableTextNode *)editableTextNode;
 - (ASEditableTextNodeTargetForAction * _Nullable)editableTextNodeTargetForAction:(SEL)action;
 - (BOOL)editableTextNodeShouldReturn:(ASEditableTextNode *)editableTextNode;
+- (void)editableTextNodeBackspaceWhileEmpty:(ASEditableTextNode *)editableTextNode;
 
 @end
 
