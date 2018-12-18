@@ -26,6 +26,8 @@ THIN="$BUILD_DIR/thin"
 
 PKG_CONFIG="$SOURCE_DIR/pkg-config-wrapper.sh"
 
+LIB_NAMES="libavcodec libavformat libavutil libswresample"
+
 set -e
 
 CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
@@ -64,14 +66,15 @@ DEPLOYMENT_TARGET="8.0"
 LIBS_HASH=""
 for ARCH in $ARCHS
 do
-	if [ -d "$THIN/$ARCH/lib" ]
-	then
-		for LIB in "$THIN/$ARCH/lib/"*.a
-		do
-			LIB_DATE=`stat -f "%a,%z" "$LIB"`
+	for LIB_NAME in $LIB_NAMES
+	do
+		LIB="$SCRATCH/$ARCH/$LIB_NAME/$LIB_NAME.a"
+		if [ -e "$LIB" ]
+		then
+			LIB_DATE=`crc32 "$LIB"`
 			LIBS_HASH="$LIBS_HASH $ARCH/$LIB:$LIB_DATE"
-		done
-	fi
+		fi
+	done
 done
 
 if [ "$COMPILE" ]
@@ -112,16 +115,20 @@ then
 
 		LIBOPUS_TARGET_PATH="$SCRATCH/$ARCH"
 		LIBOPUS_PATH="$LIBOPUS_TARGET_PATH/libopus"
-		rm -rf "$LIBOPUS_PATH"
-		cp -R "$SOURCE_DIR/libopus" "$LIBOPUS_TARGET_PATH"
 
-		echo "prefix=\"$LIBOPUS_PATH\"" > "$LIBOPUS_PATH/opus.pc"
-		printf "\n" >> "$LIBOPUS_PATH/opus.pc"
-		cat "$SOURCE_DIR/libopus/opus.pc" >> "$LIBOPUS_PATH/opus.pc"
-		echo "LIBOPUS_TARGET_PATH = $LIBOPUS_TARGET_PATH"
+		VANILLA_OPUS_PC=`cat $SOURCE_DIR/libopus/opus.pc`
+		OPUS_PC="prefix=\"$LIBOPUS_PATH\"\n$VANILLA_OPUS_PC"
+
+		if [ ! -e "$LIBOPUS_PATH/opus.pc" ]
+		then
+			echo "Generating opus.pc"
+			rm -rf "$LIBOPUS_PATH"
+			cp -R "$SOURCE_DIR/libopus" "$LIBOPUS_TARGET_PATH"
+
+			echo "$OPUS_PC" > "$LIBOPUS_PATH/opus.pc"
+		fi
 
 		export PKG_CONFIG_PATH="$LIBOPUS_PATH"
-		echo "PKG_CONFIG_PATH = $PKG_CONFIG_PATH"
 
 		CFLAGS="-arch $ARCH"
 		if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]
@@ -185,20 +192,23 @@ fi
 UPDATED_LIBS_HASH=""
 for ARCH in $ARCHS
 do
-	if [ -d "$THIN/$ARCH/lib" ]
-	then
-		for LIB in "$THIN/$ARCH/lib/"*.a
-		do
-			LIB_DATE=`stat -f "%a,%z" "$LIB"`
+	for LIB_NAME in $LIB_NAMES
+	do
+		LIB="$SCRATCH/$ARCH/$LIB_NAME/$LIB_NAME.a"
+		if [ -e "$LIB" ]
+		then
+			LIB_DATE=`crc32 "$LIB"`
 			UPDATED_LIBS_HASH="$UPDATED_LIBS_HASH $ARCH/$LIB:$LIB_DATE"
-		done
-	fi
+		fi
+	done
 done
 
 if [ "$UPDATED_LIBS_HASH" = "$LIBS_HASH" ]
 then
 	echo "Libs aren't changed, skipping lipo"
 else
+	echo "UPDATED_LIBS_HASH=$UPDATED_LIBS_HASH"
+	echo "LIBS_HASH=$LIBS_HASH"
 	LIPO="y"
 fi
 

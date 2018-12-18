@@ -6,7 +6,7 @@
 
 + (void)initializeGlobals {
 #if DEBUG
-    av_log_set_level(AV_LOG_VERBOSE);
+    av_log_set_level(AV_LOG_ERROR);
 #else
     av_log_set_level(AV_LOG_QUIET);
 #endif
