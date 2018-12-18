@@ -348,12 +348,12 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + 6.0 + revealOffset, y: 0.0), size: controlSizeAndApply.0)
                     strongSelf.editableControlNode.frame = editableControlFrame
                     
-                    let _ = reorderSizeAndApply.1(displayTextLimit)
+                    let _ = reorderSizeAndApply.1(displayTextLimit && layout.contentSize.height <= 44.0)
                     let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderSizeAndApply.0.width, y: 0.0), size: reorderSizeAndApply.0)
                     strongSelf.reorderControlNode.frame = reorderControlFrame
                     
                     let _ = textLimitApply()
-                    strongSelf.textLimitNode.frame = CGRect(origin: CGPoint(x: reorderControlFrame.minX + floor((reorderControlFrame.width - textLimitLayout.size.width) / 2.0) - 4.0 - UIScreenPixel, y: floor(reorderControlFrame.midY + 2.0)), size: textLimitLayout.size)
+                    strongSelf.textLimitNode.frame = CGRect(origin: CGPoint(x: reorderControlFrame.minX + floor((reorderControlFrame.width - textLimitLayout.size.width) / 2.0) - 4.0 - UIScreenPixel, y: max(floor(reorderControlFrame.midY + 2.0), layout.contentSize.height - 15.0 - textLimitLayout.size.height)), size: textLimitLayout.size)
                     strongSelf.textLimitNode.isHidden = !displayTextLimit
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)

@@ -17,6 +17,7 @@ public enum MessageContentKindKey {
     case liveLocation
     case expiredImage
     case expiredVideo
+    case poll
 }
 
 public enum MessageContentKind: Equatable {
@@ -34,6 +35,7 @@ public enum MessageContentKind: Equatable {
     case liveLocation
     case expiredImage
     case expiredVideo
+    case poll(String)
     
     public var key: MessageContentKindKey {
         switch self {
@@ -65,6 +67,8 @@ public enum MessageContentKind: Equatable {
                 return .expiredImage
             case .expiredVideo:
                 return .expiredVideo
+            case .poll:
+                return .poll
         }
     }
 }
@@ -82,10 +86,10 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
     switch media {
         case let expiredMedia as TelegramMediaExpiredContent:
             switch expiredMedia.data {
-            case .image:
-                return .expiredImage
-            case .file:
-                return .expiredVideo
+                case .image:
+                    return .expiredImage
+                case .file:
+                    return .expiredVideo
             }
         case _ as TelegramMediaImage:
             return .image
@@ -93,34 +97,34 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
             var fileName: String = ""
             for attribute in file.attributes {
                 switch attribute {
-                case let .Sticker(text, _, _):
-                    return .sticker(text)
-                case let .FileName(name):
-                    fileName = name
-                case let .Audio(isVoice, _, title, performer, _):
-                    if isVoice {
-                        return .audioMessage
-                    } else {
-                        if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                            return .file(title + " — " + performer)
-                        } else if let title = title, !title.isEmpty {
-                            return .file(title)
-                        } else if let performer = performer, !performer.isEmpty {
-                            return .file(performer)
-                        }
-                    }
-                case let .Video(_, _, flags):
-                    if file.isAnimated {
-                        return .animation
-                    } else {
-                        if flags.contains(.instantRoundVideo) {
-                            return .videoMessage
+                    case let .Sticker(text, _, _):
+                        return .sticker(text)
+                    case let .FileName(name):
+                        fileName = name
+                    case let .Audio(isVoice, _, title, performer, _):
+                        if isVoice {
+                            return .audioMessage
                         } else {
-                            return .video
+                            if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+                                return .file(title + " — " + performer)
+                            } else if let title = title, !title.isEmpty {
+                                return .file(title)
+                            } else if let performer = performer, !performer.isEmpty {
+                                return .file(performer)
+                            }
                         }
-                    }
-                default:
-                    break
+                    case let .Video(_, _, flags):
+                        if file.isAnimated {
+                            return .animation
+                        } else {
+                            if flags.contains(.instantRoundVideo) {
+                                return .videoMessage
+                            } else {
+                                return .video
+                            }
+                        }
+                    default:
+                        break
                 }
             }
             return .file(fileName)
@@ -141,7 +145,7 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
                 return nil
             }
         case let poll as TelegramMediaPoll:
-            return .text(poll.text)
+            return .poll(poll.text)
         default:
             return nil
     }
@@ -185,6 +189,8 @@ func stringForMediaKind(_ kind: MessageContentKind, strings: PresentationStrings
             return (strings.Message_ImageExpired, true)
         case .expiredVideo:
             return (strings.Message_VideoExpired, true)
+        case let .poll(text):
+            return ("📊 \(text)", false)
     }
 }
  
