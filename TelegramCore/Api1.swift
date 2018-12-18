@@ -3554,7 +3554,7 @@ extension Api {
         case updateLangPackTooLong(langCode: String)
         case updateUserPinnedMessage(userId: Int32, id: Int32)
         case updateChatPinnedMessage(chatId: Int32, id: Int32)
-        case updateMessagePoll(flags: Int32, peer: Api.Peer, msgId: Int32, poll: Api.Poll?, results: Api.PollResults)
+        case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4116,13 +4116,12 @@ extension Api {
                     serializeInt32(chatId, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
-                case .updateMessagePoll(let flags, let peer, let msgId, let poll, let results):
+                case .updateMessagePoll(let flags, let pollId, let poll, let results):
                     if boxed {
-                        buffer.appendInt32(-1727571636)
+                        buffer.appendInt32(-1398708869)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt64(pollId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {poll!.serialize(buffer, true)}
                     results.serialize(buffer, true)
                     break
@@ -4267,8 +4266,8 @@ extension Api {
                 return ("updateUserPinnedMessage", [("userId", userId), ("id", id)])
                 case .updateChatPinnedMessage(let chatId, let id):
                 return ("updateChatPinnedMessage", [("chatId", chatId), ("id", id)])
-                case .updateMessagePoll(let flags, let peer, let msgId, let poll, let results):
-                return ("updateMessagePoll", [("flags", flags), ("peer", peer), ("msgId", msgId), ("poll", poll), ("results", results)])
+                case .updateMessagePoll(let flags, let pollId, let poll, let results):
+                return ("updateMessagePoll", [("flags", flags), ("pollId", pollId), ("poll", poll), ("results", results)])
     }
     }
     
@@ -5401,27 +5400,22 @@ extension Api {
         static func parse_updateMessagePoll(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Api.Poll?
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.Poll?
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.Poll
+                _3 = Api.parse(reader, signature: signature) as? Api.Poll
             } }
-            var _5: Api.PollResults?
+            var _4: Api.PollResults?
             if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.PollResults
+                _4 = Api.parse(reader, signature: signature) as? Api.PollResults
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.Update.updateMessagePoll(flags: _1!, peer: _2!, msgId: _3!, poll: _4, results: _5!)
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateMessagePoll(flags: _1!, pollId: _2!, poll: _3, results: _4!)
             }
             else {
                 return nil
