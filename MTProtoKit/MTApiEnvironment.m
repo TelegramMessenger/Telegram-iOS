@@ -50,6 +50,11 @@
 #define IPAD_4G_NAMESTRING              @"iPad 4G"
 #define IPAD_5G_NAMESTRING              @"iPad Air 2"
 #define IPAD_6G_NAMESTRING  @"iPad Pro"
+#define IPAD_PRO_3G_NAMESTRING  @"iPad Pro 12.9 (3rd gen)"
+#define IPAD_PRO_11_NAMESTRING  @"iPad Pro 11"
+#define IPAD_PRO_6G_NAMESTRING  @"iPad (6th gen)"
+#define IPAD_PRO_10_5_NAMESTRING  @"iPad Pro 10.5"
+#define IPAD_PRO_12_9_NAMESTRING  @"iPad Pro 12.9"
 #define IPAD_UNKNOWN_NAMESTRING         @"Unknown iPad"
 
 #define APPLETV_2G_NAMESTRING           @"Apple TV 2G"
@@ -63,6 +68,14 @@
 #define SIMULATOR_IPHONE_NAMESTRING     @"iPhone Simulator"
 #define SIMULATOR_IPAD_NAMESTRING       @"iPad Simulator"
 #define SIMULATOR_APPLETV_NAMESTRING    @"Apple TV Simulator" // :)
+
+/*
+ iPad8,5, iPad8,6, iPad8,7, iPad8,8 - iPad Pro 12.9" (3rd gen)
+ iPad8,1, iPad8,2, iPad8,3, iPad8,4 - iPad Pro 11"
+ iPad7,5, iPad7,6 - iPad 6th gen
+ iPad7,3, iPad7,4 - iPad Pro 10.5"
+ iPad7,1, iPad7,2 - iPad Pro 12.9" (2ng gen)
+ */
 
 typedef enum {
     UIDeviceUnknown,
@@ -106,6 +119,12 @@ typedef enum {
     UIDevice4GiPad,
     UIDevice5GiPad,
     UIDevice6GiPad,
+    
+    UIDeviceiPadPro12_93g,
+    UIDeviceiPadPro11,
+    UIDeviceiPadPro6g,
+    UIDeviceiPadPro10_5,
+    UIDeviceiPadPro12_9,
     
     UIDeviceAppleTV2,
     UIDeviceAppleTV3,
@@ -316,6 +335,11 @@ NSString *suffix = @"";
         case UIDevice4GiPad : return IPAD_4G_NAMESTRING;
         case UIDevice5GiPad : return IPAD_5G_NAMESTRING;
         case UIDevice6GiPad : return IPAD_6G_NAMESTRING;
+        case UIDeviceiPadPro12_93g : return IPAD_PRO_12_9_NAMESTRING;
+        case UIDeviceiPadPro11 : return IPAD_PRO_11_NAMESTRING;
+        case UIDeviceiPadPro6g : return IPAD_PRO_6G_NAMESTRING;
+        case UIDeviceiPadPro10_5 : return IPAD_PRO_10_5_NAMESTRING;
+        case UIDeviceiPadPro12_9 : return IPAD_PRO_12_9_NAMESTRING;
         case UIDeviceUnknowniPad : return IPAD_UNKNOWN_NAMESTRING;
             
         case UIDeviceAppleTV2 : return APPLETV_2G_NAMESTRING;
@@ -412,6 +436,41 @@ NSString *suffix = @"";
     if ([platform hasPrefix:@"iPod"])               return UIDeviceUnknowniPod;
     if ([platform hasPrefix:@"iPad"])               return UIDeviceUnknowniPad;
     if ([platform hasPrefix:@"AppleTV"])            return UIDeviceUnknownAppleTV;
+    
+    if ([platform isEqualToString:@"iPad8,5"] ||
+        [platform isEqualToString:@"iPad8,6"] ||
+        [platform isEqualToString:@"iPad8,7"] ||
+        [platform isEqualToString:@"iPad8,8"]) {
+        return UIDeviceiPadPro12_93g;
+    }
+    
+    if ([platform isEqualToString:@"iPad8,1"] ||
+        [platform isEqualToString:@"iPad8,2"] ||
+        [platform isEqualToString:@"iPad8,3"] ||
+        [platform isEqualToString:@"iPad8,4"]) {
+        return UIDeviceiPadPro11;
+    }
+    
+    if ([platform isEqualToString:@"iPad7,5"] ||
+        [platform isEqualToString:@"iPad7,6"]) {
+        return UIDeviceiPadPro6g;
+    }
+    
+    if ([platform isEqualToString:@"iPad7,3"] ||
+        [platform isEqualToString:@"iPad7,4"]) {
+        return UIDeviceiPadPro10_5;
+    }
+    
+    if ([platform isEqualToString:@"iPad7,1"] ||
+        [platform isEqualToString:@"iPad7,2"]) {
+        return UIDeviceiPadPro12_9;
+    }
+    
+#define IPAD_PRO_3G_NAMESTRING  @"iPad Pro 12.9 (3rd gen)"
+#define IPAD_PRO_11_NAMESTRING  @"iPad Pro 11"
+#define IPAD_PRO_6G_NAMESTRING  @"iPad (6th gen)"
+#define IPAD_PRO_10_5_NAMESTRING  @"iPad Pro 10.5"
+#define IPAD_PRO_12_9_NAMESTRING  @"iPad Pro 12.9"
     
     // Simulator thanks Jordan Breeding
     if ([platform hasSuffix:@"86"] || [platform isEqual:@"x86_64"])
