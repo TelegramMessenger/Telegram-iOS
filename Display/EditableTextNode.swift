@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-public class EditableTextNode : ASEditableTextNode {
+public class EditableTextNode: ASEditableTextNode {
     override public var keyboardAppearance: UIKeyboardAppearance {
         get {
             return super.keyboardAppearance
