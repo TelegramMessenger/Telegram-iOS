@@ -967,6 +967,8 @@ static CGFloat transformRotation(CGAffineTransform transform)
     
     if (fromViewContainerCopy == nil)
         fromViewContainerCopy = [fromView snapshotViewAfterScreenUpdates:false];
+    if (fromViewContainerCopy == nil)
+        fromViewContainerCopy = [fromView snapshotViewAfterScreenUpdates:true];
     
     fromViewContainerCopy.frame = fromContainerFromFrame;
     [fromContainerView insertSubview:fromViewContainerCopy aboveSubview:fromScrollView];
@@ -1091,7 +1093,13 @@ static CGFloat transformRotation(CGAffineTransform transform)
         }
     }
     
-    CGRect toFrame = [fromView.superview convertRect:[toView convertRect:CGRectInset(toView.bounds, toFrameInsets.left, toFrameInsets.top) toView:nil] fromView:nil];
+    CGRect toRect;
+    if (toView.superview != nil) {
+        toRect = [toView convertRect:CGRectInset(toView.bounds, toFrameInsets.left, toFrameInsets.top) toView:nil];
+    } else {
+        toRect = CGRectInset(toView.frame, toFrameInsets.left, toFrameInsets.top);
+    }
+    CGRect toFrame = [fromView.superview convertRect:toRect fromView:nil];
     toFrame = adjustFrameForOriginalSubframe(fromView.frame, fromViewContentRect, toFrame);
     
     if (transitionDesc == nil && toViewCopy == nil)

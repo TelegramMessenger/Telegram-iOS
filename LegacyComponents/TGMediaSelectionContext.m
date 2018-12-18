@@ -117,7 +117,12 @@
 
 - (bool)isItemSelected:(id<TGMediaSelectableItem>)item
 {
-    return [_selectedIdentifiers containsObject:item.uniqueIdentifier];
+    return [self isIdentifierSelected:item.uniqueIdentifier];
+}
+
+- (bool)isIdentifierSelected:(NSString *)identifier
+{
+    return [_selectedIdentifiers containsObject:identifier];
 }
 
 - (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item

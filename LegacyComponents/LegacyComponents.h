@@ -239,6 +239,7 @@ FOUNDATION_EXPORT const unsigned char LegacyComponentsVersionString[];
 #import <LegacyComponents/TGMediaPickerGalleryModel.h>
 #import <LegacyComponents/TGMediaPickerGalleryInterfaceView.h>
 #import <LegacyComponents/TGPhotoEditorController.h>
+#import <LegacyComponents/TGMediaAvatarEditorTransition.h>
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 #import <LegacyComponents/PGPhotoEditorValues.h>

@@ -18,7 +18,7 @@
     __weak TGPhotoEditorController *_controller;
     UIView *_curtainView;
     
-    UIImageView *_fromTransitionView;
+    UIView *_fromTransitionView;
     TGImageView *_toTransitionView;
 }
 @end
@@ -32,13 +32,18 @@
     {
         _controller = controller;
         
-        _fromTransitionView = [[UIImageView alloc] init];
-        
         if ([fromView conformsToProtocol:@protocol(TGModernGalleryTransitionView)])
         {
+            UIImageView *view = [[UIImageView alloc] init];
             id<TGModernGalleryTransitionView> transitionView = (id<TGModernGalleryTransitionView>)fromView;
-            _fromTransitionView.image = [transitionView transitionImage];
+            view.image = [transitionView transitionImage];
+            _fromTransitionView = view;
         }
+        
+        if (_fromTransitionView == nil)
+            _fromTransitionView = [fromView snapshotViewAfterScreenUpdates:false];
+        if (_fromTransitionView == nil)
+            _fromTransitionView = [fromView snapshotViewAfterScreenUpdates:true];
     }
     return self;
 }
@@ -56,8 +61,13 @@
     [transitionWrapperView addSubview:_curtainView];
     
     CGRect referenceFrame = self.referenceFrame();
-    _fromTransitionView.frame = [transitionWrapperView convertRect:referenceFrame fromView:nil];
-    [transitionWrapperView addSubview:_fromTransitionView];
+    UIView *fromContainerView = self.transitionHostView ?: transitionWrapperView;
+    if (self.transitionHostView != nil) {
+        [self.transitionHostView addSubview:_fromTransitionView];
+    } else {
+        [transitionWrapperView addSubview:_fromTransitionView];
+    }
+    _fromTransitionView.frame = [fromContainerView convertRect:referenceFrame fromView:nil];
     
     UIInterfaceOrientation orientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
     if ([_controller inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
@@ -73,11 +83,12 @@
     CGSize fittedSize = TGScaleToFill(referenceImageSize, CGSizeMake(diameter, diameter));
     
     CGRect fromTransitionFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
-    
-    [self animateView:_fromTransitionView frameFrom:_fromTransitionView.frame to:[_controller.view convertRect:fromTransitionFrame toView:transitionWrapperView] velocity:CGPointZero rotationFrom:0.0f to:0.0f animatingIn:true completion:^(__unused bool finished)
+
+    [self animateView:_fromTransitionView frameFrom:_fromTransitionView.frame to:[_controller.view convertRect:fromTransitionFrame toView:fromContainerView] velocity:CGPointZero rotationFrom:0.0f to:0.0f animatingIn:true completion:^(__unused bool finished)
     {
     }];
 
+    void (^imageReady)(void) = self.imageReady;
     _toTransitionView = [[TGImageView alloc] initWithFrame:fromTransitionFrame];
     [_toTransitionView setSignal:[[[self.referenceScreenImageSignal() deliverOn:[SQueue mainQueue]] filter:^bool(id result)
     {
@@ -85,6 +96,8 @@
     }] onNext:^(UIImage *next)
     {
         [_controller _setScreenImage:next];
+        if (imageReady != nil)
+            imageReady();
     }]];
     [transitionWrapperView addSubview:_toTransitionView];
     
@@ -124,6 +137,7 @@
     _curtainView.hidden = false;
     
     UIView *transitionWrapperView = [_controller transitionWrapperView];
+    UIView *fromContainerView = self.transitionHostView ?: transitionWrapperView;
     
     UIView *fromView = self.repView;
     CGRect outReferenceFrame = self.outReferenceFrame;
@@ -138,8 +152,9 @@
     
     UIView *toView = _fromTransitionView;
     toView.hidden = false;
-    toView.frame = outReferenceFrame;
+    toView.frame = [fromContainerView convertRect:outReferenceFrame fromView:transitionWrapperView];
     
+    toFrame = [fromContainerView convertRect:toFrame fromView:nil];
     [self animateView:toView frameFrom:toView.frame to:toFrame velocity:CGPointZero rotationFrom:0.0f to:0.0f animatingIn:false completion:^(__unused bool finished)
     {
         if (completion != nil)

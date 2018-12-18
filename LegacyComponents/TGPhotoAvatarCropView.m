@@ -463,7 +463,7 @@ const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
     _scrollView.hidden = false;
     _scrollView.backgroundColor = [UIColor clearColor];
     
-    if (_imageView.image != nil && _snapshotView != nil)
+    if (_imageView.image != nil)// && _snapshotView != nil)
         [self fadeInImageView];
 }
 

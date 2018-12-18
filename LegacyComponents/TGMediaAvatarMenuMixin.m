@@ -19,6 +19,7 @@
 @interface TGMediaAvatarMenuMixin () <TGLegacyCameraControllerDelegate>
 {
     TGViewController *_parentController;
+    bool _hasSearchButton;
     bool _hasDeleteButton;
     bool _hasViewButton;
     bool _personalPhoto;
@@ -38,10 +39,10 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
 {
-    return [self initWithContext:context parentController:parentController hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false];
+    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup
 {
     self = [super init];
     if (self != nil)
@@ -50,6 +51,7 @@
         _saveCapturedMedia = saveCapturedMedia;
         _saveEditedPhotos = saveEditedPhotos;
         _parentController = parentController;
+        _hasSearchButton = hasSearchButton;
         _hasDeleteButton = hasDeleteButton;
         _hasViewButton = hasViewButton;
         _personalPhoto = ![TGCameraController useLegacyCamera] ? personalPhoto : false;
@@ -141,6 +143,25 @@
     }];
     [itemViews addObject:galleryItem];
     
+    if (_hasSearchButton)
+    {
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"AttachmentMenu.WebSearch") type:TGMenuSheetButtonTypeDefault action:^
+        {
+            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGMenuSheetController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            [strongController dismissAnimated:true];
+            if (strongSelf != nil)
+                strongSelf.requestSearchController(nil);
+        }];
+        [itemViews addObject:viewItem];
+    }
+    
     if (_hasViewButton)
     {
         TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Settings.ViewPhoto") type:TGMenuSheetButtonTypeDefault action:^
@@ -223,8 +244,6 @@
                 [controller _displayCameraWithView:nil menuController:nil];
             else if ([action isEqualToString:@"choosePhoto"])
                 [controller _displayMediaPicker];
-            else if ([action isEqualToString:@"searchWeb"])
-                [controller _displayWebSearch];
             else if ([action isEqualToString:@"delete"])
                 [controller _performDelete];
             else if ([action isEqualToString:@"cancel"] && controller.didDismiss != nil)
@@ -449,7 +468,7 @@
                 {
                     __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                     __strong TGMediaAssetsController *strongController = weakController;
-                    if (strongSelf == nil)
+                    if (strongSelf != nil)
                         strongSelf.requestSearchController(strongController);
                 };
             }
@@ -479,84 +498,6 @@
     {
         showMediaPicker(nil);
     }
-}
-
-- (void)_displayWebSearch
-{
-    /*__weak TGMediaAvatarMenuMixin *weakSelf = self;
-    TGNavigationController *navigationController = nil;
-    
-    TGWebSearchController *controller = [[TGWebSearchController alloc] initWithContext:[TGLegacyComponentsContext shared] forAvatarSelection:true embedded:false];
-    __weak TGWebSearchController *weakController = controller;
-    controller.avatarCompletionBlock = ^(UIImage *resultImage)
-    {
-        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        if (strongSelf.didFinishWithImage != nil)
-            strongSelf.didFinishWithImage(resultImage);
-        
-        __strong TGWebSearchController *strongController = weakController;
-        if (strongController != nil && strongController.dismiss != nil)
-            strongController.dismiss();
-    };
-    
-    navigationController = [TGNavigationController navigationControllerWithControllers:@[controller]];
-    
-    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
-    {
-        void (^dismiss)(void) = ^
-        {
-            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            if (strongSelf.didDismiss != nil)
-                strongSelf.didDismiss();
-            
-            [strongSelf->_parentController dismissViewControllerAnimated:true completion:nil];
-        };
-        
-        [_parentController presentViewController:navigationController animated:true completion:nil];
-        
-        controller.dismiss = dismiss;
-    }
-    else
-    {
-        navigationController.presentationStyle = TGNavigationControllerPresentationStyleInFormSheet;
-        navigationController.modalPresentationStyle = UIModalPresentationFormSheet;
-        
-        TGOverlayFormsheetWindow *formSheetWindow = [[TGOverlayFormsheetWindow alloc] initWithParentController:_parentController contentController:navigationController];
-        [formSheetWindow showAnimated:true];
-        
-        __weak TGNavigationController *weakNavController = navigationController;
-        __weak TGOverlayFormsheetWindow *weakFormSheetWindow = formSheetWindow;
-        void (^dismiss)(void) = ^
-        {
-            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            __strong TGOverlayFormsheetWindow *strongFormSheetWindow = weakFormSheetWindow;
-            if (strongFormSheetWindow == nil)
-                return;
-            
-            if (strongSelf.didDismiss != nil)
-                strongSelf.didDismiss();
-            
-            __strong TGNavigationController *strongNavController = weakNavController;
-            if (strongNavController != nil)
-            {
-                if (strongNavController.presentingViewController != nil)
-                    [strongNavController.presentingViewController dismissViewControllerAnimated:true completion:nil];
-                else
-                    [strongFormSheetWindow dismissAnimated:true];
-            }
-        };
-        
-        controller.dismiss = dismiss;
-    }*/
 }
 
 - (void)imagePickerController:(TGImagePickerController *)__unused imagePicker didFinishPickingWithAssets:(NSArray *)assets

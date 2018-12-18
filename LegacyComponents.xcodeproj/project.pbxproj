@@ -1056,7 +1056,7 @@
 		D07BCAF01F2B507600ED97AA /* TGAttachmentPhotoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCAEA1F2B507600ED97AA /* TGAttachmentPhotoCell.m */; };
 		D07BCAF31F2B509200ED97AA /* TGAttachmentAssetCell.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCAF11F2B509200ED97AA /* TGAttachmentAssetCell.h */; };
 		D07BCAF41F2B509200ED97AA /* TGAttachmentAssetCell.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCAF21F2B509200ED97AA /* TGAttachmentAssetCell.m */; };
-		D07BCAF71F2B50AA00ED97AA /* TGMediaAvatarEditorTransition.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCAF51F2B50AA00ED97AA /* TGMediaAvatarEditorTransition.h */; };
+		D07BCAF71F2B50AA00ED97AA /* TGMediaAvatarEditorTransition.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCAF51F2B50AA00ED97AA /* TGMediaAvatarEditorTransition.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D07BCAF81F2B50AA00ED97AA /* TGMediaAvatarEditorTransition.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCAF61F2B50AA00ED97AA /* TGMediaAvatarEditorTransition.m */; };
 		D07BCAFB1F2B517900ED97AA /* TGLegacyMediaPickerTipView.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCAF91F2B517900ED97AA /* TGLegacyMediaPickerTipView.h */; };
 		D07BCAFC1F2B517900ED97AA /* TGLegacyMediaPickerTipView.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCAFA1F2B517900ED97AA /* TGLegacyMediaPickerTipView.m */; };

@@ -244,6 +244,89 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _stopButton.frame = CGRectMake(floor(centerPoint.x - _stopButton.frame.size.width / 2.0f), floor(centerPoint.y - 102.0f - _stopButton.frame.size.height / 2.0f), _stopButton.frame.size.width, _stopButton.frame.size.height);
 }
 
+- (void)setPallete:(TGModernConversationInputMicPallete *)pallete {
+    bool update = _pallete != nil;
+    _pallete = pallete;
+    
+    if (!update)
+        return;
+    
+    _lockPanelView.image = [self panelBackgroundImage];
+    _lockArrowView.image = TGTintedImage(TGComponentsImageNamed(@"VideoRecordArrow"), self.pallete != nil ? self.pallete.lockColor : UIColorRGB(0x9597a0));
+    _lockView.color = self.pallete.lockColor;
+    
+    _innerCircleView.image = [self innerCircleImage:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()];
+    _outerCircleView.image = [self outerCircleImage:self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()];
+    [_stopButton setImage:[self stopButtonImage] forState:UIControlStateNormal];
+}
+
+- (UIImage *)panelBackgroundImage
+{
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    CGRect rect = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 38.0f - TGScreenPixel, 38.0 - TGScreenPixel);
+    CGFloat radius = 38.0f / 2.0f;
+    
+    CGFloat minx = CGRectGetMinX(rect), midx = CGRectGetMidX(rect), maxx = CGRectGetMaxX(rect);
+    CGFloat miny = CGRectGetMinY(rect), midy = CGRectGetMidY(rect), maxy = CGRectGetMaxY(rect);
+    
+    CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
+    CGContextSetStrokeColorWithColor(context, TGAccentColor().CGColor);
+    CGContextSetLineWidth(context, TGScreenPixel);
+    
+    CGContextMoveToPoint(context, minx, midy);
+    CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
+    CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
+    CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
+    CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
+    CGContextClosePath(context);
+    
+    CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.backgroundColor : UIColorRGB(0xf7f7f7)).CGColor);
+    CGContextSetStrokeColorWithColor(context, (self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2)).CGColor);
+    CGContextDrawPath(context, kCGPathFillStroke);
+    
+    UIImage *panelBackgroundView = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:19 topCapHeight:19];
+    UIGraphicsEndImageContext();
+    return panelBackgroundView;
+}
+
+- (UIImage *)stopButtonImage
+{
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.backgroundColor : UIColorRGB(0xf7f7f7)).CGColor);
+    CGContextSetStrokeColorWithColor(context, (self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2)).CGColor);
+    CGContextSetLineWidth(context, TGScreenPixel);
+    
+    CGRect rect1 = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 38.0f - TGScreenPixel, 38.0 - TGScreenPixel);
+    CGContextFillEllipseInRect(context, rect1);
+    CGContextStrokeEllipseInRect(context, rect1);
+    
+    CGRect iconRect = CGRectInset(rect1, 12.0f, 12.0f);
+    CGFloat radius = 1.0f;
+    
+    CGFloat minx = CGRectGetMinX(iconRect), midx = CGRectGetMidX(iconRect), maxx = CGRectGetMaxX(iconRect);
+    CGFloat miny = CGRectGetMinY(iconRect), midy = CGRectGetMidY(iconRect), maxy = CGRectGetMaxY(iconRect);
+    
+    CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
+    
+    CGContextMoveToPoint(context, minx, midy);
+    CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
+    CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
+    CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
+    CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
+    CGContextClosePath(context);
+    
+    CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()).CGColor);
+    CGContextDrawPath(context, kCGPathFill);
+    
+    UIImage *stopButtonImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:19 topCapHeight:19];
+    UIGraphicsEndImageContext();
+    return stopButtonImage;
+}
+
 - (void)animateIn {
     if (!_locked)
         _lockView.lockness = 0.0f;
@@ -270,39 +353,12 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             };
         }
         
-        UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
-        CGContextRef context = UIGraphicsGetCurrentContext();
-        
-        CGRect rect = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 38.0f - TGScreenPixel, 38.0 - TGScreenPixel);
-        CGFloat radius = 38.0f / 2.0f;
-        
-        CGFloat minx = CGRectGetMinX(rect), midx = CGRectGetMidX(rect), maxx = CGRectGetMaxX(rect);
-        CGFloat miny = CGRectGetMinY(rect), midy = CGRectGetMidY(rect), maxy = CGRectGetMaxY(rect);
-        
-        CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
-        CGContextSetStrokeColorWithColor(context, TGAccentColor().CGColor);
-        CGContextSetLineWidth(context, TGScreenPixel);
-        
-        CGContextMoveToPoint(context, minx, midy);
-        CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
-        CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
-        CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
-        CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
-        CGContextClosePath(context);
-        
-        CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.backgroundColor : UIColorRGB(0xf7f7f7)).CGColor);
-        CGContextSetStrokeColorWithColor(context, (self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2)).CGColor);
-        CGContextDrawPath(context, kCGPathFillStroke);
-        
-        UIImage *panelBackgroundView = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:19 topCapHeight:19];
-        UIGraphicsEndImageContext();
-        
         _lockPanelWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 77.0f)];
         _lockPanelWrapperView.userInteractionEnabled = false;
         [[_presentation view] addSubview:_lockPanelWrapperView];
         
         _lockPanelView = [[UIImageView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 77.0f)];
-        _lockPanelView.image = panelBackgroundView;
+        _lockPanelView.image = [self panelBackgroundImage];
         [_lockPanelWrapperView addSubview:_lockPanelView];
         
         _lockArrowView = [[UIImageView alloc] initWithImage:TGTintedImage(TGComponentsImageNamed(@"VideoRecordArrow"), self.pallete != nil ? self.pallete.lockColor : UIColorRGB(0x9597a0))];
@@ -337,42 +393,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _stopButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 38.0f, 38.0f)];
         _stopButton.adjustsImageWhenHighlighted = false;
         _stopButton.exclusiveTouch = true;
-        
-        UIImage *stopButtonImage = nil;
-        {
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
-            context = UIGraphicsGetCurrentContext();
-            
-            CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.backgroundColor : UIColorRGB(0xf7f7f7)).CGColor);
-            CGContextSetStrokeColorWithColor(context, (self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2)).CGColor);
-            CGContextSetLineWidth(context, TGScreenPixel);
-            
-            CGRect rect1 = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 38.0f - TGScreenPixel, 38.0 - TGScreenPixel);
-            CGContextFillEllipseInRect(context, rect1);
-            CGContextStrokeEllipseInRect(context, rect1);
-            
-            CGRect iconRect = CGRectInset(rect1, 12.0f, 12.0f);
-            CGFloat radius = 1.0f;
-            
-            CGFloat minx = CGRectGetMinX(iconRect), midx = CGRectGetMidX(iconRect), maxx = CGRectGetMaxX(iconRect);
-            CGFloat miny = CGRectGetMinY(iconRect), midy = CGRectGetMidY(iconRect), maxy = CGRectGetMaxY(iconRect);
-            
-            CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
-            
-            CGContextMoveToPoint(context, minx, midy);
-            CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
-            CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
-            CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
-            CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
-            CGContextClosePath(context);
-            
-            CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()).CGColor);
-            CGContextDrawPath(context, kCGPathFill);
-            
-            stopButtonImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:19 topCapHeight:19];
-            UIGraphicsEndImageContext();
-        }
-        [_stopButton setImage:stopButtonImage forState:UIControlStateNormal];
+        [_stopButton setImage:[self stopButtonImage] forState:UIControlStateNormal];
         _stopButton.userInteractionEnabled = false;
         _stopButton.alpha = 0.0f;
         [_stopButton addTarget:self action:@selector(stopPressed) forControlEvents:UIControlEventTouchUpInside];

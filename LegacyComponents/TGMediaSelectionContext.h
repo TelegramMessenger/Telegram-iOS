@@ -29,6 +29,7 @@
 - (void)clear;
 
 - (bool)isItemSelected:(id<TGMediaSelectableItem>)item;
+- (bool)isIdentifierSelected:(NSString *)identifier;
 
 - (SSignal *)itemSelectedSignal:(id<TGMediaSelectableItem>)item;
 - (SSignal *)itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)item;

@@ -137,7 +137,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         _inputFieldOnelineLabel.userInteractionEnabled = false;
         [_wrapperView addSubview:_inputFieldOnelineLabel];
         
-        _counterLabel = [[UILabel alloc] initWithFrame:CGRectMake(_fieldBackground.frame.size.width - 33, 5, 36, 16)];
+        _counterLabel = [[UILabel alloc] initWithFrame:CGRectMake(_fieldBackground.frame.size.width - 45, 5, 36, 16)];
         _counterLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
         _counterLabel.backgroundColor = [UIColor clearColor];
         _counterLabel.font = TGSystemFontOfSize(12);
