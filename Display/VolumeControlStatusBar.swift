@@ -113,6 +113,7 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
                         self.innerGraphics = (graphics.0, graphics.1, graphics.2, false)
                     }
                 }
+                self.updateIcon()
             }
         }
     }
@@ -151,9 +152,9 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
     
     func generateDarkGraphics(_ graphics: (UIImage, UIImage, UIImage)?) -> (UIImage, UIImage, UIImage, Bool)? {
         if var (offImage, halfImage, onImage) = graphics {
-            offImage = generateTintedImage(image: offImage, color: UIColor.black)!
-            halfImage = generateTintedImage(image: halfImage, color: UIColor.black)!
-            onImage = generateTintedImage(image: onImage, color: UIColor.black)!
+            offImage = generateTintedImage(image: offImage, color: UIColor.white)!
+            halfImage = generateTintedImage(image: halfImage, color: UIColor.white)!
+            onImage = generateTintedImage(image: onImage, color: UIColor.white)!
             return (offImage, halfImage, onImage, true)
         } else {
             return nil
@@ -223,17 +224,21 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
             self.value = toValue
             self.updateLayout(layout: layout, transition: .animated(duration: 0.25, curve: .spring))
             
-            if let graphics = self.graphics {
-                if self.value > 0.5 {
-                    self.iconNode.image = graphics.2
-                } else if self.value > 0.0 {
-                    self.iconNode.image = graphics.1
-                } else {
-                    self.iconNode.image = graphics.0
-                }
-            }
+            self.updateIcon()
         } else {
             self.value = toValue
+        }
+    }
+    
+    private func updateIcon() {
+        if let graphics = self.innerGraphics {
+            if self.value > 0.5 {
+                self.iconNode.image = graphics.2
+            } else if self.value > 0.0 {
+                self.iconNode.image = graphics.1
+            } else {
+                self.iconNode.image = graphics.0
+            }
         }
     }
 }

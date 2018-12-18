@@ -188,7 +188,7 @@ public extension UIImage {
     }
 }
 
-private func makeSubtreeSnapshot(layer: CALayer) -> UIView? {
+private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) -> UIView? {
     let view = UIView()
     view.layer.isHidden = layer.isHidden
     view.layer.opacity = layer.opacity
@@ -202,8 +202,11 @@ private func makeSubtreeSnapshot(layer: CALayer) -> UIView? {
     view.layer.backgroundColor = layer.backgroundColor
     if let sublayers = layer.sublayers {
         for sublayer in sublayers {
-            let subtree = makeSubtreeSnapshot(layer: sublayer)
+            let subtree = makeSubtreeSnapshot(layer: sublayer, keepTransform: keepTransform)
             if let subtree = subtree {
+                if keepTransform {
+                    subtree.layer.transform = sublayer.transform
+                }
                 subtree.frame = sublayer.frame
                 subtree.bounds = sublayer.bounds
                 view.addSubview(subtree)
@@ -243,12 +246,12 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
 }
 
 public extension UIView {
-    public func snapshotContentTree(unhide: Bool = false) -> UIView? {
+    public func snapshotContentTree(unhide: Bool = false, keepTransform: Bool = false) -> UIView? {
         let wasHidden = self.isHidden
         if unhide && wasHidden {
             self.isHidden = false
         }
-        let snapshot = makeSubtreeSnapshot(layer: self.layer)
+        let snapshot = makeSubtreeSnapshot(layer: self.layer, keepTransform: keepTransform)
         if unhide && wasHidden {
             self.isHidden = true
         }

@@ -463,7 +463,8 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                             nextItemOrigin.x += (itemSize.width + itemSpacing) * CGFloat(normalizedIndexOffset)
                         } else if let fillWidth = fillWidth, fillWidth {
                             let nextItemOriginX = nextItemOrigin.x + itemSize.width + itemSpacing
-                            if nextItemOriginX + itemSize.width > gridLayout.size.width && remainingWidth > 0.0 {
+                            let remainingWidth = remainingWidth - CGFloat(itemsInRow - 1) * itemSpacing
+                            if nextItemOriginX + itemSize.width > self.gridLayout.size.width && remainingWidth > 0.0 {
                                 itemSize.width += remainingWidth
                             }
                         }
