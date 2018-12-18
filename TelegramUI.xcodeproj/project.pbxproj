@@ -1051,7 +1051,6 @@
 		D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E3F1E93D3B000F62E39 /* ChatMessageNotificationItem.swift */; };
 		D0EC6E861EB9F58900EBF1C3 /* UIImage+WebP.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E991D6B8D200046BCD6 /* UIImage+WebP.m */; };
 		D0EC6E871EB9F58900EBF1C3 /* FastBlur.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E801D6B8C850046BCD6 /* FastBlur.m */; };
-		D0EC6E881EB9F58900EBF1C3 /* FFMpegSwResample.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E821D6B8C850046BCD6 /* FFMpegSwResample.m */; };
 		D0EC6E891EB9F58900EBF1C3 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */; };
 		D0EC6E8B1EB9F58900EBF1C3 /* RingBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E861D6B8C850046BCD6 /* RingBuffer.m */; };
 		D0EC6E8C1EB9F58900EBF1C3 /* RingByteBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E871D6B8C850046BCD6 /* RingByteBuffer.swift */; };
@@ -2242,8 +2241,6 @@
 		D0F69E711D6B8C340046BCD6 /* ContactsSectionHeaderAccessoryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactsSectionHeaderAccessoryItem.swift; sourceTree = "<group>"; };
 		D0F69E7F1D6B8C850046BCD6 /* FastBlur.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FastBlur.h; sourceTree = "<group>"; };
 		D0F69E801D6B8C850046BCD6 /* FastBlur.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FastBlur.m; sourceTree = "<group>"; };
-		D0F69E811D6B8C850046BCD6 /* FFMpegSwResample.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FFMpegSwResample.h; sourceTree = "<group>"; };
-		D0F69E821D6B8C850046BCD6 /* FFMpegSwResample.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FFMpegSwResample.m; sourceTree = "<group>"; };
 		D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0F69E851D6B8C850046BCD6 /* RingBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RingBuffer.h; sourceTree = "<group>"; };
 		D0F69E861D6B8C850046BCD6 /* RingBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RingBuffer.m; sourceTree = "<group>"; };
@@ -4596,8 +4593,6 @@
 				D0F69E991D6B8D200046BCD6 /* UIImage+WebP.m */,
 				D0F69E7F1D6B8C850046BCD6 /* FastBlur.h */,
 				D0F69E801D6B8C850046BCD6 /* FastBlur.m */,
-				D0F69E811D6B8C850046BCD6 /* FFMpegSwResample.h */,
-				D0F69E821D6B8C850046BCD6 /* FFMpegSwResample.m */,
 				D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */,
 				D0F69E851D6B8C850046BCD6 /* RingBuffer.h */,
 				D0F69E861D6B8C850046BCD6 /* RingBuffer.m */,
@@ -5967,7 +5962,6 @@
 				D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */,
 				D046142E2004DB3700EC0EF2 /* LiveLocationManager.swift in Sources */,
 				D05677511F4CA0C2001B723E /* InstantPagePeerReferenceItem.swift in Sources */,
-				D0EC6E881EB9F58900EBF1C3 /* FFMpegSwResample.m in Sources */,
 				D0EC6E891EB9F58900EBF1C3 /* FrameworkBundle.swift in Sources */,
 				D0EC6E8B1EB9F58900EBF1C3 /* RingBuffer.m in Sources */,
 				D0FA08C8204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift in Sources */,
