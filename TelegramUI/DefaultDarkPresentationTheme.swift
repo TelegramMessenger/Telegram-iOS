@@ -171,15 +171,15 @@ private let bubble = PresentationThemeChatBubble(
     incomingFileDurationColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     outgoingFileDurationColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),
-    shareButtonStrokeColor: UIColor(rgb: 0x1f1f1f),
+    shareButtonStrokeColor: UIColor(rgb: 0xb2b2b2, alpha: 0.18),
     shareButtonForegroundColor: UIColor(rgb: 0xb2b2b2), //!!!
     mediaOverlayControlBackgroundColor: UIColor(white: 0.0, alpha: 0.6), //!!!
     mediaOverlayControlForegroundColor: UIColor(white: 1.0, alpha: 1.0), //!!!
     actionButtonsIncomingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),
-    actionButtonsIncomingStrokeColor: UIColor(rgb: 0x1f1f1f),
+    actionButtonsIncomingStrokeColor: UIColor(rgb: 0xb2b2b2, alpha: 0.18),
     actionButtonsIncomingTextColor: UIColor(rgb: 0xffffff),
     actionButtonsOutgoingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),
-    actionButtonsOutgoingStrokeColor: UIColor(rgb: 0x1f1f1f),
+    actionButtonsOutgoingStrokeColor: UIColor(rgb: 0xb2b2b2, alpha: 0.18),
     actionButtonsOutgoingTextColor: UIColor(rgb: 0xffffff),
     selectionControlBorderColor: .white,
     selectionControlFillColor: accentColor,

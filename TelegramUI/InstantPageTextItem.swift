@@ -508,7 +508,10 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
             })
             let delegate = CTRunDelegateCreate(&callbacks, extentBuffer)
             let attrDictionaryDelegate = [(kCTRunDelegateAttributeName as NSAttributedStringKey): (delegate as Any), NSAttributedStringKey(rawValue: InstantPageMediaIdAttribute): id.id, NSAttributedStringKey(rawValue: InstantPageMediaDimensionsAttribute): dimensions]
-            return NSAttributedString(string: " ", attributes: attrDictionaryDelegate)
+            let mutableAttributedString = attributedStringForRichText(.plain(" "), styleStack: styleStack, url: url).mutableCopy() as! NSMutableAttributedString
+            mutableAttributedString.addAttributes(attrDictionaryDelegate, range: NSMakeRange(0, mutableAttributedString.length))
+            return mutableAttributedString
+            //return NSAttributedString(string: " ", attributes: attrDictionaryDelegate)
         case let .anchor(text, name):
             var empty = false
             var text = text
@@ -569,7 +572,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         var workingLineOrigin = currentLineOrigin
         
         let currentMaxWidth = boundingWidth - workingLineOrigin.x
-        let lineCharacterCount: CFIndex
+        var lineCharacterCount: CFIndex
         var hadIndexOffset = false
         if minimizeWidth {
             var count = 0
@@ -584,6 +587,9 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             let suggestedLineBreak = CTTypesetterSuggestLineBreak(typesetter, lastIndex, Double(currentMaxWidth))
             if let offset = indexOffset {
                 lineCharacterCount = suggestedLineBreak + offset
+                if lineCharacterCount <= 0 {
+                    lineCharacterCount = suggestedLineBreak
+                }
                 indexOffset = nil
                 hadIndexOffset = true
             } else {

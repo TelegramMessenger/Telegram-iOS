@@ -152,7 +152,7 @@ class PermissionInfoItemNode: ListViewItemNode {
         self.addSubnode(self.labelNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
-        self.addSubnode(self.closeButton)
+        //self.addSubnode(self.closeButton)
     }
     
     func asyncLayout() -> (_ item: PermissionInfoItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors?) -> (ListViewItemNodeLayout, () -> Void) {

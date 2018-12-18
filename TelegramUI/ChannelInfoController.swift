@@ -628,9 +628,9 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             }))
         })
     }, changeProfilePhoto: {
-        let _ = (account.postbox.transaction { transaction -> Peer? in
-            return transaction.getPeer(peerId)
-            } |> deliverOnMainQueue).start(next: { peer in
+        let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
+            return (transaction.getPeer(peerId), currentSearchBotsConfiguration(transaction: transaction))
+            } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 
                 let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
@@ -650,28 +650,39 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                     hasPhotos = true
                 }
                 
-                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasDeleteButton: hasPhotos, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false)!
+                let completedImpl: (UIImage) -> Void = { image in
+                    if let data = UIImageJPEGRepresentation(image, 0.6) {
+                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                        account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                        let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
+                        updateState {
+                            $0.withUpdatedUpdatingAvatar(.image(representation, true))
+                        }
+                        updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource)) |> deliverOnMainQueue).start(next: { result in
+                            switch result {
+                            case .complete:
+                                updateState {
+                                    $0.withUpdatedUpdatingAvatar(nil)
+                                }
+                            case .progress:
+                                break
+                            }
+                        }))
+                    }
+                }
+                
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
+                mixin.requestSearchController = { assetsController in
+                    let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(completion: { result in
+                        assetsController?.dismiss()
+                        completedImpl(result)
+                    }))
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }
                 mixin.didFinishWithImage = { image in
                     if let image = image {
-                        if let data = UIImageJPEGRepresentation(image, 0.6) {
-                            let resource = LocalFileMediaResource(fileId: arc4random64())
-                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                            let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
-                            updateState {
-                                $0.withUpdatedUpdatingAvatar(.image(representation, true))
-                            }
-                            updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource)) |> deliverOnMainQueue).start(next: { result in
-                                switch result {
-                                case .complete:
-                                    updateState {
-                                        $0.withUpdatedUpdatingAvatar(nil)
-                                    }
-                                case .progress:
-                                    break
-                                }
-                            }))
-                        }
+                        completedImpl(image)
                     }
                 }
                 mixin.didFinishWithDelete = {

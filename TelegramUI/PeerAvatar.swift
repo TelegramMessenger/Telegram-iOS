@@ -67,6 +67,9 @@ func peerAvatarImage(account: Account, peer: Peer, authorOfMessage: MessageRefer
         return imageData
         |> mapToSignal { data -> Signal<UIImage?, NoError> in
             let generate = deferred { () -> Signal<UIImage?, NoError> in
+                if emptyColor == nil && data == nil {
+                    return .single(nil)
+                }
                 return .single(generateImage(displayDimensions, contextGenerator: { size, context -> Void in
                     if let data = data {
                         if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {

@@ -791,7 +791,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             if let verificationIconNode = self.verificationIconNode {
                 var iconFrame = verificationIconNode.frame
-                iconFrame.origin.x = offset + titleFrame.maxX + 3.0
+                iconFrame.origin.x = titleFrame.maxX + 3.0
                 transition.updateFrame(node: verificationIconNode, frame: iconFrame)
             }
             

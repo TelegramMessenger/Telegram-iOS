@@ -210,7 +210,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
             node.insets = layout.insets
             
             completion(node, {
-                return (nil, { _ in apply(false) })
+                return (nil, { _ in apply(false, synchronousLoads) })
             })
         }
     }
@@ -228,7 +228,7 @@ class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
-                            apply(animated)
+                            apply(animated, false)
                         })
                     }
                 }
@@ -336,7 +336,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let item = strongSelf.item, let layoutWidthAndNeighbors = strongSelf.layoutWidthAndNeighbors {
                 let (_, apply) = strongSelf.asyncLayout()(item, layoutWidthAndNeighbors.0, layoutWidthAndNeighbors.1)
-                apply(true)
+                apply(true, false)
             }
         })
         
@@ -353,7 +353,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         self.avatarNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.avatarTapGesture(_:))))
     }
     
-    func asyncLayout() -> (_ item: ItemListAvatarAndNameInfoItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ItemListAvatarAndNameInfoItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let layoutNameNode = TextNode.asyncLayout(self.nameNode)
         let layoutStatusNode = TextNode.asyncLayout(self.statusNode)
         let currentOverlayImage = self.updatingAvatarOverlay.image
@@ -517,7 +517,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            return (layout, { [weak self] animated in
+            return (layout, { [weak self] animated, synchronousLoads in
                 if let strongSelf = self {
                     strongSelf.item = item
                     
@@ -551,7 +551,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                     } else if strongSelf.updatingAvatarOverlay.supernode != nil {
                         if animated {
                             strongSelf.updatingAvatarOverlay.alpha = 0.0
-                            strongSelf.updatingAvatarOverlay.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { value in
+                            strongSelf.updatingAvatarOverlay.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, completion: { value in
                                 if value {
                                     self?.updatingAvatarOverlay.removeFromSupernode()
                                 }
@@ -620,6 +620,10 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                     let _ = nameNodeApply()
                     let _ = statusNodeApply()
                     
+                    var ignoreEmpty = false
+                    if case .editSettings = item.mode {
+                        ignoreEmpty = true
+                    }
                     if let peer = item.peer {
                         var overrideImage: AvatarNodeImageOverride?
                         if let updatingImage = item.updatingImage {
@@ -632,7 +636,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         } else if case .editSettings = item.mode {
                             overrideImage = AvatarNodeImageOverride.editAvatarIcon
                         }
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: true)
+                        
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: peer, overrideImage: overrideImage, emptyColor: ignoreEmpty ? nil : item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: avatarOriginY), size: CGSize(width: 66.0, height: 66.0))

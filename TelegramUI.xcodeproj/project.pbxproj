@@ -92,6 +92,12 @@
 		09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */; };
 		09F799FA21C3542D00820234 /* LegacyWebSearchGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */; };
 		09F799FC21C3FF3000820234 /* WebSearchGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */; };
+		09F79A0121C8116C00820234 /* WebSearchBadgeNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0021C8116C00820234 /* WebSearchBadgeNode.swift */; };
+		09F79A0321C8225600820234 /* WebSearchVideoGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0221C8225600820234 /* WebSearchVideoGalleryItem.swift */; };
+		09F79A0721C829BC00820234 /* GalleryNavigationCheckNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0621C829BC00820234 /* GalleryNavigationCheckNode.swift */; };
+		09F79A0921C829C700820234 /* GalleryNavigationRecipientNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */; };
+		09F79A0B21C832F400820234 /* WebSearchGalleryFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0A21C832F400820234 /* WebSearchGalleryFooterContentNode.swift */; };
+		09F79A0D21C88E8900820234 /* LegacyWebSearchEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0C21C88E8900820234 /* LegacyWebSearchEditor.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
@@ -1186,6 +1192,12 @@
 		09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextAlertController.swift; sourceTree = "<group>"; };
 		09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWebSearchGallery.swift; sourceTree = "<group>"; };
 		09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchGalleryController.swift; sourceTree = "<group>"; };
+		09F79A0021C8116C00820234 /* WebSearchBadgeNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchBadgeNode.swift; sourceTree = "<group>"; };
+		09F79A0221C8225600820234 /* WebSearchVideoGalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchVideoGalleryItem.swift; sourceTree = "<group>"; };
+		09F79A0621C829BC00820234 /* GalleryNavigationCheckNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryNavigationCheckNode.swift; sourceTree = "<group>"; };
+		09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryNavigationRecipientNode.swift; sourceTree = "<group>"; };
+		09F79A0A21C832F400820234 /* WebSearchGalleryFooterContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchGalleryFooterContentNode.swift; sourceTree = "<group>"; };
+		09F79A0C21C88E8900820234 /* LegacyWebSearchEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWebSearchEditor.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
 		9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExcetionSettingsController.swift; sourceTree = "<group>"; };
@@ -2373,6 +2385,10 @@
 				09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */,
 				09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */,
 				09F799FB21C3FF3000820234 /* WebSearchGalleryController.swift */,
+				09F79A0021C8116C00820234 /* WebSearchBadgeNode.swift */,
+				09F79A0621C829BC00820234 /* GalleryNavigationCheckNode.swift */,
+				09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */,
+				09F79A0A21C832F400820234 /* WebSearchGalleryFooterContentNode.swift */,
 			);
 			name = "Web Search";
 			sourceTree = "<group>";
@@ -3185,6 +3201,7 @@
 				D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */,
 				D097C26B20DD1EA5007BB4B8 /* OverlayStatusController.swift */,
 				09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */,
+				09F79A0C21C88E8900820234 /* LegacyWebSearchEditor.swift */,
 			);
 			name = "Legacy Components";
 			sourceTree = "<group>";
@@ -4516,6 +4533,7 @@
 				D0104F291F471DA6004E4881 /* InstantImageGalleryItem.swift */,
 				D0104F2B1F471EEB004E4881 /* InstantPageGalleryFooterContentNode.swift */,
 				D0A8BBA01F61EE83000F03FD /* UniversalVideoGalleryItem.swift */,
+				09F79A0221C8225600820234 /* WebSearchVideoGalleryItem.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -5034,6 +5052,7 @@
 				D0B2F76820528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift in Sources */,
 				D0EC6CB71EB9F58800EBF1C3 /* RMIntroPageView.m in Sources */,
 				D0EC6CB81EB9F58800EBF1C3 /* RMIntroViewController.m in Sources */,
+				09F79A0321C8225600820234 /* WebSearchVideoGalleryItem.swift in Sources */,
 				D0EC6CB91EB9F58800EBF1C3 /* RMLoginViewController.m in Sources */,
 				D0E9BA631F055AD200F079A4 /* BotPaymentCardInputItemNode.swift in Sources */,
 				D01848E821A03BDA00B6DEBD /* ChatSearchState.swift in Sources */,
@@ -5221,6 +5240,7 @@
 				D0EC6D131EB9F58800EBF1C3 /* MediaTrackDecodableFrame.swift in Sources */,
 				D0EC6D141EB9F58800EBF1C3 /* MediaTrackFrame.swift in Sources */,
 				D0B69C3920EBB397003632C7 /* ChatMessageInteractiveInstantVideoNode.swift in Sources */,
+				09F79A0D21C88E8900820234 /* LegacyWebSearchEditor.swift in Sources */,
 				D0EC6D151EB9F58800EBF1C3 /* MediaTrackFrameBuffer.swift in Sources */,
 				D0EC6D161EB9F58800EBF1C3 /* MediaTrackFrameDecoder.swift in Sources */,
 				D056CD701FF147B000880D28 /* IconButtonNode.swift in Sources */,
@@ -5301,6 +5321,7 @@
 				D087BFB31F748752003FD209 /* ShareControllerRecentPeersGridItem.swift in Sources */,
 				D0EC6D341EB9F58800EBF1C3 /* AvatarNode.swift in Sources */,
 				D08D7E8420A0F6020005D80C /* ExperimentalUISettings.swift in Sources */,
+				09F79A0921C829C700820234 /* GalleryNavigationRecipientNode.swift in Sources */,
 				D0EC6D351EB9F58800EBF1C3 /* SearchBarNode.swift in Sources */,
 				D0EC6D361EB9F58800EBF1C3 /* SearchBarPlaceholderNode.swift in Sources */,
 				D0E8B8B9204477B600605593 /* SecretChatKeyVisualization.swift in Sources */,
@@ -5638,6 +5659,7 @@
 				D0F0AAE61EC21B68005EE2A5 /* CallControllerButton.swift in Sources */,
 				D0EC6DDE1EB9F58900EBF1C3 /* ChatTextInputAudioRecordingOverlayButton.swift in Sources */,
 				D0E9BAC91F05738600F079A4 /* STPAPIClient+ApplePay.m in Sources */,
+				09F79A0721C829BC00820234 /* GalleryNavigationCheckNode.swift in Sources */,
 				D0EC6DDF1EB9F58900EBF1C3 /* ChatTextInputAudioRecordingTimeNode.swift in Sources */,
 				D0BFAE5B20AB35D200793CF2 /* IconSwitchNode.swift in Sources */,
 				D0EC6DE01EB9F58900EBF1C3 /* ChatTextInputAudioRecordingCancelIndicator.swift in Sources */,
@@ -5842,6 +5864,7 @@
 				D09250061FE5371D003F693F /* GlobalExperimentalSettings.swift in Sources */,
 				D0A24D281F92C27100584D24 /* DefaultDarkAccentPresentationTheme.swift in Sources */,
 				D025A4231F79344500563950 /* FetchManager.swift in Sources */,
+				09F79A0121C8116C00820234 /* WebSearchBadgeNode.swift in Sources */,
 				D0CB27CF20C17A4A001ACF93 /* TermsOfServiceController.swift in Sources */,
 				D00BDA1F1EE5B69200C64C5E /* ChannelAdminController.swift in Sources */,
 				D0EC6E501EB9F58900EBF1C3 /* ChannelAdminsController.swift in Sources */,
@@ -5897,6 +5920,7 @@
 				D0EC6E6E1EB9F58900EBF1C3 /* ArchivedStickerPacksController.swift in Sources */,
 				D0DE5805205B202500C356A8 /* ScreenCaptureDetection.swift in Sources */,
 				D0EC6E711EB9F58900EBF1C3 /* ThemeGalleryController.swift in Sources */,
+				09F79A0B21C832F400820234 /* WebSearchGalleryFooterContentNode.swift in Sources */,
 				D0C0B5B11EE1C421000F4D2C /* ChatDateSelectionSheet.swift in Sources */,
 				D0EC6E721EB9F58900EBF1C3 /* ThemeGalleryItem.swift in Sources */,
 				D00781052084DFB100369A39 /* UrlEscaping.swift in Sources */,

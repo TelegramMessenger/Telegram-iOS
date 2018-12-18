@@ -6,22 +6,56 @@ import AsyncDisplayKit
 import TelegramCore
 import LegacyComponents
 
-private func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 30) -> Signal<ChatContextResultCollection?, NoError> {
+private func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
     return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
     |> mapToSignal { results -> Signal<ChatContextResultCollection?, NoError> in
         var collection = existingResults
         if let existingResults = existingResults, let results = results {
             var newResults: [ChatContextResult] = []
-            newResults.append(contentsOf: existingResults.results)
-            newResults.append(contentsOf: results.results)
+            var existingIds = Set<String>()
+            for result in existingResults.results {
+                newResults.append(result)
+                existingIds.insert(result.id)
+            }
+            for result in results.results {
+                if !existingIds.contains(result.id) {
+                    newResults.append(result)
+                    existingIds.insert(result.id)
+                }
+            }
             collection = ChatContextResultCollection(botId: existingResults.botId, peerId: existingResults.peerId, query: existingResults.query, geoPoint: existingResults.geoPoint, queryId: results.queryId, nextOffset: results.nextOffset, presentation: existingResults.presentation, switchPeer: existingResults.switchPeer, results: newResults, cacheTimeout: existingResults.cacheTimeout)
         } else {
             collection = results
         }
         if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset {
-            return requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection)
+            let nextResults = requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection)
+            if collection.results.count > 10 {
+                return .single(collection)
+                |> then(nextResults)
+            } else {
+                return nextResults
+            }
         } else {
             return .single(collection)
+        }
+    }
+}
+
+enum WebSearchMode {
+    case media
+    case avatar
+}
+
+enum WebSearchControllerMode {
+    case media(completion: (TGMediaSelectionContext, TGMediaEditingContext) -> Void)
+    case avatar(completion: (UIImage) -> Void)
+    
+    var mode: WebSearchMode {
+        switch self {
+            case .media:
+                return .media
+            case .avatar:
+                return .avatar
         }
     }
 }
@@ -30,19 +64,33 @@ final class WebSearchControllerInteraction {
     let openResult: (ChatContextResult) -> Void
     let setSearchQuery: (String) -> Void
     let deleteRecentQuery: (String) -> Void
-    let toggleSelection: ([String], Bool) -> Void
-    let sendSelected: (ChatContextResultCollection, ChatContextResult?) -> Void
-    var selectionState: WebSearchSelectionState?
+    let toggleSelection: (ChatContextResult, Bool) -> Void
+    let sendSelected: (ChatContextResult?) -> Void
+    let avatarCompleted: (UIImage) -> Void
+    let selectionState: TGMediaSelectionContext?
+    let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
-    let editingContext: TGMediaEditingContext
     
-    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping ([String], Bool) -> Void, sendSelected: @escaping (ChatContextResultCollection, ChatContextResult?) -> Void, editingContext: TGMediaEditingContext) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Void, sendSelected: @escaping (ChatContextResult?) -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openResult = openResult
         self.setSearchQuery = setSearchQuery
         self.deleteRecentQuery = deleteRecentQuery
         self.toggleSelection = toggleSelection
         self.sendSelected = sendSelected
-        self.editingContext = editingContext
+        self.avatarCompleted = avatarCompleted
+        self.selectionState = selectionState
+        self.editingState = editingState
+    }
+}
+
+private func selectionChangedSignal(selectionState: TGMediaSelectionContext) -> Signal<Void, NoError> {
+    return Signal { subscriber in
+        let disposable = selectionState.selectionChangedSignal()?.start(next: { next in
+            subscriber.putNext(Void())
+        }, completed: {})
+        return ActionDisposable {
+            disposable?.dispose()
+        }
     }
 }
 
@@ -50,7 +98,8 @@ final class WebSearchController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     private let account: Account
-    private let chatLocation: ChatLocation
+    private let mode: WebSearchControllerMode
+    private let peer: Peer?
     private let configuration: SearchBotsConfiguration
     
     private var controllerNode: WebSearchControllerNode {
@@ -70,17 +119,19 @@ final class WebSearchController: ViewController {
     
     private var disposable: Disposable?
     private let resultsDisposable = MetaDisposable()
+    private var selectionDisposable: Disposable?
     
     private var navigationContentNode: WebSearchNavigationContentNode?
     
-    init(account: Account, chatLocation: ChatLocation, configuration: SearchBotsConfiguration, sendSelected: @escaping ([String], ChatContextResultCollection, TGMediaEditingContext) -> Void) {
+    init(account: Account, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.account = account
-        self.chatLocation = chatLocation
+        self.mode = mode
+        self.peer = peer
         self.configuration = configuration
         
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.interfaceState = WebSearchInterfaceState(presentationData: presentationData)
-    
+        
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
         
@@ -101,8 +152,8 @@ final class WebSearchController: ViewController {
             }
             strongSelf.updateInterfaceState { current -> WebSearchInterfaceState in
                 var updated = current
-                if current.state?.mode != settings.mode {
-                    updated = updated.withUpdatedMode(settings.mode)
+                if case .media = mode, current.state?.scope != settings.scope {
+                    updated = updated.withUpdatedScope(settings.scope)
                 }
                 if current.presentationData !== presentationData {
                     updated = updated.withUpdatedPresentationData(presentationData)
@@ -121,12 +172,19 @@ final class WebSearchController: ViewController {
         }
         self.navigationBar?.setContentNode(navigationContentNode, animated: false)
         
-        let editingContext = TGMediaEditingContext()
+        let selectionState: TGMediaSelectionContext?
+        switch self.mode {
+            case .media:
+                selectionState = TGMediaSelectionContext()
+            case .avatar:
+                selectionState = nil
+        }
+        let editingState = TGMediaEditingContext()
         self.controllerInteraction = WebSearchControllerInteraction(openResult: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.controllerNode.openResult(currentResult: result, present: { [weak self] viewController, arguments in
                     if let strongSelf = self {
-                        strongSelf.present(viewController, in: .window(.root), with: arguments)
+                        strongSelf.present(viewController, in: .window(.root), with: arguments, blockInteraction: true)
                     }
                 })
             }
@@ -140,19 +198,35 @@ final class WebSearchController: ViewController {
             if let strongSelf = self {
                 _ = removeRecentWebSearchQuery(postbox: strongSelf.account.postbox, string: query).start()
             }
-        }, toggleSelection: { [weak self] ids, value in
+        }, toggleSelection: { [weak self] result, value in
             if let strongSelf = self {
-                strongSelf.updateInterfaceState { $0.withToggledSelectedMessages(ids, value: value) }
+                let item = LegacyWebSearchItem(result: result)
+                strongSelf.controllerInteraction?.selectionState?.setItem(item, selected: value)
             }
-        }, sendSelected: { [weak self] collection, current in
-            if let strongSelf = self, let state = strongSelf.interfaceState.state {
-                var selectedIds = state.selectionState.selectedIds
+        }, sendSelected: { current in
+            if let selectionState = selectionState {
                 if let current = current {
-                    selectedIds.insert(current.id)
+                    let currentItem = LegacyWebSearchItem(result: current)
+                    selectionState.setItem(currentItem, selected: true)
                 }
-                sendSelected(Array(selectedIds), collection, editingContext)
+                if case let .media(sendSelected) = mode {
+                    sendSelected(selectionState, editingState)
+                }
             }
-        }, editingContext: editingContext)
+        }, avatarCompleted: { result in
+            if case let .avatar(avatarCompleted) = mode {
+                avatarCompleted(result)
+            }
+        }, selectionState: selectionState, editingState: editingState)
+        
+        if let selectionState = selectionState {
+            self.selectionDisposable = (selectionChangedSignal(selectionState: selectionState)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                if let strongSelf = self {
+                    strongSelf.controllerNode.updateSelectionState(animated: true)
+                }
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -161,6 +235,8 @@ final class WebSearchController: ViewController {
     
     deinit {
         self.disposable?.dispose()
+        self.resultsDisposable.dispose()
+        self.selectionDisposable?.dispose()
     }
     
     public override func viewDidAppear(_ animated: Bool) {
@@ -181,7 +257,7 @@ final class WebSearchController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WebSearchControllerNode(account: self.account, theme: self.interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, controllerInteraction: self.controllerInteraction!)
+        self.displayNode = WebSearchControllerNode(account: self.account, theme: self.interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, controllerInteraction: self.controllerInteraction!, peer: self.peer, mode: self.mode.mode)
         self.controllerNode.requestUpdateInterfaceState = { [weak self] animated, f in
             if let strongSelf = self {
                 strongSelf.updateInterfaceState(f)
@@ -212,8 +288,6 @@ final class WebSearchController: ViewController {
         self.interfaceState = updatedInterfaceState
         self.interfaceStatePromise.set(updatedInterfaceState)
         
-        self.controllerInteraction?.selectionState = updatedInterfaceState.state?.selectionState
-        
         if self.isNodeLoaded {
             if previousTheme !== updatedInterfaceState.presentationData.theme || previousStrings !== updatedInterfaceState.presentationData.strings {
                 self.controllerNode.updatePresentationData(theme: updatedInterfaceState.presentationData.theme, strings: updatedInterfaceState.presentationData.strings)
@@ -229,29 +303,26 @@ final class WebSearchController: ViewController {
             let _ = addRecentWebSearchQuery(postbox: self.account.postbox, string: query).start()
         }
         
-        let mode = self.interfaceStatePromise.get()
-        |> map { state -> WebSearchMode? in
-            return state.state?.mode
+        let scope: Signal<WebSearchScope?, NoError>
+        switch self.mode {
+            case .media:
+                scope = self.interfaceStatePromise.get()
+                |> map { state -> WebSearchScope? in
+                    return state.state?.scope
+                }
+                |> distinctUntilChanged
+            case .avatar:
+                scope = .single(.images)
         }
-        |> distinctUntilChanged
         
         self.updateInterfaceState { $0.withUpdatedQuery(query) }
         
-        var results = mode
-        |> mapToSignal { mode -> (Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>) in
-            if let mode = mode {
-                return self.signalForQuery(query, mode: mode)
-                |> deliverOnMainQueue
-                |> beforeStarted { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.navigationContentNode?.setActivity(true)
-                    }
-                }
-                |> afterCompleted { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.navigationContentNode?.setActivity(false)
-                    }
-                }
+        let scopes: [WebSearchScope: Promise<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?>] = [.images: Promise(initializeOnFirstAccess: self.signalForQuery(query, scope: .images)), .gifs: Promise(initializeOnFirstAccess: self.signalForQuery(query, scope: .gifs))]
+        
+        var results = scope
+        |> mapToSignal { scope -> (Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>) in
+            if let scope = scope, let scopeResults = scopes[scope] {
+                return scopeResults.get()
             } else {
                 return .complete()
             }
@@ -276,29 +347,16 @@ final class WebSearchController: ViewController {
         }))
     }
     
-    private func signalForQuery(_ query: String, mode: WebSearchMode) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> {
+    private func signalForQuery(_ query: String, scope: WebSearchScope) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> {
         var delayRequest = true
-        var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
-//        if let previousQuery = previousQuery {
-//            switch previousQuery {
-//                case let .contextRequest(currentAddressName, currentContextQuery) where currentAddressName == addressName:
-//                    if query.isEmpty && !currentContextQuery.isEmpty {
-//                        delayRequest = false
-//                    }
-//                default:
-//                    delayRequest = false
-//                    signal = .single({ _ in return .contextRequestResult(nil, nil) })
-//            }
-//        } else {
-            signal = .single({ _ in return .contextRequestResult(nil, nil) })
-//        }
+        var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ _ in return .contextRequestResult(nil, nil) })
         
-        guard case let .peer(peerId) = self.chatLocation else {
+        guard let peerId = self.peer?.id else {
             return .single({ _ in return .contextRequestResult(nil, nil) })
         }
         
         let botName: String?
-        switch mode {
+        switch scope {
             case .images:
                 botName = self.configuration.imageBotUsername
             case .gifs:
@@ -354,7 +412,18 @@ final class WebSearchController: ViewController {
                 return .single({ _ in return nil })
             }
         }
-        return signal |> then(contextBot)
+        return (signal |> then(contextBot))
+        |> deliverOnMainQueue
+        |> beforeStarted { [weak self] in
+            if let strongSelf = self {
+                strongSelf.navigationContentNode?.setActivity(true)
+            }
+        }
+        |> afterCompleted { [weak self] in
+            if let strongSelf = self {
+                strongSelf.navigationContentNode?.setActivity(false)
+            }
+        }
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

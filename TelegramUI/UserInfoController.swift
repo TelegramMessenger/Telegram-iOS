@@ -25,6 +25,7 @@ private final class UserInfoControllerArguments {
     let displayCopyContextMenu: (UserInfoEntryTag, String) -> Void
     let call: () -> Void
     let openCallMenu: (String) -> Void
+    let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let displayAboutContextMenu: (String) -> Void
     let openEncryptionKey: (SecretChatKeyFingerprint) -> Void
     let addBotToGroup: () -> Void
@@ -34,7 +35,7 @@ private final class UserInfoControllerArguments {
     let botPrivacy: () -> Void
     let report: () -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, shareMyContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, shareBot: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, shareMyContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, shareBot: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
@@ -55,6 +56,7 @@ private final class UserInfoControllerArguments {
         self.displayCopyContextMenu = displayCopyContextMenu
         self.call = call
         self.openCallMenu = openCallMenu
+        self.aboutLinkAction = aboutLinkAction
         self.displayAboutContextMenu = displayAboutContextMenu
         self.openEncryptionKey = openEncryptionKey
         self.addBotToGroup = addBotToGroup
@@ -93,7 +95,7 @@ private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> B
 private enum UserInfoEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer?, presence: PeerPresence?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, displayCall: Bool)
     case calls(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, messages: [Message])
-    case about(PresentationTheme, String, String)
+    case about(PresentationTheme, Peer, String, String)
     case phoneNumber(PresentationTheme, Int, String, String, Bool)
     case userName(PresentationTheme, String, String)
     case sendMessage(PresentationTheme, String)
@@ -192,8 +194,8 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .about(lhsTheme, lhsText, lhsValue):
-                if case let .about(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .about(lhsTheme, lhsPeer, lhsText, lhsValue):
+                if case let .about(rhsTheme, rhsPeer, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPeer.isEqual(rhsPeer), lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -380,9 +382,15 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 } : nil)
             case let .calls(theme, strings, dateTimeFormat, messages):
                 return ItemListCallListItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, messages: messages, sectionId: self.section, style: .plain)
-            case let .about(theme, text, value):
-                return ItemListTextWithLabelItem(theme: theme, label: text, text: value, enabledEntitiyTypes: [], multiline: true, sectionId: self.section, action: {
+            case let .about(theme, peer, text, value):
+                var enabledEntitiyTypes: EnabledEntityTypes = []
+                if let peer = peer as? TelegramUser, let _ = peer.botInfo {
+                    enabledEntitiyTypes = [.url, .mention, .hashtag]
+                }
+                return ItemListTextWithLabelItem(theme: theme, label: text, text: value, enabledEntitiyTypes: enabledEntitiyTypes, multiline: true, sectionId: self.section, action: nil, longTapAction: {
                     arguments.displayAboutContextMenu(value)
+                }, linkItemAction: { action, itemLink in
+                    arguments.aboutLinkAction(action, itemLink)
                 }, tag: UserInfoEntryTag.about)
             case let .phoneNumber(theme, _, label, value, isMain):
                 return ItemListTextWithLabelItem(theme: theme, label: label, text: value, textColor: isMain ? .highlighted : .accent, enabledEntitiyTypes: [], multiline: false, sectionId: self.section, action: {
@@ -618,7 +626,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         } else {
             title = presentationData.strings.Profile_About
         }
-        entries.append(UserInfoEntry.about(presentationData.theme, title, about))
+        entries.append(UserInfoEntry.about(presentationData.theme, peer, title, about))
     }
     
     if !isEditing {
@@ -764,10 +772,14 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
     let createSecretChatDisposable = MetaDisposable()
     actionsDisposable.add(createSecretChatDisposable)
     
+    let navigateDisposable = MetaDisposable()
+    actionsDisposable.add(navigateDisposable)
+    
     var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
     var updateHiddenAvatarImpl: (() -> Void)?
     
+    var aboutLinkActionImpl: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     var displayAboutContextMenuImpl: ((String) -> Void)?
     var displayCopyContextMenuImpl: ((UserInfoEntryTag, String) -> Void)?
     
@@ -915,7 +927,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
             }
             
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            if let user = peer as? TelegramUser, user.botInfo != nil {
+            if let peer = peer as? TelegramUser, let _ = peer.botInfo {
                 updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: account, peerId: peer.id, isBlocked: value).start())
                 if !value {
                     let _ = enqueueMessages(account: account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)]).start()
@@ -989,6 +1001,8 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
                 account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
             }
         })
+    }, aboutLinkAction: { action, itemLink in
+        aboutLinkActionImpl?(action, itemLink)
     }, displayAboutContextMenu: { text in
         displayAboutContextMenuImpl?(text)
     }, openEncryptionKey: { fingerprint in
@@ -1309,6 +1323,11 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
                     itemNode.updateAvatarHidden()
                 }
             }
+        }
+    }
+    aboutLinkActionImpl = { [weak controller] action, itemLink in
+        if let controller = controller {
+            handlePeerInfoAboutTextAction(account: account, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
     }
     displayAboutContextMenuImpl = { [weak controller] text in

@@ -40,10 +40,9 @@ final class WebSearchItem: GridItem {
 final class WebSearchItemNode: GridItemNode {
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
-    private var selectionNode: GridMessageSelectionNode?
+    private var checkNode: CheckNode?
     
     private var currentImageResource: TelegramMediaResource?
-    private var currentVideoFile: TelegramMediaFile?
     private var currentDimensions: CGSize?
     
     private(set) var item: WebSearchItem?
@@ -51,8 +50,6 @@ final class WebSearchItemNode: GridItemNode {
     private let fetchStatusDisposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
     private var resourceStatus: MediaResourceStatus?
-    
-    private let statusNode: RadialStatusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
     
     override init() {
         self.imageNodeBackground = ASDisplayNode()
@@ -86,35 +83,33 @@ final class WebSearchItemNode: GridItemNode {
     func setup(item: WebSearchItem) {
         if self.item !== item {
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
             
+            var thumbnailDimensions: CGSize?
+            var thumbnailResource: TelegramMediaResource?
             var imageResource: TelegramMediaResource?
-            var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
-                case let .externalReference(_, _, type, title, _, url, content, thumbnail, _):
+                case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
                     if let content = content {
                         imageResource = content.resource
                     } else if let thumbnail = thumbnail {
                         imageResource = thumbnail.resource
                     }
                     imageDimensions = content?.dimensions
-                    if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
-                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
-                        imageResource = nil
+                    if type == "gif", let imageResource = imageResource, let content = content, let dimensions = content.dimensions {
+                        thumbnailResource = imageResource
+                        thumbnailDimensions = dimensions
                     }
-                    
-                    if let file = videoFile {
-                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(file.resource)
-                    } else if let imageResource = imageResource {
-                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
-                    }
-                case let .internalReference(_, _, _, title, _, image, file, _):
+                case let .internalReference(_, _, _, _, _, image, file, _):
                     if let image = image {
                         if let largestRepresentation = largestImageRepresentation(image.representations) {
                             imageDimensions = largestRepresentation.dimensions
                         }
                         imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0))?.resource
+                        if let thumbnailRepresentation = smallestImageRepresentation(image.representations) {
+                            thumbnailDimensions = thumbnailRepresentation.dimensions
+                            thumbnailResource = thumbnailRepresentation.resource
+                        }
                     } else if let file = file {
                         if let dimensions = file.dimensions {
                             imageDimensions = dimensions
@@ -123,32 +118,26 @@ final class WebSearchItemNode: GridItemNode {
                         }
                         imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
                     }
-                
-    //                if let file = file {
-    //                    if file.isVideo && file.isAnimated {
-    //                        videoFile = file
-    //                        imageResource = nil
-    //                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(file.resource)
-    //                    } else if let imageResource = imageResource {
-    //                        updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
-    //                    }
-    //                } else if let imageResource = imageResource {
-    //                    updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
-    //                }
             }
             
+            var representations: [TelegramMediaImageRepresentation] = []
+            if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
+                representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource))
+            }
             if let imageResource = imageResource, let imageDimensions = imageDimensions {
-                let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource)
-                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil, partialReference: nil)
+                representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
+            }
+            if !representations.isEmpty {
+                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, reference: nil, partialReference: nil)
                 updateImageSignal =  mediaGridMessagePhoto(account: item.account, photoReference: .standalone(media: tmpImage))
             } else {
                 updateImageSignal = .complete()
             }
             
             if let updateImageSignal = updateImageSignal {
-                let editingContext = item.controllerInteraction.editingContext
+                let editingContext = item.controllerInteraction.editingState
                 let editedImageSignal = Signal<UIImage?, NoError> { subscriber in
-                    let editableItem = LegacyWebSearchItem(result: item.result, dimensions: CGSize(), thumbnailImage: .complete(), originalImage: .complete())
+                    let editableItem = LegacyWebSearchItem(result: item.result)
                     if let signal = editingContext.thumbnailImageSignal(for: editableItem) {
                         let disposable = signal.start(next: { next in
                             if let image = next as? UIImage {
@@ -200,46 +189,49 @@ final class WebSearchItemNode: GridItemNode {
             }
             
             self.currentImageResource = imageResource
-            self.currentVideoFile = videoFile
             self.currentDimensions = imageDimensions
             if let _ = imageDimensions {
                 self.setNeedsLayout()
             }
+            self.updateHiddenMedia()
         }
         
         self.item = item
         self.updateSelectionState(animated: false)
     }
     
+    @objc func toggleSelection() {
+        if let checkNode = self.checkNode, let item = self.item {
+            checkNode.setIsChecked(!checkNode.isChecked, animated: true)
+            item.controllerInteraction.toggleSelection(item.result, checkNode.isChecked)
+        }
+    }
+    
     func updateSelectionState(animated: Bool) {
-        if self.selectionNode == nil, let item = self.item {
-            let selectionNode = GridMessageSelectionNode(theme: item.theme, toggle: { [weak self] value in
-                if let strongSelf = self, let item = strongSelf.item {
-                    item.controllerInteraction.toggleSelection([item.result.id], value)
-                    strongSelf.updateSelectionState(animated: true)
-                }
-            })
-            self.addSubnode(selectionNode)
-            self.selectionNode = selectionNode
+        if self.checkNode == nil, let item = self.item, let _ = item.controllerInteraction.selectionState {
+            let checkNode = CheckNode(strokeColor: item.theme.list.itemCheckColors.strokeColor, fillColor: item.theme.list.itemCheckColors.fillColor, foregroundColor: item.theme.list.itemCheckColors.foregroundColor, style: .overlay)
+            checkNode.addTarget(target: self, action: #selector(self.toggleSelection))
+            self.addSubnode(checkNode)
+            self.checkNode = checkNode
             self.setNeedsLayout()
         }
         
         if let item = self.item {
             if let selectionState = item.controllerInteraction.selectionState {
-                let selected = selectionState.selectedIds.contains(item.result.id)
-                self.selectionNode?.updateSelected(selected, animated: animated)
+                let selected = selectionState.isIdentifierSelected(item.result.id)
+                self.checkNode?.setIsChecked(selected, animated: animated)
             }
         }
     }
     
     func updateHiddenMedia() {
         if let item = self.item {
-            self.imageNode.isHidden = item.controllerInteraction.hiddenMediaId == item.result.id
+            self.isHidden = item.controllerInteraction.hiddenMediaId == item.result.id
         }
     }
     
     func transitionView() -> UIView {
-        let view = self.imageNode.view.snapshotContentTree(unhide: true)!
+        let view = self.view.snapshotContentTree(unhide: true, keepTransform: true)!
         view.frame = self.convert(self.bounds, to: nil)
         return view
     }
@@ -256,11 +248,7 @@ final class WebSearchItemNode: GridItemNode {
         }
         
         let checkSize = CGSize(width: 32.0, height: 32.0)
-        self.selectionNode?.frame = CGRect(origin: CGPoint(x: imageFrame.width - checkSize.width, y: 0.0), size: checkSize)
-        let progressDiameter: CGFloat = 40.0
-        self.statusNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - progressDiameter) / 2.0), y: floor((imageFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
-        
-        //self.videoAccessoryNode.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - self.videoAccessoryNode.contentSize.width - 5, y: imageFrame.maxY - self.videoAccessoryNode.contentSize.height - 5), size: self.videoAccessoryNode.contentSize)
+        self.checkNode?.frame = CGRect(origin: CGPoint(x: imageFrame.width - checkSize.width, y: 0.0), size: checkSize)
     }
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -274,9 +262,6 @@ final class WebSearchItemNode: GridItemNode {
                     switch gesture {
                         case .tap:
                             item.controllerInteraction.openResult(item.result)
-
-                        case .longTap:
-                            break
                         default:
                             break
                     }

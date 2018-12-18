@@ -3,22 +3,22 @@ import Postbox
 import SwiftSignalKit
 
 struct WebSearchSettings: Equatable, PreferencesEntry {
-    var mode: WebSearchMode
+    var scope: WebSearchScope
     
     static var defaultSettings: WebSearchSettings {
-        return WebSearchSettings(mode: .images)
+        return WebSearchSettings(scope: .images)
     }
     
-    init(mode: WebSearchMode) {
-        self.mode = mode
+    init(scope: WebSearchScope) {
+        self.scope = scope
     }
     
     init(decoder: PostboxDecoder) {
-        self.mode = WebSearchMode(rawValue: decoder.decodeInt32ForKey("mode", orElse: 0)) ?? .images
+        self.scope = WebSearchScope(rawValue: decoder.decodeInt32ForKey("scope", orElse: 0)) ?? .images
     }
     
     func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.mode.rawValue, forKey: "mode")
+        encoder.encodeInt32(self.scope.rawValue, forKey: "scope")
     }
     
     func isEqual(to: PreferencesEntry) -> Bool {

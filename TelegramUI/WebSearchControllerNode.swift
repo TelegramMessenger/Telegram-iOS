@@ -113,8 +113,10 @@ private func preparedWebSearchRecentTransition(from fromEntries: [WebSearchRecen
 
 class WebSearchControllerNode: ASDisplayNode {
     private let account: Account
+    private let peer: Peer?
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private let mode: WebSearchMode
     
     private let controllerInteraction: WebSearchControllerInteraction
     private var webSearchInterfaceState: WebSearchInterfaceState
@@ -128,6 +130,7 @@ class WebSearchControllerNode: ASDisplayNode {
     private let toolbarSeparatorNode: ASDisplayNode
     private let cancelButton: HighlightableButtonNode
     private let sendButton: HighlightableButtonNode
+    private let badgeNode: WebSearchBadgeNode
     
     private let attributionNode: ASImageNode
     
@@ -145,8 +148,6 @@ class WebSearchControllerNode: ASDisplayNode {
     private var hasMore = false
     private var isLoadingMore = false
     
-    private let selectionContext = TGMediaSelectionContext()
-    
     private let hiddenMediaId = Promise<String?>(nil)
     private var hiddenMediaDisposable: Disposable?
     
@@ -163,11 +164,13 @@ class WebSearchControllerNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var dismissInput: (() -> Void)?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
+        self.peer = peer
+        self.mode = mode
         
         self.webSearchInterfaceState = WebSearchInterfaceState(presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 })
         self.webSearchInterfaceStatePromise = ValuePromise(self.webSearchInterfaceState, ignoreRepeated: true)
@@ -185,6 +188,8 @@ class WebSearchControllerNode: ASDisplayNode {
         
         self.cancelButton = HighlightableButtonNode()
         self.sendButton = HighlightableButtonNode()
+        
+        self.badgeNode = WebSearchBadgeNode(theme: theme)
         
         self.gridNode = GridNode()
         self.gridNode.backgroundColor = theme.list.plainBackgroundColor
@@ -204,12 +209,15 @@ class WebSearchControllerNode: ASDisplayNode {
         self.addSubnode(self.recentQueriesNode)
         self.addSubnode(self.segmentedBackgroundNode)
         self.addSubnode(self.segmentedSeparatorNode)
-        self.view.addSubview(self.segmentedControl)
+        if case .media = mode {
+            self.view.addSubview(self.segmentedControl)
+        }
         self.addSubnode(self.toolbarBackgroundNode)
         self.addSubnode(self.toolbarSeparatorNode)
         self.addSubnode(self.cancelButton)
         self.addSubnode(self.sendButton)
         self.addSubnode(self.attributionNode)
+        self.addSubnode(self.badgeNode)
         
         self.segmentedControl.addTarget(self, action: #selector(self.indexChanged), for: .valueChanged)
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
@@ -246,7 +254,7 @@ class WebSearchControllerNode: ASDisplayNode {
         
         self.gridNode.visibleItemsUpdated = { [weak self] visibleItems in
             if let strongSelf = self, let bottom = visibleItems.bottom, let entries = strongSelf.currentEntries {
-                if bottom.0 <= entries.count {
+                if bottom.0 >= entries.count - 8 {
                     strongSelf.loadMore()
                 }
             }
@@ -258,6 +266,18 @@ class WebSearchControllerNode: ASDisplayNode {
         
         self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
+        }
+        
+        self.sendButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self, strongSelf.badgeNode.alpha > 0.0 {
+                if highlighted {
+                    strongSelf.badgeNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.badgeNode.alpha = 0.4
+                } else {
+                    strongSelf.badgeNode.alpha = 1.0
+                    strongSelf.badgeNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
         }
         
         self.hiddenMediaDisposable = (self.hiddenMediaId.get()
@@ -291,7 +311,12 @@ class WebSearchControllerNode: ASDisplayNode {
     
     func applyPresentationData(themeUpdated: Bool = true) {
         self.cancelButton.setTitle(self.strings.Common_Cancel, with: Font.regular(17.0), with: self.theme.rootController.navigationBar.accentTextColor, for: .normal)
-        self.sendButton.setTitle(self.strings.MediaPicker_Send, with: Font.medium(17.0), with: self.theme.rootController.navigationBar.accentTextColor, for: .normal)
+        
+        if let selectionState = self.controllerInteraction.selectionState {
+            let sendEnabled = selectionState.count() > 0
+            let color = sendEnabled ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.disabledButtonColor
+            self.sendButton.setTitle(self.strings.MediaPicker_Send, with: Font.medium(17.0), with: color, for: .normal)
+        }
         
         if themeUpdated {
             self.backgroundColor = self.theme.chatList.backgroundColor
@@ -322,7 +347,7 @@ class WebSearchControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
-        let segmentedHeight: CGFloat = 40.0
+        let segmentedHeight: CGFloat = self.segmentedControl.superview != nil ? 40.0 : 5.0
         let panelY: CGFloat = insets.top - UIScreenPixel - 4.0
         
         transition.updateFrame(node: self.segmentedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: segmentedHeight)))
@@ -342,15 +367,54 @@ class WebSearchControllerNode: ASDisplayNode {
         
         if let image = self.attributionNode.image {
             transition.updateFrame(node: self.attributionNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - image.size.width) / 2.0), y: toolbarY + floor((toolbarHeight - image.size.height) / 2.0)), size: image.size))
-            transition.updateAlpha(node: self.attributionNode, alpha: self.webSearchInterfaceState.state?.mode == .gifs ? 1.0 : 0.0)
+            transition.updateAlpha(node: self.attributionNode, alpha: self.webSearchInterfaceState.state?.scope == .gifs ? 1.0 : 0.0)
         }
         
-        let toolbarPadding: CGFloat = 15.0
+        let toolbarPadding: CGFloat = 10.0
         let cancelSize = self.cancelButton.measure(CGSize(width: layout.size.width, height: toolbarHeight))
         transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: toolbarPadding + layout.safeInsets.left, y: toolbarY), size: CGSize(width: cancelSize.width, height: toolbarHeight)))
         
         let sendSize = self.sendButton.measure(CGSize(width: layout.size.width, height: toolbarHeight))
-        transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: layout.size.width - toolbarPadding - layout.safeInsets.right - sendSize.width, y: toolbarY), size: CGSize(width: sendSize.width, height: toolbarHeight)))
+        let sendFrame = CGRect(origin: CGPoint(x: layout.size.width - toolbarPadding - layout.safeInsets.right - sendSize.width, y: toolbarY), size: CGSize(width: sendSize.width, height: toolbarHeight))
+        transition.updateFrame(node: self.sendButton, frame: sendFrame)
+        
+        if let selectionState = self.controllerInteraction.selectionState {
+            self.sendButton.isHidden = false
+            
+            let previousSendEnabled = self.sendButton.isEnabled
+            let sendEnabled = selectionState.count() > 0
+            self.sendButton.isEnabled = sendEnabled
+            if sendEnabled != previousSendEnabled {
+                let color = sendEnabled ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.disabledButtonColor
+                self.sendButton.setTitle(self.strings.MediaPicker_Send, with: Font.medium(17.0), with: color, for: .normal)
+            }
+            
+            let selectedCount = selectionState.count()
+            let badgeText = String(selectedCount)
+            if selectedCount > 0 && (self.badgeNode.text != badgeText || self.badgeNode.alpha < 1.0) {
+                if transition.isAnimated {
+                    var incremented = true
+                    if let previousCount = Int(self.badgeNode.text) {
+                        incremented = selectedCount > previousCount || self.badgeNode.alpha < 1.0
+                    }
+                    self.badgeNode.animateBump(incremented: incremented)
+                }
+                self.badgeNode.text = badgeText
+                
+                let badgeSize = self.badgeNode.measure(layout.size)
+                transition.updateFrame(node: self.badgeNode, frame: CGRect(origin: CGPoint(x: sendFrame.minX - badgeSize.width - 6.0, y: toolbarY + 11.0), size: badgeSize))
+                transition.updateAlpha(node: self.badgeNode, alpha: 1.0)
+            } else if selectedCount == 0 {
+                if transition.isAnimated {
+                    self.badgeNode.animateOut()
+                }
+                let badgeSize = CGSize(width: 22.0, height: 22.0)
+                transition.updateFrame(node: self.badgeNode, frame: CGRect(origin: CGPoint(x: sendFrame.minX - badgeSize.width - 6.0, y: toolbarY + 11.0), size: badgeSize))
+                transition.updateAlpha(node: self.badgeNode, alpha: 0.0)
+            }
+        } else {
+            self.sendButton.isHidden = true
+        }
         
         let previousBounds = self.gridNode.bounds
         self.gridNode.bounds = CGRect(x: previousBounds.origin.x, y: previousBounds.origin.y, width: layout.size.width, height: layout.size.height)
@@ -396,7 +460,19 @@ class WebSearchControllerNode: ASDisplayNode {
         self.webSearchInterfaceStatePromise.set(self.webSearchInterfaceState)
         
         if let state = interfaceState.state {
-            self.segmentedControl.selectedSegmentIndex = Int(state.mode.rawValue)
+            self.segmentedControl.selectedSegmentIndex = Int(state.scope.rawValue)
+        }
+        
+        if let validLayout = self.containerLayout {
+            self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
+        }
+    }
+    
+    func updateSelectionState(animated: Bool) {
+        self.gridNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? WebSearchItemNode {
+                itemNode.updateSelectionState(animated: animated)
+            }
         }
         
         if let validLayout = self.containerLayout {
@@ -421,7 +497,7 @@ class WebSearchControllerNode: ASDisplayNode {
     }
     
     private func loadMore() {
-        guard !self.isLoadingMore, let currentProcessedResults = self.currentProcessedResults, let nextOffset = currentProcessedResults.nextOffset else {
+        guard !self.isLoadingMore, let currentProcessedResults = self.currentProcessedResults, currentProcessedResults.results.count > 55, let nextOffset = currentProcessedResults.nextOffset else {
             return
         }
         self.isLoadingMore = true
@@ -432,11 +508,16 @@ class WebSearchControllerNode: ASDisplayNode {
                 }
                 strongSelf.isLoadingMore = false
                 var results: [ChatContextResult] = []
+                var existingIds = Set<String>()
                 for result in currentProcessedResults.results {
                     results.append(result)
+                    existingIds.insert(result.id)
                 }
                 for result in nextResults.results {
-                    results.append(result)
+                    if !existingIds.contains(result.id) {
+                        results.append(result)
+                        existingIds.insert(result.id)
+                    }
                 }
                 let mergedResults = ChatContextResultCollection(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, geoPoint: currentProcessedResults.geoPoint, queryId: nextResults.queryId, nextOffset: nextResults.nextOffset, presentation: currentProcessedResults.presentation, switchPeer: currentProcessedResults.switchPeer, results: results, cacheTimeout: currentProcessedResults.cacheTimeout)
                 strongSelf.currentProcessedResults = mergedResults
@@ -527,11 +608,13 @@ class WebSearchControllerNode: ASDisplayNode {
     }
     
     @objc private func indexChanged() {
-        self.requestUpdateInterfaceState(true) { current in
-            if let mode = WebSearchMode(rawValue: Int32(self.segmentedControl.selectedSegmentIndex)) {
-                return current.withUpdatedMode(mode)
+        if let scope = WebSearchScope(rawValue: Int32(self.segmentedControl.selectedSegmentIndex)) {
+            let _ = updateWebSearchSettingsInteractively(postbox: self.account.postbox) { _ -> WebSearchSettings in
+                return WebSearchSettings(scope: scope)
+            }.start()
+            self.requestUpdateInterfaceState(true) { current in
+                return current.withUpdatedScope(scope)
             }
-            return current
         }
     }
     
@@ -540,67 +623,85 @@ class WebSearchControllerNode: ASDisplayNode {
     }
     
     @objc private func sendPressed() {
-        if let results = self.currentProcessedResults {
-            self.controllerInteraction.sendSelected(results, nil)
-        }
+        self.controllerInteraction.sendSelected(nil)
         self.cancel?()
     }
     
-    func openResult(currentResult: ChatContextResult, present: (ViewController, Any?) -> Void) {
-        if let state = self.webSearchInterfaceState.state, state.mode == .images {
-            if let results = self.currentProcessedResults?.results {
-                presentLegacyWebSearchGallery(account: self.account, peer: nil, theme: self.theme, results: results, current: currentResult, selectionContext: self.selectionContext, editingContext: self.controllerInteraction.editingContext, updateHiddenMedia: { [weak self] id in
-                    self?.hiddenMediaId.set(.single(id))
-                }, initialLayout: self.containerLayout?.0, transitionHostView: { [weak self] in
-                    return self?.gridNode.view
-                }, transitionView: { [weak self] result in
-                    return self?.transitionView(for: result)
-                }, completed: { [weak self] result in
-                    if let strongSelf = self, let results = strongSelf.currentProcessedResults {
-                        strongSelf.controllerInteraction.sendSelected(results, nil)
-                        strongSelf.cancel?()
-                    }
-                }, present: present)
-            }
-        } else {
-            if let results = self.currentProcessedResults?.results {
-                var entries: [WebSearchGalleryEntry] = []
-                var centralIndex: Int = 0
-                for i in 0 ..< results.count {
-                    entries.append(WebSearchGalleryEntry(result: results[i]))
-                    if results[i] == currentResult {
-                        centralIndex = i
-                    }
+    func openResult(currentResult: ChatContextResult, present: @escaping (ViewController, Any?) -> Void) {
+        if self.controllerInteraction.selectionState != nil {
+            if let state = self.webSearchInterfaceState.state, state.scope == .images {
+                if let results = self.currentProcessedResults?.results {
+                    presentLegacyWebSearchGallery(account: self.account, peer: self.peer, theme: self.theme, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
+                        self?.hiddenMediaId.set(.single(id))
+                    }, initialLayout: self.containerLayout?.0, transitionHostView: { [weak self] in
+                        return self?.gridNode.view
+                    }, transitionView: { [weak self] result in
+                        return self?.transitionView(for: result)
+                    }, completed: { [weak self] result in
+                        if let strongSelf = self {
+                            strongSelf.controllerInteraction.sendSelected(result)
+                            strongSelf.cancel?()
+                        }
+                    }, present: present)
                 }
-                
-                let controller = WebSearchGalleryController(account: self.account, entries: entries, centralIndex: centralIndex, replaceRootController: { (controller, _) in
+            } else {
+                if let results = self.currentProcessedResults?.results {
+                    var entries: [WebSearchGalleryEntry] = []
+                    var centralIndex: Int = 0
+                    for i in 0 ..< results.count {
+                        entries.append(WebSearchGalleryEntry(result: results[i]))
+                        if results[i] == currentResult {
+                            centralIndex = i
+                        }
+                    }
                     
-                }, baseNavigationController: nil)
-                self.hiddenMediaId.set((controller.hiddenMedia |> deliverOnMainQueue)
-                |> map { entry in
-                    return entry?.result.id
-                })
-                present(controller, WebSearchGalleryControllerPresentationArguments(transitionArguments: { [weak self] entry -> GalleryTransitionArguments? in
-                    if let strongSelf = self {
-                        var transitionNode: WebSearchItemNode?
-                        strongSelf.gridNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? WebSearchItemNode, itemNode.item?.result.id == entry.result.id {
-                                transitionNode = itemNode
+                    let controller = WebSearchGalleryController(account: self.account, peer: self.peer, selectionState: self.controllerInteraction.selectionState, editingState: self.controllerInteraction.editingState, entries: entries, centralIndex: centralIndex, replaceRootController: { (controller, _) in
+                        
+                    }, baseNavigationController: nil, sendCurrent: { [weak self] result in
+                        if let strongSelf = self {
+                            strongSelf.controllerInteraction.sendSelected(result)
+                            strongSelf.cancel?()
+                        }
+                    })
+                    self.hiddenMediaId.set((controller.hiddenMedia |> deliverOnMainQueue)
+                    |> map { entry in
+                        return entry?.result.id
+                    })
+                    present(controller, WebSearchGalleryControllerPresentationArguments(transitionArguments: { [weak self] entry -> GalleryTransitionArguments? in
+                        if let strongSelf = self {
+                            var transitionNode: WebSearchItemNode?
+                            strongSelf.gridNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? WebSearchItemNode, itemNode.item?.result.id == entry.result.id {
+                                    transitionNode = itemNode
+                                }
+                            }
+                            if let transitionNode = transitionNode {
+                                return GalleryTransitionArguments(transitionNode: (transitionNode, { [weak transitionNode] in
+                                        return transitionNode?.transitionView().snapshotContentTree(unhide: true)
+                                }), addToTransitionSurface: { view in
+                                    if let strongSelf = self {
+                                        strongSelf.gridNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.gridNode.view)
+                                    }
+                                })
                             }
                         }
-                        if let transitionNode = transitionNode {
-                            return GalleryTransitionArguments(transitionNode: (transitionNode, { [weak transitionNode] in
-                                    return transitionNode?.transitionView().snapshotContentTree(unhide: true)
-                            }), addToTransitionSurface: { view in
-                                if let strongSelf = self {
-                                    strongSelf.gridNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.gridNode.view)
-                                }
-                            })
-                        }
-                    }
-                    return nil
-                }))
+                        return nil
+                    }))
+                }
             }
+        } else {
+            presentLegacyWebSearchEditor(account: self.account, theme: self.theme, result: currentResult, initialLayout: self.containerLayout?.0, updateHiddenMedia: { [weak self] id in
+                self?.hiddenMediaId.set(.single(id))
+            }, transitionHostView: { [weak self] in
+                    return self?.gridNode.view
+            }, transitionView: { [weak self] result in
+                return self?.transitionView(for: result)
+            }, completed: { [weak self] result in
+                if let strongSelf = self {
+                    strongSelf.controllerInteraction.avatarCompleted(result)
+                    strongSelf.cancel?()
+                }
+            }, present: present)
         }
     }
     

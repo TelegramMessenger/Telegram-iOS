@@ -240,8 +240,6 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         
         self.disablesInteractiveTransitionGestureRecognizer = true
         
-        let inputPanelTheme = theme.chat.inputPanel
-        
         self.pallete = legacyInputMicPalette(from: theme)
         
         self.insertSubview(self.innerIconView, at: 0)
@@ -348,7 +346,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     func micButtonInteractionCancelled(_ velocity: CGPoint) {
         //print("\(CFAbsoluteTimeGetCurrent()) cancelled")
         self.modeTimeoutTimer?.invalidate()
-        self.stopRecording()
+        self.endRecording(false)
     }
     
     func micButtonInteractionCompleted(_ velocity: CGPoint) {

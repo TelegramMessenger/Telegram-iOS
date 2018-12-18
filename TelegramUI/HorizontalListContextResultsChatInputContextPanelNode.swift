@@ -209,11 +209,16 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             }
             strongSelf.isLoadingMore = false
             var results: [ChatContextResult] = []
+            var existingIds = Set<String>()
             for result in currentProcessedResults.results {
                 results.append(result)
+                existingIds.insert(result.id)
             }
             for result in nextResults.results {
-                results.append(result)
+                if !existingIds.contains(result.id) {
+                    results.append(result)
+                    existingIds.insert(result.id)
+                }
             }
             let mergedResults = ChatContextResultCollection(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, geoPoint: currentProcessedResults.geoPoint, queryId: nextResults.queryId, nextOffset: nextResults.nextOffset, presentation: currentProcessedResults.presentation, switchPeer: currentProcessedResults.switchPeer, results: results, cacheTimeout: currentProcessedResults.cacheTimeout)
             strongSelf.currentProcessedResults = mergedResults

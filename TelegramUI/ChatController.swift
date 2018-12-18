@@ -3894,9 +3894,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     
                     configureLegacyAssetPicker(controller, account: strongSelf.account, peer: peer, presentWebSearch: { [weak self] in
                         if let strongSelf = self {
-                            let controller = WebSearchController(account: strongSelf.account, chatLocation: .peer(peer.id), configuration: searchBotsConfiguration, sendSelected: { (resuls, collection, editingContext) in
-                                
-                            })
+                            let controller = WebSearchController(account: strongSelf.account, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { [weak self] selectionState, editingState in
+                                legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
+                                    if let strongSelf = self {
+                                        strongSelf.enqueueChatContextResult(nil, result)
+                                    }
+                                }, enqueueMediaMessages: { [weak self] signals in
+                                    if let strongSelf = self {
+                                        strongSelf.enqueueMediaMessages(signals: signals)
+                                    }
+                                })
+                            }))
                             strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                         }
                     })
@@ -3920,7 +3928,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func presentWebSearch(editingMessage: Bool) {
-        guard let _ = self.presentationInterfaceState.renderedPeer?.peer else {
+        guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
         
@@ -3933,48 +3941,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         |> deliverOnMainQueue).start(next: { [weak self] configuration in
             if let strongSelf = self {
-                let controller = WebSearchController(account: strongSelf.account, chatLocation: strongSelf.chatLocation, configuration: configuration, sendSelected: { [weak self] ids, collection, editingContext in
-                    if let strongSelf = self {
-                        var results: [ChatContextResult] = []
-                        for id in ids {
-                            var result: ChatContextResult?
-                            for r in collection.results {
-                                if r.id == id {
-                                    result = r
-                                    results.append(r)
-                                    break
-                                }
-                            }
+                let controller = WebSearchController(account: strongSelf.account, peer: peer, configuration: configuration, mode: .media(completion: { [weak self] selectionState, editingState in
+                    legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
+                        if let strongSelf = self {
+                            strongSelf.enqueueChatContextResult(nil, result)
                         }
-                        
-                        if !results.isEmpty {
-                            var signals: [Any] = []
-                            for result in results {
-                                let editableItem = LegacyWebSearchItem(result: result, dimensions: CGSize(), thumbnailImage: .complete(), originalImage: .complete())
-                                if editingContext.adjustments(for: editableItem) != nil {
-                                    if let imageSignal = editingContext.imageSignal(for: editableItem) {
-                                        let signal = imageSignal.map { image -> Any in
-                                            if let image = image as? UIImage {
-                                                let dict: [AnyHashable: Any] = [
-                                                    "type": "editedPhoto",
-                                                    "image": image
-                                                ]
-                                                return legacyAssetPickerItemGenerator()(dict, nil, nil, nil)
-                                            } else {
-                                                return SSignal.complete()
-                                            }
-                                        }
-                                        signals.append(signal)
-                                    }
-                                } else {
-                                    strongSelf.enqueueChatContextResult(collection, result, includeViaBot: false)
-                                }
-                            }
-                            
+                    }, enqueueMediaMessages: { [weak self] signals in
+                        if let strongSelf = self {
                             strongSelf.enqueueMediaMessages(signals: signals)
                         }
-                    }
-                })
+                    })
+                }))
                 strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         })
@@ -4250,11 +4227,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }))
     }
     
-    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, includeViaBot: Bool = true) {
+    private func enqueueChatContextResult(_ results: ChatContextResultCollection?, _ result: ChatContextResult) {
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
-        if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result, includeViaBot: includeViaBot), canSendMessagesToChat(self.presentationInterfaceState) {
+        if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result), canSendMessagesToChat(self.presentationInterfaceState) {
             let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {

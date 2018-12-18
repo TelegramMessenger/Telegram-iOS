@@ -100,7 +100,21 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     var inputActivities: (PeerId, [(Peer, PeerInputActivity)])? {
         didSet {
-            if let (peerId, inputActivities) = self.inputActivities, !inputActivities.isEmpty {
+            var inputActivitiesAllowed = true
+            if let titleContent = self.titleContent {
+                switch titleContent {
+                    case let .peer(peerView, _):
+                        if let peer = peerViewMainPeer(peerView) {
+                            if peer.id == self.account.peerId {
+                                inputActivitiesAllowed = false
+                            }
+                        }
+                    default:
+                        break
+                }
+            }
+            
+            if let (peerId, inputActivities) = self.inputActivities, !inputActivities.isEmpty, inputActivitiesAllowed {
                 self.typingNode.isHidden = false
                 self.infoNode.isHidden = true
                 var stringValue = ""
