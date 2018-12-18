@@ -130,6 +130,9 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         }
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else if let poll = media as? TelegramMediaPoll {
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            return .fail(.generic)
+        }
         let inputPoll = Api.InputMedia.inputMediaPoll(poll: Api.Poll.poll(id: 0, flags: 0, question: poll.text, answers: poll.options.map({ $0.apiOption })))
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil)))
     } else {
