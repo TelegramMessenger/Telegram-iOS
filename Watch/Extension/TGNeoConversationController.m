@@ -959,15 +959,17 @@ const NSInteger TGNeoConversationControllerInitialRenderCount = 4;
         return;
     }
     
-    TGNeoRowController *rowController = (TGNeoRowController *)controller;
-    rowController.shouldRenderContent = ^bool
-    {
-        __strong TGNeoConversationController *strongSelf = weakSelf;
-        if (strongSelf != nil && strongSelf->_initialRendering && index >= TGNeoConversationControllerInitialRenderCount)
-            return false;
-        
-        return true;
-    };
+    if ([controller isKindOfClass:[TGNeoRowController class]]) {
+        TGNeoRowController *rowController = (TGNeoRowController *)controller;
+        rowController.shouldRenderContent = ^bool
+        {
+            __strong TGNeoConversationController *strongSelf = weakSelf;
+            if (strongSelf != nil && strongSelf->_initialRendering && index >= TGNeoConversationControllerInitialRenderCount)
+                return false;
+            
+            return true;
+        };
+    }
     
     if ([model isKindOfClass:[TGBridgeMessage class]])
     {

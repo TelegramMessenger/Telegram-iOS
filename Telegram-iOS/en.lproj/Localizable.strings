@@ -3611,3 +3611,5 @@ Unused sets are archived when you add more.";
 "CreatePoll.OptionPlaceholder" = "Option";
 "CreatePoll.AddOption" = "Add an Option";
 "CreatePoll.OptionsInfo" = "You can add up to 10 options.";
+
+"AttachmentMenu.WebSearch" = "Web Search";
