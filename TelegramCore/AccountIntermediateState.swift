@@ -59,7 +59,7 @@ enum AccountStateMutationOperation {
     case DeleteMessagesWithGlobalIds([Int32])
     case DeleteMessages([MessageId])
     case EditMessage(MessageId, StoreMessage)
-    case UpdateMessagePoll(MessageId, Api.Poll?, Api.PollResults)
+    case UpdateMessagePoll(MediaId, Api.Poll?, Api.PollResults)
     case UpdateMedia(MediaId, Media?)
     case ReadInbox(MessageId)
     case ReadOutbox(MessageId, Int32?)
@@ -195,7 +195,7 @@ struct AccountMutableState {
         self.addOperation(.EditMessage(id, message))
     }
     
-    mutating func updateMessagePoll(_ id: MessageId, poll: Api.Poll?, results: Api.PollResults) {
+    mutating func updateMessagePoll(_ id: MediaId, poll: Api.Poll?, results: Api.PollResults) {
         self.addOperation(.UpdateMessagePoll(id, poll, results))
     }
     

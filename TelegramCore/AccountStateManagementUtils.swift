@@ -1241,8 +1241,8 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                         langCode = langPackDifference.langCode
                 }
                 updatedState.updateLangPack(langCode: langCode, difference: difference)
-            case let .updateMessagePoll(flags, peer, msgId, poll, results):
-                updatedState.updateMessagePoll(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), poll: poll, results: results)
+            case let .updateMessagePoll(flags, pollId, poll, results):
+                updatedState.updateMessagePoll(MediaId(namespace: Namespaces.Media.CloudPoll, id: pollId), poll: poll, results: results)
             default:
                 break
         }
@@ -2099,35 +2099,24 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                     }
                     return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
                 })
-            case let .UpdateMessagePoll(id, apiPoll, results):
-                transaction.updateMessage(id, update: { currentMessage in
-                    var storeForwardInfo: StoreMessageForwardInfo?
-                    if let forwardInfo = currentMessage.forwardInfo {
-                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                    }
-                    var media = currentMessage.media
-                    loop: for j in 0 ..< media.count {
-                        if let poll = media[j] as? TelegramMediaPoll {
-                            var updatedPoll = poll
-                            if let apiPoll = apiPoll {
-                                switch apiPoll {
-                                    case let .poll(id, flags, question, answers):
-                                        updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0)
-                                }
-                            }
-                            
-                            let resultsMin: Bool
-                            switch results {
-                                case let .pollResults(pollResults):
-                                    resultsMin = (pollResults.flags & (1 << 0)) != 0
-                            }
-                            updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
-                            media[j] = updatedPoll
-                            break loop
+            case let .UpdateMessagePoll(pollId, apiPoll, results):
+                if let poll = transaction.getMedia(pollId) as? TelegramMediaPoll {
+                    var updatedPoll = poll
+                    if let apiPoll = apiPoll {
+                        switch apiPoll {
+                            case let .poll(id, flags, question, answers):
+                                updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0)
                         }
                     }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: media))
-                })
+                    
+                    let resultsMin: Bool
+                    switch results {
+                        case let .pollResults(pollResults):
+                            resultsMin = (pollResults.flags & (1 << 0)) != 0
+                    }
+                    updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
+                    updateMessageMedia(transaction: transaction, id: pollId, media: updatedPoll)
+                }
             case let .UpdateMedia(id, media):
                 if let media = media as? TelegramMediaWebpage {
                     updatedWebpages[id] = media
