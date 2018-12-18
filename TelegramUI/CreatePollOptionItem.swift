@@ -20,11 +20,11 @@ class CreatePollOptionItem: ListViewItem, ItemListItem {
     let setItemIdWithRevealedOptions: (Int?, Int?) -> Void
     let updated: (String) -> Void
     let next: (() -> Void)?
-    let delete: () -> Void
+    let delete: (Bool) -> Void
     let focused: () -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, id: Int, placeholder: String, value: String, maxLength: Int, editing: CreatePollOptionItemEditing, sectionId: ItemListSectionId, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, updated: @escaping (String) -> Void, next: (() -> Void)?, delete: @escaping () -> Void, focused: @escaping () -> Void, tag: ItemListItemTag?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, id: Int, placeholder: String, value: String, maxLength: Int, editing: CreatePollOptionItemEditing, sectionId: ItemListSectionId, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, updated: @escaping (String) -> Void, next: (() -> Void)?, delete: @escaping (Bool) -> Void, focused: @escaping () -> Void, tag: ItemListItemTag?) {
         self.theme = theme
         self.strings = strings
         self.id = id
@@ -79,12 +79,15 @@ class CreatePollOptionItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(15.0)
 
-class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode, ItemListItemFocusableNode, UITextFieldDelegate {
+class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode, ItemListItemFocusableNode, ASEditableTextNodeDelegate {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     
-    private let textNode: TextFieldNode
+    private let textClippingNode: ASDisplayNode
+    private let textNode: EditableTextNode
+    private let measureTextNode: TextNode
+    
     private let textLimitNode: TextNode
     private let editableControlNode: ItemListEditableControlNode
     private let reorderControlNode: ItemListEditableReorderControlNode
@@ -110,14 +113,20 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         self.editableControlNode = ItemListEditableControlNode()
         self.reorderControlNode = ItemListEditableReorderControlNode()
         
-        self.textNode = TextFieldNode()
+        self.textClippingNode = ASDisplayNode()
+        self.textClippingNode.clipsToBounds = true
+        
+        self.textNode = EditableTextNode()
+        self.measureTextNode = TextNode()
         
         self.textLimitNode = TextNode()
         self.textLimitNode.isUserInteractionEnabled = false
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        self.addSubnode(self.textNode)
+        self.textClippingNode.addSubnode(self.textNode)
+        self.addSubnode(self.textClippingNode)
+        
         self.addSubnode(self.editableControlNode)
         self.addSubnode(self.reorderControlNode)
         self.addSubnode(self.textLimitNode)
@@ -133,42 +142,77 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
     override func didLoad() {
         super.didLoad()
         
-        self.textNode.textField.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0)]
-        self.textNode.textField.font = Font.regular(17.0)
+        var textColor: UIColor = .black
         if let item = self.item {
-            self.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
-            self.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            textColor = item.theme.list.itemPrimaryTextColor
         }
+        self.textNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: textColor]
         self.textNode.clipsToBounds = true
-        self.textNode.textField.delegate = self
-        self.textNode.textField.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
+        self.textNode.delegate = self
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
     }
     
-    @objc private func textFieldTextChanged(_ textField: UITextField) {
-        if let item = self.item {
-            item.updated(self.textNode.textField.text ?? "")
-        }
+    func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
+        self.item?.focused()
     }
     
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        if let item = self.item {
+    func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        guard let item = self.item else {
+            return false
+        }
+        if text.firstIndex(of: "\n") != nil {
+            let currentText = editableTextNode.attributedText?.string ?? ""
+            var updatedText = (currentText as NSString).replacingCharacters(in: range, with: text)
+            updatedText = updatedText.replacingOccurrences(of: "\n", with: " ")
+            if updatedText.count == 1 {
+                updatedText = ""
+            }
+            let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
+            self.textNode.attributedText = updatedAttributedText
+            self.editableTextNodeDidUpdateText(editableTextNode)
             if let next = item.next {
                 next()
             } else {
-                textField.resignFirstResponder()
+                editableTextNode.resignFirstResponder()
             }
+            return false
         }
-        return false
+        return true
     }
     
-    func textFieldDidBeginEditing(_ textField: UITextField) {
-        self.item?.focused()
+    func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
+        if let item = self.item {
+            let text = self.textNode.attributedText ?? NSAttributedString()
+                
+            var updatedText = text.string
+            var hadReturn = false
+            if updatedText.firstIndex(of: "\n") != nil {
+                hadReturn = true
+                updatedText = updatedText.replacingOccurrences(of: "\n", with: " ")
+            }
+            let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
+            if text.string != updatedAttributedText.string {
+                self.textNode.attributedText = updatedAttributedText
+            }
+            item.updated(updatedText)
+            if hadReturn {
+                if let next = item.next {
+                    next()
+                } else {
+                    editableTextNode.resignFirstResponder()
+                }
+            }
+        }
+    }
+    
+    func editableTextNodeBackspaceWhileEmpty(_ editableTextNode: ASEditableTextNode) {
+        self.item?.delete(editableTextNode.isFirstResponder())
     }
     
     func asyncLayout() -> (_ item: CreatePollOptionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
+        let makeTextLayout = TextNode.asyncLayout(self.measureTextNode)
         let makeTextLimitLayout = TextNode.asyncLayout(self.textLimitNode)
         
         let currentItem = self.item
@@ -185,19 +229,32 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
             
             let separatorHeight = UIScreenPixel
             
-            let contentSize = CGSize(width: params.width, height: 44.0)
             let insets = itemListNeighborsGroupedInsets(neighbors)
             
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            let layoutSize = layout.size
-            
-            let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
+            let leftInset: CGFloat = 60.0 + params.leftInset
+            let rightInset: CGFloat = 44.0 + params.rightInset
             
             let textLength = item.value.count
             let displayTextLimit = textLength > item.maxLength * 70 / 100
             let remainingCount = item.maxLength - textLength
             
             let (textLimitLayout, textLimitApply) = makeTextLimitLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(remainingCount)", font: Font.regular(13.0), textColor: remainingCount < 0 ? item.theme.list.itemDestructiveColor : item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            
+            var measureText = item.value
+            if measureText.hasSuffix("\n") || measureText.isEmpty {
+                measureText += "|"
+            }
+            let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
+            let attributedText = NSAttributedString(string: item.value, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedMeasureText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, lineSpacing: 0.05, cutout: nil, insets: UIEdgeInsets()))
+            
+            let textTopInset: CGFloat = 11.0
+            let textBottomInset: CGFloat = 11.0
+            
+            let contentSize = CGSize(width: params.width, height: textLayout.size.height + textTopInset + textBottomInset)
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            
+            let attributedPlaceholderText = NSAttributedString(string: item.placeholder, font: Font.regular(17.0), textColor: item.theme.list.itemPlaceholderTextColor)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
@@ -209,37 +266,38 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                         strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                         
-                        strongSelf.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
-                        strongSelf.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+                        if strongSelf.isNodeLoaded {
+                            strongSelf.textNode.typingAttributes = [NSAttributedStringKey.font.rawValue: Font.regular(17.0), NSAttributedStringKey.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
+                        }
                     }
                     
                     let revealOffset = strongSelf.revealOffset
                     
-                    let leftInset: CGFloat
-                    leftInset = 60.0 + params.leftInset
-                    let rightInset: CGFloat = 44.0
-                    
-                    let secureEntry: Bool
                     let capitalizationType: UITextAutocapitalizationType
                     let autocorrectionType: UITextAutocorrectionType
                     let keyboardType: UIKeyboardType
                     
-                    secureEntry = false
                     capitalizationType = .sentences
                     autocorrectionType = .default
                     keyboardType = UIKeyboardType.default
                     
-                    if strongSelf.textNode.textField.isSecureTextEntry != secureEntry {
-                        strongSelf.textNode.textField.isSecureTextEntry = secureEntry
+                    let _ = textApply()
+                    if let currentText = strongSelf.textNode.attributedText {
+                        if currentText.string !=  attributedText.string {
+                            strongSelf.textNode.attributedText = attributedText
+                        }
+                    } else {
+                        strongSelf.textNode.attributedText = attributedText
                     }
-                    if strongSelf.textNode.textField.keyboardType != keyboardType {
-                        strongSelf.textNode.textField.keyboardType = keyboardType
+                    
+                    if strongSelf.textNode.keyboardType != keyboardType {
+                        strongSelf.textNode.keyboardType = keyboardType
                     }
-                    if strongSelf.textNode.textField.autocapitalizationType != capitalizationType {
-                        strongSelf.textNode.textField.autocapitalizationType = capitalizationType
+                    if strongSelf.textNode.autocapitalizationType != capitalizationType {
+                        strongSelf.textNode.autocapitalizationType = capitalizationType
                     }
-                    if strongSelf.textNode.textField.autocorrectionType != autocorrectionType {
-                        strongSelf.textNode.textField.autocorrectionType = autocorrectionType
+                    if strongSelf.textNode.autocorrectionType != autocorrectionType {
+                        strongSelf.textNode.autocorrectionType = autocorrectionType
                     }
                     let returnKeyType: UIReturnKeyType
                     if let _ = item.next {
@@ -247,19 +305,18 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                     } else {
                         returnKeyType = .done
                     }
-                    if strongSelf.textNode.textField.returnKeyType != returnKeyType {
-                        strongSelf.textNode.textField.returnKeyType = returnKeyType
+                    if strongSelf.textNode.returnKeyType != returnKeyType {
+                        strongSelf.textNode.returnKeyType = returnKeyType
                     }
                     
-                    if let currentText = strongSelf.textNode.textField.text {
-                        if currentText != item.value {
-                            strongSelf.textNode.textField.text = item.value
-                        }
-                    } else {
-                        strongSelf.textNode.textField.text = item.value
+                    if strongSelf.textNode.attributedPlaceholderText == nil || !strongSelf.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
+                        strongSelf.textNode.attributedPlaceholderText = attributedPlaceholderText
                     }
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: floor((layout.contentSize.height - 40.0) / 2.0)), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset)), height: 40.0))
+                    strongSelf.textNode.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+                    
+                    strongSelf.textClippingNode.frame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: textTopInset), size: CGSize(width: params.width - leftInset - params.rightInset, height: textLayout.size.height))
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width - leftInset - rightInset, height: textLayout.size.height + 1.0))
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -284,12 +341,8 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                             bottomStripeInset = 0.0
                     }
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
-                    
-                    if strongSelf.textNode.textField.attributedPlaceholder == nil || !strongSelf.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
-                        strongSelf.textNode.textField.attributedPlaceholder = attributedPlaceholderText
-                    }
+                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layout.contentSize.width, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layout.contentSize.width - bottomStripeInset, height: separatorHeight))
                     
                     let _ = controlSizeAndApply.1()
                     let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + 6.0 + revealOffset, y: 0.0), size: controlSizeAndApply.0)
@@ -331,13 +384,13 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
         reorderFrame.origin.x = params.width + revealOffset - params.rightInset - reorderFrame.width
         transition.updateFrame(node: self.reorderControlNode, frame: reorderFrame)
         
-        var textNodeFrame = self.textNode.frame
-        textNodeFrame.origin.x = revealOffset + leftInset
-        transition.updateFrame(node: self.textNode, frame: textNodeFrame)
+        var textClippingNodeFrame = self.textClippingNode.frame
+        textClippingNodeFrame.origin.x = revealOffset + leftInset
+        transition.updateFrame(node: self.textClippingNode, frame: textClippingNodeFrame)
     }
     
     override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
-        self.item?.delete()
+        self.item?.delete(self.textNode.isFirstResponder())
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
@@ -349,7 +402,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
     }
     
     func focus() {
-        self.textNode.textField.becomeFirstResponder()
+        self.textNode.becomeFirstResponder()
     }
     
     override func isReorderable(at point: CGPoint) -> Bool {
