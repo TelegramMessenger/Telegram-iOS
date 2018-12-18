@@ -101,28 +101,7 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
         })!
         itemViews.append(locationItem)
         
-        var canPin = false
-        if let channel = peer as? TelegramChannel {
-            switch channel.info {
-                case .broadcast:
-                    canPin = channel.hasAdminRights([.canEditMessages])
-                case .group:
-                    canPin = channel.hasAdminRights([.canPinMessages])
-            }
-        } else if let group = peer as? TelegramGroup {
-            if group.flags.contains(.adminsEnabled) {
-                switch group.role {
-                    case .creator, .admin:
-                        canPin = true
-                    default:
-                        canPin = false
-                }
-            } else {
-                canPin = true
-            }
-        }
-        
-        if canPin {
+        if !(peer is TelegramSecretChat) && canSendMessagesToPeer(peer) {
             let pollItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_Poll, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
                 controller?.dismiss(animated: true)
                 openPoll()
