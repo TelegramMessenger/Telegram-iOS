@@ -127,6 +127,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     
     public final var dynamicBounceEnabled = true
     public final var rotated = false
+    public final var experimentalSnapScrollToItem = false
     
     private final var invisibleInset: CGFloat = 500.0
     public var preloadPages: Bool = true {
@@ -239,6 +240,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private var flashNodesDelayTimer: Foundation.Timer?
     private var flashScrollIndicatorTimer: Foundation.Timer?
     private var highlightedItemIndex: Int?
+    private var scrolledToItem: (Int, ListViewScrollPosition)?
     private var reorderNode: ListViewReorderingItemNode?
     private var reorderFeedback: HapticFeedback?
     private var reorderFeedbackDisposable: MetaDisposable?
@@ -547,6 +549,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         if self.snapToBottomInsetUntilFirstInteraction {
             self.snapToBottomInsetUntilFirstInteraction = false
         }
+        self.scrolledToItem = nil
         
         self.beganInteractiveDragging()
     }
@@ -1277,6 +1280,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         
+        self.scrolledToItem = nil
+        
         let startTime = CACurrentMediaTime()
         var state = self.currentState()
         
@@ -1980,7 +1985,16 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
-    private func replayOperations(animated: Bool, animateAlpha: Bool, animateCrossfade: Bool, animateTopItemVerticalOrigin: Bool, operations: [ListViewStateOperation], requestItemInsertionAnimationsIndices: Set<Int>, scrollToItem: ListViewScrollToItem?, additionalScrollDistance: CGFloat, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, updateOpaqueState: Any?, completion: () -> Void) {
+    private func replayOperations(animated: Bool, animateAlpha: Bool, animateCrossfade: Bool, animateTopItemVerticalOrigin: Bool, operations: [ListViewStateOperation], requestItemInsertionAnimationsIndices: Set<Int>, scrollToItem originalScrollToItem: ListViewScrollToItem?, additionalScrollDistance: CGFloat, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, updateOpaqueState: Any?, completion: () -> Void) {
+        var scrollToItem: ListViewScrollToItem?
+        if let originalScrollToItem = originalScrollToItem {
+            scrollToItem = originalScrollToItem
+            if self.experimentalSnapScrollToItem {
+                self.scrolledToItem = (originalScrollToItem.index, originalScrollToItem.position)
+            }
+        } else if let scrolledToItem = self.scrolledToItem {
+            scrollToItem = ListViewScrollToItem(index: scrolledToItem.0, position: scrolledToItem.1, animated: false, curve: .Default(duration: nil), directionHint: .Down)
+        }
         /*if true {
             print("----------")
             for itemNode in self.itemNodes {
@@ -2267,6 +2281,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                                     case .bottom:
                                         offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY
                                 }
+                            }
+                        case .visible:
+                            if itemNode.apparentFrame.maxY > self.visibleSize.height - self.insets.bottom {
+                                offset = (self.visibleSize.height - self.insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom
+                            } else if itemNode.apparentFrame.minY < self.insets.top {
+                                offset = self.insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top
+                            } else {
+                                offset = 0.0
                             }
                     }
                     
@@ -3493,10 +3515,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(0.0), animated: true, curve: ListViewAnimationCurve.Default(duration: 0.25), directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                 }*/
             } else {
-                if node.frame.minY < self.insets.top {
-                    self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(0.0), animated: true, curve: ListViewAnimationCurve.Default(duration: 0.25), directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
-                    self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(0.0), animated: true, curve: ListViewAnimationCurve.Default(duration: 0.25), directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                if self.experimentalSnapScrollToItem {
+                    self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.visible, animated: true, curve: ListViewAnimationCurve.Default(duration: nil), directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                } else {
+                    if node.frame.minY < self.insets.top {
+                        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.top(0.0), animated: true, curve: ListViewAnimationCurve.Default(duration: 0.25), directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
+                        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.bottom(0.0), animated: true, curve: ListViewAnimationCurve.Default(duration: 0.25), directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                    }
                 }
             }
         }

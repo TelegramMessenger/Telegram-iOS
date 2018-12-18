@@ -20,16 +20,17 @@ static NSMutableArray *notificationHandlers() {
 
 - (void)_a65afc19_postNotificationName:(NSString *)aName object:(id)anObject userInfo:(NSDictionary *)aUserInfo
 {
-    for (NotificationHandlerBlock handler in notificationHandlers())
-    {
-        if (handler(aName, anObject, aUserInfo, ^{
-            [self _a65afc19_postNotificationName:aName object:anObject userInfo:aUserInfo];
-        })) {
-            return;
+    if ([NSThread isMainThread]) {
+        for (NotificationHandlerBlock handler in notificationHandlers())
+        {
+            if (handler(aName, anObject, aUserInfo, ^{
+                [self _a65afc19_postNotificationName:aName object:anObject userInfo:aUserInfo];
+            })) {
+                return;
+            }
         }
     }
     
-    //printf("***** %s\n", [aName cStringUsingEncoding:NSUTF8StringEncoding]);
     [self _a65afc19_postNotificationName:aName object:anObject userInfo:aUserInfo];
 }
 

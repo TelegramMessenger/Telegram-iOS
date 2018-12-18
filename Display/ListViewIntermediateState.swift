@@ -14,6 +14,7 @@ public enum ListViewScrollPosition: Equatable {
     case top(CGFloat)
     case bottom(CGFloat)
     case center(ListViewCenterScrollPositionOverflow)
+    case visible
 }
 
 public enum ListViewScrollToItemDirectionHint {
@@ -284,7 +285,7 @@ struct ListViewState {
     mutating func fixScrollPosition(_ itemCount: Int) {
         if let (fixedIndex, fixedPosition) = self.scrollPosition {
             for node in self.nodes {
-                if let index = node.index , index == fixedIndex {
+                if let index = node.index, index == fixedIndex {
                     let offset: CGFloat
                     switch fixedPosition {
                         case let .bottom(additionalOffset):
@@ -302,6 +303,14 @@ struct ListViewState {
                                     case .bottom:
                                         offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
                                 }
+                            }
+                        case .visible:
+                            if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
+                                offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
+                            } else if node.frame.minY < self.insets.top {
+                                offset = self.insets.top - node.frame.minY
+                            } else {
+                                offset = 0.0
                             }
                     }
                     
