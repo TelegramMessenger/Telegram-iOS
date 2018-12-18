@@ -855,7 +855,7 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		D0085B361B282B9800EAF753 /* Debug Hockeyapp */ = {
+		D0085B361B282B9800EAF753 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -885,9 +885,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0085B371B282B9800EAF753 /* Release Hockeyapp */ = {
+		D0085B371B282B9800EAF753 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -915,9 +915,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D0085B391B282B9800EAF753 /* Debug Hockeyapp */ = {
+		D0085B391B282B9800EAF753 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -937,9 +937,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0085B3A1B282B9800EAF753 /* Release Hockeyapp */ = {
+		D0085B3A1B282B9800EAF753 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
@@ -957,9 +957,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 3.0;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D021D502219CB1D90064BEBA /* Debug Fork */ = {
+		D021D502219CB1D90064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1005,9 +1005,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D503219CB1D90064BEBA /* Debug Fork */ = {
+		D021D503219CB1D90064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1027,9 +1027,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D504219CB1D90064BEBA /* Debug Fork */ = {
+		D021D504219CB1D90064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1051,9 +1051,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D505219CB1D90064BEBA /* Debug Fork */ = {
+		D021D505219CB1D90064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1083,9 +1083,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D506219CB1D90064BEBA /* Debug Fork */ = {
+		D021D506219CB1D90064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -1105,9 +1105,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D507219CB1D90064BEBA /* Debug Fork */ = {
+		D021D507219CB1D90064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1136,9 +1136,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D0445DEC1A7C2CA500267924 /* Debug Hockeyapp */ = {
+		D0445DEC1A7C2CA500267924 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1184,9 +1184,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0445DED1A7C2CA500267924 /* Release Hockeyapp */ = {
+		D0445DED1A7C2CA500267924 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1225,9 +1225,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D0445DEF1A7C2CA500267924 /* Debug Hockeyapp */ = {
+		D0445DEF1A7C2CA500267924 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1247,9 +1247,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0445DF01A7C2CA500267924 /* Release Hockeyapp */ = {
+		D0445DF01A7C2CA500267924 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1269,9 +1269,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D0445DF21A7C2CA500267924 /* Debug Hockeyapp */ = {
+		D0445DF21A7C2CA500267924 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1293,9 +1293,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0445DF31A7C2CA500267924 /* Release Hockeyapp */ = {
+		D0445DF31A7C2CA500267924 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1313,9 +1313,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D086A5741CC0117500F08284 /* Release AppStore */ = {
+		D086A5741CC0117500F08284 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1354,9 +1354,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D086A5751CC0117500F08284 /* Release AppStore */ = {
+		D086A5751CC0117500F08284 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1376,9 +1376,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D086A5761CC0117500F08284 /* Release AppStore */ = {
+		D086A5761CC0117500F08284 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1396,9 +1396,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D086A5771CC0117500F08284 /* Release AppStore */ = {
+		D086A5771CC0117500F08284 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1426,9 +1426,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D086A5781CC0117500F08284 /* Release AppStore */ = {
+		D086A5781CC0117500F08284 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
@@ -1445,9 +1445,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D0924FE21FE52C0A003F693F /* Release Hockeyapp Internal */ = {
+		D0924FE21FE52C0A003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1486,9 +1486,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FE31FE52C0A003F693F /* Release Hockeyapp Internal */ = {
+		D0924FE31FE52C0A003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1508,9 +1508,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FE41FE52C0A003F693F /* Release Hockeyapp Internal */ = {
+		D0924FE41FE52C0A003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1528,9 +1528,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FE51FE52C0A003F693F /* Release Hockeyapp Internal */ = {
+		D0924FE51FE52C0A003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1558,9 +1558,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FE61FE52C0A003F693F /* Release Hockeyapp Internal */ = {
+		D0924FE61FE52C0A003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
@@ -1578,9 +1578,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 3.0;
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FE71FE52C0A003F693F /* Release Hockeyapp Internal */ = {
+		D0924FE71FE52C0A003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1609,9 +1609,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0ADF92E212B3AD400310BBC /* Debug AppStore LLC */ = {
+		D0ADF92E212B3AD400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1657,9 +1657,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF92F212B3AD400310BBC /* Debug AppStore LLC */ = {
+		D0ADF92F212B3AD400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1679,9 +1679,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF930212B3AD400310BBC /* Debug AppStore LLC */ = {
+		D0ADF930212B3AD400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1703,9 +1703,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF931212B3AD400310BBC /* Debug AppStore LLC */ = {
+		D0ADF931212B3AD400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1735,9 +1735,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF932212B3AD400310BBC /* Debug AppStore LLC */ = {
+		D0ADF932212B3AD400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -1757,9 +1757,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF933212B3AD400310BBC /* Debug AppStore LLC */ = {
+		D0ADF933212B3AD400310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1788,9 +1788,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0B417F31D7DFA63004562A4 /* Debug Hockeyapp */ = {
+		D0B417F31D7DFA63004562A4 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1819,9 +1819,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D0B417F41D7DFA63004562A4 /* Release Hockeyapp */ = {
+		D0B417F41D7DFA63004562A4 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1850,9 +1850,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D0B417F51D7DFA63004562A4 /* Release AppStore */ = {
+		D0B417F51D7DFA63004562A4 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1881,9 +1881,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D0CE6EEF213DC30100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EEF213DC30100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1922,9 +1922,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EF0213DC30100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EF0213DC30100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1944,9 +1944,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EF1213DC30100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EF1213DC30100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -1964,9 +1964,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EF2213DC30100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EF2213DC30100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -1994,9 +1994,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EF3213DC30100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EF3213DC30100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
@@ -2013,9 +2013,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EF4213DC30100BCD44B /* Release AppStore LLC */ = {
+		D0CE6EF4213DC30100BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2044,9 +2044,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0DB57B61E5C4B7A0071854C /* Debug AppStore */ = {
+		D0DB57B61E5C4B7A0071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2092,9 +2092,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57B71E5C4B7A0071854C /* Debug AppStore */ = {
+		D0DB57B71E5C4B7A0071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2114,9 +2114,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57B81E5C4B7A0071854C /* Debug AppStore */ = {
+		D0DB57B81E5C4B7A0071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -2138,9 +2138,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57B91E5C4B7A0071854C /* Debug AppStore */ = {
+		D0DB57B91E5C4B7A0071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2170,9 +2170,9 @@
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57BA1E5C4B7A0071854C /* Debug AppStore */ = {
+		D0DB57BA1E5C4B7A0071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -2192,9 +2192,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57BB1E5C4B7A0071854C /* Debug AppStore */ = {
+		D0DB57BB1E5C4B7A0071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2223,7 +2223,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
 /* End XCBuildConfiguration section */
 
@@ -2231,92 +2231,92 @@
 		D0085B351B282B9800EAF753 /* Build configuration list for PBXNativeTarget "SwiftSignalKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0085B361B282B9800EAF753 /* Debug Hockeyapp */,
-				D021D505219CB1D90064BEBA /* Debug Fork */,
-				D0DB57B91E5C4B7A0071854C /* Debug AppStore */,
-				D0ADF931212B3AD400310BBC /* Debug AppStore LLC */,
-				D0085B371B282B9800EAF753 /* Release Hockeyapp */,
-				D0924FE51FE52C0A003F693F /* Release Hockeyapp Internal */,
-				D086A5771CC0117500F08284 /* Release AppStore */,
-				D0CE6EF2213DC30100BCD44B /* Release AppStore LLC */,
+				D0085B361B282B9800EAF753 /* DebugHockeyapp */,
+				D021D505219CB1D90064BEBA /* DebugFork */,
+				D0DB57B91E5C4B7A0071854C /* DebugAppStore */,
+				D0ADF931212B3AD400310BBC /* DebugAppStoreLLC */,
+				D0085B371B282B9800EAF753 /* ReleaseHockeyapp */,
+				D0924FE51FE52C0A003F693F /* ReleaseHockeyappInternal */,
+				D086A5771CC0117500F08284 /* ReleaseAppStore */,
+				D0CE6EF2213DC30100BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		D0085B381B282B9800EAF753 /* Build configuration list for PBXNativeTarget "SwiftSignalKitTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0085B391B282B9800EAF753 /* Debug Hockeyapp */,
-				D021D506219CB1D90064BEBA /* Debug Fork */,
-				D0DB57BA1E5C4B7A0071854C /* Debug AppStore */,
-				D0ADF932212B3AD400310BBC /* Debug AppStore LLC */,
-				D0085B3A1B282B9800EAF753 /* Release Hockeyapp */,
-				D0924FE61FE52C0A003F693F /* Release Hockeyapp Internal */,
-				D086A5781CC0117500F08284 /* Release AppStore */,
-				D0CE6EF3213DC30100BCD44B /* Release AppStore LLC */,
+				D0085B391B282B9800EAF753 /* DebugHockeyapp */,
+				D021D506219CB1D90064BEBA /* DebugFork */,
+				D0DB57BA1E5C4B7A0071854C /* DebugAppStore */,
+				D0ADF932212B3AD400310BBC /* DebugAppStoreLLC */,
+				D0085B3A1B282B9800EAF753 /* ReleaseHockeyapp */,
+				D0924FE61FE52C0A003F693F /* ReleaseHockeyappInternal */,
+				D086A5781CC0117500F08284 /* ReleaseAppStore */,
+				D0CE6EF3213DC30100BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		D0445DD21A7C2CA500267924 /* Build configuration list for PBXProject "SSignalKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0445DEC1A7C2CA500267924 /* Debug Hockeyapp */,
-				D021D502219CB1D90064BEBA /* Debug Fork */,
-				D0DB57B61E5C4B7A0071854C /* Debug AppStore */,
-				D0ADF92E212B3AD400310BBC /* Debug AppStore LLC */,
-				D0445DED1A7C2CA500267924 /* Release Hockeyapp */,
-				D0924FE21FE52C0A003F693F /* Release Hockeyapp Internal */,
-				D086A5741CC0117500F08284 /* Release AppStore */,
-				D0CE6EEF213DC30100BCD44B /* Release AppStore LLC */,
+				D0445DEC1A7C2CA500267924 /* DebugHockeyapp */,
+				D021D502219CB1D90064BEBA /* DebugFork */,
+				D0DB57B61E5C4B7A0071854C /* DebugAppStore */,
+				D0ADF92E212B3AD400310BBC /* DebugAppStoreLLC */,
+				D0445DED1A7C2CA500267924 /* ReleaseHockeyapp */,
+				D0924FE21FE52C0A003F693F /* ReleaseHockeyappInternal */,
+				D086A5741CC0117500F08284 /* ReleaseAppStore */,
+				D0CE6EEF213DC30100BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		D0445DEE1A7C2CA500267924 /* Build configuration list for PBXNativeTarget "SSignalKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0445DEF1A7C2CA500267924 /* Debug Hockeyapp */,
-				D021D503219CB1D90064BEBA /* Debug Fork */,
-				D0DB57B71E5C4B7A0071854C /* Debug AppStore */,
-				D0ADF92F212B3AD400310BBC /* Debug AppStore LLC */,
-				D0445DF01A7C2CA500267924 /* Release Hockeyapp */,
-				D0924FE31FE52C0A003F693F /* Release Hockeyapp Internal */,
-				D086A5751CC0117500F08284 /* Release AppStore */,
-				D0CE6EF0213DC30100BCD44B /* Release AppStore LLC */,
+				D0445DEF1A7C2CA500267924 /* DebugHockeyapp */,
+				D021D503219CB1D90064BEBA /* DebugFork */,
+				D0DB57B71E5C4B7A0071854C /* DebugAppStore */,
+				D0ADF92F212B3AD400310BBC /* DebugAppStoreLLC */,
+				D0445DF01A7C2CA500267924 /* ReleaseHockeyapp */,
+				D0924FE31FE52C0A003F693F /* ReleaseHockeyappInternal */,
+				D086A5751CC0117500F08284 /* ReleaseAppStore */,
+				D0CE6EF0213DC30100BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		D0445DF11A7C2CA500267924 /* Build configuration list for PBXNativeTarget "SSignalKitTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0445DF21A7C2CA500267924 /* Debug Hockeyapp */,
-				D021D504219CB1D90064BEBA /* Debug Fork */,
-				D0DB57B81E5C4B7A0071854C /* Debug AppStore */,
-				D0ADF930212B3AD400310BBC /* Debug AppStore LLC */,
-				D0445DF31A7C2CA500267924 /* Release Hockeyapp */,
-				D0924FE41FE52C0A003F693F /* Release Hockeyapp Internal */,
-				D086A5761CC0117500F08284 /* Release AppStore */,
-				D0CE6EF1213DC30100BCD44B /* Release AppStore LLC */,
+				D0445DF21A7C2CA500267924 /* DebugHockeyapp */,
+				D021D504219CB1D90064BEBA /* DebugFork */,
+				D0DB57B81E5C4B7A0071854C /* DebugAppStore */,
+				D0ADF930212B3AD400310BBC /* DebugAppStoreLLC */,
+				D0445DF31A7C2CA500267924 /* ReleaseHockeyapp */,
+				D0924FE41FE52C0A003F693F /* ReleaseHockeyappInternal */,
+				D086A5761CC0117500F08284 /* ReleaseAppStore */,
+				D0CE6EF1213DC30100BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		D0B417F21D7DFA63004562A4 /* Build configuration list for PBXNativeTarget "SwiftSignalKitMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0B417F31D7DFA63004562A4 /* Debug Hockeyapp */,
-				D021D507219CB1D90064BEBA /* Debug Fork */,
-				D0DB57BB1E5C4B7A0071854C /* Debug AppStore */,
-				D0ADF933212B3AD400310BBC /* Debug AppStore LLC */,
-				D0B417F41D7DFA63004562A4 /* Release Hockeyapp */,
-				D0924FE71FE52C0A003F693F /* Release Hockeyapp Internal */,
-				D0B417F51D7DFA63004562A4 /* Release AppStore */,
-				D0CE6EF4213DC30100BCD44B /* Release AppStore LLC */,
+				D0B417F31D7DFA63004562A4 /* DebugHockeyapp */,
+				D021D507219CB1D90064BEBA /* DebugFork */,
+				D0DB57BB1E5C4B7A0071854C /* DebugAppStore */,
+				D0ADF933212B3AD400310BBC /* DebugAppStoreLLC */,
+				D0B417F41D7DFA63004562A4 /* ReleaseHockeyapp */,
+				D0924FE71FE52C0A003F693F /* ReleaseHockeyappInternal */,
+				D0B417F51D7DFA63004562A4 /* ReleaseAppStore */,
+				D0CE6EF4213DC30100BCD44B /* ReleaseAppStoreLLC */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 /* End XCConfigurationList section */
 	};
