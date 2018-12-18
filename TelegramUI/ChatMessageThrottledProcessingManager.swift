@@ -62,3 +62,50 @@ final class ChatMessageThrottledProcessingManager {
         }
     }
 }
+
+
+final class ChatMessageVisibleThrottledProcessingManager {
+    private let queue = Queue()
+    
+    private let delay: Double
+    
+    private var currentIds = Set<MessageId>()
+    
+    var process: ((Set<MessageId>) -> Void)?
+    
+    private var timer: SwiftSignalKit.Timer?
+    
+    init(delay: Double = 1.0) {
+        self.delay = delay
+    }
+    
+    func setProcess(process: @escaping (Set<MessageId>) -> Void) {
+        self.queue.async {
+            self.process = process
+        }
+    }
+    
+    func update(_ ids: Set<MessageId>) {
+        self.queue.async {
+            if self.currentIds != ids {
+                self.currentIds = ids
+                if self.timer == nil {
+                    var completionImpl: (() -> Void)?
+                    let timer = SwiftSignalKit.Timer(timeout: self.delay, repeat: false, completion: {
+                        completionImpl?()
+                    }, queue: self.queue)
+                    completionImpl = { [weak self, weak timer] in
+                        if let strongSelf = self {
+                            if let timer = timer, strongSelf.timer === timer {
+                                strongSelf.timer = nil
+                            }
+                            strongSelf.process?(strongSelf.currentIds)
+                        }
+                    }
+                    self.timer = timer
+                    timer.start()
+                }
+            }
+        }
+    }
+}

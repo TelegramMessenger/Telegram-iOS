@@ -2883,32 +2883,53 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             guard let strongSelf = self else {
                 return
             }
-            let disposables: DisposableDict<MessageId>
-            if let current = strongSelf.selectMessagePollOptionDisposables {
-                disposables = current
-            } else {
-                disposables = DisposableDict()
-                strongSelf.selectMessagePollOptionDisposables = disposables
-            }
-            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
-            strongSelf.present(controller, in: .window(.root))
-            let signal = requestClosePoll(postbox: strongSelf.account.postbox, network: strongSelf.account.network, stateManager: strongSelf.account.stateManager, messageId: id)
-            |> afterDisposed { [weak controller] in
-                Queue.mainQueue().async {
-                    controller?.dismiss()
-                }
-            }
-            disposables.set((signal
-            |> deliverOnMainQueue).start(error: { _ in
-                guard let _ = self else {
-                    return
-                }
-            }, completed: {
-                if strongSelf.selectPollOptionFeedback == nil {
-                    strongSelf.selectPollOptionFeedback = HapticFeedback()
-                }
-                strongSelf.selectPollOptionFeedback?.success()
-            }), forKey: id)
+            
+            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: strongSelf.presentationData.strings.Conversation_StopPollConfirmationTitle),
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_StopPollConfirmation, color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let disposables: DisposableDict<MessageId>
+                    if let current = strongSelf.selectMessagePollOptionDisposables {
+                        disposables = current
+                    } else {
+                        disposables = DisposableDict()
+                        strongSelf.selectMessagePollOptionDisposables = disposables
+                    }
+                    let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
+                    strongSelf.present(controller, in: .window(.root))
+                    let signal = requestClosePoll(postbox: strongSelf.account.postbox, network: strongSelf.account.network, stateManager: strongSelf.account.stateManager, messageId: id)
+                    |> afterDisposed { [weak controller] in
+                        Queue.mainQueue().async {
+                            controller?.dismiss()
+                        }
+                    }
+                    disposables.set((signal
+                    |> deliverOnMainQueue).start(error: { _ in
+                        guard let _ = self else {
+                            return
+                        }
+                    }, completed: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if strongSelf.selectPollOptionFeedback == nil {
+                            strongSelf.selectPollOptionFeedback = HapticFeedback()
+                        }
+                        strongSelf.selectPollOptionFeedback?.success()
+                    }), forKey: id)
+                })
+            ]), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])])
+            
+            strongSelf.chatDisplayNode.dismissInput()
+            strongSelf.present(actionSheet, in: .window(.root))
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {

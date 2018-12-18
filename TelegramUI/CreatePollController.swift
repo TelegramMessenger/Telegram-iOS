@@ -12,11 +12,11 @@ private final class CreatePollControllerArguments {
     let updateOptionText: (Int, String) -> Void
     let moveToNextOption: (Int) -> Void
     let addOption: () -> Void
-    let removeOption: (Int) -> Void
+    let removeOption: (Int, Bool) -> Void
     let optionFocused: (Int) -> Void
     let setItemIdWithRevealedOptions: (Int?, Int?) -> Void
     
-    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String) -> Void, moveToNextOption: @escaping (Int) -> Void, addOption: @escaping () -> Void, removeOption: @escaping (Int) -> Void, optionFocused: @escaping (Int) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void) {
+    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String) -> Void, moveToNextOption: @escaping (Int) -> Void, addOption: @escaping () -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void) {
         self.updatePollText = updatePollText
         self.updateOptionText = updateOptionText
         self.moveToNextOption = moveToNextOption
@@ -118,8 +118,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
                     arguments.updateOptionText(id, value)
                 }, next: hasNext ? {
                     arguments.moveToNextOption(id)
-                } : nil, delete: {
-                    arguments.removeOption(id)
+                } : nil, delete: { focused in
+                    arguments.removeOption(id, focused)
                 }, focused: {
                     arguments.optionFocused(id)
                 }, tag: CreatePollEntryTag.option(id))
@@ -233,10 +233,18 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
             state.nextOptionId += 1
             return state
         }
-    }, removeOption: { id in
+    }, removeOption: { id, focused in
         updateState { state in
             var state = state
-            state.options = state.options.filter({ $0.id != id })
+            for i in 0 ..< state.options.count {
+                if state.options[i].id == id {
+                    state.options.remove(at: i)
+                    if focused && i != 0 {
+                        state.focusOptionId = state.options[i - 1].id
+                    }
+                    break
+                }
+            }
             return state
         }
     }, optionFocused: { id in
@@ -267,16 +275,16 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
         if state.text.count > maxTextLength {
             enabled = false
         }
-        var hasNonEmptyOptions = false
+        var nonEmptyOptionCount = 0
         for option in state.options {
             if !option.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                hasNonEmptyOptions = true
+                nonEmptyOptionCount += 1
             }
             if option.text.count > maxOptionLength {
                 enabled = false
             }
         }
-        if !hasNonEmptyOptions {
+        if nonEmptyOptionCount < 2 {
             enabled = false
         }
         var rightNavigationButton: ItemListNavigationButton?
