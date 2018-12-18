@@ -287,7 +287,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             let layoutSize = layout.size
             
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
-            var reorderControlSizeAndApply: (CGSize, () -> ItemListEditableReorderControlNode)?
+            var reorderControlSizeAndApply: (CGSize, (Bool) -> ItemListEditableReorderControlNode)?
             
             var editingOffset: CGFloat = 0.0
             var reorderInset: CGFloat = 0.0
@@ -411,7 +411,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1()
+                            let reorderControlNode = reorderControlSizeAndApply.1(false)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
                             let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)

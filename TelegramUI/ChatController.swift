@@ -1109,10 +1109,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     disposables = DisposableDict()
                     strongSelf.selectMessagePollOptionDisposables = disposables
                 }
-                var signal = requestMessageSelectPollOption(account: strongSelf.account, messageId: id, opaqueIdentifier: opaqueIdentifier)
-                #if DEBUG
-                signal = signal |> delay(2.0, queue: .mainQueue())
-                #endif
+                let signal = requestMessageSelectPollOption(account: strongSelf.account, messageId: id, opaqueIdentifier: opaqueIdentifier)
                 disposables.set((signal
                 |> deliverOnMainQueue).start(error: { _ in
                     guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
@@ -2852,6 +2849,66 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }))
                 }
             }
+        }, requestUnvoteInMessage: { [weak self] id in
+            guard let strongSelf = self else {
+                return
+            }
+            let disposables: DisposableDict<MessageId>
+            if let current = strongSelf.selectMessagePollOptionDisposables {
+                disposables = current
+            } else {
+                disposables = DisposableDict()
+                strongSelf.selectMessagePollOptionDisposables = disposables
+            }
+            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
+            strongSelf.present(controller, in: .window(.root))
+            let signal = requestMessageSelectPollOption(account: strongSelf.account, messageId: id, opaqueIdentifier: nil)
+            |> afterDisposed { [weak controller] in
+                Queue.mainQueue().async {
+                    controller?.dismiss()
+                }
+            }
+            disposables.set((signal
+            |> deliverOnMainQueue).start(error: { _ in
+                guard let _ = self else {
+                    return
+                }
+            }, completed: {
+                if strongSelf.selectPollOptionFeedback == nil {
+                    strongSelf.selectPollOptionFeedback = HapticFeedback()
+                }
+                strongSelf.selectPollOptionFeedback?.success()
+            }), forKey: id)
+        }, requestStopPollInMessage: { [weak self] id in
+            guard let strongSelf = self else {
+                return
+            }
+            let disposables: DisposableDict<MessageId>
+            if let current = strongSelf.selectMessagePollOptionDisposables {
+                disposables = current
+            } else {
+                disposables = DisposableDict()
+                strongSelf.selectMessagePollOptionDisposables = disposables
+            }
+            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
+            strongSelf.present(controller, in: .window(.root))
+            let signal = requestClosePoll(postbox: strongSelf.account.postbox, network: strongSelf.account.network, stateManager: strongSelf.account.stateManager, messageId: id)
+            |> afterDisposed { [weak controller] in
+                Queue.mainQueue().async {
+                    controller?.dismiss()
+                }
+            }
+            disposables.set((signal
+            |> deliverOnMainQueue).start(error: { _ in
+                guard let _ = self else {
+                    return
+                }
+            }, completed: {
+                if strongSelf.selectPollOptionFeedback == nil {
+                    strongSelf.selectPollOptionFeedback = HapticFeedback()
+                }
+                strongSelf.selectPollOptionFeedback?.success()
+            }), forKey: id)
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {
@@ -4054,13 +4111,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         if case let .peer(peerId) = self.chatLocation {
             self.present(createPollController(account: self.account, peerId: peerId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
-        
-        /*self.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(text: "If there was a referendum on GB membership of the EU, how would you vote?", options: [
-            TelegramMediaPollOption(text: "To leave the European Union", opaqueIdentifier: "1".data(using: .utf8)!),
-            TelegramMediaPollOption(text: "To remain a member of the European Union", opaqueIdentifier: "2".data(using: .utf8)!),
-            TelegramMediaPollOption(text: "Would not vote", opaqueIdentifier: "3".data(using: .utf8)!),
-            TelegramMediaPollOption(text: "Don't know", opaqueIdentifier: "4".data(using: .utf8)!)
-        ], results: nil)), replyToMessageId: nil, localGroupingKey: nil)])*/
     }
     
     private func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {

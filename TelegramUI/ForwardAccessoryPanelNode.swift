@@ -51,6 +51,8 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
                 return (strings.ForwardedLocations(1), true)
             case _ as TelegramMediaAction:
                 return ("", true)
+            case _ as TelegramMediaPoll:
+                return (strings.ForwardedPolls(1), true)
             default:
                 break
         }

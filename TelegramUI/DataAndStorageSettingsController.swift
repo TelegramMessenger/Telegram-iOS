@@ -378,7 +378,7 @@ private func stringForUseLessDataSetting(strings: PresentationStrings, settings:
 private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
-    entries.append(.storageUsage(presentationData.theme, presentationData.strings.Cache_Title))
+    entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache))
     entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title))
     
     entries.append(.automaticMediaDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle))

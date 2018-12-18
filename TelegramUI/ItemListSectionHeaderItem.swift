@@ -6,13 +6,15 @@ import SwiftSignalKit
 class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
+    let accessoryText: String
     let sectionId: ItemListSectionId
     
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, text: String, accessoryText: String = "", sectionId: ItemListSectionId) {
         self.theme = theme
         self.text = text
+        self.accessoryText = accessoryText
         self.sectionId = sectionId
     }
     
@@ -57,6 +59,7 @@ private let titleFont = Font.regular(14.0)
 
 class ItemListSectionHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
+    private let accessoryTextNode: TextNode
     
     init() {
         self.titleNode = TextNode()
@@ -64,18 +67,26 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
+        self.accessoryTextNode = TextNode()
+        self.accessoryTextNode.isUserInteractionEnabled = false
+        self.accessoryTextNode.contentMode = .left
+        self.accessoryTextNode.contentsScale = UIScreen.main.scale
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.accessoryTextNode)
     }
     
     func asyncLayout() -> (_ item: ItemListSectionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeAccessoryTextLayout = TextNode.asyncLayout(self.accessoryTextNode)
         
         return { item, params, neighbors in
             let leftInset: CGFloat = 15.0 + params.leftInset
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (accessoryLayout, accessoryApply) = makeAccessoryTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.accessoryText, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             var insets = UIEdgeInsets()
@@ -95,8 +106,10 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     let _ = titleApply()
+                    let _ = accessoryApply()
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: titleLayout.size)
+                    strongSelf.accessoryTextNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - accessoryLayout.size.width, y: 7.0), size: accessoryLayout.size)
                 }
             })
         }

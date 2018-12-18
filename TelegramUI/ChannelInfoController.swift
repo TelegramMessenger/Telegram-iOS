@@ -318,7 +318,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     arguments.openChannelTypeSetup()
                 })
             case let .channelDescriptionSetup(theme, placeholder, value):
-                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: 255, sectionId: self.section, style: .plain, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .plain, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     

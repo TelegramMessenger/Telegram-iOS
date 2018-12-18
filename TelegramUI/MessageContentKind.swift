@@ -156,7 +156,7 @@ func descriptionStringForMessage(_ message: Message, strings: PresentationString
             if text.isEmpty {
                 return (strings.Message_Sticker, true)
             } else {
-                return ("\(text) \(strings.Message_Sticker)", true)
+                return (strings.Message_StickerText(text).0, true)
             }
         case .animation:
             return (strings.Message_Animation, true)

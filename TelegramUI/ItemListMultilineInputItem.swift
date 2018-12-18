@@ -3,6 +3,11 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+struct ItemListMultilineInputItemTextLimit {
+    let value: Int
+    let display: Bool
+}
+
 class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
@@ -12,9 +17,9 @@ class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let action: () -> Void
     let textUpdated: (String) -> Void
     let tag: ItemListItemTag?
-    let maxLength: Int?
+    let maxLength: ItemListMultilineInputItemTextLimit?
     
-    init(theme: PresentationTheme, text: String, placeholder: String, maxLength: Int?, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, tag: ItemListItemTag? = nil, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, tag: ItemListItemTag? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.text = text
         self.placeholder = placeholder
@@ -144,8 +149,8 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
             }
             
             var limitTextString: NSAttributedString?
-            if let maxLength = item.maxLength {
-                limitTextString = NSAttributedString(string: "\(max(0, maxLength - item.text.count))", font: titleFont, textColor: item.theme.list.itemSecondaryTextColor)
+            if let maxLength = item.maxLength, maxLength.display {
+                limitTextString = NSAttributedString(string: "\(max(0, maxLength.value - item.text.count))", font: titleFont, textColor: item.theme.list.itemSecondaryTextColor)
             }
             
             let (limitTextLayout, limitTextApply) = makeLimitTextLayout(TextNodeLayoutArguments(attributedString: limitTextString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
@@ -282,8 +287,8 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
         if let item = self.item {
             if let text = self.textNode.attributedText {
                 var updatedText = text.string
-                if let maxLength = item.maxLength, updatedText.count > maxLength {
-                    updatedText = String(updatedText[..<updatedText.index(updatedText.startIndex, offsetBy: maxLength)])
+                if let maxLength = item.maxLength, updatedText.count > maxLength.value {
+                    updatedText = String(updatedText[..<updatedText.index(updatedText.startIndex, offsetBy: maxLength.value)])
                 }
                 let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
                 if text.string != updatedAttributedText.string {
@@ -302,8 +307,8 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
             if let text = text {
                 if let maxLength = item.maxLength {
                     let string = self.textNode.attributedText?.string ?? ""
-                    if string.count + text.count > maxLength {
-                        UIPasteboard.general.string = String(text[..<text.index(text.startIndex, offsetBy: maxLength - string.count)])
+                    if string.count + text.count > maxLength.value {
+                        UIPasteboard.general.string = String(text[..<text.index(text.startIndex, offsetBy: maxLength.value - string.count)])
                     }
                 }
                 return true

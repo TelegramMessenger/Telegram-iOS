@@ -341,7 +341,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroup), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroupTitle), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
             
             return (controllerState, (listState, arguments))

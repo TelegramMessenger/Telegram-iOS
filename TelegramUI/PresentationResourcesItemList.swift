@@ -86,7 +86,7 @@ struct PresentationResourcesItemList {
     
     static func itemListReorderIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListReorderIndicatorIcon.rawValue, { theme in
-            generateImage(CGSize(width: 22.0, height: 9.0), contextGenerator: { size, context in
+            generateImage(CGSize(width: 16.0, height: 9.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(theme.list.controlSecondaryColor.cgColor)
                 

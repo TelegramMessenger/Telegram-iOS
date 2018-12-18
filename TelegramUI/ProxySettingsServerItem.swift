@@ -222,7 +222,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
             let statusAttributedString = NSAttributedString(string: item.label, font: statusFont, textColor: item.labelAccent ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
             
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
-            var reorderControlSizeAndApply: (CGSize, () -> ItemListEditableReorderControlNode)?
+            var reorderControlSizeAndApply: (CGSize, (Bool) -> ItemListEditableReorderControlNode)?
             
             let editingOffset: CGFloat
             var reorderInset: CGFloat = 0.0
@@ -312,7 +312,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                     
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1()
+                            let reorderControlNode = reorderControlSizeAndApply.1(false)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
                             let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)

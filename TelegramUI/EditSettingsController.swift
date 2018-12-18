@@ -162,7 +162,7 @@ private enum SettingsEntry: ItemListNodeEntry {
             case let .userInfoNotice(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .bioText(theme, currentText, placeholder):
-                return ItemListMultilineInputItem(theme: theme, text: currentText, placeholder: placeholder, maxLength: 70, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: currentText, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 70, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateBioText(currentText, updatedText)
                 }, action: {
                     

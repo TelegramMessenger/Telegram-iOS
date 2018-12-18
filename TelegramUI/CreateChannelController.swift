@@ -135,7 +135,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                     arguments.changeProfilePhoto()
                 })
             case let .descriptionSetup(theme, text, value):
-                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: 255, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
+                return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
                 }, action: {
                     

@@ -498,7 +498,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentSecretIconImage: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
-            var reorderControlSizeAndApply: (CGSize, () -> ItemListEditableReorderControlNode)?
+            var reorderControlSizeAndApply: (CGSize, (Bool) -> ItemListEditableReorderControlNode)?
             
             let editingOffset: CGFloat
             var reorderInset: CGFloat = 0.0
@@ -797,7 +797,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0.width, y: 0.0), size: reorderControlSizeAndApply.0)
                         if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1()
+                            let reorderControlNode = reorderControlSizeAndApply.1(false)
                             strongSelf.reorderControlNode = reorderControlNode
                             strongSelf.addSubnode(reorderControlNode)
                             reorderControlNode.frame = reorderControlFrame
@@ -810,7 +810,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             transition.updateAlpha(node: strongSelf.mentionBadgeNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.statusNode, alpha: 0.0)
                         } else if let reorderControlNode = strongSelf.reorderControlNode {
-                            let _ = reorderControlSizeAndApply.1()
+                            let _ = reorderControlSizeAndApply.1(false)
                             transition.updateFrame(node: reorderControlNode, frame: reorderControlFrame)
                         }
                     } else if let reorderControlNode = strongSelf.reorderControlNode {

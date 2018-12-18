@@ -129,7 +129,7 @@ final class LegacyStickerImageDataSource: TGImageDataSource {
     override func loadDataAsync(withUri uri: String!, progress: ((Float) -> Void)!, partialCompletion: ((TGDataResource?) -> Void)!, completion: ((TGDataResource?) -> Void)!) -> Any! {
         if let account = self.account() {
             let args: [AnyHashable : Any]
-            let highQuality: Bool
+            var highQuality: Bool
             if uri.hasPrefix("sticker-preview://") {
                 let argumentsString = String(uri[uri.index(uri.startIndex, offsetBy: "sticker-preview://?".count)...])
                 args = TGStringUtils.argumentDictionary(inUrlString: argumentsString)!
@@ -149,6 +149,10 @@ final class LegacyStickerImageDataSource: TGImageDataSource {
             
             let width = Int((args["width"] as! String))!
             let height = Int((args["height"] as! String))!
+            
+            if width < 128 {
+                highQuality = false
+            }
             
             let fitSize = CGSize(width: CGFloat(width), height: CGFloat(height))
             

@@ -41,6 +41,7 @@ private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
     let emptyStateItem: ItemListControllerEmptyStateItem?
     let searchItem: ItemListControllerSearch?
     let focusItemTag: ItemListItemTag?
+    let ensureVisibleItemTag: ItemListItemTag?
     let firstTime: Bool
     let animated: Bool
     let animateAlpha: Bool
@@ -56,8 +57,9 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let animateChanges: Bool
     let crossfadeState: Bool
     let focusItemTag: ItemListItemTag?
+    let ensureVisibleItemTag: ItemListItemTag?
     
-    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, crossfadeState: Bool = false, animateChanges: Bool = true) {
+    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, crossfadeState: Bool = false, animateChanges: Bool = true) {
         self.entries = entries
         self.style = style
         self.emptyStateItem = emptyStateItem
@@ -65,6 +67,7 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
         self.crossfadeState = crossfadeState
         self.animateChanges = animateChanges
         self.focusItemTag = focusItemTag
+        self.ensureVisibleItemTag = ensureVisibleItemTag
     }
 }
 
@@ -115,6 +118,9 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
     private var listStyle: ItemListStyle?
     
     private var appliedFocusItemTag: ItemListItemTag?
+    private var appliedEnsureVisibleItemTag: ItemListItemTag?
+    
+    private var afterLayoutActions: [() -> Void] = []
     
     let updateNavigationOffset: (CGFloat) -> Void
     var dismiss: (() -> Void)?
@@ -183,7 +189,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
             if previous?.style != state.style {
                 updatedStyle = state.style
             }
-            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries)
+            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -258,6 +264,14 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
         if dequeue {
             self.dequeueTransitions()
         }
+        
+        if !self.afterLayoutActions.isEmpty {
+            let afterLayoutActions = self.afterLayoutActions
+            self.afterLayoutActions = []
+            for f in afterLayoutActions {
+                f()
+            }
+        }
     }
     
     private func enqueueTransition(_ transition: ItemListNodeTransition<Entry>) {
@@ -318,6 +332,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                 options.insert(.PreferSynchronousDrawing)
             }
             let focusItemTag = transition.focusItemTag
+            let ensureVisibleItemTag = transition.ensureVisibleItemTag
             self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, updateOpaqueState: ItemListNodeOpaqueState(mergedEntries: transition.mergedEntries), completion: { [weak self] _ in
                 if let strongSelf = self {
                     if !strongSelf.didSetReady {
@@ -348,6 +363,33 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
                             }
                             if applied {
                                 strongSelf.appliedFocusItemTag = focusItemTag
+                            }
+                        }
+                    }
+                    
+                    var updatedEnsureVisibleItemTag = false
+                    if let appliedEnsureVisibleTag = strongSelf.appliedEnsureVisibleItemTag, let ensureVisibleItemTag = ensureVisibleItemTag {
+                        updatedEnsureVisibleItemTag = !appliedEnsureVisibleTag.isEqual(to: ensureVisibleItemTag)
+                    } else if (strongSelf.appliedEnsureVisibleItemTag != nil) != (ensureVisibleItemTag != nil) {
+                        updatedEnsureVisibleItemTag = true
+                    }
+                    if updatedEnsureVisibleItemTag {
+                        if let ensureVisibleItemTag = ensureVisibleItemTag {
+                            var applied = false
+                            strongSelf.listNode.forEachItemNode { itemNode in
+                                if let itemNode = itemNode as? ItemListItemNode {
+                                    if let itemTag = itemNode.tag {
+                                        if itemTag.isEqual(to: ensureVisibleItemTag) {
+                                            if let itemNode = itemNode as? ListViewItemNode {
+                                                strongSelf.listNode.ensureItemNodeVisible(itemNode)
+                                                applied = true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if applied {
+                                strongSelf.appliedEnsureVisibleItemTag = ensureVisibleItemTag
                             }
                         }
                     }
@@ -469,5 +511,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ViewControllerTracingNod
         }
         
         return super.hitTest(point, with: event)
+    }
+    
+    func afterLayout(_ f: @escaping () -> Void) {
+        self.afterLayoutActions.append(f)
+        self.view.setNeedsLayout()
     }
 }

@@ -16,6 +16,7 @@ public final class TelegramApplicationOpenUrlCompletion {
 public final class TelegramApplicationBindings {
     public let isMainApp: Bool
     public let containerPath: String
+    public let appSpecificScheme: String
     public let openUrl: (String) -> Void
     public let openUniversalUrl: (String, TelegramApplicationOpenUrlCompletion) -> Void
     public let canOpenUrl: (String) -> Bool
@@ -32,9 +33,10 @@ public final class TelegramApplicationBindings {
     public let presentNativeController: (UIViewController) -> Void
     public let dismissNativeController: () -> Void
     
-    public init(isMainApp: Bool, containerPath: String, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void, registerForNotifications: @escaping ((Bool) -> Void) -> Void, getWindowHost: @escaping () -> WindowHost?, presentNativeController: @escaping (UIViewController) -> Void, dismissNativeController: @escaping () -> Void) {
+    public init(isMainApp: Bool, containerPath: String, appSpecificScheme: String, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void, registerForNotifications: @escaping ((Bool) -> Void) -> Void, getWindowHost: @escaping () -> WindowHost?, presentNativeController: @escaping (UIViewController) -> Void, dismissNativeController: @escaping () -> Void) {
         self.isMainApp = isMainApp
         self.containerPath = containerPath
+        self.appSpecificScheme = appSpecificScheme
         self.openUrl = openUrl
         self.openUniversalUrl = openUniversalUrl
         self.canOpenUrl = canOpenUrl

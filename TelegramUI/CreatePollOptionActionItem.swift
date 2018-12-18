@@ -7,13 +7,15 @@ class CreatePollOptionActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let title: String
     let enabled: Bool
+    let tag: ItemListItemTag?
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, enabled: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, enabled: Bool, tag: ItemListItemTag?, sectionId: ItemListSectionId, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.enabled = enabled
+        self.tag = tag
         self.sectionId = sectionId
         self.action = action
     }
@@ -68,7 +70,7 @@ class CreatePollOptionActionItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class CreatePollOptionActionItemNode: ListViewItemNode {
+class CreatePollOptionActionItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -78,6 +80,10 @@ class CreatePollOptionActionItemNode: ListViewItemNode {
     private let titleNode: TextNode
     
     private var item: CreatePollOptionActionItem?
+    
+    var tag: ItemListItemTag? {
+        return self.item?.tag
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -145,7 +151,6 @@ class CreatePollOptionActionItemNode: ListViewItemNode {
                     }
                     
                     let _ = titleApply()
-                    
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {

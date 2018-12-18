@@ -269,10 +269,14 @@ func storageUsageController(account: Account) -> ViewController {
     
     let statsPromise = Promise<CacheUsageStatsResult?>()
     let resetStats: () -> Void = {
+        let containerPath = account.telegramApplicationContext.applicationBindings.containerPath
         let additionalPaths: [String] = [
             NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0],
-            NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/files",
-            NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/videos"
+            containerPath + "/Documents/files",
+            containerPath + "/Documents/video",
+            containerPath + "/Documents/audio",
+            containerPath + "/Documents/mediacache",
+            containerPath + "/Documents/tempcache_v1/store",
         ]
         statsPromise.set(.single(nil)
         |> then(collectCacheUsageStats(account: account, additionalCachePaths: additionalPaths, logFilesPath: account.telegramApplicationContext.applicationBindings.containerPath + "/telegram-data/logs")

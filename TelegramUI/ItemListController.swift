@@ -465,4 +465,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     func ensureItemNodeVisible(_ itemNode: ListViewItemNode) {
         (self.displayNode as! ItemListControllerNode<Entry>).listNode.ensureItemNodeVisible(itemNode)
     }
+    
+    func afterLayout(_ f: @escaping () -> Void) {
+        (self.displayNode as! ItemListControllerNode<Entry>).afterLayout(f)
+    }
 }

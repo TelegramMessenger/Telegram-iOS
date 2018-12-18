@@ -213,7 +213,7 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
             })
         }
         
-        if parsedUrl.scheme == "tg", let query = parsedUrl.query {
+        if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == applicationContext.applicationBindings.appSpecificScheme), let query = parsedUrl.query {
             var convertedUrl: String?
             if parsedUrl.host == "localpeer" {
                  if let components = URLComponents(string: "/?" + query) {
