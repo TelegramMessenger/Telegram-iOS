@@ -182,16 +182,20 @@ public final class TelegramMediaPoll: Media, Equatable {
     
     func withUpdatedResults(_ results: TelegramMediaPollResults, min: Bool) -> TelegramMediaPoll {
         let updatedResults: TelegramMediaPollResults
-        if min, let currentVoters = self.results.voters, let updatedVoters = results.voters {
-            var selectedOpaqueIdentifiers = Set<Data>()
-            for voters in currentVoters {
-                if voters.selected {
-                    selectedOpaqueIdentifiers.insert(voters.opaqueIdentifier)
+        if min {
+            if let currentVoters = self.results.voters, let updatedVoters = results.voters {
+                var selectedOpaqueIdentifiers = Set<Data>()
+                for voters in currentVoters {
+                    if voters.selected {
+                        selectedOpaqueIdentifiers.insert(voters.opaqueIdentifier)
+                    }
                 }
+                updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
+                    return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count)
+                }), totalVoters: results.totalVoters)
+            } else {
+                updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters)
             }
-            updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
-                return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count)
-            }), totalVoters: results.totalVoters)
         } else {
             updatedResults = results
         }
