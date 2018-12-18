@@ -36,8 +36,13 @@ LOT_EXPORT Lottie_Animation_S *lottie_animation_from_data(const char *data, cons
 
 LOT_EXPORT void lottie_animation_destroy(Lottie_Animation_S *animation)
 {
-    if (animation)
+    if (animation) {
+        if (animation->mRenderTask.valid()) {
+            animation->mRenderTask.get();
+        }
+        animation->mAnimation = nullptr;
         delete animation;
+    }
 }
 
 LOT_EXPORT void lottie_animation_get_size(const Lottie_Animation_S *animation, size_t *width, size_t *height)
