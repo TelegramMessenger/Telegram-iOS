@@ -12,9 +12,9 @@ private func aspectFitSize(_ size: CGSize, to: CGSize) -> CGSize {
     return CGSize(width: floor(size.width * scale), height: floor(size.height * scale))
 }
 
-public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, includeViaBot: Bool = true) -> EnqueueMessage? {
+public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection?, result: ChatContextResult) -> EnqueueMessage? {
     var attributes: [MessageAttribute] = []
-    if includeViaBot {
+    if let results = results {
         attributes.append(OutgoingChatContextResultMessageAttribute(queryId: result.queryId, id: result.id))
         attributes.append(InlineBotMessageAttribute(peerId: results.botId, title: nil))
     }
