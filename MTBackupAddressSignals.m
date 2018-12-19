@@ -145,7 +145,7 @@ static NSData *base64_decode(NSString *str) {
     MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization apiEnvironment:apiEnvironment isTestingEnvironment:currentContext.isTestingEnvironment useTempAuthKeys:address.datacenterId != 0 ? currentContext.useTempAuthKeys : false];
     
     if (address.datacenterId != 0) {
-        context.keychain = currentContext.keychain;
+        //context.keychain = currentContext.keychain;
     }
     
     MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:address.datacenterId usageCalculationInfo:nil];
