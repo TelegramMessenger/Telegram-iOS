@@ -400,7 +400,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         var activePoll: TelegramMediaPoll?
         for media in message.media {
-            if let poll = media as? TelegramMediaPoll, !poll.isClosed {
+            if let poll = media as? TelegramMediaPoll, !poll.isClosed, message.id.namespace == Namespaces.Message.Cloud, poll.pollId.namespace == Namespaces.Media.CloudPoll {
                 activePoll = poll
             }
         }
@@ -429,8 +429,34 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     interfaceInteraction.unpinMessage()
                 })))
             }
+        }
+        
+        if let _ = activePoll, messages[0].forwardInfo == nil {
+            var canStopPoll = false
+            if !messages[0].flags.contains(.Incoming) {
+                canStopPoll = true
+            } else {
+                var hasEditRights = false
+                if messages[0].id.namespace == Namespaces.Message.Cloud {
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        hasEditRights = false
+                    } else if let author = message.author, author.id == account.peerId {
+                        hasEditRights = true
+                    } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            if peer.hasAdminRights(.canEditMessages) {
+                                hasEditRights = true
+                            }
+                        }
+                    }
+                }
+                
+                if hasEditRights {
+                    canStopPoll = true
+                }
+            }
             
-            if let _ = activePoll, messages[0].forwardInfo == nil, !messages[0].flags.contains(.Incoming) {
+            if canStopPoll {
                 actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_StopPoll, action: {
                     interfaceInteraction.requestStopPollInMessage(messages[0].id)
                 })))

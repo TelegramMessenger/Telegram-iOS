@@ -79,7 +79,7 @@ private struct CollectableExternalShareItem {
     let mediaReference: AnyMediaReference?
 }
 
-private func collectExternalShareItems(postbox: Postbox, collectableItems: [CollectableExternalShareItem]) -> Signal<ExternalShareItemsState, NoError> {
+private func collectExternalShareItems(strings: PresentationStrings, postbox: Postbox, collectableItems: [CollectableExternalShareItem]) -> Signal<ExternalShareItemsState, NoError> {
     var signals: [Signal<ExternalShareItemStatus, NoError>] = []
     for item in collectableItems {
         if let mediaReference = item.mediaReference, let file = mediaReference.media as? TelegramMediaFile {
@@ -135,6 +135,19 @@ private func collectExternalShareItems(postbox: Postbox, collectableItems: [Coll
                         }
                 }
             })
+        } else if let mediaReference = item.mediaReference, let poll = mediaReference.media as? TelegramMediaPoll {
+            var text = "📊 \(poll.text)"
+            text.append("\n\(strings.MessagePoll_LabelAnonymous)")
+            for option in poll.options {
+                text.append("\n— \(option.text)")
+            }
+            let totalVoters = poll.results.totalVoters ?? 0
+            if totalVoters == 0 {
+                text.append("\n\(strings.MessagePoll_NoVotes)")
+            } else {
+                text.append("\n\(strings.MessagePoll_VotedCount(totalVoters))")
+            }
+            signals.append(.single(.done(.text(text))))
         }
         if let url = item.url, let parsedUrl = URL(string: url) {
             if signals.isEmpty {
@@ -454,6 +467,9 @@ public final class ShareController: ViewController {
                                                 selectedMedia = image
                                             }
                                         }
+                                    case let _ as TelegramMediaPoll:
+                                        selectedMedia = media
+                                        break loop
                                     default:
                                         break
                                 }
@@ -468,7 +484,7 @@ public final class ShareController: ViewController {
                     case .fromExternal:
                         break
                 }
-                return (collectExternalShareItems(postbox: strongSelf.account.postbox, collectableItems: collectableItems) |> deliverOnMainQueue) |> map { state in
+                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, postbox: strongSelf.account.postbox, collectableItems: collectableItems) |> deliverOnMainQueue) |> map { state in
                     switch state {
                         case .progress:
                             return .preparing

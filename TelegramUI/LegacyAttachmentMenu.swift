@@ -101,7 +101,7 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
         })!
         itemViews.append(locationItem)
         
-        if !(peer is TelegramSecretChat) && canSendMessagesToPeer(peer) {
+        if (peer is TelegramGroup || peer is TelegramChannel) && canSendMessagesToPeer(peer) {
             let pollItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_Poll, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
                 controller?.dismiss(animated: true)
                 openPoll()
