@@ -104,6 +104,24 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusDisposable.dispose()
     }
     
+    @objc override func contentTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        if recognizer.state == .ended {
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                    case .tap:
+                        if let item = self.item, let selectionState = item.controllerInteraction?.selectionState {
+                            let legacyItem = legacyWebSearchItem(account: item.account, result: item.result)
+                            selectionState.toggleItemSelection(legacyItem)
+                        }
+                    case .doubleTap:
+                        super.contentTap(recognizer)
+                    default:
+                        break
+                }
+            }
+        }
+    }
+    
     override func ready() -> Signal<Void, NoError> {
         return self._ready.get()
     }

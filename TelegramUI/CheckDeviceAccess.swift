@@ -71,6 +71,11 @@ public final class DeviceAccess {
         return self.notificationsPromise.get()
     }
     
+    private static let siriPromise = Promise<Bool?>(nil)
+    static var siri: Signal<Bool?, NoError> {
+        return self.siriPromise.get()
+    }
+    
     public static func isMicrophoneAccessAuthorized() -> Bool? {
         return AVAudioSession.sharedInstance().recordPermission() == .granted
     }
@@ -178,6 +183,21 @@ public final class DeviceAccess {
                     }
                     return EmptyDisposable
             }
+            case .siri:
+                return Signal { subscriber in
+                    let status = account.telegramApplicationContext.applicationBindings.siriAuthorization()
+                    subscriber.putNext(status)
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                }
+                |> then(self.siri
+                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                        if let authorized = authorized {
+                            return .single(authorized ? .allowed : .denied)
+                        } else {
+                            return .complete()
+                        }
+                    })
             default:
                 return .single(.notDetermined)
         }
@@ -367,10 +387,17 @@ public final class DeviceAccess {
                     })
                 case .notifications:
                     if let account = account {
-                        account.telegramApplicationContext.applicationBindings.registerForNotifications({ result in
+                        account.telegramApplicationContext.applicationBindings.registerForNotifications { result in
                             self.notificationsPromise.set(.single(result))
                             completion(result)
-                        })
+                        }
+                    }
+                case .siri:
+                    if let account = account {
+                        account.telegramApplicationContext.applicationBindings.requestSiriAuthorization { result in
+                            self.siriPromise.set(.single(result))
+                            completion(result)
+                        }
                     }
                 default:
                     break

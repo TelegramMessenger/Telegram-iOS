@@ -434,7 +434,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     func item(_ arguments: NotificationsAndSoundsArguments) -> ListViewItem {
         switch self {
             case let .permissionInfo(theme, strings, type):
-                return PermissionInfoItemListItem(theme: theme, strings: strings, subject: .notifications, type: type, style: .blocks, sectionId: self.section, close: {
+                return PermissionInfoItemListItem(theme: theme, strings: strings, subject: .notifications, type: type, style: .blocks, sectionId: self.section, suppressed: false, close: {
                     arguments.suppressWarning()
                 })
             case let .permissionEnable(theme, text):
@@ -666,7 +666,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         |> deliverOnMainQueue).start(next: { status in
             switch status {
                 case .notDetermined:
-                    DeviceAccess.authorizeAccess(to: .notifications)
+                    DeviceAccess.authorizeAccess(to: .notifications, account: account)
                 case .denied, .restricted:
                     account.telegramApplicationContext.applicationBindings.openSettings()
                 case .unreachable:
@@ -678,8 +678,10 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         })
     }, suppressWarning: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(account: account, title: nil, text: presentationData.strings.Notifications_PermissionsSuppressWarningTitle, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+        presentControllerImpl?(textAlertController(account: account, title: presentationData.strings.Notifications_PermissionsSuppressWarningTitle, text: presentationData.strings.Notifications_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Notifications_PermissionsKeepDisabled, action: {
             ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: Int32(Date().timeIntervalSince1970))
+        }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Notifications_PermissionsEnable, action: {
+            account.telegramApplicationContext.applicationBindings.openSettings()
         })]), nil)
     }, updateMessageAlerts: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
