@@ -139,7 +139,7 @@ public final class TextAlertContentNode: AlertContentNode {
             titleNode.attributedText = title
             titleNode.displaysAsynchronously = false
             titleNode.isUserInteractionEnabled = false
-            titleNode.maximumNumberOfLines = 1
+            titleNode.maximumNumberOfLines = 2
             titleNode.truncationMode = .byTruncatingTail
             self.titleNode = titleNode
         } else {
