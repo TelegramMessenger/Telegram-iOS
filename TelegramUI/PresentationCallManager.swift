@@ -359,7 +359,7 @@ public final class PresentationCallManager {
                         currentCall.rejectBusy()
                     }
                  
-                    let call = PresentationCall(account: strongSelf.account, audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings?.0), serializedData: strongSelf.callSettings?.1.serializedData, dataSaving: strongSelf.callSettings?.0.dataSaving ?? .never, detivedState: strongSelf.callSettings?.2 ?? VoipDerivedState.default, getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: strongSelf.networkType)
+                    let call = PresentationCall(account: strongSelf.account, audioSession: strongSelf.audioSession, callSessionManager: strongSelf.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings?.0), serializedData: strongSelf.callSettings?.1.serializedData, dataSaving: strongSelf.callSettings?.0.dataSaving ?? .never, derivedState: strongSelf.callSettings?.2 ?? VoipDerivedState.default, getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: strongSelf.networkType)
                     strongSelf.currentCall = call
                     strongSelf.currentCallPromise.set(.single(call))
                     strongSelf.hasActiveCallsPromise.set(true)
