@@ -160,80 +160,19 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
 private func fetchPoll(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
-    |> mapToSignal { peer in
-        if let inputPeer = apiInputPeer(peer) {
-            let messages: Signal<Api.messages.Messages, MTRpcError>
-            switch inputPeer {
-                case let .inputPeerChannel(channelId, accessHash):
-                    messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
-                default:
-                    messages = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+    |> mapToSignal { peer -> Signal<Void, NoError> in
+        guard let inputPeer = apiInputPeer(peer) else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.messages.getPollResults(peer: inputPeer, msgId: messageId.id))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Void, NoError> in
+            if let updates = updates {
+                account.stateManager.addUpdates(updates)
             }
-            return messages
-            |> retryRequest
-            |> mapToSignal { result in
-                let messages: [Api.Message]
-                let chats: [Api.Chat]
-                let users: [Api.User]
-                switch result {
-                    case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
-                        messages = apiMessages
-                        chats = apiChats
-                        users = apiUsers
-                    case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
-                        messages = apiMessages
-                        chats = apiChats
-                        users = apiUsers
-                    case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
-                        messages = apiMessages
-                        chats = apiChats
-                        users = apiUsers
-                    case .messagesNotModified:
-                        messages = []
-                        chats = []
-                        users = []
-                }
-                
-                return account.postbox.transaction { transaction -> Void in
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
-                    for chat in chats {
-                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                            peers.append(groupOrChannel)
-                        }
-                    }
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
-                        }
-                    }
-                    
-                    for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message) {
-                            var poll: TelegramMediaPoll?
-                            for media in storeMessage.media {
-                                if let media = media as? TelegramMediaPoll {
-                                    poll = media
-                                }
-                            }
-                            
-                            if let poll = poll {
-                                updateMessageMedia(transaction: transaction, id: poll.pollId, media: poll)
-                            }
-                            break
-                        }
-                    }
-                    
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
-                    
-                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
-                }
-            }
-        } else {
             return .complete()
         }
     }
