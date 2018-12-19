@@ -1144,6 +1144,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var popToRootImpl: (() -> Void)?
+    var endEditingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -1203,6 +1204,8 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             }))
         })
     }, changeProfilePhoto: {
+        endEditingImpl?()
+        
         let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(peerId), currentSearchBotsConfiguration(transaction: transaction))
             } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
@@ -1924,6 +1927,10 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 }
             }
         }
+    }
+    endEditingImpl = {
+        [weak controller] in
+        controller?.view.endEditing(true)
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if let loadMoreControl = loadMoreControl, case let .known(value) = offset, value < 40.0 {

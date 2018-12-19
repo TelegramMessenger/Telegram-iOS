@@ -667,7 +667,10 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
             switch status {
                 case .notDetermined:
                     DeviceAccess.authorizeAccess(to: .notifications)
-                case .denied, .restricted, .unreachable:
+                case .denied, .restricted:
+                    account.telegramApplicationContext.applicationBindings.openSettings()
+                case .unreachable:
+                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: Int32(Date().timeIntervalSince1970))
                     account.telegramApplicationContext.applicationBindings.openSettings()
                 default:
                     break
@@ -870,7 +873,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         |> then(account.postbox.combinedView(keys: [warningKey])
             |> map { combined -> Bool in
                 let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
-                if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
+                if let timestamp = timestamp, timestamp > 0 {
                     return true
                 } else {
                     return false

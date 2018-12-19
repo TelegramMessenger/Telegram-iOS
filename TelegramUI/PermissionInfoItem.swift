@@ -209,11 +209,12 @@ class PermissionInfoItemNode: ListViewItemNode {
                     title = item.strings.Contacts_PermissionsTitle
                     text = item.strings.Contacts_PermissionsText
                 case .notifications:
-                    title = item.strings.Notifications_PermissionsTitle
                     switch item.type {
                         case .unreachable:
+                            title = item.strings.Notifications_PermissionsUnreachableTitle
                             text = item.strings.Notifications_PermissionsUnreachableText
                         default:
+                            title = item.strings.Notifications_PermissionsTitle
                             text = item.strings.Notifications_PermissionsText
                     }
                 default:

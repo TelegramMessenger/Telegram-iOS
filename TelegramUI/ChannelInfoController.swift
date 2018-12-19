@@ -577,6 +577,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var popToRootControllerImpl: (() -> Void)?
+    var endEditingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -628,6 +629,8 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             }))
         })
     }, changeProfilePhoto: {
+        endEditingImpl?()
+        
         let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(peerId), currentSearchBotsConfiguration(transaction: transaction))
             } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
@@ -996,6 +999,10 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         if let controller = controller {
             handlePeerInfoAboutTextAction(account: account, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
         }
+    }
+    endEditingImpl = {
+        [weak controller] in
+        controller?.view.endEditing(true)
     }
     return controller
 }

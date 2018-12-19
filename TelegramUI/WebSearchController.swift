@@ -135,6 +135,12 @@ final class WebSearchController: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
         
+        self.scrollToTop = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.controllerNode.scrollToTop(animated: true)
+            }
+        }
+        
         let settings = self.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.webSearchSettings])
         |> take(1)
         |> map { view -> WebSearchSettings in
@@ -317,10 +323,18 @@ final class WebSearchController: ViewController {
         
         self.updateInterfaceState { $0.withUpdatedQuery(query) }
         
-        let scopes: [WebSearchScope: Promise<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?>] = [.images: Promise(initializeOnFirstAccess: self.signalForQuery(query, scope: .images)), .gifs: Promise(initializeOnFirstAccess: self.signalForQuery(query, scope: .gifs))]
+        let scopes: [WebSearchScope: Promise<((ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, Bool)>] = [.images: Promise(initializeOnFirstAccess: self.signalForQuery(query, scope: .images)
+        |> mapToSignal { result -> Signal<((ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, Bool), NoError> in
+            return .single((result, false))
+            |> then(.single((result, true)))
+        }), .gifs: Promise(initializeOnFirstAccess: self.signalForQuery(query, scope: .gifs)
+        |> mapToSignal { result -> Signal<((ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, Bool), NoError> in
+            return .single((result, false))
+            |> then(.single((result, true)))
+        })]
         
         var results = scope
-        |> mapToSignal { scope -> (Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>) in
+        |> mapToSignal { scope -> (Signal<((ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, Bool), NoError>) in
             if let scope = scope, let scopeResults = scopes[scope] {
                 return scopeResults.get()
             } else {
@@ -329,16 +343,21 @@ final class WebSearchController: ViewController {
         }
         
         if query.isEmpty {
-            results = .single({ _ in return nil})
+            results = .single(({ _ in return nil}, false))
             self.navigationContentNode?.setActivity(false)
         }
         
+        let previousResults = Atomic<(ChatContextResultCollection, Bool)?>(value: nil)
         self.resultsDisposable.set((results
-        |> deliverOnMainQueue).start(next: { [weak self] result in
+        |> deliverOnMainQueue).start(next: { [weak self] result, immediate in
             if let strongSelf = self {
                 if let result = result(nil), case let .contextRequestResult(_, results) = result {
                     if let results = results {
-                        strongSelf.controllerNode.updateResults(results)
+                        let previous = previousResults.swap((results, immediate))
+                        if let previous = previous, previous.0.queryId == results.queryId && !previous.1 {
+                        } else {
+                            strongSelf.controllerNode.updateResults(results, immediate: immediate)
+                        }
                     }
                 } else {
                     strongSelf.controllerNode.updateResults(nil)

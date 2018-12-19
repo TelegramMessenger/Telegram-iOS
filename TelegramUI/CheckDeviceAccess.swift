@@ -53,7 +53,7 @@ private let cachedMediaLibraryAccessStatus = Atomic<Bool?>(value: nil)
 
 func shouldDisplayNotificationsPermissionWarning(status: AccessType, suppressed: Bool) -> Bool {
     switch (status, suppressed) {
-        case (.allowed, _), (.unreachable, true):
+        case (.allowed, _), (.unreachable, true), (.notDetermined, true):
             return false
         default:
             return true
@@ -83,7 +83,7 @@ public final class DeviceAccess {
                         UNUserNotificationCenter.current().getNotificationSettings(completionHandler: { settings in
                             switch settings.authorizationStatus {
                                 case .authorized:
-                                    if settings.alertSetting == .disabled || settings.soundSetting == .disabled || settings.badgeSetting == .disabled || settings.notificationCenterSetting == .disabled || settings.lockScreenSetting == .disabled {
+                                    if settings.alertSetting == .disabled {
                                         subscriber.putNext(.unreachable)
                                     } else {
                                         subscriber.putNext(.allowed)

@@ -177,7 +177,9 @@ final class PermissionControllerNode: ASDisplayNode {
                         hasPrivacyPolicy = false
                 }
 
-                let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind, icon: icon, title: title, text: text, buttonTitle: buttonTitle, buttonAction: {}, openPrivacyPolicy: hasPrivacyPolicy ? self.openPrivacyPolicy : nil)
+                let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind, icon: icon, title: title, text: text, buttonTitle: buttonTitle, buttonAction: { [weak self] in
+                    self?.allow?()
+                }, openPrivacyPolicy: hasPrivacyPolicy ? self.openPrivacyPolicy : nil)
                 self.insertSubnode(contentNode, at: 0)
                 contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: .immediate)
                 contentNode.frame = contentFrame
@@ -208,14 +210,6 @@ final class PermissionControllerNode: ASDisplayNode {
             state.layout = PermissionControllerLayoutState(layout: layout, navigationHeight: navigationBarHeight)
             return state
         }, transition: transition)
-    }
-    
-    func activateNextAction() {
-        
-    }
-    
-    @objc func allowPressed() {
-        self.allow?()
     }
     
     @objc func privacyPolicyPressed() {

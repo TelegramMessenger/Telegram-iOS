@@ -277,6 +277,8 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
             }))
         }
     }, changeProfilePhoto: {
+        endEditingImpl?()
+        
         let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(account.peerId), currentSearchBotsConfiguration(transaction: transaction))
         } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in

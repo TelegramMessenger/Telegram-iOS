@@ -145,8 +145,14 @@ private class LegacyWebSearchGalleryItem: TGModernGalleryImageItem, TGModernGall
 private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGModernGalleryEditableItemView {
     private let readyForTransition = SVariable()!
     
-    func setHiddenAsBeingEdited(_ hidden: Bool) {
+    @objc func setHiddenAsBeingEdited(_ hidden: Bool) {
         self.imageView.isHidden = hidden
+    }
+    
+    @objc func singleTap() {
+        if let item = item as? LegacyWebSearchGalleryItem, let selectionContext = item.selectionContext {
+            selectionContext.toggleItemSelection(item.selectableMediaItem())
+        }
     }
     
     override func readyForTransitionIn() -> SSignal! {
@@ -343,8 +349,9 @@ func presentLegacyWebSearchGallery(account: Account, peer: Peer?, theme: Present
     controller.transitionHost = {
         return transitionHostView()
     }
+    var transitionedIn = false
     controller.itemFocused = { item in
-        if let item = item as? LegacyWebSearchGalleryItem {
+        if let item = item as? LegacyWebSearchGalleryItem, transitionedIn {
             updateHiddenMedia(item.item.result.id)
         }
     }
@@ -354,6 +361,10 @@ func presentLegacyWebSearchGallery(account: Account, peer: Peer?, theme: Present
         } else {
             return nil
         }
+    }
+    controller.startedTransitionIn = {
+        transitionedIn = true
+        updateHiddenMedia(current.id)
     }
     controller.beginTransitionOut = { item, _ in
         if let item = item as? LegacyWebSearchGalleryItem {

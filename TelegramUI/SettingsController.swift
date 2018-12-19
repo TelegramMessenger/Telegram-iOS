@@ -733,7 +733,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
         |> then(account.postbox.combinedView(keys: [warningKey])
             |> map { combined -> Bool in
                 let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
-                if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
+                if let timestamp = timestamp, timestamp > 0 {
                     return true
                 } else {
                     return false
