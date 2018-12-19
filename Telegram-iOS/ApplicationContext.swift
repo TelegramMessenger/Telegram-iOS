@@ -799,7 +799,7 @@ final class AuthorizedApplicationContext {
         }))
         
         if #available(iOS 10.0, *) {
-            let alwaysModal = true
+            let debugModal = false
             
             let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
             self.permissionsDisposable.set((combineLatest(requiredPermissions(account: account), permissionUISplitTest(postbox: account.postbox), permissionsPosition.get(), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey()), .noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())]))
@@ -836,14 +836,14 @@ final class AuthorizedApplicationContext {
                                 modal = true
                             }
                             if case .requestable = required.0.status, contactsTimestamp != 0 {
-                                requestedPermissions.append((required.0, modal || alwaysModal))
+                                requestedPermissions.append((required.0, modal || debugModal))
                             }
                         case .notifications:
                             if case .modal = config.notifications {
                                 modal = true
                             }
                             if case .requestable = required.1.status, notificationsTimestamp != 0 {
-                                requestedPermissions.append((required.1, modal || alwaysModal))
+                                requestedPermissions.append((required.1, modal || debugModal))
                             }
                         case .siri:
                             if case .requestable = required.2.status {
