@@ -39,7 +39,7 @@
 #include "MessageThread.h"
 #include "utils.h"
 
-#define LIBTGVOIP_VERSION "2.4"
+#define LIBTGVOIP_VERSION "2.4.1"
 
 #ifdef _WIN32
 #undef GetCurrentTime
