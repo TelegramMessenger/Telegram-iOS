@@ -588,8 +588,6 @@ final class AuthorizedApplicationContext {
                             }
                             
                             if #available(iOS 10.0, *) {
-                                INPreferences.requestSiriAuthorization { _ in
-                                }
                             } else {
                                 DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, present: { c, a in
                                 }, openSettings: {}, { _ in })
@@ -805,24 +803,28 @@ final class AuthorizedApplicationContext {
             
             let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
             self.permissionsDisposable.set((combineLatest(requiredPermissions(account: account), permissionUISplitTest(postbox: account.postbox), permissionsPosition.get(), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey()), .noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())]))
-            |> deliverOnMainQueue).start(next: { [weak self] contactsAndNotifications, splitTest, position, combined in
+            |> deliverOnMainQueue).start(next: { [weak self] required, splitTest, position, combined in
                 guard let strongSelf = self else {
                     return
                 }
                 
                 let contactsTimestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 let notificationsTimestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
-                if contactsTimestamp == nil, case .requestable = contactsAndNotifications.0.status {
+                if contactsTimestamp == nil, case .requestable = required.0.status {
                     ApplicationSpecificNotice.setContactsPermissionWarning(postbox: account.postbox, value: 1)
                 }
-                if notificationsTimestamp == nil, case .requestable = contactsAndNotifications.1.status {
+                if notificationsTimestamp == nil, case .requestable = required.1.status {
                     ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: 1)
                 }
                 
                 let config = splitTest.configuration
+                var order = config.order
+                if !order.contains(.siri) {
+                    order.append(.siri)
+                }
                 var requestedPermissions: [(PermissionState, Bool)] = []
                 var i: Int = 0
-                for subject in config.order {
+                for subject in order {
                     if i < position {
                         i += 1
                         continue
@@ -833,15 +835,19 @@ final class AuthorizedApplicationContext {
                             if case .modal = config.contacts {
                                 modal = true
                             }
-                            if case .requestable = contactsAndNotifications.0.status, contactsTimestamp != 0 {
-                                requestedPermissions.append((contactsAndNotifications.0, modal || alwaysModal))
+                            if case .requestable = required.0.status, contactsTimestamp != 0 {
+                                requestedPermissions.append((required.0, modal || alwaysModal))
                             }
                         case .notifications:
                             if case .modal = config.notifications {
                                 modal = true
                             }
-                            if case .requestable = contactsAndNotifications.1.status, notificationsTimestamp != 0 {
-                                requestedPermissions.append((contactsAndNotifications.1, modal || alwaysModal))
+                            if case .requestable = required.1.status, notificationsTimestamp != 0 {
+                                requestedPermissions.append((required.1, modal || alwaysModal))
+                            }
+                        case .siri:
+                            if case .requestable = required.2.status {
+                                requestedPermissions.append((required.2, false))
                             }
                         default:
                             break
@@ -902,7 +908,11 @@ final class AuthorizedApplicationContext {
                                     }
                                     permissionsPosition.set(position + 1)
                                     ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: 0)
-                            }
+                                }
+                            case .siri:
+                                DeviceAccess.authorizeAccess(to: .siri, account: account) { result in
+                                    permissionsPosition.set(position + 1)
+                                }
                             default:
                                 break
                         }
@@ -910,8 +920,7 @@ final class AuthorizedApplicationContext {
                 } else {
                     if let controller = strongSelf.currentPermissionsController {
                         strongSelf.currentPermissionsController = nil
-                        controller.dismiss(completion: {
-                        })
+                        controller.dismiss(completion: {})
                     }
                 }
             }))
