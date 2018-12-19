@@ -183,7 +183,7 @@ public class UnauthorizedAccount {
         })
         
         network.context.performBatchUpdates({
-            /*var datacenterIds: [Int] = [1, 2]
+            var datacenterIds: [Int] = [1, 2]
             if !testingEnvironment {
                 datacenterIds.append(contentsOf: [4])
             }
@@ -191,8 +191,8 @@ public class UnauthorizedAccount {
                 if network.context.authInfoForDatacenter(withId: id) == nil {
                     network.context.authInfoForDatacenter(withIdRequired: id, isCdn: false)
                 }
-            }*/
-            //network.context.beginExplicitBackupAddressDiscovery()
+            }
+            network.context.beginExplicitBackupAddressDiscovery()
         })
     }
     
