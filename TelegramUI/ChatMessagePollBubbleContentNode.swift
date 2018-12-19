@@ -203,13 +203,13 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
     }
 }
 
-private let percentageFont = Font.bold(14.0)
+private let percentageFont = Font.bold(14.5)
 
 private func generatePercentageImage(presentationData: ChatPresentationData, incoming: Bool, value: CGFloat) -> UIImage {
     return generateImage(CGSize(width: 42.0, height: 20.0), rotatedContext: { size, context in
         UIGraphicsPushContext(context)
         context.clear(CGRect(origin: CGPoint(), size: size))
-        let percents = Int(value * 100.0)
+        let percents = Int(round(value * 100.0))
         let string = NSAttributedString(string: "\(percents)%", font: percentageFont, textColor: incoming ? presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor, paragraphAlignment: .right)
         string.draw(in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: size))
         UIGraphicsPopContext()
@@ -300,7 +300,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         
         return { accountPeerId, presentationData, message, option, optionResult, constrainedWidth in
             let leftInset: CGFloat = 50.0
-            let rightInset: CGFloat = 18.0
+            let rightInset: CGFloat = 12.0
             
             let incoming = message.effectivelyIncoming(accountPeerId)
             
@@ -336,7 +336,11 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         node.addSubnode(titleNode)
                         titleNode.isUserInteractionEnabled = false
                     }
-                    titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    if titleLayout.hasRTL {
+                        titleNode.frame = CGRect(origin: CGPoint(x: width - rightInset - titleLayout.size.width, y: 11.0), size: titleLayout.size)
+                    } else {
+                        titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    }
                     
                     if shouldHaveRadioNode {
                         let radioNode: ChatMessagePollOptionRadioNode
@@ -368,11 +372,12 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     if let image = node.percentageImage {
                         node.percentageNode.frame = CGRect(origin: CGPoint(x: leftInset - 7.0 - image.size.width, y: 12.0), size: image.size)
                         if animated, let optionResult = optionResult {
-                            let images = generatePercentageAnimationImages(presentationData: presentationData, incoming: incoming, from: previousResult?.absolute ?? 0.0, to: optionResult.absolute, duration: 0.4)
+                            let percentageDuration = 0.27
+                            let images = generatePercentageAnimationImages(presentationData: presentationData, incoming: incoming, from: previousResult?.absolute ?? 0.0, to: optionResult.absolute, duration: percentageDuration)
                             if !images.isEmpty {
                                 let animation = CAKeyframeAnimation(keyPath: "contents")
                                 animation.values = images.map { $0.cgImage! }
-                                animation.duration = 0.4 * UIView.animationDurationFactor()
+                                animation.duration = percentageDuration * UIView.animationDurationFactor()
                                 animation.calculationMode = kCAAnimationDiscrete
                                 node.percentageNode.layer.add(animation, forKey: "image")
                             }
@@ -776,7 +781,11 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.statusNode.removeFromSupernode()
                             }
                             
-                            strongSelf.textNode.frame = textFrame
+                            if textLayout.hasRTL {
+                                strongSelf.textNode.frame = CGRect(origin: CGPoint(x: resultSize.width - textFrame.size.width - textInsets.left - layoutConstants.text.bubbleInsets.right, y: textFrame.origin.y), size: textFrame.size)
+                            } else {
+                                strongSelf.textNode.frame = textFrame
+                            }
                             strongSelf.typeNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.maxY + titleTypeSpacing), size: typeLayout.size)
                             
                             let _ = votersApply()
