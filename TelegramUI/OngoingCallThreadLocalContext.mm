@@ -214,7 +214,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     return tgvoip::VoIPController::GetConnectionMaxLayer();
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving logPath:(NSString * _Nonnull)logPath {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueue> _Nonnull)queue proxy:(VoipProxyServer * _Nullable)proxy networkType:(OngoingCallNetworkType)networkType dataSaving:(OngoingCallDataSaving)dataSaving logPath:(NSString * _Nonnull)logPath derivedState:(NSData * _Nonnull)derivedState {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -231,6 +231,10 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         
         _controller = new tgvoip::VoIPController();
         _controller->implData = (void *)((intptr_t)_contextId);
+        std::vector<uint8_t> derivedStateValue;
+        derivedStateValue.resize(derivedState.length);
+        [derivedState getBytes:derivedStateValue.data() length:derivedState.length];
+        _controller->SetPersistentState(derivedStateValue);
         
         if (proxy != nil) {
             _controller->SetProxy(tgvoip::PROXY_SOCKS5, proxy.host.UTF8String, (uint16_t)proxy.port, proxy.username.UTF8String ?: "", proxy.password.UTF8String ?: "");
@@ -334,6 +338,15 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         return [NSString stringWithUTF8String:_controller->GetVersion()];
     } else {
         return nil;
+    }
+}
+
+- (NSData * _Nonnull)getDerivedState {
+    if (_controller != nil) {
+        std::vector<uint8_t> derivedStateValue = _controller->GetPersistentState();
+        return [[NSData alloc] initWithBytes:derivedStateValue.data() length:derivedStateValue.size()];
+    } else {
+        return [NSData data];
     }
 }
 

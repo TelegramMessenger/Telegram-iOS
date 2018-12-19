@@ -101,6 +101,7 @@
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
+		D005808B21CAB8F000CB7CD3 /* VoipDerivedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */; };
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
 		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
@@ -1210,6 +1211,7 @@
 		D003702D1DA43052004308D3 /* ItemListAvatarAndNameItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListAvatarAndNameItem.swift; sourceTree = "<group>"; };
 		D003702F1DA43077004308D3 /* ItemListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListItem.swift; sourceTree = "<group>"; };
 		D00370311DA46C06004308D3 /* ItemListTextWithLabelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextWithLabelItem.swift; sourceTree = "<group>"; };
+		D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoipDerivedState.swift; sourceTree = "<group>"; };
 		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
 		D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegqacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
@@ -3304,6 +3306,7 @@
 				D08A10BA211DF7A80077488B /* StickerSettings.swift */,
 				0952D1762177FB5400194860 /* WatchPresetSettings.swift */,
 				0962E67C21BA048D00245FD9 /* WebSearchSettings.swift */,
+				D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -5916,6 +5919,7 @@
 				D0EC6E7B1EB9F58900EBF1C3 /* DebugAccountsController.swift in Sources */,
 				D093D8262069A31700BC3599 /* FormControllerItem.swift in Sources */,
 				D0EC6E7C1EB9F58900EBF1C3 /* UsernameSetupController.swift in Sources */,
+				D005808B21CAB8F000CB7CD3 /* VoipDerivedState.swift in Sources */,
 				D0471B621EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift in Sources */,
 				D09250041FE5363D003F693F /* ExperimentalSettings.swift in Sources */,
 				D0E8175B201254FA00B82BBB /* ChatRecentActionsEmptyNode.swift in Sources */,
