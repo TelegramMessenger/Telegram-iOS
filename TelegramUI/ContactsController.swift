@@ -131,11 +131,7 @@ public class ContactsController: ViewController {
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
                 let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
-                strongSelf.present(textAlertController(account: strongSelf.account, title: presentationData.strings.Contacts_PermissionsSuppressWarningTitle, text: presentationData.strings.Contacts_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Permissions_DataSettings, action: { [weak self] in
-                    if let strongSelf = self {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(dataPrivacyController(account: strongSelf.account))
-                    }
-                }), TextAlertAction(type: .genericAction, title: presentationData.strings.Notifications_PermissionsKeepDisabled, action: {
+                strongSelf.present(textAlertController(account: strongSelf.account, title: presentationData.strings.Contacts_PermissionsSuppressWarningTitle, text: presentationData.strings.Contacts_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Notifications_PermissionsKeepDisabled, action: {
                     ApplicationSpecificNotice.setContactsPermissionWarning(postbox: strongSelf.account.postbox, value: Int32(Date().timeIntervalSince1970))
                 })]), in: .window(.root))
             }
