@@ -595,6 +595,10 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     
     var loggedOut: (() -> Void)?
     
+    override public var description: String {
+        return "Network context: \(self.context)"
+    }
+    
     fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String) {
         self.queue = queue
         self.datacenterId = datacenterId

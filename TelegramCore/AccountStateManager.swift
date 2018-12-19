@@ -51,7 +51,13 @@ private final class UpdatedWebpageSubscriberContext {
 
 public final class AccountStateManager {
     private let queue = Queue()
-    private let account: Account
+    private let accountPeerId: PeerId
+    private let postbox: Postbox
+    private let network: Network
+    private let callSessionManager: CallSessionManager
+    private let addIsContactUpdates: ([(PeerId, Bool)]) -> Void
+    private let shouldKeepOnlinePresence: Signal<Bool, NoError>
+    
     private let peerInputActivityManager: PeerInputActivityManager
     private let auxiliaryMethods: AccountAuxiliaryMethods
     
@@ -123,8 +129,13 @@ public final class AccountStateManager {
     private let appliedQtsPromise = Promise<Int32?>(nil)
     private let appliedQtsDisposable = MetaDisposable()
     
-    init(account: Account, peerInputActivityManager: PeerInputActivityManager, auxiliaryMethods: AccountAuxiliaryMethods) {
-        self.account = account
+    init(accountPeerId: PeerId, postbox: Postbox, network: Network, callSessionManager: CallSessionManager, addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void, shouldKeepOnlinePresence: Signal<Bool, NoError>, peerInputActivityManager: PeerInputActivityManager, auxiliaryMethods: AccountAuxiliaryMethods) {
+        self.accountPeerId = accountPeerId
+        self.postbox = postbox
+        self.network = network
+        self.callSessionManager = callSessionManager
+        self.addIsContactUpdates = addIsContactUpdates
+        self.shouldKeepOnlinePresence = shouldKeepOnlinePresence
         self.peerInputActivityManager = peerInputActivityManager
         self.auxiliaryMethods = auxiliaryMethods
     }
@@ -139,13 +150,13 @@ public final class AccountStateManager {
     func reset() {
         self.queue.async {
             if self.updateService == nil {
-                self.updateService = UpdateMessageService(peerId: self.account.peerId)
+                self.updateService = UpdateMessageService(peerId: self.accountPeerId)
                 self.updateServiceDisposable.set(self.updateService!.pipe.signal().start(next: { [weak self] groups in
                     if let strongSelf = self {
                         strongSelf.addUpdateGroups(groups)
                     }
                 }))
-                self.account.network.mtProto.add(self.updateService)
+                self.network.mtProto.add(self.updateService)
             }
             self.operationDisposable.set(nil)
             self.replaceOperations(with: .pollDifference(AccountFinalStateEvents()))
@@ -157,8 +168,8 @@ public final class AccountStateManager {
             ]
             
             for (disposable, value, isMaxMessageId) in appliedValues {
-                let network = self.account.network
-                disposable.set((combineLatest(queue: self.queue, self.account.shouldKeepOnlinePresence.get(), value)
+                let network = self.network
+                disposable.set((combineLatest(queue: self.queue, self.shouldKeepOnlinePresence, value)
                 |> mapToSignal { shouldKeepOnlinePresence, value -> Signal<Int32, NoError> in
                     guard let value = value else {
                         return .complete()
@@ -342,11 +353,12 @@ public final class AccountStateManager {
             case let .pollDifference(currentEvents):
                 self.operationTimer?.invalidate()
                 self.currentIsUpdatingValue = true
-                let account = self.account
-                let mediaBox = account.postbox.mediaBox
-                let accountPeerId = account.peerId
+                let postbox = self.postbox
+                let network = self.network
+                let mediaBox = postbox.mediaBox
+                let accountPeerId = self.accountPeerId
                 let auxiliaryMethods = self.auxiliaryMethods
-                let signal = account.postbox.stateView()
+                let signal = postbox.stateView()
                 |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
                     if let state = view.state as? AuthorizedAccountState {
                         return .single(state)
@@ -357,31 +369,31 @@ public final class AccountStateManager {
                 |> take(1)
                 |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                     if let authorizedState = state.state {
-                        let request = account.network.request(Api.functions.updates.getDifference(flags: 1 << 0, pts: authorizedState.pts, ptsTotalLimit: 1000, date: authorizedState.date, qts: authorizedState.qts))
+                        let request = network.request(Api.functions.updates.getDifference(flags: 1 << 0, pts: authorizedState.pts, ptsTotalLimit: 1000, date: authorizedState.date, qts: authorizedState.qts))
                         |> retryRequest
                         
                         return request
                         |> mapToSignal { difference -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                             switch difference {
                                 case .differenceTooLong:
-                                    return accountStateReset(postbox: account.postbox, network: account.network, accountPeerId: account.peerId) |> mapToSignal { _ -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
+                                    return accountStateReset(postbox: postbox, network: network, accountPeerId: accountPeerId) |> mapToSignal { _ -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                         return .complete()
                                     } |> then(.single((nil, nil)))
                                 default:
-                                    return initialStateWithDifference(account, difference: difference)
+                                    return initialStateWithDifference(postbox: postbox, difference: difference)
                                     |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                         if state.initialState.state != authorizedState {
                                             Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
                                             return .single((nil, nil))
                                         } else {
-                                            return finalStateWithDifference(account: account, state: state, difference: difference)
+                                            return finalStateWithDifference(postbox: postbox, network: network, state: state, difference: difference)
                                                 |> mapToSignal { finalState -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                                                     if !finalState.state.preCachedResources.isEmpty {
                                                         for (resource, data) in finalState.state.preCachedResources {
-                                                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                                            mediaBox.storeResourceData(resource.id, data: data)
                                                         }
                                                     }
-                                                    return account.postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
+                                                    return postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
                                                         if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState) {
                                                             return (difference, replayedState)
                                                         } else {
@@ -394,10 +406,10 @@ public final class AccountStateManager {
                             }
                         }
                     } else {
-                        let appliedState = account.network.request(Api.functions.updates.getState())
+                        let appliedState = network.request(Api.functions.updates.getState())
                         |> retryRequest
                         |> mapToSignal { state in
-                            return account.postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
+                            return postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
                                 if let currentState = transaction.getState() as? AuthorizedAccountState {
                                     switch state {
                                         case let .state(pts, qts, date, seq, _):
@@ -468,22 +480,23 @@ public final class AccountStateManager {
                 operationTimer.start()
             case let .processUpdateGroups(groups):
                 self.operationTimer?.invalidate()
-                let account = self.account
+                let postbox = self.postbox
+                let network = self.network
                 let auxiliaryMethods = self.auxiliaryMethods
-                let accountPeerId = account.peerId
-                let mediaBox = account.postbox.mediaBox
+                let accountPeerId = self.accountPeerId
+                let mediaBox = postbox.mediaBox
                 let queue = self.queue
-                let signal = initialStateWithUpdateGroups(account, groups: groups)
+                let signal = initialStateWithUpdateGroups(postbox: postbox, groups: groups)
                 |> mapToSignal { state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
-                    return finalStateWithUpdateGroups(account, state: state, groups: groups)
+                    return finalStateWithUpdateGroups(postbox: postbox, network: network, state: state, groups: groups)
                     |> mapToSignal { finalState in
                         if !finalState.state.preCachedResources.isEmpty {
                             for (resource, data) in finalState.state.preCachedResources {
-                                account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                postbox.mediaBox.storeResourceData(resource.id, data: data)
                             }
                         }
                         
-                        return account.postbox.transaction { transaction -> AccountReplayedFinalState? in
+                        return postbox.transaction { transaction -> AccountReplayedFinalState? in
                             return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
                         }
                         |> map({ ($0, finalState) })
@@ -554,11 +567,11 @@ public final class AccountStateManager {
                             }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
-                                    strongSelf.account.callSessionManager.updateSession(call)
+                                    strongSelf.callSessionManager.updateSession(call)
                                 }
                             }
                             if !events.isContactUpdates.isEmpty {
-                                strongSelf.account.contactSyncManager.addIsContactUpdates(events.isContactUpdates)
+                                strongSelf.addIsContactUpdates(events.isContactUpdates)
                             }
                             if let updatedMaxMessageId = events.updatedMaxMessageId {
                                 strongSelf.appliedMaxMessageIdPromise.set(.single(updatedMaxMessageId))
@@ -589,7 +602,7 @@ public final class AccountStateManager {
                     let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
                 }
                 
-                let signal = self.account.postbox.transaction { transaction -> [([Message], PeerGroupId?, Bool)] in
+                let signal = self.postbox.transaction { transaction -> [([Message], PeerGroupId?, Bool)] in
                     var messageList: [([Message], PeerGroupId?, Bool)] = []
                     for id in events.addedIncomingMessageIds {
                         let (messages, notify, _, _) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
@@ -621,7 +634,7 @@ public final class AccountStateManager {
                     self.startFirstOperation()
                 } else {
                     self.operationTimer?.invalidate()
-                    let signal = self.account.network.request(Api.functions.help.test())
+                    let signal = self.network.request(Api.functions.help.test())
                     |> deliverOn(self.queue)
                     let completed: () -> Void = { [weak self] in
                         if let strongSelf = self {
@@ -651,14 +664,14 @@ public final class AccountStateManager {
             case let .replayAsynchronouslyBuiltFinalState(finalState, completion):
                 if !finalState.state.preCachedResources.isEmpty {
                     for (resource, data) in finalState.state.preCachedResources {
-                        self.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                        self.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     }
                 }
                 
-                let accountPeerId = self.account.peerId
-                let mediaBox = self.account.postbox.mediaBox
+                let accountPeerId = self.accountPeerId
+                let mediaBox = self.postbox.mediaBox
                 let auxiliaryMethods = self.auxiliaryMethods
-                let signal = self.account.postbox.transaction { transaction -> AccountReplayedFinalState? in
+                let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
                     return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
                     }
                 |> map({ ($0, finalState) })

@@ -122,7 +122,7 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
     } else if let map = media as? TelegramMediaMap {
         let input: Api.InputMedia
         if let liveBroadcastingTimeout = map.liveBroadcastingTimeout {
-            input = .inputMediaGeoLive(flags: 0, geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), period: liveBroadcastingTimeout)
+            input = .inputMediaGeoLive(flags: 1 << 1, geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), period: liveBroadcastingTimeout)
         } else if let venue = map.venue {
             input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
         } else {

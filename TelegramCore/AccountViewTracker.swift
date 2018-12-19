@@ -808,7 +808,7 @@ public final class AccountViewTracker {
                 
                 if context.subscribers.isEmpty {
                     if let account = self.account {
-                        context.disposable.set(keepPollingChannel(account: account, peerId: peerId, stateManager: account.stateManager).start())
+                        context.disposable.set(keepPollingChannel(postbox: account.postbox, network: account.network, peerId: peerId, stateManager: account.stateManager).start())
                     }
                 }
                 

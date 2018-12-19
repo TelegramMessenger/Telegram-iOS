@@ -398,8 +398,8 @@ private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<Pe
     return AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsWithNewMessages: peerIdsWithNewMessages, chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedMessageIds: associatedMessageIds, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
 }
 
-func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGroup]) -> Signal<AccountMutableState, NoError> {
-    return account.postbox.transaction { transaction -> AccountMutableState in
+func initialStateWithUpdateGroups(postbox: Postbox, groups: [UpdateGroup]) -> Signal<AccountMutableState, NoError> {
+    return postbox.transaction { transaction -> AccountMutableState in
         let peerIds = peerIdsFromUpdateGroups(groups)
         let activeChannelIds = activeChannelsFromUpdateGroups(groups)
         let associatedMessageIds = associatedMessageIdsFromUpdateGroups(groups)
@@ -409,8 +409,8 @@ func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGroup]) -> 
     }
 }
 
-func initialStateWithDifference(_ account: Account, difference: Api.updates.Difference) -> Signal<AccountMutableState, NoError> {
-    return account.postbox.transaction { transaction -> AccountMutableState in
+func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Difference) -> Signal<AccountMutableState, NoError> {
+    return postbox.transaction { transaction -> AccountMutableState in
         let peerIds = peerIdsFromDifference(difference)
         let activeChannelIds = activeChannelsFromDifference(difference)
         let associatedMessageIds = associatedMessageIdsFromDifference(difference)
@@ -419,7 +419,7 @@ func initialStateWithDifference(_ account: Account, difference: Api.updates.Diff
     }
 }
 
-func finalStateWithUpdateGroups(_ account: Account, state: AccountMutableState, groups: [UpdateGroup]) -> Signal<AccountFinalState, NoError> {
+func finalStateWithUpdateGroups(postbox: Postbox, network: Network, state: AccountMutableState, groups: [UpdateGroup]) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var hadReset = false
@@ -543,10 +543,10 @@ func finalStateWithUpdateGroups(_ account: Account, state: AccountMutableState, 
         collectedUpdates.append(Api.Update.updateDeleteChannelMessages(channelId: channelId, messages: [], pts: pts, ptsCount: ptsCount))
     }
     
-    return finalStateWithUpdates(account: account, state: updatedState, updates: collectedUpdates, shouldPoll: hadReset, missingUpdates: !ptsUpdatesAfterHole.isEmpty || !qtsUpdatesAfterHole.isEmpty || !seqGroupsAfterHole.isEmpty, shouldResetChannels: true, updatesDate: updatesDate)
+    return finalStateWithUpdates(postbox: postbox, network: network, state: updatedState, updates: collectedUpdates, shouldPoll: hadReset, missingUpdates: !ptsUpdatesAfterHole.isEmpty || !qtsUpdatesAfterHole.isEmpty || !seqGroupsAfterHole.isEmpty, shouldResetChannels: true, updatesDate: updatesDate)
 }
 
-func finalStateWithDifference(account: Account, state: AccountMutableState, difference: Api.updates.Difference) -> Signal<AccountFinalState, NoError> {
+func finalStateWithDifference(postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var messages: [Api.Message] = []
@@ -601,7 +601,7 @@ func finalStateWithDifference(account: Account, state: AccountMutableState, diff
         updatedState.addSecretMessages(encryptedMessages)
     }
     
-    return finalStateWithUpdates(account: account, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false, shouldResetChannels: true, updatesDate: nil)
+    return finalStateWithUpdates(postbox: postbox, network: network, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false, shouldResetChannels: true, updatesDate: nil)
 }
 
 private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
@@ -709,15 +709,15 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
     return result
 }
 
-private func finalStateWithUpdates(account: Account, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?) -> Signal<AccountFinalState, NoError> {
-    return account.network.currentGlobalTime
+private func finalStateWithUpdates(postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?) -> Signal<AccountFinalState, NoError> {
+    return network.currentGlobalTime
     |> take(1)
     |> mapToSignal { serverTime -> Signal<AccountFinalState, NoError> in
-        return finalStateWithUpdatesAndServerTime(account: account, state: state, updates: updates, shouldPoll: shouldPoll, missingUpdates: missingUpdates, shouldResetChannels: shouldResetChannels, updatesDate: updatesDate, serverTime: Int32(serverTime))
+        return finalStateWithUpdatesAndServerTime(postbox: postbox, network: network, state: state, updates: updates, shouldPoll: shouldPoll, missingUpdates: missingUpdates, shouldResetChannels: shouldResetChannels, updatesDate: updatesDate, serverTime: Int32(serverTime))
     }
 }
     
-private func finalStateWithUpdatesAndServerTime(account: Account, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?, serverTime: Int32) -> Signal<AccountFinalState, NoError> {
+private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?, serverTime: Int32) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var channelsToPoll = Set<PeerId>()
@@ -1261,7 +1261,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
             }
         }
         if !channelPeers.isEmpty {
-            let resetSignal = resetChannels(account, peers: channelPeers, state: updatedState)
+            let resetSignal = resetChannels(network: network, peers: channelPeers, state: updatedState)
                 |> map { resultState -> (AccountMutableState, Bool, Int32?) in
                     return (resultState, true, nil)
                 }
@@ -1272,7 +1272,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
     } else {
         for peerId in channelsToPoll {
             if let peer = updatedState.peers[peerId] {
-                pollChannelSignals.append(pollChannel(account, peer: peer, state: updatedState.branch()))
+                pollChannelSignals.append(pollChannel(network: network, peer: peer, state: updatedState.branch()))
             } else {
                 Logger.shared.log("State", "can't poll channel \(peerId): no peer found")
             }
@@ -1294,11 +1294,11 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
                 }
             }
         }
-        return resolveAssociatedMessages(account: account, state: finalState)
+        return resolveAssociatedMessages(network: network, state: finalState)
         |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-            return resolveMissingPeerNotificationSettings(account: account, state: resultingState)
+            return resolveMissingPeerNotificationSettings(network: network, state: resultingState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-                return resolveMissingPeerCloudReadStates(account: account, state: resultingState)
+                return resolveMissingPeerCloudReadStates(postbox: postbox, network: network, state: resultingState)
                 |> map { resultingState -> AccountFinalState in
                     return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError, incomplete: missingUpdates)
                 }
@@ -1308,7 +1308,7 @@ private func finalStateWithUpdatesAndServerTime(account: Account, state: Account
 }
 
 
-private func resolveAssociatedMessages(account: Account, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+private func resolveAssociatedMessages(network: Network, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     let missingMessageIds = state.referencedMessageIds.subtracting(state.storedMessages)
     if missingMessageIds.isEmpty {
         return .single(state)
@@ -1320,10 +1320,10 @@ private func resolveAssociatedMessages(account: Account, state: AccountMutableSt
             if let peer = state.peers[peerId] {
                 var signal: Signal<Api.messages.Messages, MTRpcError>?
                 if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-                    signal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                    signal = network.request(Api.functions.messages.getMessages(id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
                 } else if peerId.namespace == Namespaces.Peer.CloudChannel {
                     if let inputChannel = apiInputChannel(peer) {
-                        signal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                        signal = network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
                     }
                 }
                 if let signal = signal {
@@ -1373,7 +1373,7 @@ private func resolveAssociatedMessages(account: Account, state: AccountMutableSt
     }
 }
 
-private func resolveMissingPeerNotificationSettings(account: Account, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+private func resolveMissingPeerNotificationSettings(network: Network, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     var missingPeers: [PeerId: Api.InputPeer] = [:]
     
     for peerId in state.initialState.peerIdsWithNewMessages {
@@ -1392,7 +1392,7 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Acc
         Logger.shared.log("State", "will fetch notification settings for \(missingPeers.count) peers")
         var signals: [Signal<(PeerId, PeerNotificationSettings)?, NoError>] = []
         for (peerId, peer) in missingPeers {
-            let fetchSettings = account.network.request(Api.functions.account.getNotifySettings(peer: .inputNotifyPeer(peer: peer)))
+            let fetchSettings = network.request(Api.functions.account.getNotifySettings(peer: .inputNotifyPeer(peer: peer)))
                 |> map { settings -> (PeerId, PeerNotificationSettings)? in
                     return (peerId, TelegramPeerNotificationSettings(apiSettings: settings))
                 }
@@ -1402,19 +1402,19 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Acc
             signals.append(fetchSettings)
         }
         return combineLatest(signals)
-            |> map { peersAndSettings -> AccountMutableState in
-                var updatedState = state
-                for pair in peersAndSettings {
-                    if let (peerId, settings) = pair {
-                        updatedState.updateNotificationSettings(.peer(peerId), notificationSettings: settings)
-                    }
+        |> map { peersAndSettings -> AccountMutableState in
+            var updatedState = state
+            for pair in peersAndSettings {
+                if let (peerId, settings) = pair {
+                    updatedState.updateNotificationSettings(.peer(peerId), notificationSettings: settings)
                 }
-                return updatedState
             }
+            return updatedState
+        }
     }
 }
 
-private func resolveMissingPeerCloudReadStates(account: Account, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+private func resolveMissingPeerCloudReadStates(postbox: Postbox, network: Network, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     var missingPeers: [PeerId: Api.InputPeer] = [:]
     
     for peerId in state.initialState.peerIdsWithNewMessages {
@@ -1434,29 +1434,29 @@ private func resolveMissingPeerCloudReadStates(account: Account, state: AccountM
         
         var signals: [Signal<(PeerId, PeerReadState)?, NoError>] = []
         for (peerId, inputPeer) in missingPeers {
-            let fetchSettings = fetchPeerCloudReadState(network: account.network, postbox: account.postbox, peerId: peerId, inputPeer: inputPeer)
-                |> map { state -> (PeerId, PeerReadState)? in
-                    return state.flatMap { (peerId, $0) }
-                }
+            let fetchSettings = fetchPeerCloudReadState(network: network, postbox: postbox, peerId: peerId, inputPeer: inputPeer)
+            |> map { state -> (PeerId, PeerReadState)? in
+                return state.flatMap { (peerId, $0) }
+            }
             signals.append(fetchSettings)
         }
         return combineLatest(signals)
-            |> map { peersAndSettings -> AccountMutableState in
-                var updatedState = state
-                for pair in peersAndSettings {
-                    if let (peerId, state) = pair {
-                        if case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread) = state {
-                            updatedState.resetReadState(peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
-                        }
+        |> map { peersAndSettings -> AccountMutableState in
+            var updatedState = state
+            for pair in peersAndSettings {
+                if let (peerId, state) = pair {
+                    if case let .idBased(maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread) = state {
+                        updatedState.resetReadState(peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxIncomingReadId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: count, markedUnread: markedUnread)
                     }
                 }
-                return updatedState
+            }
+            return updatedState
         }
     }
 }
 
-func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Void, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
         if let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) {
             var chatStates: [PeerId: PeerChatState] = [:]
             if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
@@ -1468,11 +1468,11 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
                 peerNotificationSettings[peerId] = notificationSettings
             }
             let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsWithNewMessages: Set(), chatStates: chatStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
-            return pollChannel(account, peer: peer, state: initialState)
+            return pollChannel(network: network, peer: peer, state: initialState)
             |> mapToSignal { (finalState, _, timeout) -> Signal<Void, NoError> in
-                return resolveAssociatedMessages(account: account, state: finalState)
+                return resolveAssociatedMessages(network: network, state: finalState)
                 |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-                    return resolveMissingPeerNotificationSettings(account: account, state: resultingState)
+                    return resolveMissingPeerNotificationSettings(network: network, state: resultingState)
                     |> map { resultingState -> AccountFinalState in
                         return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false)
                     }
@@ -1493,14 +1493,14 @@ func keepPollingChannel(account: Account, peerId: PeerId, stateManager: AccountS
     |> restart
 }
 
-private func resetChannels(_ account: Account, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+private func resetChannels(network: Network, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     var inputPeers: [Api.InputDialogPeer] = []
     for peer in peers {
         if let inputPeer = apiInputPeer(peer) {
             inputPeers.append(.inputDialogPeer(peer: inputPeer))
         }
     }
-    return account.network.request(Api.functions.messages.getPeerDialogs(peers: inputPeers))
+    return network.request(Api.functions.messages.getPeerDialogs(peers: inputPeers))
     |> map(Optional.init)
     |> `catch` { error -> Signal<Api.messages.PeerDialogs?, NoError> in
         if error.errorDescription == "CHANNEL_PRIVATE" && inputPeers.count == 1 {
@@ -1633,14 +1633,14 @@ private func resetChannels(_ account: Account, peers: [Peer], state: AccountMuta
         
         // TODO: delete messages later than top
         
-        return resolveAssociatedMessages(account: account, state: updatedState)
+        return resolveAssociatedMessages(network: network, state: updatedState)
         |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
             return .single(resultingState)
         }
     }
 }
 
-private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
+private func pollChannel(network: Network, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
     if let inputChannel = apiInputChannel(peer) {
         let limit: Int32 = 20
         let pollPts: Int32
@@ -1649,7 +1649,7 @@ private func pollChannel(_ account: Account, peer: Peer, state: AccountMutableSt
         } else {
             pollPts = 1
         }
-        return (account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: pollPts, limit: limit))
+        return (network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: pollPts, limit: limit))
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.updates.ChannelDifference?, MTRpcError> in
             if error.errorDescription == "CHANNEL_PRIVATE" {

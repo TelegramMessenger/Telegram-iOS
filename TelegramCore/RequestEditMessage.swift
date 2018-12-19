@@ -193,38 +193,54 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
 }
 
 public func requestEditLiveLocation(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId, coordinate: (latitude: Double, longitude: Double)?) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    return postbox.transaction { transaction -> (Api.InputPeer, TelegramMediaMap)? in
+        guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
+            return nil
+        }
+        guard let message = transaction.getMessage(messageId) else {
+            return nil
+        }
+        for media in message.media {
+            if let media = media as? TelegramMediaMap {
+                return (inputPeer, media)
+            }
+        }
+        return nil
     }
-    |> mapToSignal { inputPeer -> Signal<Void, NoError> in
-        if let inputPeer = inputPeer {
-            return network.request(Api.functions.messages.editGeoLive(flags: coordinate == nil ? (1 << 0) : 0, peer: inputPeer, id: messageId.id, geoPoint: coordinate.flatMap({ Api.InputGeoPoint.inputGeoPoint(lat: $0.latitude, long: $0.longitude) })))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-                return .single(nil)
-            }
-            |> mapToSignal { updates -> Signal<Void, NoError> in
-                if let updates = updates {
-                    stateManager.addUpdates(updates)
-                }
-                if coordinate == nil {
-                    return postbox.transaction { transaction -> Void in
-                        transaction.updateMessage(messageId, update: { currentMessage in
-                            var storeForwardInfo: StoreMessageForwardInfo?
-                            if let forwardInfo = currentMessage.forwardInfo {
-                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                            }
-                            var updatedLocalTags = currentMessage.localTags
-                            updatedLocalTags.remove(.OutgoingLiveLocation)
-                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: updatedLocalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
-                        })
-                    }
-                } else {
-                    return .complete()
-                }
-            }
-        } else {
+    |> mapToSignal { inputPeerAndMedia -> Signal<Void, NoError> in
+        guard let (inputPeer, media) = inputPeerAndMedia else {
             return .complete()
+        }
+        let inputMedia: Api.InputMedia
+        if let coordinate = coordinate, let liveBroadcastingTimeout = media.liveBroadcastingTimeout {
+            inputMedia = .inputMediaGeoLive(flags: 1 << 1, geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude), period: liveBroadcastingTimeout)
+        } else {
+            inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(lat: media.latitude, long: media.longitude), period: nil)
+        }
+        return network.request(Api.functions.messages.editMessage(flags: 1 << 14, peer: inputPeer, id: messageId.id, message: nil, media: inputMedia, replyMarkup: nil, entities: nil))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Void, NoError> in
+            if let updates = updates {
+                stateManager.addUpdates(updates)
+            }
+            if coordinate == nil {
+                return postbox.transaction { transaction -> Void in
+                    transaction.updateMessage(messageId, update: { currentMessage in
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = currentMessage.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                        }
+                        var updatedLocalTags = currentMessage.localTags
+                        updatedLocalTags.remove(.OutgoingLiveLocation)
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: updatedLocalTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                    })
+                }
+            } else {
+                return .complete()
+            }
         }
     }
 }

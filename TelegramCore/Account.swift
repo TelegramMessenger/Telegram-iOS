@@ -124,6 +124,7 @@ private func makeExclusiveKeychain(id: AccountRecordId, postbox: Postbox) -> Key
         if enabled {
             return postbox.keychainEntryForKey(key)
         } else {
+            Logger.shared.log("Keychain", "couldn't get \(key) — not current")
             return nil
         }
     }, set: { (key, data) in
@@ -132,6 +133,8 @@ private func makeExclusiveKeychain(id: AccountRecordId, postbox: Postbox) -> Key
         }
         if enabled {
             postbox.setKeychainEntryForKey(key, value: data)
+        } else {
+            Logger.shared.log("Keychain", "couldn't set \(key) — not current")
         }
     }, remove: { key in
         let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
@@ -139,6 +142,8 @@ private func makeExclusiveKeychain(id: AccountRecordId, postbox: Postbox) -> Key
         }
         if enabled {
             postbox.removeKeychainEntryForKey(key)
+        } else {
+            Logger.shared.log("Keychain", "couldn't remove \(key) — not current")
         }
     })
 }
@@ -178,7 +183,7 @@ public class UnauthorizedAccount {
         })
         
         network.context.performBatchUpdates({
-            var datacenterIds: [Int] = [1, 2]
+            /*var datacenterIds: [Int] = [1, 2]
             if !testingEnvironment {
                 datacenterIds.append(contentsOf: [4])
             }
@@ -186,8 +191,8 @@ public class UnauthorizedAccount {
                 if network.context.authInfoForDatacenter(withId: id) == nil {
                     network.context.authInfoForDatacenter(withIdRequired: id, isCdn: false)
                 }
-            }
-            network.context.beginExplicitBackupAddressDiscovery()
+            }*/
+            //network.context.beginExplicitBackupAddressDiscovery()
         })
     }
     
@@ -726,17 +731,17 @@ private struct MasterNotificationKey {
     let data: Data
 }
 
-private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
-    if let key = account.masterNotificationKey.with({ $0 }) {
+private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNotificationKey?>, postbox: Postbox, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
+    if let key = masterNotificationKeyValue.with({ $0 }) {
         return .single(key)
     }
     
-    return account.postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey in
+    return postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey in
         if let value = transaction.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
             let authKeyHash = sha1Digest(value)
             let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
             let keyData = MasterNotificationKey(id: authKeyId, data: value)
-            let _ = account.masterNotificationKey.swap(keyData)
+            let _ = masterNotificationKeyValue.swap(keyData)
             return keyData
         } else {
             var secretData = Data(count: 256)
@@ -752,14 +757,14 @@ private func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> S
             let authKeyHash = sha1Digest(secretData)
             let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
             let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
-            let _ = account.masterNotificationKey.swap(keyData)
+            let _ = masterNotificationKeyValue.swap(keyData)
             return keyData
         }
     })
 }
 
 public func decryptedNotificationPayload(account: Account, data: Data) -> Signal<Data?, NoError> {
-    return masterNotificationsKey(account: account, ignoreDisabled: true)
+    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: true)
     |> map { secret -> Data? in
         if data.subdata(in: 0 ..< 8) != secret.id {
             return nil
@@ -891,11 +896,13 @@ public class Account {
         self.auxiliaryMethods = auxiliaryMethods
         
         self.peerInputActivityManager = PeerInputActivityManager()
-        self.stateManager = AccountStateManager(account: self, peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
-        self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager)
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, addUpdates: { [weak self] updates in
-            self?.stateManager.addUpdates(updates)
+            self?.stateManager?.addUpdates(updates)
         })
+        self.stateManager = AccountStateManager(accountPeerId: self.peerId, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in
+            self?.contactSyncManager?.addIsContactUpdates(updates)
+        }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
+        self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager)
         self.localInputActivityManager = PeerInputActivityManager()
         self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
         let _ = (postbox.transaction { transaction -> Void in
@@ -1002,6 +1009,8 @@ public class Account {
         
         self.networkTypeValue.set(currentNetworkType())
         
+        let masterNotificationKey = self.masterNotificationKey
+        
         let appliedNotificationToken = combineLatest(self.notificationToken.get(), self.notificationTokensVersionPromise.get())
         |> distinctUntilChanged(isEqual: { $0 == $1 })
         |> mapToSignal { token, _ -> Signal<Void, NoError> in
@@ -1018,7 +1027,7 @@ public class Account {
                 appSandbox = .boolTrue
             #endif
             
-            return masterNotificationsKey(account: self, ignoreDisabled: false)
+            return masterNotificationsKey(masterNotificationKeyValue: masterNotificationKey, postbox: postbox, ignoreDisabled: false)
             |> mapToSignal { secret -> Signal<Void, NoError> in
                 return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(/*data: secret.data*/), otherUids: []))
                 |> retryRequest
@@ -1045,7 +1054,7 @@ public class Account {
                 appSandbox = .boolTrue
             #endif
             
-            return masterNotificationsKey(account: self, ignoreDisabled: false)
+            return masterNotificationsKey(masterNotificationKeyValue: masterNotificationKey, postbox: postbox, ignoreDisabled: false)
             |> mapToSignal { secret -> Signal<Void, NoError> in
                 return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
                 |> retryRequest
