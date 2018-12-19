@@ -134,6 +134,7 @@ static void withContext(int32_t contextId, void (^f)(OngoingCallThreadLocalConte
     
     OngoingCallState _state;
     int32_t _signalBars;
+    NSData *_lastDerivedState;
 }
 
 - (void)controllerStateChanged:(int)state;
@@ -315,6 +316,8 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         
         tgvoip::VoIPController::TrafficStats stats;
         _controller->GetStats(&stats);
+        std::vector<uint8_t> derivedStateValue = _controller->GetPersistentState();
+        _lastDerivedState = [[NSData alloc] initWithBytes:derivedStateValue.data() length:derivedStateValue.size()];
         delete _controller;
         _controller = NULL;
         
@@ -345,6 +348,8 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     if (_controller != nil) {
         std::vector<uint8_t> derivedStateValue = _controller->GetPersistentState();
         return [[NSData alloc] initWithBytes:derivedStateValue.data() length:derivedStateValue.size()];
+    } else if (_lastDerivedState != nil) {
+        return _lastDerivedState;
     } else {
         return [NSData data];
     }
