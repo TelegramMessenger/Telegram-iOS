@@ -544,6 +544,8 @@ private func preparedContactListNodeTransition(account: Account, from fromEntrie
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     
+    
+    
     var indexSections: [String] = []
     if generateIndexSections {
         var existingSections = Set<unichar>()
@@ -714,11 +716,17 @@ final class ContactListNode: ASDisplayNode {
         contactsAuthorization.set(.single(.allowed)
         |> then(DeviceAccess.authorizationStatus(account: account, subject: .contacts)))
         
+        let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
+        let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
         let contactsWarningSuppressed = Promise<Bool>()
         contactsWarningSuppressed.set(.single(false)
-        |> then(account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())])
+        |> then(account.postbox.combinedView(keys: [warningKey, preferencesKey])
             |> map { combined -> Bool in
-                let timestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let synchronizeDeviceContacts: Bool = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
+                if !synchronizeDeviceContacts {
+                    return true
+                }
+                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
                     return true
                 } else {

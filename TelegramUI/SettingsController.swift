@@ -728,10 +728,11 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let notificationsWarningSuppressed = Promise<Bool>(true)
     if #available(iOSApplicationExtension 10.0, *) {
+        let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())
         notificationsWarningSuppressed.set(.single(true)
-        |> then(account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())])
+        |> then(account.postbox.combinedView(keys: [warningKey])
             |> map { combined -> Bool in
-                let timestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
                     return true
                 } else {

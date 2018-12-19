@@ -139,7 +139,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = text
                     }
                 case let poll as TelegramMediaPoll:
-                    messageText = "📊 \(strings.Message_Poll)"
+                    messageText = "📊 \(poll.text)"
                 default:
                     break
             }

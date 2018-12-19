@@ -63,9 +63,15 @@ public class ContactsController: ViewController {
         })
         
         if #available(iOSApplicationExtension 10.0, *) {
-            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(account: account, subject: .contacts), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())])
+            let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
+            let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
+            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(account: account, subject: .contacts), account.postbox.combinedView(keys: [warningKey, preferencesKey])
                 |> map { combined -> Bool in
-                    let timestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                    let synchronizeDeviceContacts: Bool = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
+                    if !synchronizeDeviceContacts {
+                        return true
+                    }
+                    let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                     if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
                         return true
                     } else {
@@ -125,8 +131,12 @@ public class ContactsController: ViewController {
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
                 let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
-                strongSelf.present(textAlertController(account: strongSelf.account, title: nil, text: presentationData.strings.Contacts_PermissionsSuppressWarning, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: strongSelf.account.postbox, value: Int32(Date().timeIntervalSince1970))
+                strongSelf.present(textAlertController(account: strongSelf.account, title: presentationData.strings.Contacts_PermissionsSuppressWarningTitle, text: presentationData.strings.Contacts_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Permissions_DataSettings, action: { [weak self] in
+                    if let strongSelf = self {
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(dataPrivacyController(account: strongSelf.account))
+                    }
+                }), TextAlertAction(type: .genericAction, title: presentationData.strings.Notifications_PermissionsKeepDisabled, action: {
+                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: strongSelf.account.postbox, value: Int32(Date().timeIntervalSince1970))
                 })]), in: .window(.root))
             }
         }

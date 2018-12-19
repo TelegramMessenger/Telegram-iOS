@@ -4111,7 +4111,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private func presentPollCreation() {
         if case let .peer(peerId) = self.chatLocation {
             self.present(createPollController(account: self.account, peerId: peerId, completion: { [weak self] message in
-                self?.sendMessages([message])
+                guard let strongSelf = self else {
+                    return
+                }
+                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                        })
+                    }
+                })
+                strongSelf.sendMessages([message.withUpdatedReplyToMessageId(replyMessageId)])
             }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }

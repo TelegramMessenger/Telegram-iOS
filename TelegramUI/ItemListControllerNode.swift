@@ -9,8 +9,13 @@ protocol ItemListNodeEntry: Comparable, Identifiable {
     associatedtype ItemGenerationArguments
     
     var section: ItemListSectionId { get }
+    var tag: ItemListItemTag? { get }
     
     func item(_ arguments: ItemGenerationArguments) -> ListViewItem
+}
+
+extension ItemListNodeEntry {
+    var tag: ItemListItemTag? { return nil }
 }
 
 private struct ItemListNodeEntryTransition {
@@ -378,7 +383,15 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
             }
             let focusItemTag = transition.focusItemTag
             let ensureVisibleItemTag = transition.ensureVisibleItemTag
-            self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, updateOpaqueState: ItemListNodeOpaqueState(mergedEntries: transition.mergedEntries), completion: { [weak self] _ in
+            var scrollToItem: ListViewScrollToItem?
+            if self.listNode.experimentalSnapScrollToItem, let ensureVisibleItemTag = ensureVisibleItemTag {
+                for i in 0 ..< transition.mergedEntries.count {
+                    if let tag = transition.mergedEntries[i].tag, tag.isEqual(to: ensureVisibleItemTag) {
+                        scrollToItem = ListViewScrollToItem(index: i, position: ListViewScrollPosition.visible, animated: true, curve: .Default(duration: nil), directionHint: .Down)
+                    }
+                }
+            }
+            self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, scrollToItem: scrollToItem, updateOpaqueState: ItemListNodeOpaqueState(mergedEntries: transition.mergedEntries), completion: { [weak self] _ in
                 if let strongSelf = self {
                     if !strongSelf.didSetReady {
                         strongSelf.didSetReady = true
@@ -406,9 +419,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                                     }
                                 }
                             }
-                            if applied {
-                                strongSelf.appliedFocusItemTag = focusItemTag
-                            }
+                            strongSelf.appliedFocusItemTag = focusItemTag
                         }
                     }
                     

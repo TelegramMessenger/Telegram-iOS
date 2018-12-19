@@ -119,6 +119,8 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
                 mappedPosition = .center
             case .bottom:
                 mappedPosition = .bottom
+            case .visible:
+                mappedPosition = .bottom
         }
         let scrollTransition: ContainedViewLayoutTransition
         if scrollToItem.animated {

@@ -578,12 +578,15 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     
     if #available(iOSApplicationExtension 10.0, *) {
         switch (authorizationStatus, warningSuppressed) {
-            case (.denied, _), (.unreachable, false):
+            case (.denied, _):
                 entries.append(.permissionInfo(presentationData.theme, presentationData.strings, authorizationStatus))
-                entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Permissions_NotificationsAllowInSettings_v0))
+                entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Notifications_PermissionsAllowInSettings))
+            case (.unreachable, false):
+                entries.append(.permissionInfo(presentationData.theme, presentationData.strings, authorizationStatus))
+                entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Notifications_PermissionsOpenSettings))
             case (.notDetermined, _):
                 entries.append(.permissionInfo(presentationData.theme, presentationData.strings, authorizationStatus))
-                entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Permissions_NotificationsAllow_v0))
+                entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Notifications_PermissionsAllow))
             default:
                 break
         }
@@ -672,7 +675,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         })
     }, suppressWarning: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(account: account, title: nil, text: presentationData.strings.Notifications_PermissionsSuppressWarning, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+        presentControllerImpl?(textAlertController(account: account, title: nil, text: presentationData.strings.Notifications_PermissionsSuppressWarningTitle, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
             ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: Int32(Date().timeIntervalSince1970))
         })]), nil)
     }, updateMessageAlerts: { value in
@@ -862,10 +865,11 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
     
     let notificationsWarningSuppressed = Promise<Bool>(true)
     if #available(iOSApplicationExtension 10.0, *) {
+        let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())
         notificationsWarningSuppressed.set(.single(true)
-        |> then(account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())])
+        |> then(account.postbox.combinedView(keys: [warningKey])
             |> map { combined -> Bool in
-                let timestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
                     return true
                 } else {

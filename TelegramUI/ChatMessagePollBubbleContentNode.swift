@@ -566,7 +566,11 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let votersString: String
                 if let totalVoters = poll?.results.totalVoters {
-                    votersString = item.presentationData.strings.MessagePoll_VotedCount(totalVoters)
+                    if totalVoters == 0 {
+                        votersString = item.presentationData.strings.MessagePoll_NoVotes
+                    } else {
+                        votersString = item.presentationData.strings.MessagePoll_VotedCount(totalVoters)
+                    }
                 } else {
                     votersString = " "
                 }
@@ -610,7 +614,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
                         totalVoterCount = totalVoters
-                        if didVote {
+                        if didVote || poll.isClosed {
                             for i in 0 ..< poll.options.count {
                                 inner: for optionVoters in voters {
                                     if optionVoters.opaqueIdentifier == poll.options[i].opaqueIdentifier {

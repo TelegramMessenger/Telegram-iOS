@@ -63,6 +63,20 @@ private enum CreatePollEntry: ItemListNodeEntry {
         }
     }
     
+    var tag: ItemListItemTag? {
+        switch self {
+            case .text:
+                return CreatePollEntryTag.text
+            case let .option(_, _, id, _, _, _, _, _):
+                return CreatePollEntryTag.option(id)
+            case let .addOption(_, _, _, id):
+                return CreatePollEntryTag.addOption(id)
+            default:
+                break
+        }
+        return nil
+    }
+    
     var stableId: Int {
         switch self {
             case .textHeader:
@@ -209,6 +223,7 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
         }
         ensureOptionVisibleImpl?(id)
     }, moveToNextOption: { id in
+        var resetFocusOptionId: Int?
         updateState { state in
             var state = state
             for i in 0 ..< state.options.count {
@@ -218,12 +233,24 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
                         state.focusOptionId = state.nextOptionId
                         state.nextOptionId += 1
                     } else {
-                        state.focusOptionId = state.options[i + 1].id
+                        if state.focusOptionId == state.options[i + 1].id {
+                            resetFocusOptionId = state.options[i + 1].id
+                            state.focusOptionId = -1
+                        } else {
+                            state.focusOptionId = state.options[i + 1].id
+                        }
                     }
                     break
                 }
             }
             return state
+        }
+        if let resetFocusOptionId = resetFocusOptionId {
+            updateState { state in
+                var state = state
+                state.focusOptionId = resetFocusOptionId
+                return state
+            }
         }
     }, addOption: {
         updateState { state in
@@ -382,15 +409,29 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
             }
             
             var resultItemNode: ListViewItemNode?
-            let _ = controller.frameForItemNode({ itemNode in
-                if let itemNode = itemNode as? ItemListItemNode {
-                    if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.option(id)) {
-                        resultItemNode = itemNode as? ListViewItemNode
-                        return true
+            let state = stateValue.with({ $0 })
+            if state.options.last?.id == id {
+                let _ = controller.frameForItemNode({ itemNode in
+                    if let itemNode = itemNode as? ItemListItemNode {
+                        if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.addOption(id)) {
+                            resultItemNode = itemNode as? ListViewItemNode
+                            return true
+                        }
                     }
-                }
-                return false
-            })
+                    return false
+                })
+            } else {
+                let _ = controller.frameForItemNode({ itemNode in
+                    if let itemNode = itemNode as? ItemListItemNode {
+                        if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.option(id)) {
+                            resultItemNode = itemNode as? ListViewItemNode
+                            return true
+                        }
+                    }
+                    return false
+                })
+            }
+                
             if let resultItemNode = resultItemNode {
                 controller.ensureItemNodeVisible(resultItemNode)
             }
@@ -457,6 +498,7 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
             return state
         }
     }
+    controller.experimentalSnapScrollToItem = true
     
     return controller
 }
