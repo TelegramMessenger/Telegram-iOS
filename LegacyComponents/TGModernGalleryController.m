@@ -619,15 +619,15 @@
                 _transitionInDisposable = [[[[transitionFromItemView readyForTransitionIn] take:1] timeout:1.0 onQueue:[SQueue mainQueue] orSignal:[SSignal single:@true]] startWithNext:^(__unused id next) {
                     __strong TGModernGalleryController *strongSelf = weakSelf;
                     if (strongSelf != nil) {
-                        if (strongSelf->_startedTransitionIn) {
-                            strongSelf->_startedTransitionIn();
-                        }
-                        
                         [strongSelf animateTransitionInFromView:transitionInFromView toView:transitionInToView toViewContentRect:transitionInToViewContentRect];
                         [strongSelf->_view transitionInWithDuration:0.15];
                         
                         [strongSelf animateStatusBarTransition:0.2];
                         strongSelf.view.hidden = false;
+                        
+                        if (strongSelf->_startedTransitionIn) {
+                            strongSelf->_startedTransitionIn();
+                        }
                     }
                 }];
             } else {
