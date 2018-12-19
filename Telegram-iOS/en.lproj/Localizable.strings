@@ -3643,7 +3643,7 @@ Unused sets are archived when you add more.";
 "ForwardedPolls_many" = "%@ forwarded polls";
 "ForwardedPolls_0" = "%@ forwarded polls";
 
-"Conversation.UnvotePoll" = "Unvote";
+"Conversation.UnvotePoll" = "Retract Vote";
 "Conversation.StopPoll" = "Stop Poll";
 "Conversation.StopPollConfirmationTitle" = "If you stop this poll now, nobody will be able to vote in it anymore. This action cannot be undone.";
 "Conversation.StopPollConfirmation" = "Stop Poll";
