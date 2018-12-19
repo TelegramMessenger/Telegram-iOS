@@ -79,7 +79,8 @@ class WebSearchGalleryController: ViewController {
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
     private let centralItemFooterContentNode = Promise<GalleryFooterContentNode?>()
     private let centralItemAttributesDisposable = DisposableSet();
-    
+
+    private let checkedDisposable = MetaDisposable()
     private var checkNode: GalleryNavigationCheckNode?
     
     private let _hiddenMedia = Promise<WebSearchGalleryEntry?>(nil)
@@ -160,6 +161,7 @@ class WebSearchGalleryController: ViewController {
     
     deinit {
         self.disposable.dispose()
+        self.checkedDisposable.dispose()
         self.centralItemAttributesDisposable.dispose()
     }
     
@@ -265,6 +267,30 @@ class WebSearchGalleryController: ViewController {
                 }
             }
         }
+        
+        let selectionState = self.controllerInteraction?.selectionState
+        let selectionUpdated = Signal<Void, NoError> { subscriber in
+            if let selectionState = selectionState {
+                let disposable = selectionState.selectionChangedSignal()!.start(next: { _ in
+                    subscriber.putNext(Void())
+                }, error: { _ in }, completed: {})!
+                return ActionDisposable {
+                    disposable.dispose()
+                }
+            } else {
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+        }
+        self.checkedDisposable.set((selectionUpdated
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            if let strongSelf = self, let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() {
+                let item = strongSelf.entries[centralItemNode.index]
+                if let checkNode = strongSelf.checkNode, let controllerInteraction = strongSelf.controllerInteraction, let selectionState = controllerInteraction.selectionState {
+                    checkNode.setIsChecked(selectionState.isIdentifierSelected(item.result.id), animated: true)
+                }
+            }
+        }))
         
         let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
             self?.didSetReady = true
