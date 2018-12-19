@@ -115,6 +115,7 @@ final class OngoingCallContext {
     let internalId: CallSessionInternalId
     
     private let queue = Queue()
+    private let postbox: Postbox
     private let callSessionManager: CallSessionManager
     
     private var contextRef: Unmanaged<OngoingCallThreadLocalContext>?
@@ -148,11 +149,12 @@ final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, logPath: String) {
+    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, logPath: String) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
         self.internalId = internalId
+        self.postbox = account.postbox
         self.callSessionManager = callSessionManager
         
         let queue = self.queue
@@ -166,7 +168,7 @@ final class OngoingCallContext {
                         break
                 }
             }
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), logPath: logPath)
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), logPath: logPath, derivedState: derivedState.data)
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
@@ -228,6 +230,10 @@ final class OngoingCallContext {
     func stop() {
         self.withContext { context in
             context.stop()
+            let derivedState = context.getDerivedState()
+            let _ = updateVoipDerivedStateInteractively(postbox: self.postbox, { _ in
+                return VoipDerivedState(data: derivedState)
+            }).start()
         }
     }
     

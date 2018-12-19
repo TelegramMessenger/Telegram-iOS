@@ -350,6 +350,9 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                             radioNode = ChatMessagePollOptionRadioNode()
                             node.addSubnode(radioNode)
                             node.radioNode = radioNode
+                            if animated {
+                                radioNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                            }
                         }
                         let radioSize: CGFloat = 22.0
                         radioNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: CGSize(width: radioSize, height: radioSize))
@@ -371,9 +374,9 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     }
                     if let image = node.percentageImage {
                         node.percentageNode.frame = CGRect(origin: CGPoint(x: leftInset - 7.0 - image.size.width, y: 12.0), size: image.size)
-                        if animated, let optionResult = optionResult {
+                        if animated && previousResult?.absolute != optionResult?.absolute {
                             let percentageDuration = 0.27
-                            let images = generatePercentageAnimationImages(presentationData: presentationData, incoming: incoming, from: previousResult?.absolute ?? 0.0, to: optionResult.absolute, duration: percentageDuration)
+                            let images = generatePercentageAnimationImages(presentationData: presentationData, incoming: incoming, from: previousResult?.absolute ?? 0.0, to: optionResult?.absolute ?? 0.0, duration: percentageDuration)
                             if !images.isEmpty {
                                 let animation = CAKeyframeAnimation(keyPath: "contents")
                                 animation.values = images.map { $0.cgImage! }

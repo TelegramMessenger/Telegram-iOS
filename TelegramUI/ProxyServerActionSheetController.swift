@@ -6,21 +6,22 @@ import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
 
-final class ProxyServerActionSheetController: ActionSheetController {
+public final class ProxyServerActionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
-    override var ready: Promise<Bool> {
+    override public var ready: Promise<Bool> {
         return self._ready
     }
     
     private var isDismissed: Bool = false
     
-    init(account: Account, server: ProxyServerSettings) {
+    convenience init(account: Account, server: ProxyServerSettings) {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
-        let strings = presentationData.strings
-        
+        self.init(theme: presentationData.theme, strings: presentationData.strings, postbox: account.postbox, network: account.network, server: server, presentationData: account.telegramApplicationContext.presentationData)
+    }
+    
+    public init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, network: Network, server: ProxyServerSettings, presentationData: Signal<PresentationData, NoError>?) {
         let sheetTheme = ActionSheetControllerTheme(presentationTheme: theme)
         super.init(theme: sheetTheme)
         
@@ -31,7 +32,7 @@ final class ProxyServerActionSheetController: ActionSheetController {
             items.append(ActionSheetTextItem(title: strings.SocksProxySetup_AdNoticeHelp))
         }
         items.append(ProxyServerInfoItem(strings: strings, server: server))
-        items.append(ProxyServerActionItem(account: account, strings: strings, server: server, dismiss: { [weak self] success in
+        items.append(ProxyServerActionItem(postbox: postbox, network: network, presentationTheme: theme, strings: strings, server: server, dismiss: { [weak self] success in
             guard let strongSelf = self, !strongSelf.isDismissed else {
                 return
             }
@@ -52,14 +53,16 @@ final class ProxyServerActionSheetController: ActionSheetController {
             ])
         ])
         
-        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
-            if let strongSelf = self {
-                strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
-            }
-        })
+        if let presentationData = presentationData {
+            self.presentationDisposable = presentationData.start(next: { [weak self] presentationData in
+                if let strongSelf = self {
+                    strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
+                }
+            })
+        }
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -190,14 +193,18 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
 }
 
 private final class ProxyServerActionItem: ActionSheetItem {
-    private let account: Account
+    private let postbox: Postbox
+    private let network: Network
+    private let presentationTheme: PresentationTheme
     private let strings: PresentationStrings
     private let server: ProxyServerSettings
     private let dismiss: (Bool) -> Void
     private let present: (ViewController, Any?) -> Void
     
-    init(account: Account, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
+    init(postbox: Postbox, network: Network, presentationTheme: PresentationTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.postbox = postbox
+        self.network = network
+        self.presentationTheme = presentationTheme
         self.strings = strings
         self.server = server
         self.dismiss = dismiss
@@ -205,7 +212,7 @@ private final class ProxyServerActionItem: ActionSheetItem {
     }
     
     func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
-        return ProxyServerActionItemNode(account: self.account, theme: theme, strings: self.strings, server: self.server, dismiss: self.dismiss, present: self.present)
+        return ProxyServerActionItemNode(postbox: self.postbox, network: self.network, presentationTheme: self.presentationTheme, theme: theme, strings: self.strings, server: self.server, dismiss: self.dismiss, present: self.present)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -213,7 +220,9 @@ private final class ProxyServerActionItem: ActionSheetItem {
 }
 
 private final class ProxyServerActionItemNode: ActionSheetItemNode {
-    private let account: Account
+    private let postbox: Postbox
+    private let network: Network
+    private let presentationTheme: PresentationTheme
     private let theme: ActionSheetControllerTheme
     private let strings: PresentationStrings
     private let server: ProxyServerSettings
@@ -227,9 +236,11 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     private let disposable = MetaDisposable()
     private var revertSettings: ProxySettings?
     
-    init(account: Account, theme: ActionSheetControllerTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
+    init(postbox: Postbox, network: Network, presentationTheme: PresentationTheme, theme: ActionSheetControllerTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.postbox = postbox
+        self.network = network
         self.theme = theme
+        self.presentationTheme = presentationTheme
         self.strings = strings
         self.server = server
         self.dismiss = dismiss
@@ -269,7 +280,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     deinit {
         self.disposable.dispose()
         if let revertSettings = self.revertSettings {
-            let _ = updateProxySettingsInteractively(postbox: self.account.postbox, network: self.account.network, { _ in
+            let _ = updateProxySettingsInteractively(postbox: self.postbox, network: self.network, { _ in
                 return revertSettings
             })
         }
@@ -295,8 +306,8 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     
     @objc private func buttonPressed() {
         let proxyServerSettings = self.server
-        let network = self.account.network
-        let _ = (self.account.postbox.transaction { transaction -> ProxySettings in
+        let network = self.network
+        let _ = (self.postbox.transaction { transaction -> ProxySettings in
             var currentSettings: ProxySettings?
             updateProxySettingsInteractively(transaction: transaction, network: network, { settings in
                 currentSettings = settings
@@ -320,7 +331,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
                 strongSelf.activityIndicator.isHidden = false
                 strongSelf.setNeedsLayout()
                 
-                let signal = strongSelf.account.network.connectionStatus
+                let signal = strongSelf.network.connectionStatus
                 |> filter { status in
                     switch status {
                         case let .online(proxyAddress):
@@ -345,16 +356,14 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
                         if value {
                             strongSelf.dismiss(true)
                         } else {
-                            let _ = updateProxySettingsInteractively(postbox: strongSelf.account.postbox, network: strongSelf.account.network, { _ in
+                            let _ = updateProxySettingsInteractively(postbox: strongSelf.postbox, network: strongSelf.network, { _ in
                                 return previousSettings
                             })
                             strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: strongSelf.theme.controlAccentColor)
                             strongSelf.buttonNode.isUserInteractionEnabled = true
                             strongSelf.setNeedsLayout()
                             
-                            let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
-                            
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.SocksProxySetup_FailedToConnect, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationTheme), title: nil, text: strongSelf.strings.SocksProxySetup_FailedToConnect, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
                         }
                     }
                 }))
