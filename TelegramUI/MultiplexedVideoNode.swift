@@ -58,7 +58,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
     }
     private var displayItems: [VisibleVideoItem] = []
     private var visibleThumbnailLayers: [MediaId: SoftwareVideoThumbnailLayer] = [:]
-    private var visibleProgressNodes: [MediaId: RadialStatusNode] = [:]
+    //private var visibleProgressNodes: [MediaId: RadialStatusNode] = [:]
     private var statusDisposable: [MediaId : MetaDisposable] = [:]
 
     private var visibleLayers: [MediaId: (SoftwareVideoLayerFrameManager, SampleBufferLayer)] = [:]
@@ -230,7 +230,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 continue
             }
             
-            if self.statusDisposable[item.fileReference.media.fileId] == nil {
+            /*if self.statusDisposable[item.fileReference.media.fileId] == nil {
                 let statusDisposable = MetaDisposable()
                 let updatedStatusSignal = account.postbox.mediaBox.resourceStatus(item.fileReference.media.resource)
                 self.statusDisposable[item.fileReference.media.fileId] = statusDisposable
@@ -249,7 +249,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                             state = .none
                     }
                     
-                    if let statusNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
+                    /*if let statusNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
                         if state == .none {
                             self.visibleProgressNodes.removeValue(forKey: item.fileReference.media.fileId)
                             statusNode.transitionToState(state, completion: { [weak statusNode] in
@@ -259,11 +259,11 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                             statusNode.isHidden = false
                             statusNode.transitionToState(state, completion: {})
                         }
-                    }
+                    }*/
                 }))
-            }
+            }*/
             
-            if let visibleProgressNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
+            /*if let visibleProgressNode = self.visibleProgressNodes[item.fileReference.media.fileId] {
                 if ensureFrames {
                     visibleProgressNode.frame = progressFrame
                 }
@@ -273,7 +273,7 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
                 statusNode.frame = progressFrame
                 self.visibleProgressNodes[item.fileReference.media.fileId] = statusNode
                 self.addSubnode(statusNode)
-            }
+            }*/
             
             visibleIds.insert(item.fileReference.media.fileId)
             
@@ -310,12 +310,12 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
             }
         }
         
-        var removeProgressIds: [MediaId] = []
+        /*var removeProgressIds: [MediaId] = []
         for id in self.visibleProgressNodes.keys {
             if !visibleIds.contains(id) {
                 removeProgressIds.append(id)
             }
-        }
+        }*/
         
         for id in removeIds {
             let (_, layerHolder) = self.visibleLayers[id]!
@@ -329,12 +329,12 @@ final class MultiplexedVideoNode: UIScrollView, UIScrollViewDelegate {
             self.visibleThumbnailLayers.removeValue(forKey: id)
         }
         
-        for id in removeProgressIds {
+        /*for id in removeProgressIds {
             let progressNode = self.visibleProgressNodes[id]!
             progressNode.removeFromSupernode()
             self.visibleProgressNodes.removeValue(forKey: id)
             self.statusDisposable.removeValue(forKey: id)?.dispose()
-        }
+        }*/
     }
     
     private func updateVisibleItems(transition: ContainedViewLayoutTransition = .immediate) {
