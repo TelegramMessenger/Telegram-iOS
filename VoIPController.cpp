@@ -1989,6 +1989,10 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 		}
 	}
 
+#ifdef LOG_PACKETS
+	LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, packet.length, GetPacketTypeString(type).c_str());
+#endif
+
 	//LOGV("acks: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", lastRemoteAckSeq, remoteAcks[0], remoteAcks[1], remoteAcks[2], remoteAcks[3], remoteAcks[4], remoteAcks[5], remoteAcks[6], remoteAcks[7]);
 	//LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", lastRemoteSeq, recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
 	//LOGI("RTT = %.3lf", GetAverageRTT());
@@ -2265,6 +2269,9 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 	if(type==PKT_PONG){
 		if(packetInnerLen>=4){
 			uint32_t pingSeq=(uint32_t) in.ReadInt32();
+#ifdef LOG_PACKETS
+			LOGD("Received pong for ping in seq %u", pingSeq);
+#endif
 			if(pingSeq==srcEndpoint.lastPingSeq){
 				srcEndpoint.rtts.Add(GetCurrentTime()-srcEndpoint.lastPingTime);
 				srcEndpoint.averageRTT=srcEndpoint.rtts.NonZeroAverage();
@@ -2615,6 +2622,9 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint& ep, P
 		}
 	}
 	//LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
+#ifdef LOG_PACKETS
+	LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s", ep.GetAddress().ToString().c_str(), ep.port, srcPacket.seq, out.GetLength(), GetPacketTypeString(srcPacket.type).c_str());
+#endif
 
 	NetworkPacket pkt={0};
 	pkt.address=&ep.GetAddress();
@@ -2668,6 +2678,34 @@ std::string VoIPController::NetworkTypeToString(int type){
 		default:
 			return "unknown";
 	}
+}
+
+std::string VoIPController::GetPacketTypeString(unsigned char type){
+	switch(type){
+		case PKT_INIT:
+			return "init";
+		case PKT_INIT_ACK:
+			return "init_ack";
+		case PKT_STREAM_STATE:
+			return "stream_state";
+		case PKT_STREAM_DATA:
+			return "stream_data";
+		case PKT_PING:
+			return "ping";
+		case PKT_PONG:
+			return "pong";
+		case PKT_LAN_ENDPOINT:
+			return "lan_endpoint";
+		case PKT_NETWORK_CHANGED:
+			return "network_changed";
+		case PKT_NOP:
+			return "nop";
+		case PKT_STREAM_EC:
+			return "stream_ec";
+	}
+    char buf[255];
+	snprintf(buf, sizeof(buf), "unknown(%u)", type);
+	return string(buf);
 }
 
 void VoIPController::AddIPv6Relays(){
@@ -3431,6 +3469,8 @@ void VoIPController::UpdateQueuedPackets(){
 }
 
 void VoIPController::SendNopPacket(){
+	if(state!=STATE_ESTABLISHED)
+		return;
 	SendOrEnqueuePacket(PendingOutgoingPacket{
 			/*.seq=*/(firstSentPing=GenerateOutSeq()),
 			/*.type=*/PKT_NOP,

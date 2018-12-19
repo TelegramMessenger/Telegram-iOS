@@ -13,6 +13,7 @@
 #include "audio/AudioOutput.h"
 #include "audio/AudioInput.h"
 #include "logging.h"
+#include "VoIPServerConfig.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -42,12 +43,34 @@ EchoCanceller::EchoCanceller(bool enableAEC, bool enableNS, bool enableAGC){
 	config.high_pass_filter.enabled = enableAEC;
 	config.gain_controller2.enabled = enableAGC;
 	apm->ApplyConfig(config);
-
-	apm->noise_suppression()->set_level(webrtc::NoiseSuppression::Level::kHigh);
+	
+	webrtc::NoiseSuppression::Level nsLevel;
+#ifdef __APPLE__
+	switch(ServerConfig::GetSharedInstance()->GetInt("webrtc_ns_level_vpio", 0)){
+#else
+	switch(ServerConfig::GetSharedInstance()->GetInt("webrtc_ns_level", 2)){
+#endif
+		case 0:
+			nsLevel=webrtc::NoiseSuppression::Level::kLow;
+			break;
+		case 1:
+			nsLevel=webrtc::NoiseSuppression::Level::kModerate;
+			break;
+		case 3:
+			nsLevel=webrtc::NoiseSuppression::Level::kVeryHigh;
+			break;
+		case 2:
+		default:
+			nsLevel=webrtc::NoiseSuppression::Level::kHigh;
+			break;
+	}
+	apm->noise_suppression()->set_level(nsLevel);
 	apm->noise_suppression()->Enable(enableNS);
 	if(enableAGC){
 		apm->gain_control()->set_mode(webrtc::GainControl::Mode::kAdaptiveDigital);
-		apm->gain_control()->set_target_level_dbfs(9);
+		apm->gain_control()->set_target_level_dbfs(ServerConfig::GetSharedInstance()->GetInt("webrtc_agc_target_level", 9));
+		apm->gain_control()->enable_limiter(ServerConfig::GetSharedInstance()->GetBoolean("webrtc_agc_enable_limiter", true));
+		apm->gain_control()->set_compression_gain_db(ServerConfig::GetSharedInstance()->GetInt("webrtc_agc_compression_gain", 20));
 	}
 	apm->voice_detection()->set_likelihood(webrtc::VoiceDetection::Likelihood::kVeryLowLikelihood);
 

@@ -73,11 +73,17 @@ CellularCarrierInfo DarwinSpecific::GetCarrierInfo(){
 #if TARGET_OS_IOS
 	CTTelephonyNetworkInfo* netinfo=[CTTelephonyNetworkInfo new];
 	CTCarrier* carrier=[netinfo subscriberCellularProvider];
-	if(carrier && [carrier carrierName]){
-    	info.name=[[carrier carrierName] cStringUsingEncoding:NSUTF8StringEncoding];
-    	info.mcc=[[carrier mobileCountryCode] cStringUsingEncoding:NSUTF8StringEncoding];
-    	info.mnc=[[carrier mobileNetworkCode] cStringUsingEncoding:NSUTF8StringEncoding];
-    	info.countryCode=[[[carrier isoCountryCode] uppercaseString] cStringUsingEncoding:NSUTF8StringEncoding];
+	if(carrier){
+		NSString* name=[carrier carrierName];
+		NSString* mcc=[carrier mobileCountryCode];
+		NSString* mnc=[carrier mobileNetworkCode];
+		NSString* countryCode=[carrier isoCountryCode];
+		if(name && mcc && mnc && countryCode){
+        	info.name=[name cStringUsingEncoding:NSUTF8StringEncoding];
+        	info.mcc=[mcc cStringUsingEncoding:NSUTF8StringEncoding];
+        	info.mnc=[mnc cStringUsingEncoding:NSUTF8StringEncoding];
+        	info.countryCode=[[countryCode uppercaseString] cStringUsingEncoding:NSUTF8StringEncoding];
+		}
 	}
 #endif
 	return info;

@@ -39,7 +39,7 @@
 #include "MessageThread.h"
 #include "utils.h"
 
-#define LIBTGVOIP_VERSION "2.4"
+#define LIBTGVOIP_VERSION "2.4.1"
 
 #ifdef _WIN32
 #undef GetCurrentTime
@@ -403,13 +403,11 @@ namespace tgvoip{
 			double ackTime;
 		};
 		struct PendingOutgoingPacket{
-#if defined(_MSC_VER) && _MSC_VER <= 1800 // VS2013 doesn't support auto-generating move constructors
-			//TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
 			PendingOutgoingPacket(uint32_t seq, unsigned char type, size_t len, Buffer&& data, int64_t endpoint){
 				this->seq=seq;
 				this->type=type;
 				this->len=len;
-				this->data=data;
+				this->data=std::move(data);
 				this->endpoint=endpoint;
 			}
 			PendingOutgoingPacket(PendingOutgoingPacket&& other){
@@ -419,7 +417,17 @@ namespace tgvoip{
 				data=std::move(other.data);
 				endpoint=other.endpoint;
 			}
-#endif
+			PendingOutgoingPacket& operator=(PendingOutgoingPacket&& other){
+				if(this!=&other){
+					seq=other.seq;
+					type=other.type;
+					len=other.len;
+					data=std::move(other.data);
+					endpoint=other.endpoint;
+				}
+				return *this;
+			}
+			TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
 			uint32_t seq;
 			unsigned char type;
 			size_t len;
@@ -553,6 +561,7 @@ namespace tgvoip{
 		void SendNopPacket();
 		void TickJitterBufferAngCongestionControl();
 		void ResetUdpAvailability();
+		std::string GetPacketTypeString(unsigned char type);
 
 		int state;
 		std::map<int64_t, Endpoint> endpoints;
