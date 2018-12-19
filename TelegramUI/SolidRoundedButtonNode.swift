@@ -163,7 +163,13 @@ final class SolidRoundedButtonGlossNode : ASDisplayNode {
     }
     
     private func displayLinkEvent() {
-        var newProgress = self.progress + 0.009
+        let delta: CGFloat
+        if self.progress < 0.05 || self.progress > 0.95 {
+            delta = 0.001
+        } else {
+            delta = 0.009
+        }
+        var newProgress = self.progress + delta
         if newProgress > 1.0 {
             newProgress = 0.0
         }

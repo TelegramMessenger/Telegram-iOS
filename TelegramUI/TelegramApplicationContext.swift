@@ -29,11 +29,13 @@ public final class TelegramApplicationBindings {
     public let openSettings: () -> Void
     public let openAppStorePage: () -> Void
     public let registerForNotifications: (@escaping (Bool) -> Void) -> Void
+    public let requestSiriAuthorization: (@escaping (Bool) -> Void) -> Void
+    public let siriAuthorization: () -> AccessType
     public let getWindowHost: () -> WindowHost?
     public let presentNativeController: (UIViewController) -> Void
     public let dismissNativeController: () -> Void
     
-    public init(isMainApp: Bool, containerPath: String, appSpecificScheme: String, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void, registerForNotifications: @escaping (@escaping (Bool) -> Void) -> Void, getWindowHost: @escaping () -> WindowHost?, presentNativeController: @escaping (UIViewController) -> Void, dismissNativeController: @escaping () -> Void) {
+    public init(isMainApp: Bool, containerPath: String, appSpecificScheme: String, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void, registerForNotifications: @escaping (@escaping (Bool) -> Void) -> Void, requestSiriAuthorization: @escaping (@escaping (Bool) -> Void) -> Void, siriAuthorization: @escaping () -> AccessType, getWindowHost: @escaping () -> WindowHost?, presentNativeController: @escaping (UIViewController) -> Void, dismissNativeController: @escaping () -> Void) {
         self.isMainApp = isMainApp
         self.containerPath = containerPath
         self.appSpecificScheme = appSpecificScheme
@@ -49,6 +51,8 @@ public final class TelegramApplicationBindings {
         self.openSettings = openSettings
         self.openAppStorePage = openAppStorePage
         self.registerForNotifications = registerForNotifications
+        self.requestSiriAuthorization = requestSiriAuthorization
+        self.siriAuthorization = siriAuthorization
         self.presentNativeController = presentNativeController
         self.dismissNativeController = dismissNativeController
         self.getWindowHost = getWindowHost
