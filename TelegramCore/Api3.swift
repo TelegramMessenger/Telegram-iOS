@@ -2267,23 +2267,6 @@ extension Api {
                     })
                 }
             
-                static func editGeoLive(flags: Int32, peer: Api.InputPeer, id: Int32, geoPoint: Api.InputGeoPoint?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1701695410)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {geoPoint!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "messages.editGeoLive", parameters: [("flags", flags), ("peer", peer), ("id", id), ("geoPoint", geoPoint)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
                 static func uploadMedia(peer: Api.InputPeer, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1369162417)

@@ -15488,7 +15488,7 @@ extension Api {
         case messageActionBotAllowed(domain: String)
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSecureValuesSent(types: [Api.SecureValueType])
-        case messageActionContactSignUp(flags: Int32)
+        case messageActionContactSignUp
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -15654,11 +15654,11 @@ extension Api {
                         item.serialize(buffer, true)
                     }
                     break
-                case .messageActionContactSignUp(let flags):
+                case .messageActionContactSignUp:
                     if boxed {
-                        buffer.appendInt32(1894744724)
+                        buffer.appendInt32(-202219658)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    
                     break
     }
     }
@@ -15709,8 +15709,8 @@ extension Api {
                 return ("messageActionSecureValuesSentMe", [("values", values), ("credentials", credentials)])
                 case .messageActionSecureValuesSent(let types):
                 return ("messageActionSecureValuesSent", [("types", types)])
-                case .messageActionContactSignUp(let flags):
-                return ("messageActionContactSignUp", [("flags", flags)])
+                case .messageActionContactSignUp:
+                return ("messageActionContactSignUp", [])
     }
     }
     
@@ -15977,15 +15977,7 @@ extension Api {
             }
         }
         static func parse_messageActionContactSignUp(_ reader: BufferReader) -> MessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionContactSignUp(flags: _1!)
-            }
-            else {
-                return nil
-            }
+            return Api.MessageAction.messageActionContactSignUp
         }
     
     }
