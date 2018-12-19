@@ -623,11 +623,11 @@
                             strongSelf->_startedTransitionIn();
                         }
                         
-                        strongSelf.view.hidden = false;
                         [strongSelf animateTransitionInFromView:transitionInFromView toView:transitionInToView toViewContentRect:transitionInToViewContentRect];
                         [strongSelf->_view transitionInWithDuration:0.15];
                         
                         [strongSelf animateStatusBarTransition:0.2];
+                        strongSelf.view.hidden = false;
                     }
                 }];
             } else {
