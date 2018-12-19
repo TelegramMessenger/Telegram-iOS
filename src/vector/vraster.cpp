@@ -355,12 +355,17 @@ class RleTaskScheduler {
         SW_FT_Stroker_Done(stroker);
     }
 
-public:
     RleTaskScheduler()
     {
         for (unsigned n = 0; n != _count; ++n) {
             _threads.emplace_back([&, n] { run(n); });
         }
+    }
+public:
+    static RleTaskScheduler& instance()
+    {
+         static RleTaskScheduler singleton;
+         return singleton;
     }
 
     ~RleTaskScheduler()
@@ -412,8 +417,6 @@ public:
     }
 };
 
-static RleTaskScheduler raster_scheduler;
-
 void VRaster::generateFillInfo(RleShare &promise, VPath &&path, VRle &&rle,
                                             FillRule fillRule, const VRect &clip)
 {
@@ -421,7 +424,7 @@ void VRaster::generateFillInfo(RleShare &promise, VPath &&path, VRle &&rle,
         promise->set_value(VRle());
         return;
     }
-    return raster_scheduler.fillRle(promise, std::move(path), std::move(rle), fillRule, clip);
+    return RleTaskScheduler::instance().fillRle(promise, std::move(path), std::move(rle), fillRule, clip);
 }
 
 void VRaster::generateStrokeInfo(RleShare &promise, VPath &&path, VRle &&rle, CapStyle cap,
@@ -432,7 +435,7 @@ void VRaster::generateStrokeInfo(RleShare &promise, VPath &&path, VRle &&rle, Ca
         promise->set_value(VRle());
         return;
     }
-    return raster_scheduler.strokeRle(promise, std::move(path), std::move(rle), cap, join, width, meterLimit, clip);
+    return RleTaskScheduler::instance().strokeRle(promise, std::move(path), std::move(rle), cap, join, width, meterLimit, clip);
 }
 
 V_END_NAMESPACE

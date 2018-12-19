@@ -120,12 +120,18 @@ class RenderTaskScheduler {
         }
     }
 
-public:
     RenderTaskScheduler()
     {
         for (unsigned n = 0; n != _count; ++n) {
             _threads.emplace_back([&, n] { run(n); });
         }
+    }
+
+public:
+    static RenderTaskScheduler& instance()
+    {
+         static RenderTaskScheduler singleton;
+         return singleton;
     }
 
     ~RenderTaskScheduler()
@@ -159,7 +165,6 @@ public:
         return async(std::move(task));
     }
 };
-static RenderTaskScheduler render_scheduler;
 
 /**
  * \breif Brief abput the Api.
@@ -236,7 +241,7 @@ Animation::renderTree(size_t frameNo, size_t width, size_t height) const
 
 std::future<Surface> Animation::render(size_t frameNo, Surface surface)
 {
-    return render_scheduler.render(d.get(), frameNo, std::move(surface));
+    return RenderTaskScheduler::instance().render(d.get(), frameNo, std::move(surface));
 }
 
 void Animation::renderSync(size_t frameNo, Surface surface)
