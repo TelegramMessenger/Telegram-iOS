@@ -369,6 +369,15 @@ namespace tgvoip{
 		static int32_t GetConnectionMaxLayer(){
 			return 92;
 		};
+		/**
+		 * Get the persistable state of the library, like proxy capabilities, to save somewhere on the disk. Call this at the end of the call.
+		 * Using this will speed up the connection establishment in some cases.
+		 */
+		std::vector<uint8_t> GetPersistentState();
+		/**
+		 * Load the persistable state. Call this before starting the call.
+		 */
+		void SetPersistentState(std::vector<uint8_t> state);
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 		void SetAudioDataCallbacks(std::function<void(int16_t*, size_t)> input, std::function<void(int16_t*, size_t)> output);
@@ -692,10 +701,15 @@ namespace tgvoip{
 		std::function<void(int16_t*, size_t)> audioInputDataCallback;
 		std::function<void(int16_t*, size_t)> audioOutputDataCallback;
 #endif
-
+		
 		video::VideoSource* videoSource=NULL;
 		video::VideoRenderer* videoRenderer=NULL;
 		double firstVideoFrameTime=0.0;
+		
+		/*** persistable state values ***/
+		bool proxySupportsUDP=true;
+		bool proxySupportsTCP=true;
+		std::string lastTestedProxyServer="";
 
 		/*** server config values ***/
 		uint32_t maxAudioBitrate;

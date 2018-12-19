@@ -845,6 +845,46 @@ void VoIPController::SetConfig(const Config& cfg){
 	UpdateAudioBitrateLimit();
 }
 
+void VoIPController::SetPersistentState(vector<uint8_t> state){
+	using namespace json11;
+	
+	if(state.empty())
+		return;
+	string jsonErr;
+	string json=string(state.begin(), state.end());
+	Json _obj=Json::parse(json, jsonErr);
+	if(!jsonErr.empty()){
+		LOGE("Error parsing persistable state: %s", jsonErr.c_str());
+		return;
+	}
+	Json::object obj=_obj.object_items();
+	if(obj.find("proxy")!=obj.end()){
+		Json::object proxy=obj["proxy"].object_items();
+		lastTestedProxyServer=proxy["server"].string_value();
+		proxySupportsUDP=proxy["udp"].bool_value();
+		proxySupportsTCP=proxy["tcp"].bool_value();
+	}
+}
+
+vector<uint8_t> VoIPController::GetPersistentState(){
+	using namespace json11;
+	
+	Json::object obj=Json::object{
+		{"ver", 1},
+	};
+	if(proxyProtocol==PROXY_SOCKS5){
+		char pbuf[128];
+		snprintf(pbuf, sizeof(pbuf), "%s:%u", proxyAddress.c_str(), proxyPort);
+    	obj.insert({"proxy", Json::object{
+    		{"server", string(pbuf)},
+			{"udp", proxySupportsUDP},
+			{"tcp", proxySupportsTCP}
+    	}});
+	}
+	const char* jstr=Json(obj).dump().c_str();
+	return vector<uint8_t>(jstr, jstr+strlen(jstr));
+}
+
 #pragma mark - Internal intialization
 
 void VoIPController::InitializeTimers(){
@@ -877,8 +917,6 @@ void VoIPController::InitializeTimers(){
 		}, 0.1, 0.1);
 	}
 
-	udpConnectivityState=UDP_PING_PENDING;
-	udpPingTimeoutID=messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.0, 0.5);
 	messageThread.Post(std::bind(&VoIPController::SendRelayPings, this), 0.0, 2.0);
 }
 
@@ -1373,6 +1411,14 @@ void VoIPController::InitUDPProxy(){
 		delete udpSocket;
 		udpSocket=realUdpSocket;
 	}
+	char sbuf[128];
+	snprintf(sbuf, sizeof(sbuf), "%s:%u", proxyAddress.c_str(), proxyPort);
+	string proxyHostPort(sbuf);
+	if(proxyHostPort==lastTestedProxyServer && !proxySupportsUDP){
+		LOGI("Proxy does not support UDP - using UDP directly instead");
+		return;
+	}
+	
 	NetworkSocket* tcp=NetworkSocket::Create(PROTO_TCP);
 	tcp->Connect(resolvedProxyAddress, proxyPort);
 	
@@ -1410,12 +1456,11 @@ void VoIPController::InitUDPProxy(){
 	if(udpProxy->IsFailed()){
 		udpProxy->Close();
 		delete udpProxy;
-		useTCP=true;
-		useUDP=false;
-		udpConnectivityState=UDP_NOT_AVAILABLE;
+		proxySupportsUDP=false;
 	}else{
 		udpSocket=udpProxy;
 	}
+	ResetUdpAvailability();
 }
 
 void VoIPController::RunRecvThread(){
@@ -1429,6 +1474,9 @@ void VoIPController::RunRecvThread(){
 			SetState(STATE_FAILED);
 			return;
 		}
+	}else{
+		udpConnectivityState=UDP_PING_PENDING;
+		udpPingTimeoutID=messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.0, 0.5);
 	}
 	while(runReceiver){
 		
@@ -3144,6 +3192,17 @@ void VoIPController::EvaluateUdpPingResults(){
 	else
 		avgPongs=0.0;
 	LOGI("UDP ping reply count: %.2f", avgPongs);
+	if(avgPongs==0.0 && proxyProtocol==PROXY_SOCKS5 && udpSocket!=realUdpSocket){
+		LOGI("Proxy does not let UDP through, closing proxy connection and using UDP directly");
+		NetworkSocket* proxySocket=udpSocket;
+		proxySocket->Close();
+		udpSocket=realUdpSocket;
+		selectCanceller->CancelSelect();
+		delete proxySocket;
+		proxySupportsUDP=false;
+		ResetUdpAvailability();
+		return;
+	}
 	bool configUseTCP=ServerConfig::GetSharedInstance()->GetBoolean("use_tcp", true);
 	if(configUseTCP){
 		if(avgPongs==0.0 || (udpConnectivityState==UDP_BAD && avgPongs<7.0)){

@@ -38,6 +38,7 @@ jclass jniUtilitiesClass=NULL;
 
 struct ImplDataAndroid{
 	jobject javaObject;
+	std::string persistentStateFile="";
 };
 
 #ifndef TGVOIP_PACKAGE_PATH
@@ -115,9 +116,12 @@ namespace tgvoip {
 
 #pragma mark - VoIPController
 
-	jlong VoIPController_nativeInit(JNIEnv* env, jobject thiz) {
-		ImplDataAndroid* impl=(ImplDataAndroid*) malloc(sizeof(ImplDataAndroid));
+	jlong VoIPController_nativeInit(JNIEnv* env, jobject thiz, jstring persistentStateFile) {
+		ImplDataAndroid* impl=new ImplDataAndroid();
 		impl->javaObject=env->NewGlobalRef(thiz);
+		if(persistentStateFile){
+			impl->persistentStateFile=jni::JavaStringToStdString(env, persistentStateFile);
+		}
 		VoIPController* cntrlr=new VoIPController();
 		cntrlr->implData=impl;
 		VoIPController::Callbacks callbacks;
@@ -127,6 +131,22 @@ namespace tgvoip {
 		callbacks.groupCallKeySent=groupCallKeySent;
 		callbacks.upgradeToGroupCallRequested=callUpgradeRequestReceived;
 		cntrlr->SetCallbacks(callbacks);
+		if(!impl->persistentStateFile.empty()){
+			FILE* f=fopen(impl->persistentStateFile.c_str(), "r");
+			if(f){
+				fseek(f, 0, SEEK_END);
+				size_t len=static_cast<size_t>(ftell(f));
+				fseek(f, 0, SEEK_SET);
+				if(len<1024*512 && len>0){
+					char *fbuf=static_cast<char *>(malloc(len));
+					fread(fbuf, 1, len, f);
+					std::vector<uint8_t> state(fbuf, fbuf+len);
+					free(fbuf);
+					cntrlr->SetPersistentState(state);
+				}
+				fclose(f);
+			}
+		}
 		return (jlong)(intptr_t)cntrlr;
 	}
 
@@ -196,9 +216,17 @@ namespace tgvoip {
 		VoIPController* ctlr=((VoIPController*)(intptr_t)inst);
 		ImplDataAndroid* impl=(ImplDataAndroid*)ctlr->implData;
 		ctlr->Stop();
+		std::vector<uint8_t> state=ctlr->GetPersistentState();
 		delete ctlr;
 		env->DeleteGlobalRef(impl->javaObject);
-		free(impl);
+		if(!impl->persistentStateFile.empty()){
+			FILE* f=fopen(impl->persistentStateFile.c_str(), "w");
+			if(f){
+				fwrite(state.data(), 1, state.size(), f);
+				fclose(f);
+			}
+		}
+		delete impl;
 	}
 
 	jstring VoIPController_nativeGetDebugString(JNIEnv* env, jobject thiz, jlong inst){
@@ -520,7 +548,7 @@ extern "C" void tgvoipRegisterNatives(JNIEnv* env){
 
 	// VoIPController
 	JNINativeMethod controllerMethods[]={
-			{"nativeInit", "()J", (void*)&tgvoip::VoIPController_nativeInit},
+			{"nativeInit", "(Ljava/lang/String;)J", (void*)&tgvoip::VoIPController_nativeInit},
 			{"nativeStart", "(J)V", (void*)&tgvoip::VoIPController_nativeStart},
 			{"nativeConnect", "(J)V", (void*)&tgvoip::VoIPController_nativeConnect},
 			{"nativeSetProxy", "(JLjava/lang/String;ILjava/lang/String;Ljava/lang/String;)V", (void*)&tgvoip::VoIPController_nativeSetProxy},
