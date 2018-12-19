@@ -156,7 +156,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                 let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
                                 postbox.mediaBox.storeResourceData(thumbnailResource.id, data: smallestData)
                                 representations.append(TelegramMediaImageRepresentation(dimensions: smallestSize, resource: thumbnailResource))
-                                let updatedImage = TelegramMediaImage(imageId: image.imageId, representations: representations, reference: image.reference, partialReference: image.partialReference)
+                                let updatedImage = TelegramMediaImage(imageId: image.imageId, representations: representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference)
                                 return .single(.standalone(media: updatedImage))
                             }
                         }

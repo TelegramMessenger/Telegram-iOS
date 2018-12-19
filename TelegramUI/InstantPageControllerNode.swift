@@ -865,12 +865,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private func longPressMedia(_ media: InstantPageMedia) {
         let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
-                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, reference: nil, partialReference: nil)
+                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
                 let _ = copyToPasteboard(applicationContext: strongSelf.account.telegramApplicationContext, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(self.strings.Conversation_LinkDialogSave), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
-                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, reference: nil, partialReference: nil)
+                let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
                 let _ = saveToCameraRoll(applicationContext: strongSelf.account.telegramApplicationContext, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in

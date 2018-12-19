@@ -131,7 +131,7 @@ final class WebSearchItemNode: GridItemNode {
                 representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
             }
             if !representations.isEmpty {
-                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, reference: nil, partialReference: nil)
+                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
                 updateImageSignal =  mediaGridMessagePhoto(account: item.account, photoReference: .standalone(media: tmpImage))
             } else {
                 updateImageSignal = .complete()
