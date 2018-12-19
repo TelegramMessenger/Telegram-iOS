@@ -55,11 +55,11 @@ public func requestPeerPhotos(account:Account, peerId: PeerId) -> Signal<[Telegr
                             case let .photo(data):
                                 date = data.date
                                 reference = .cloud(imageId: data.id, accessHash: data.accessHash, fileReference: data.fileReference.makeData())
-                                image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: data.id), representations: telegramMediaImageRepresentationsFromApiSizes(data.sizes), reference: reference, partialReference: nil)
+                                image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: data.id), representations: telegramMediaImageRepresentationsFromApiSizes(data.sizes), immediateThumbnailData: nil, reference: reference, partialReference: nil)
                             case let .photoEmpty(id: id):
                                 date = 0
                                 reference = .cloud(imageId: id, accessHash: 0, fileReference: nil)
-                                image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: [], reference: reference, partialReference: nil)
+                                image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: [], immediateThumbnailData: nil, reference: reference, partialReference: nil)
                             }
                             images.append(TelegramPeerPhoto(image: image, date: date, reference: reference, index: i, totalCount: totalCount))
                         }

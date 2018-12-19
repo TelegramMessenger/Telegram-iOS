@@ -57,7 +57,7 @@ private func convertForwardedMediaForSecretChat(_ media: Media) -> Media {
     if let file = media as? TelegramMediaFile {
         return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: file.partialReference, resource: file.resource, previewRepresentations: file.previewRepresentations, mimeType: file.mimeType, size: file.size, attributes: file.attributes)
     } else if let image = media as? TelegramMediaImage {
-        return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: image.representations, reference: image.reference, partialReference: image.partialReference)
+        return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference)
     } else {
         return media
     }

@@ -47,6 +47,7 @@ public enum TelegramMediaImageReference: PostboxCoding, Equatable {
 public final class TelegramMediaImage: Media, Equatable {
     public let imageId: MediaId
     public let representations: [TelegramMediaImageRepresentation]
+    public let immediateThumbnailData: Data?
     public let reference: TelegramMediaImageReference?
     public let partialReference: PartialMediaReference?
     public let peerIds: [PeerId] = []
@@ -55,9 +56,10 @@ public final class TelegramMediaImage: Media, Equatable {
         return self.imageId
     }
     
-    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?) {
+    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], immediateThumbnailData: Data?, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?) {
         self.imageId = imageId
         self.representations = representations
+        self.immediateThumbnailData = immediateThumbnailData
         self.reference = reference
         self.partialReference = partialReference
     }
@@ -65,6 +67,7 @@ public final class TelegramMediaImage: Media, Equatable {
     public init(decoder: PostboxDecoder) {
         self.imageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.representations = decoder.decodeObjectArrayForKey("r")
+        self.immediateThumbnailData = decoder.decodeDataForKey("itd")
         self.reference = decoder.decodeObjectForKey("rf", decoder: { TelegramMediaImageReference(decoder: $0) }) as? TelegramMediaImageReference
         self.partialReference = decoder.decodeAnyObjectForKey("prf", decoder: { PartialMediaReference(decoder: $0) }) as? PartialMediaReference
     }
@@ -74,6 +77,11 @@ public final class TelegramMediaImage: Media, Equatable {
         self.imageId.encodeToBuffer(buffer)
         encoder.encodeBytes(buffer, forKey: "i")
         encoder.encodeObjectArray(self.representations, forKey: "r")
+        if let immediateThumbnailData = self.immediateThumbnailData {
+            encoder.encodeData(immediateThumbnailData, forKey: "itd")
+        } else {
+            encoder.encodeNil(forKey: "itd")
+        }
         if let reference = self.reference {
             encoder.encodeObject(reference, forKey: "rf")
         } else {
@@ -121,6 +129,9 @@ public final class TelegramMediaImage: Media, Equatable {
             if other.representations != self.representations {
                 return false
             }
+            if other.immediateThumbnailData != self.immediateThumbnailData {
+                return false
+            }
             if self.partialReference != other.partialReference {
                 return false
             }
@@ -156,7 +167,7 @@ public final class TelegramMediaImage: Media, Equatable {
     }
     
     public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaImage {
-        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, reference: self.reference, partialReference: partialReference)
+        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, immediateThumbnailData: self.immediateThumbnailData, reference: self.reference, partialReference: partialReference)
     }
 }
 
@@ -227,7 +238,7 @@ func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> 
 func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
         case let .photo(_, id, accessHash, fileReference, _, sizes):
-            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil)
+            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), immediateThumbnailData: nil, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil)
         case .photoEmpty:
             return nil
     }
