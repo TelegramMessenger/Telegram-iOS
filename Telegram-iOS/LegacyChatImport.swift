@@ -419,7 +419,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                             }
                         }
                         
-                        parsedMedia.append(TelegramMediaImage(imageId: mediaId, representations: representations, reference: nil, partialReference: nil))
+                        parsedMedia.append(TelegramMediaImage(imageId: mediaId, representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil))
                     } else if let item = item as? TGVideoMediaAttachment {
                         let mediaId = MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64())
                         var representations: [TelegramMediaImageRepresentation] = []
