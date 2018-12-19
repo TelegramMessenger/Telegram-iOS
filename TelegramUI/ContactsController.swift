@@ -72,7 +72,7 @@ public class ContactsController: ViewController {
                         return true
                     }
                     let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
-                    if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
+                    if let timestamp = timestamp, timestamp > 0 {
                         return true
                     } else {
                         return false

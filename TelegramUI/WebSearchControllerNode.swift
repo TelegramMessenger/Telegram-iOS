@@ -138,7 +138,7 @@ class WebSearchControllerNode: ASDisplayNode {
     private let recentQueriesNode: ListView
     private var enqueuedRecentTransitions: [(WebSearchRecentTransition, Bool)] = []
     
-    private let gridNode: GridNode
+    private var gridNode: GridNode
     private var enqueuedTransitions: [(WebSearchTransition, Bool)] = []
     private var dequeuedInitialTransitionOnLayout = false
     
@@ -252,6 +252,11 @@ class WebSearchControllerNode: ASDisplayNode {
             }
         })
         
+        self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
+            self?.dismissInput?()
+        }
+        
+        
         self.gridNode.visibleItemsUpdated = { [weak self] visibleItems in
             if let strongSelf = self, let bottom = visibleItems.bottom, let entries = strongSelf.currentEntries {
                 if bottom.0 >= entries.count - 8 {
@@ -259,12 +264,7 @@ class WebSearchControllerNode: ASDisplayNode {
                 }
             }
         }
-        
         self.gridNode.scrollingInitiated = { [weak self] in
-            self?.dismissInput?()
-        }
-        
-        self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
         }
         
@@ -458,7 +458,7 @@ class WebSearchControllerNode: ASDisplayNode {
     func updateInterfaceState(_ interfaceState: WebSearchInterfaceState, animated: Bool) {
         self.webSearchInterfaceState = interfaceState
         self.webSearchInterfaceStatePromise.set(self.webSearchInterfaceState)
-        
+    
         if let state = interfaceState.state {
             self.segmentedControl.selectedSegmentIndex = Int(state.scope.rawValue)
         }
@@ -480,15 +480,58 @@ class WebSearchControllerNode: ASDisplayNode {
         }
     }
     
-    func updateResults(_ results: ChatContextResultCollection?) {
+    func updateResults(_ results: ChatContextResultCollection?, immediate: Bool = false) {
         if self.currentExternalResults == results {
             return
         }
+        let previousResults = self.currentExternalResults
         self.currentExternalResults = results
         self.currentProcessedResults = results
         
         self.isLoadingMore = false
         self.loadMoreDisposable.set(nil)
+        
+        if immediate && previousResults?.query == results?.query && previousResults?.botId != results?.botId {
+            let previousNode = self.gridNode
+            
+            let gridNode = GridNode()
+            gridNode.backgroundColor = theme.list.plainBackgroundColor
+            gridNode.frame = previousNode.frame
+            
+            gridNode.visibleItemsUpdated = { [weak self] visibleItems in
+                if let strongSelf = self, let bottom = visibleItems.bottom, let entries = strongSelf.currentEntries {
+                    if bottom.0 >= entries.count - 8 {
+                        strongSelf.loadMore()
+                    }
+                }
+            }
+            gridNode.scrollingInitiated = { [weak self] in
+                self?.dismissInput?()
+            }
+            
+            self.insertSubnode(gridNode, belowSubnode: self.recentQueriesNode)
+            self.gridNode = gridNode
+            self.currentEntries = nil
+            let directionMultiplier: CGFloat
+            if let state = self.webSearchInterfaceState.state {
+                switch state.scope {
+                    case .images:
+                        directionMultiplier = 1.0
+                    case .gifs:
+                        directionMultiplier = -1.0
+                }
+            } else {
+                directionMultiplier = 1.0
+            }
+            
+            previousNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -directionMultiplier * self.bounds.width, y: 0.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak previousNode] _ in
+                previousNode?.removeFromSupernode()
+            })
+            gridNode.layer.animatePosition(from: CGPoint(x: directionMultiplier * bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        } else if previousResults?.botId != results?.botId || previousResults?.query != results?.query {
+            self.scrollToTop()
+        }
+        
         self.results.set(results)
     }
     
@@ -629,7 +672,13 @@ class WebSearchControllerNode: ASDisplayNode {
         self.cancel?()
     }
     
+    func scrollToTop(animated: Bool = false) {
+        self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.gridNode.scrollView.contentInset.top), animated: animated)
+    }
+    
     func openResult(currentResult: ChatContextResult, present: @escaping (ViewController, Any?) -> Void) {
+        self.view.endEditing(true)
+        
         if self.controllerInteraction.selectionState != nil {
             if let state = self.webSearchInterfaceState.state, state.scope == .images {
                 if let results = self.currentProcessedResults?.results {

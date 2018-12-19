@@ -56,7 +56,7 @@ final class WebSearchItemNode: GridItemNode {
         self.imageNodeBackground.isLayerBacked = true
         
         self.imageNode = TransformImageNode()
-        self.imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         self.imageNode.displaysAsynchronously = false
         
         super.init()
@@ -230,7 +230,11 @@ final class WebSearchItemNode: GridItemNode {
     
     func updateHiddenMedia() {
         if let item = self.item {
+            let wasHidden = self.isHidden
             self.isHidden = item.controllerInteraction.hiddenMediaId == item.result.id
+            if !self.isHidden && wasHidden {
+                self.checkNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
     }
     

@@ -25,7 +25,7 @@ public final class PermissionController : ViewController {
     
     private var allow: (() -> Void)?
     private var skip: (() -> Void)?
-    public var proceed: (() -> Void)?
+    public var proceed: ((Bool) -> Void)?
     
     public init(account: Account, splitTest: PermissionUISplitTest) {
         self.account = account
@@ -99,19 +99,19 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest.addEvent(.ContactsRequest)
-                                DeviceAccess.authorizeAccess(to: .contacts, { [weak self] result in
+                                DeviceAccess.authorizeAccess(to: .contacts, account: strongSelf.account, { [weak self] result in
                                     if let strongSelf = self {
                                         if result {
                                             strongSelf.splitTest.addEvent(.ContactsAllowed)
                                         } else {
                                             strongSelf.splitTest.addEvent(.ContactsDenied)
                                         }
-                                        strongSelf.proceed?()
+                                        strongSelf.proceed?(true)
                                     }
                                 })
                             case .denied:
                                 strongSelf.openAppSettings()
-                                strongSelf.proceed?()
+                                strongSelf.proceed?(true)
                             default:
                                 break
                         }
@@ -125,19 +125,19 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest.addEvent(.NotificationsRequest)
-                                DeviceAccess.authorizeAccess(to: .notifications, { [weak self] result in
+                                DeviceAccess.authorizeAccess(to: .notifications, account: strongSelf.account, { [weak self] result in
                                     if let strongSelf = self {
                                         if result {
                                             strongSelf.splitTest.addEvent(.NotificationsAllowed)
                                         } else {
                                             strongSelf.splitTest.addEvent(.NotificationsDenied)
                                         }
-                                        strongSelf.proceed?()
+                                        strongSelf.proceed?(true)
                                     }
                                 })
                             case .denied, .unreachable:
                                 strongSelf.openAppSettings()
-                                strongSelf.proceed?()
+                                strongSelf.proceed?(true)
                             default:
                                 break
                         }
@@ -145,16 +145,16 @@ public final class PermissionController : ViewController {
                 }
             case let .siri(status):
                 self.allow = { [weak self] in
-                    self?.proceed?()
+                    self?.proceed?(true)
                 }
             case let .cellularData:
                 self.allow = { [weak self] in
-                    self?.proceed?()
+                    self?.proceed?(true)
                 }
         }
         
         self.skip = { [weak self] in
-            self?.proceed?()
+            self?.proceed?(false)
         }
         self.controllerNode.setState(state, transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate)
     }

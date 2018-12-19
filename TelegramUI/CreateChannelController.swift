@@ -258,6 +258,8 @@ public func createChannelController(account: Account) -> ViewController {
             }))
         }
     }, changeProfilePhoto: {
+        endEditingImpl?()
+        
         let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(account.peerId), currentSearchBotsConfiguration(transaction: transaction))
         } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in

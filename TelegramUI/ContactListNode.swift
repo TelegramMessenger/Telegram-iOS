@@ -83,6 +83,12 @@ private final class ContactListNodeInteraction {
     }
 }
 
+enum ContactListAnimation {
+    case none
+    case `default`
+    case insertion
+}
+
 enum ContactListPeerId: Hashable {
     case peer(PeerId)
     case deviceContact(DeviceContactStableId)
@@ -537,14 +543,12 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     return entries
 }
 
-private func preparedContactListNodeTransition(account: Account, from fromEntries: [ContactListNodeEntry], to toEntries: [ContactListNodeEntry], interaction: ContactListNodeInteraction, firstTime: Bool, isEmpty: Bool, generateIndexSections: Bool, animated: Bool) -> ContactsListNodeTransition {
+private func preparedContactListNodeTransition(account: Account, from fromEntries: [ContactListNodeEntry], to toEntries: [ContactListNodeEntry], interaction: ContactListNodeInteraction, firstTime: Bool, isEmpty: Bool, generateIndexSections: Bool, animation: ContactListAnimation) -> ContactsListNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
-    
-    
     
     var indexSections: [String] = []
     if generateIndexSections {
@@ -570,7 +574,7 @@ private func preparedContactListNodeTransition(account: Account, from fromEntrie
         }
     }
     
-    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, animated: animated)
+    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, animation: animation)
 }
 
 private struct ContactsListNodeTransition {
@@ -580,7 +584,7 @@ private struct ContactsListNodeTransition {
     let indexSections: [String]
     let firstTime: Bool
     let isEmpty: Bool
-    let animated: Bool
+    let animation: ContactListAnimation
 }
 
 public struct ContactListAdditionalOption: Equatable {
@@ -725,13 +729,15 @@ final class ContactListNode: ASDisplayNode {
                 let synchronizeDeviceContacts: Bool = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
                 if !synchronizeDeviceContacts {
                     return true
-                }
-                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
-                if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
-                    return true
                 } else {
                     return false
                 }
+//                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+//                if let timestamp = timestamp, timestamp > 0 {
+//                    return true
+//                } else {
+//                    return false
+//                }
             }))
         
         var authorizeImpl: (() -> Void)?
@@ -913,7 +919,7 @@ final class ContactListNode: ASDisplayNode {
                         
                         let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: true)
                         let previous = previousEntries.swap(entries)
-                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animated: false))
+                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none))
                     }
                     
                     if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -956,13 +962,35 @@ final class ContactListNode: ASDisplayNode {
                         }
                         let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed)
                         let previous = previousEntries.swap(entries)
-                        let animated: Bool
-                        if let previous = previous, !themeAndStrings.5 {
-                            animated = (entries.count - previous.count) < 20
-                        } else {
-                            animated = false
+                        
+                        var hadPermissionInfo = false
+                        if let previous = previous {
+                            for entry in previous {
+                                if case .permissionInfo = entry {
+                                    hadPermissionInfo = true
+                                    break
+                                }
+                            }
                         }
-                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: isEmpty, generateIndexSections: generateSections, animated: animated))
+                        var hasPermissionInfo = false
+                        for entry in entries {
+                            if case .permissionInfo = entry {
+                                hasPermissionInfo = true
+                                break
+                            }
+                        }
+                        
+                        let animation: ContactListAnimation
+                        if hadPermissionInfo != hasPermissionInfo {
+                            animation = .insertion
+                        }
+                        else if let previous = previous, !themeAndStrings.5, (entries.count - previous.count) < 20 {
+                            animation = .default
+                        } else {
+                            animation = .none
+                        }
+                        
+                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: isEmpty, generateIndexSections: generateSections, animation: animation))
                     }
             
                     if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -1137,8 +1165,10 @@ final class ContactListNode: ASDisplayNode {
                 if transition.firstTime {
                     options.insert(.Synchronous)
                     options.insert(.LowLatency)
-                } else if transition.animated {
-                    if case .orderedByPresence = self.presentation {
+                } else if transition.animation != .none {
+                    if transition.animation == .insertion {
+                        options.insert(.AnimateInsertion)
+                    } else if case .orderedByPresence = self.presentation {
                         options.insert(.AnimateCrossfade)
                     }
                 }
