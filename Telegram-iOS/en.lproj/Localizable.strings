@@ -3595,6 +3595,7 @@ Unused sets are archived when you add more.";
 
 "Notifications.PermissionsTitle" = "Turn ON Notifications";
 "Notifications.PermissionsText" = "Don't miss important messages from your friends and coworkers.";
+"Notifications.PermissionsUnreachableTitle" = "Check Notification Settings";
 "Notifications.PermissionsUnreachableText" = "Please note that you partly disabled message notifications in your Settings.";
 "Notifications.PermissionsAllow" = "Turn Notifications ON";
 "Notifications.PermissionsAllowInSettings" = "Turn ON in Settings";

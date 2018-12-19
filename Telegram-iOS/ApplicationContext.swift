@@ -801,6 +801,8 @@ final class AuthorizedApplicationContext {
         }))
         
         if #available(iOS 10.0, *) {
+            let alwaysModal = true
+            
             let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
             self.permissionsDisposable.set((combineLatest(requiredPermissions(account: account), permissionUISplitTest(postbox: account.postbox), permissionsPosition.get(), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey()), .noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())]))
             |> deliverOnMainQueue).start(next: { [weak self] contactsAndNotifications, splitTest, position, combined in
@@ -811,10 +813,10 @@ final class AuthorizedApplicationContext {
                 let contactsTimestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 let notificationsTimestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if contactsTimestamp == nil, case .requestable = contactsAndNotifications.0.status {
-                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: account.postbox, value: -1)
+                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: account.postbox, value: 1)
                 }
                 if notificationsTimestamp == nil, case .requestable = contactsAndNotifications.1.status {
-                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: -1)
+                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: 1)
                 }
                 
                 let config = splitTest.configuration
@@ -831,15 +833,15 @@ final class AuthorizedApplicationContext {
                             if case .modal = config.contacts {
                                 modal = true
                             }
-                            if case .requestable = contactsAndNotifications.0.status {
-                                requestedPermissions.append((contactsAndNotifications.0, modal))
+                            if case .requestable = contactsAndNotifications.0.status, contactsTimestamp != 0 {
+                                requestedPermissions.append((contactsAndNotifications.0, modal || alwaysModal))
                             }
                         case .notifications:
                             if case .modal = config.notifications {
                                 modal = true
                             }
-                            if case .requestable = contactsAndNotifications.1.status {
-                                requestedPermissions.append((contactsAndNotifications.1, modal))
+                            if case .requestable = contactsAndNotifications.1.status, notificationsTimestamp != 0 {
+                                requestedPermissions.append((contactsAndNotifications.1, modal || alwaysModal))
                             }
                         default:
                             break
@@ -860,7 +862,7 @@ final class AuthorizedApplicationContext {
                         }
                         
                         controller.setState(state, animated: didAppear)
-                        controller.proceed = {
+                        controller.proceed = { resolved in
                             permissionsPosition.set(position + 1)
                             switch state {
                                 case .contacts:
@@ -881,7 +883,7 @@ final class AuthorizedApplicationContext {
                         switch state {
                             case .contacts:
                                 splitTest.addEvent(.ContactsRequest)
-                                DeviceAccess.authorizeAccess(to: .contacts) { result in
+                                DeviceAccess.authorizeAccess(to: .contacts, account: account) { result in
                                     if result {
                                         splitTest.addEvent(.ContactsAllowed)
                                     } else {
@@ -892,7 +894,7 @@ final class AuthorizedApplicationContext {
                                 }
                             case .notifications:
                                 splitTest.addEvent(.NotificationsRequest)
-                                DeviceAccess.authorizeAccess(to: .notifications) { result in
+                                DeviceAccess.authorizeAccess(to: .notifications, account: account) { result in
                                     if result {
                                         splitTest.addEvent(.NotificationsAllowed)
                                     } else {
@@ -907,10 +909,8 @@ final class AuthorizedApplicationContext {
                     }
                 } else {
                     if let controller = strongSelf.currentPermissionsController {
-                        controller.dismiss(completion: { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf.currentPermissionsController = nil
-                            }
+                        strongSelf.currentPermissionsController = nil
+                        controller.dismiss(completion: {
                         })
                     }
                 }
