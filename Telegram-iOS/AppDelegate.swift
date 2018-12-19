@@ -396,7 +396,7 @@ private enum QueuedWakeup: Int32 {
         telegramUIDeclareEncodables()
         
         #if DEBUG
-        LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
+        LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: true, redactSensitiveData: true)
         #else
         if BuildConfig.shared().isInternalBuild {
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)

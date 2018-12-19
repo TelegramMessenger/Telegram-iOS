@@ -20,6 +20,11 @@
 "MESSAGE_PHOTOS" = "%1$@ sent you %2$@ photos";
 "MESSAGES" = "%1$@ sent you %2$@ messages";
 
+"MESSAGE_POLL" = "%1$@ sent you a poll";
+"CHANNEL_MESSAGE_POLL" = "%1$@ posted a poll";
+"CHAT_MESSAGE_POLL" = "%1$@ sent a poll to the group %2$@";
+"PINNED_POLL" = "%1$@ pinned a poll";
+
 "CHAT_MESSAGE_TEXT" = "%1$@@%2$@: %3$@";
 "CHAT_MESSAGE_NOTEXT" = "%1$@ sent a message to the group %2$@";
 "CHAT_MESSAGE_PHOTO" = "%1$@ sent a photo to the group %2$@";
@@ -80,7 +85,6 @@
 "PINNED_GEO" = "%1$@ pinned a map";
 "PINNED_GEOLIVE" = "%1$@ pinned a live location";
 "PINNED_GIF" = "%1$@ pinned a GIF";
-"PINNED_POLL" = "%1$@ pinned a poll";
 
 "MESSAGE_GAME" = "%1$@ invited you to play %2$@";
 "CHANNEL_MESSAGE_GAME" = "%1$@ invited you to play %2$@";
@@ -401,7 +405,6 @@
 "Message.Audio" = "Voice Message";
 "Message.ForwardedMessage" = "Forwarded Message\nFrom: %@";
 "Message.Animation" = "GIF";
-"Message.Poll" = "Poll";
 
 // Conversation Profile
 "ConversationProfile.ErrorCreatingConversation" = "An error occurred";
@@ -3581,19 +3584,23 @@ Unused sets are archived when you add more.";
 "Permissions.SiriAllowInSettings.v0" = "Turn ON in Settings";
 
 "Permissions.PrivacyPolicy" = "Privacy Policy";
+"Permissions.DataSettings" = "Data Settings";
 
 "Contacts.PermissionsTitle" = "Access to Contacts";
 "Contacts.PermissionsText" = "Please allow Telegram access to your phonebook to seamlessly find all your friends.";
 "Contacts.PermissionsAllow" = "Allow Access";
 "Contacts.PermissionsAllowInSettings" = "Allow in Settings";
-"Contacts.PermissionsSuppressWarning" = "Are you sure?";
+"Contacts.PermissionsSuppressWarningTitle" = "Are you sure you want to keep access to contacts disabled?";
+"Contacts.PermissionsSuppressWarningText" = "You can fine tune contacts sync in Settings > Privacy & Security > Data Settings.";
 
 "Notifications.PermissionsTitle" = "Turn ON Notifications";
 "Notifications.PermissionsText" = "Don't miss important messages from your friends and coworkers.";
-"Notifications.PermissionsUnreachableText" = "Check that both Alert and Sound are enabled in Settings.";
+"Notifications.PermissionsUnreachableText" = "Please note that you partly disabled message notifications in your Settings.";
 "Notifications.PermissionsAllow" = "Turn Notifications ON";
 "Notifications.PermissionsAllowInSettings" = "Turn ON in Settings";
-"Notifications.PermissionsSuppressWarning" = "Are you sure?";
+"Notifications.PermissionsOpenSettings" = "Open Settings";
+"Notifications.PermissionsSuppressWarningTitle" = "Are you sure?";
+"Notifications.PermissionsKeepDisabled" = "Keep Disabled";
 
 "ChatSettings.DownloadInBackground" = "Background Download";
 "ChatSettings.DownloadInBackgroundInfo" = "The app will continue downloading media files for a limited time.";
@@ -3603,16 +3610,15 @@ Unused sets are archived when you add more.";
 "SharedMedia.SearchNoResults" = "No Results";
 "SharedMedia.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
 
-"WebSearch.RecentSearchPlaceholder" = "Your recent search queries will appear here";
-
 "MessagePoll.LabelAnonymous" = "Anonymous Poll";
 "MessagePoll.LabelClosed" = "Final Results";
-"MessagePoll.VotedCount_0" = "No votes";
-"MessagePoll.VotedCount_1" = "1 voted";
-"MessagePoll.VotedCount_2" = "2 voted";
-"MessagePoll.VotedCount_3_10" = "%@ voted";
-"MessagePoll.VotedCount_many" = "%@ voted";
-"MessagePoll.VotedCount_any" = "%@ voted";
+"MessagePoll.NoVotes" = "No votes";
+"MessagePoll.VotedCount_0" = "%@ votes";
+"MessagePoll.VotedCount_1" = "1 vote";
+"MessagePoll.VotedCount_2" = "2 votes";
+"MessagePoll.VotedCount_3_10" = "%@ votes";
+"MessagePoll.VotedCount_many" = "%@ votes";
+"MessagePoll.VotedCount_any" = "%@ votes";
 "AttachmentMenu.Poll" = "Poll";
 "Conversation.PinnedPoll" = "Pinned Poll";
 
@@ -3641,8 +3647,9 @@ Unused sets are archived when you add more.";
 "ForwardedPolls_many" = "%@ forwarded polls";
 "ForwardedPolls_0" = "%@ forwarded polls";
 
-"Conversation.UnvotePoll" = "Unvote";
+"Conversation.UnvotePoll" = "Retract Vote";
 "Conversation.StopPoll" = "Stop Poll";
-"CreatePoll.OptionsInfo" = "You can add up to 10 options.";
+"Conversation.StopPollConfirmationTitle" = "If you stop this poll now, nobody will be able to vote in it anymore. This action cannot be undone.";
+"Conversation.StopPollConfirmation" = "Stop Poll";
 
 "AttachmentMenu.WebSearch" = "Web Search";
