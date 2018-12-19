@@ -639,10 +639,33 @@ private enum QueuedWakeup: Int32 {
         
         self.contextDisposable.set(self.context.get().start(next: { context in
             assert(Queue.mainQueue().isCurrent())
-            Logger.shared.log("App \(self.episodeId)", "received context \(String(describing: context)) account \(String(describing: context?.accountId))")
+            var network: Network?
+            if let context = context {
+                switch context {
+                    case let .unauthorized(unauthorized):
+                        network = unauthorized.account.network
+                    case let .authorized(authorized):
+                        network = authorized.account.network
+                    default:
+                        break
+                }
+            }
+            
+            Logger.shared.log("App \(self.episodeId)", "received context \(String(describing: context)) account \(String(describing: context?.accountId)) network \(String(describing: network))")
             
             if let contextValue = self.contextValue {
                 (contextValue.account?.applicationContext as? TelegramApplicationContext)?.isCurrent = false
+                switch contextValue {
+                    case let .unauthorized(unauthorized):
+                        unauthorized.account.shouldBeServiceTaskMaster.set(.single(.never))
+                    case let .authorized(authorized):
+                        authorized.account.shouldBeServiceTaskMaster.set(.single(.never))
+                        authorized.account.shouldKeepOnlinePresence.set(.single(false))
+                        authorized.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
+                        authorized.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
+                    default:
+                        break
+                }
             }
             self.contextValue = context
             if let context = context {
