@@ -3584,7 +3584,6 @@ Unused sets are archived when you add more.";
 "Permissions.SiriAllowInSettings.v0" = "Turn ON in Settings";
 
 "Permissions.PrivacyPolicy" = "Privacy Policy";
-"Permissions.DataSettings" = "Data Settings";
 
 "Contacts.PermissionsTitle" = "Access to Contacts";
 "Contacts.PermissionsText" = "Please allow Telegram access to your phonebook to seamlessly find all your friends.";
