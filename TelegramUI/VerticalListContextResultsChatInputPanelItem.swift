@@ -234,7 +234,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             if updatedIconImageResource {
                 if let imageResource = imageResource {
                     let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 55.0, height: 55.0), resource: imageResource)
-                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], reference: nil, partialReference: nil)
+                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil)
                     updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photoReference: .standalone(media: tmpImage))
                 } else {
                     updateIconImageSignal = .complete()

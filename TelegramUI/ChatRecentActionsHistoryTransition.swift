@@ -215,7 +215,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 var photo: TelegramMediaImage?
                 if !new.isEmpty {
-                    photo = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: new, reference: nil, partialReference: nil)
+                    photo = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: new, immediateThumbnailData: nil, reference: nil, partialReference: nil)
                 }
                 
                 let action = TelegramMediaActionType.photoUpdated(image: photo)
