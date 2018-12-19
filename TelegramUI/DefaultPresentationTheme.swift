@@ -277,7 +277,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, day: Bool) -> Pr
         incomingMediaPlaceholderColor: UIColor(rgb: 0xffffff).withMultipliedBrightnessBy(0.95),
         outgoingMediaPlaceholderColor: accentColor.withMultipliedBrightnessBy(0.95),
         incomingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0xc8c7cc), radioProgress: accentColor, highlight: accentColor.withAlphaComponent(0.12), separator: UIColor(rgb: 0xc8c7cc), bar: accentColor),
-        outgoingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0xffffff, alpha: 0.6), radioProgress: UIColor(rgb: 0x3FC33B), highlight: UIColor(rgb: 0x3FC33B).withAlphaComponent(0.12), separator: .white, bar: UIColor(rgb: 0x007ee5))
+        outgoingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0xffffff, alpha: 0.6), radioProgress: .white, highlight: UIColor.white.withAlphaComponent(0.12), separator: UIColor(rgb: 0xffffff, alpha: 0.6), bar: .white)
     )
     
     let serviceMessage = PresentationThemeServiceMessage(
