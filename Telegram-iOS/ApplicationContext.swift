@@ -587,21 +587,12 @@ final class AuthorizedApplicationContext {
                                 strongSelf.openUrl(url)
                             }
                             
-                            DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, present: { c, a in
-                            }, openSettings: {
-                            }, { _ in
-                            })
-
                             if #available(iOS 10.0, *) {
                                 INPreferences.requestSiriAuthorization { _ in
                                 }
-                            }
-
-                            if #available(iOS 12.0, *) {
-                                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSendMessageIntent.self))
-                                userActivity.interaction?.donate(completion: { _ in
-
-                                })
+                            } else {
+                                DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, present: { c, a in
+                                }, openSettings: {}, { _ in })
                             }
                             
                             if let passcodeController = strongSelf.passcodeController {
@@ -809,97 +800,122 @@ final class AuthorizedApplicationContext {
             }
         }))
         
-        let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
-        self.permissionsDisposable.set((combineLatest(requiredPermissions(account: account), permissionUISplitTest(postbox: account.postbox), permissionsPosition.get())
-        |> deliverOnMainQueue).start(next: { [weak self] contactsAndNotifications, splitTest, position in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            let config = splitTest.configuration
-            var states: [(PermissionState, Bool)] = []
-            var i: Int = 0
-            for subject in config.order {
-                if i < position {
-                    i += 1
-                    continue
+        if #available(iOS 10.0, *) {
+            let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
+            self.permissionsDisposable.set((combineLatest(requiredPermissions(account: account), permissionUISplitTest(postbox: account.postbox), permissionsPosition.get(), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey()), .noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())]))
+            |> deliverOnMainQueue).start(next: { [weak self] contactsAndNotifications, splitTest, position, combined in
+                guard let strongSelf = self else {
+                    return
                 }
-                var modal = false
-                switch subject {
-                    case .contacts:
-                        if case .modal = config.contacts {
-                            modal = true
-                        }
-                        if case .requestable = contactsAndNotifications.0.status {
-                            states.append((contactsAndNotifications.0, modal))
-                        }
-                    case .notifications:
-                        if case .modal = config.notifications {
-                            modal = true
-                        }
-                        if case .requestable = contactsAndNotifications.1.status {
-                            states.append((contactsAndNotifications.1, modal))
-                        }
-                    default:
-                        break
+                
+                let contactsTimestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let notificationsTimestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                if contactsTimestamp == nil, case .requestable = contactsAndNotifications.0.status {
+                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: account.postbox, value: -1)
                 }
-                i += 1
-            }
-            
-            if let (state, modal) = states.first {
-                if modal {
-                    if let controller = strongSelf.currentPermissionsController {
-                        controller.setState(state, animated: true)
-                        controller.proceed = {
-                            permissionsPosition.set(position + 1)
-                        }
-                    } else {
-                        let controller = PermissionController(account: account, splitTest: splitTest)
-                        strongSelf.currentPermissionsController = controller
-                        controller.setState(state, animated: false)
-                        controller.proceed = {
-                            permissionsPosition.set(position + 1)
-                        }
-                        dispatch_after_delay(0.15, DispatchQueue.main, {
-                            (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments.init(presentationAnimation: .modalSheet))
-                        })
+                if notificationsTimestamp == nil, case .requestable = contactsAndNotifications.1.status {
+                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: -1)
+                }
+                
+                let config = splitTest.configuration
+                var requestedPermissions: [(PermissionState, Bool)] = []
+                var i: Int = 0
+                for subject in config.order {
+                    if i < position {
+                        i += 1
+                        continue
                     }
-                } else {
-                    switch state {
+                    var modal = false
+                    switch subject {
                         case .contacts:
-                            splitTest.addEvent(.ContactsRequest)
-                            DeviceAccess.authorizeAccess(to: .contacts) { result in
-                                if result {
-                                    splitTest.addEvent(.ContactsAllowed)
-                                } else {
-                                    splitTest.addEvent(.ContactsDenied)
-                                }
-                                permissionsPosition.set(position + 1)
+                            if case .modal = config.contacts {
+                                modal = true
+                            }
+                            if case .requestable = contactsAndNotifications.0.status {
+                                requestedPermissions.append((contactsAndNotifications.0, modal))
                             }
                         case .notifications:
-                            splitTest.addEvent(.NotificationsRequest)
-                            DeviceAccess.authorizeAccess(to: .notifications) { result in
-                                if result {
-                                    splitTest.addEvent(.NotificationsAllowed)
-                                } else {
-                                    splitTest.addEvent(.NotificationsDenied)
-                                }
-                                permissionsPosition.set(position + 1)
-                        }
+                            if case .modal = config.notifications {
+                                modal = true
+                            }
+                            if case .requestable = contactsAndNotifications.1.status {
+                                requestedPermissions.append((contactsAndNotifications.1, modal))
+                            }
                         default:
                             break
                     }
+                    i += 1
                 }
-            } else {
-                if let controller = strongSelf.currentPermissionsController {
-                    controller.dismiss(completion: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.currentPermissionsController = nil
+                
+                if let (state, modal) = requestedPermissions.first {
+                    if modal {
+                        var didAppear = false
+                        let controller: PermissionController
+                        if let currentController = strongSelf.currentPermissionsController {
+                            controller = currentController
+                            didAppear = true
+                        } else {
+                            controller = PermissionController(account: account, splitTest: splitTest)
+                            strongSelf.currentPermissionsController = controller
                         }
-                    })
+                        
+                        controller.setState(state, animated: didAppear)
+                        controller.proceed = {
+                            permissionsPosition.set(position + 1)
+                            switch state {
+                                case .contacts:
+                                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: account.postbox, value: 0)
+                                case .notifications:
+                                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: 0)
+                                default:
+                                    break
+                            }
+                        }
+                        
+                        if !didAppear {
+                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.15, execute: {
+                                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments.init(presentationAnimation: .modalSheet))
+                            })
+                        }
+                    } else {
+                        switch state {
+                            case .contacts:
+                                splitTest.addEvent(.ContactsRequest)
+                                DeviceAccess.authorizeAccess(to: .contacts) { result in
+                                    if result {
+                                        splitTest.addEvent(.ContactsAllowed)
+                                    } else {
+                                        splitTest.addEvent(.ContactsDenied)
+                                    }
+                                    permissionsPosition.set(position + 1)
+                                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: account.postbox, value: 0)
+                                }
+                            case .notifications:
+                                splitTest.addEvent(.NotificationsRequest)
+                                DeviceAccess.authorizeAccess(to: .notifications) { result in
+                                    if result {
+                                        splitTest.addEvent(.NotificationsAllowed)
+                                    } else {
+                                        splitTest.addEvent(.NotificationsDenied)
+                                    }
+                                    permissionsPosition.set(position + 1)
+                                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: 0)
+                            }
+                            default:
+                                break
+                        }
+                    }
+                } else {
+                    if let controller = strongSelf.currentPermissionsController {
+                        controller.dismiss(completion: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.currentPermissionsController = nil
+                            }
+                        })
+                    }
                 }
-            }
-        }))
+            }))
+        }
         
         self.displayAlertsDisposable = (account.stateManager.displayAlerts |> deliverOnMainQueue).start(next: { [weak self] alerts in
             if let strongSelf = self{

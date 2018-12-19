@@ -3567,7 +3567,7 @@ Unused sets are archived when you add more.";
 
 "Permissions.NotificationsTitle.v0" = "Turn ON Notifications";
 "Permissions.NotificationsText.v0" = "Don't miss important messages from your friends and coworkers.";
-"Permissions.NotificationsUnreachableText.v0" = "Check that both Alert and Sound are enabled in Settings.";
+"Permissions.NotificationsUnreachableText.v0" = "Please note that you partly disabled message notifications in your Settings.";
 "Permissions.NotificationsAllow.v0" = "Turn Notifications ON";
 "Permissions.NotificationsAllowInSettings.v0" = "Turn ON in Settings";
 
@@ -3586,12 +3586,14 @@ Unused sets are archived when you add more.";
 "Contacts.PermissionsText" = "Please allow Telegram access to your phonebook to seamlessly find all your friends.";
 "Contacts.PermissionsAllow" = "Allow Access";
 "Contacts.PermissionsAllowInSettings" = "Allow in Settings";
+"Contacts.PermissionsSuppressWarning" = "Are you sure?";
 
 "Notifications.PermissionsTitle" = "Turn ON Notifications";
 "Notifications.PermissionsText" = "Don't miss important messages from your friends and coworkers.";
 "Notifications.PermissionsUnreachableText" = "Check that both Alert and Sound are enabled in Settings.";
 "Notifications.PermissionsAllow" = "Turn Notifications ON";
 "Notifications.PermissionsAllowInSettings" = "Turn ON in Settings";
+"Notifications.PermissionsSuppressWarning" = "Are you sure?";
 
 "ChatSettings.DownloadInBackground" = "Background Download";
 "ChatSettings.DownloadInBackgroundInfo" = "The app will continue downloading media files for a limited time.";

@@ -599,7 +599,7 @@ private enum QueuedWakeup: Int32 {
             |> take(1)
             |> deliverOnMainQueue).start(next: { context in
                 if let context = context {
-                    self.registerForNotifications(account: context.account)
+                    self.registerForNotifications(account: context.account, authorize: true, completion: completion)
                 }
             })
         }, getWindowHost: {
@@ -631,7 +631,7 @@ private enum QueuedWakeup: Int32 {
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { value in
                     if let value = value, case let .authorized(context) = value {
-                        self.registerForNotifications(account: context.account)
+                        self.registerForNotifications(account: context.account, authorize: false)
                     }
                 })
             })
@@ -655,7 +655,11 @@ private enum QueuedWakeup: Int32 {
                 self.maybeDequeueWakeups()
                 switch context {
                     case let .authorized(context):
-                        self.registerForNotifications(account: context.account)
+                        var authorizeNotifications = true
+                        if #available(iOS 10.0, *) {
+                            authorizeNotifications = false
+                        }
+                        self.registerForNotifications(account: context.account, authorize: authorizeNotifications)
                         context.account.notificationToken.set(self.notificationTokenPromise.get())
                         context.account.voipToken.set(self.voipTokenPromise.get())
                     case .unauthorized:
@@ -1387,47 +1391,68 @@ private enum QueuedWakeup: Int32 {
         }
     }
     
-    private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, includeNames: Bool) {
+    private func registerForNotifications(account: Account, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let _ = (account.postbox.transaction { transaction -> Bool in
+            let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+            return settings.displayNameOnLockscreen
+        }
+        |> deliverOnMainQueue).start(next: { displayNames in
+            self.registerForNotifications(replyString: presentationData.strings.Notification_Reply, messagePlaceholderString: presentationData.strings.Conversation_InputTextPlaceholder, hiddenContentString: presentationData.strings.Watch_MessageView_Title, includeNames: displayNames, authorize: authorize, completion: completion)
+        })
+    }
+    
+    
+    private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         if #available(iOS 10.0, *) {
-            UNUserNotificationCenter.current().requestAuthorization(options: [.badge, .sound, .alert], completionHandler: { result, _ in
-                if result {
-                    Queue.mainQueue().async {
-                        let reply = UNTextInputNotificationAction(identifier: "reply", title: replyString, options: [], textInputButtonTitle: replyString, textInputPlaceholder: messagePlaceholderString)
-                        
-                        let unknownMessageCategory: UNNotificationCategory
-                        let replyMessageCategory: UNNotificationCategory
-                        let replyLegacyMessageCategory: UNNotificationCategory
-                        let replyLegacyMediaMessageCategory: UNNotificationCategory
-                        let replyMediaMessageCategory: UNNotificationCategory
-                        let muteMessageCategory: UNNotificationCategory
-                        let muteMediaMessageCategory: UNNotificationCategory
-                        if #available(iOS 11.0, *) {
-                            var options: UNNotificationCategoryOptions = []
-                            if includeNames {
-                                options.insert(.hiddenPreviewsShowTitle)
+            let notificationCenter = UNUserNotificationCenter.current()
+            
+            notificationCenter.getNotificationSettings(completionHandler: { settings in
+                switch (settings.authorizationStatus, authorize) {
+                    case (.authorized, _), (.notDetermined, true):
+                        notificationCenter.requestAuthorization(options: [.badge, .sound, .alert], completionHandler: { result, _ in
+                            if result {
+                                Queue.mainQueue().async {
+                                    let reply = UNTextInputNotificationAction(identifier: "reply", title: replyString, options: [], textInputButtonTitle: replyString, textInputPlaceholder: messagePlaceholderString)
+                                    
+                                    let unknownMessageCategory: UNNotificationCategory
+                                    let replyMessageCategory: UNNotificationCategory
+                                    let replyLegacyMessageCategory: UNNotificationCategory
+                                    let replyLegacyMediaMessageCategory: UNNotificationCategory
+                                    let replyMediaMessageCategory: UNNotificationCategory
+                                    let muteMessageCategory: UNNotificationCategory
+                                    let muteMediaMessageCategory: UNNotificationCategory
+                                    if #available(iOS 11.0, *) {
+                                        var options: UNNotificationCategoryOptions = []
+                                        if includeNames {
+                                            options.insert(.hiddenPreviewsShowTitle)
+                                        }
+                                        
+                                        unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                    } else {
+                                        unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], options: [])
+                                        replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], options: [])
+                                        replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], options: [])
+                                        replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
+                                        replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], options: [])
+                                        muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], options: [])
+                                        muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], options: [])
+                                    }
+                                    
+                                    UNUserNotificationCenter.current().setNotificationCategories([unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, muteMessageCategory, muteMediaMessageCategory])
+                                    
+                                    UIApplication.shared.registerForRemoteNotifications()
+                                }
                             }
-                            
-                            unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                            replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                            replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                            replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                            replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                            muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                            muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                        } else {
-                            unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], options: [])
-                            replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], options: [])
-                            replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], options: [])
-                            replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
-                            replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], options: [])
-                            muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], options: [])
-                            muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], options: [])
-                        }
-                        
-                        UNUserNotificationCenter.current().setNotificationCategories([unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, muteMessageCategory, muteMediaMessageCategory])
-                        
-                        UIApplication.shared.registerForRemoteNotifications()
-                    }
+                        })
+                    default:
+                        break
                 }
             })
         } else {
@@ -1554,17 +1579,6 @@ private enum QueuedWakeup: Int32 {
         }
         
         self.queuedWakeups.removeAll()
-    }
-    
-    private func registerForNotifications(account: Account) {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let _ = (account.postbox.transaction { transaction -> Bool in
-            let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
-            return settings.displayNameOnLockscreen
-        }
-        |> deliverOnMainQueue).start(next: { displayNames in
-            self.registerForNotifications(replyString: presentationData.strings.Notification_Reply, messagePlaceholderString: presentationData.strings.Conversation_InputTextPlaceholder, hiddenContentString: presentationData.strings.Watch_MessageView_Title, includeNames: displayNames)
-        })
     }
     
     @available(iOS 10.0, *)
