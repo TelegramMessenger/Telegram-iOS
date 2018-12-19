@@ -930,6 +930,9 @@ public final class PendingMessageManager {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
                         }
                     case let .chatContextResult(chatContextResult):
+                        if chatContextResult.hideVia {
+                            flags |= Int32(1 << 11)
+                        }
                         sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id))
                         |> map(NetworkRequestResult.result)
                     case .messageScreenshot:
