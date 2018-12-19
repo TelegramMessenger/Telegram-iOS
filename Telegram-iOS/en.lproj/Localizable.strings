@@ -3589,8 +3589,10 @@ Unused sets are archived when you add more.";
 "Contacts.PermissionsText" = "Please allow Telegram access to your phonebook to seamlessly find all your friends.";
 "Contacts.PermissionsAllow" = "Allow Access";
 "Contacts.PermissionsAllowInSettings" = "Allow in Settings";
-"Contacts.PermissionsSuppressWarningTitle" = "Are you sure you want to keep access to contacts disabled?";
-"Contacts.PermissionsSuppressWarningText" = "You can fine tune contacts sync in Settings > Privacy & Security > Data Settings.";
+"Contacts.PermissionsSuppressWarningTitle" = "Keep contacts disabled?";
+"Contacts.PermissionsSuppressWarningText" = "You won't know when your friends join Telegram and become available to chat. We recommend enabling access to contacts in Settings.";
+"Contacts.PermissionsKeepDisabled" = "Keep Disabled";
+"Contacts.PermissionsEnable" = "Enable";
 
 "Notifications.PermissionsTitle" = "Turn ON Notifications";
 "Notifications.PermissionsText" = "Don't miss important messages from your friends and coworkers.";
@@ -3599,8 +3601,10 @@ Unused sets are archived when you add more.";
 "Notifications.PermissionsAllow" = "Turn Notifications ON";
 "Notifications.PermissionsAllowInSettings" = "Turn ON in Settings";
 "Notifications.PermissionsOpenSettings" = "Open Settings";
-"Notifications.PermissionsSuppressWarningTitle" = "Are you sure?";
+"Notifications.PermissionsSuppressWarningTitle" = "Keep notifications disabled?";
+"Notifications.PermissionsSuppressWarningText" = "You may miss important messages on Telegram due to your current settings.\n\nFor better results, enable alerts or banners and try muting certain chats or chat types in Telegram settings.";
 "Notifications.PermissionsKeepDisabled" = "Keep Disabled";
+"Notifications.PermissionsEnable" = "Enable";
 
 "ChatSettings.DownloadInBackground" = "Background Download";
 "ChatSettings.DownloadInBackgroundInfo" = "The app will continue downloading media files for a limited time.";
