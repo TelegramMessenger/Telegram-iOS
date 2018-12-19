@@ -1239,7 +1239,12 @@ private enum QueuedWakeup: Int32 {
                 case let .authorized(context):
                     context.openUrl(url)
                 case let .unauthorized(context):
-                    if let secureIdData = parseSecureIdUrl(url) {
+                    if let proxyData = parseProxyUrl(url) {
+                        context.rootController.view.endEditing(true)
+                        let strings = context.applicationContext.currentPresentationData.with({ $0 }).strings
+                        let controller = ProxyServerActionSheetController(theme: defaultPresentationTheme, strings: strings, postbox: context.account.postbox, network: context.account.network, server: proxyData, presentationData: nil)
+                        context.rootController.currentWindow?.present(controller, on: PresentationSurfaceLevel.root, blockInteraction: false, completion: {})
+                    } else if let secureIdData = parseSecureIdUrl(url) {
                         let strings = context.applicationContext.currentPresentationData.with({ $0 }).strings
                         let theme = context.rootController.theme
                         context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: strings.Calls_NotNow, action: {
