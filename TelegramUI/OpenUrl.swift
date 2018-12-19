@@ -4,6 +4,7 @@ import SafariServices
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import MtProtoKitDynamic
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
@@ -12,6 +13,54 @@ public struct ParsedSecureIdUrl {
     public let callbackUrl: String
     public let opaquePayload: Data
     public let opaqueNonce: Data
+}
+
+public func parseProxyUrl(_ url: URL) -> ProxyServerSettings? {
+    guard let query = url.query, url.scheme == "tg" else {
+        return nil
+    }
+    if url.host == "socks" || url.host == "proxy" {
+        if let components = URLComponents(string: "/?" + query) {
+            var server: String?
+            var port: String?
+            var user: String?
+            var pass: String?
+            var secret: String?
+            if let queryItems = components.queryItems {
+                for queryItem in queryItems {
+                    if let value = queryItem.value {
+                        if queryItem.name == "server" || queryItem.name == "proxy" {
+                            server = value
+                        } else if queryItem.name == "port" {
+                            port = value
+                        } else if queryItem.name == "user" {
+                            user = value
+                        } else if queryItem.name == "pass" {
+                            pass = value
+                        } else if queryItem.name == "secret" {
+                            secret = value
+                        }
+                    }
+                }
+            }
+            
+            if let server = server, !server.isEmpty, let port = port, let portValue = Int32(port), let _ = Int32(port) {
+                let connection: ProxyServerConnection
+                if let secret = secret {
+                    let data = dataWithHexString(secret)
+                    if data.count == 16 || (data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data)) {
+                        connection = .mtp(secret: data)
+                    } else {
+                        return nil
+                    }
+                } else {
+                    connection = .socks5(username: user, password: pass)
+                }
+                return ProxyServerSettings(host: server, port: portValue, connection: connection)
+            }
+        }
+    }
+    return nil
 }
 
 public func parseSecureIdUrl(_ url: URL) -> ParsedSecureIdUrl? {
