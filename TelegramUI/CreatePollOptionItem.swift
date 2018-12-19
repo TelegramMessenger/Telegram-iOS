@@ -161,15 +161,17 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
             return false
         }
         if text.firstIndex(of: "\n") != nil {
-            let currentText = editableTextNode.attributedText?.string ?? ""
-            var updatedText = (currentText as NSString).replacingCharacters(in: range, with: text)
-            updatedText = updatedText.replacingOccurrences(of: "\n", with: " ")
-            if updatedText.count == 1 {
-                updatedText = ""
+            if text != "\n" {
+                let currentText = editableTextNode.attributedText?.string ?? ""
+                var updatedText = (currentText as NSString).replacingCharacters(in: range, with: text)
+                updatedText = updatedText.replacingOccurrences(of: "\n", with: " ")
+                if updatedText.count == 1 {
+                    updatedText = ""
+                }
+                let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
+                self.textNode.attributedText = updatedAttributedText
+                self.editableTextNodeDidUpdateText(editableTextNode)
             }
-            let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
-            self.textNode.attributedText = updatedAttributedText
-            self.editableTextNodeDidUpdateText(editableTextNode)
             if let next = item.next {
                 next()
             } else {

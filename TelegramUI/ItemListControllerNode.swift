@@ -419,9 +419,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                                     }
                                 }
                             }
-                            if applied {
-                                strongSelf.appliedFocusItemTag = focusItemTag
-                            }
+                            strongSelf.appliedFocusItemTag = focusItemTag
                         }
                     }
                     
