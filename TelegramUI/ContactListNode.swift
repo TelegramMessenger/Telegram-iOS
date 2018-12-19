@@ -136,7 +136,7 @@ enum ContactListPeer: Equatable {
 
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
-    case permissionInfo(PresentationTheme, PresentationStrings)
+    case permissionInfo(PresentationTheme, PresentationStrings, Bool)
     case permissionEnable(PresentationTheme, String)
     case option(Int, ContactListAdditionalOption, ListViewItemHeader?, PresentationTheme, PresentationStrings)
     case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)
@@ -167,8 +167,8 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ChatListSearchItem(theme: theme, placeholder: strings.Contacts_SearchLabel, activate: {
                     interaction.activateSearch()
                 })
-            case let .permissionInfo(theme, strings):
-                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied, style: .plain, close: {
+            case let .permissionInfo(theme, strings, suppressed):
+                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied, style: .plain, suppressed: suppressed, close: {
                     interaction.suppressWarning()
                 })
             case let .permissionEnable(theme, text):
@@ -207,8 +207,8 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .permissionInfo(lhsTheme, lhsStrings):
-                if case let .permissionInfo(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+            case let .permissionInfo(lhsTheme, lhsStrings, lhsSuppressed):
+                if case let .permissionInfo(rhsTheme, rhsStrings, rhsSuppressed) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSuppressed == rhsSuppressed {
                     return true
                 } else {
                     return false
@@ -376,7 +376,7 @@ private extension PeerIndexNameRepresentation {
     }
 }
 
-private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>, authorizationStatus: AccessType, warningSuppressed: Bool) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>, authorizationStatus: AccessType, warningSuppressed: (Bool, Bool)) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var commonHeader: ListViewItemHeader?
@@ -389,14 +389,15 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             
             var addHeader = false
             if #available(iOSApplicationExtension 10.0, *) {
-                if !peers.isEmpty && !warningSuppressed {
+                let (suppressed, syncDisabled) = warningSuppressed
+                if !peers.isEmpty && !syncDisabled {
                     switch authorizationStatus {
                         case .denied:
-                            entries.append(.permissionInfo(theme, strings))
+                            entries.append(.permissionInfo(theme, strings, suppressed))
                             entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
                             addHeader = true
                         case .notDetermined:
-                            entries.append(.permissionInfo(theme, strings))
+                            entries.append(.permissionInfo(theme, strings, false))
                             entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow_v0))
                             addHeader = true
                         default:
@@ -722,22 +723,19 @@ final class ContactListNode: ASDisplayNode {
         
         let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
         let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
-        let contactsWarningSuppressed = Promise<Bool>()
-        contactsWarningSuppressed.set(.single(false)
+        let contactsWarningSuppressed = Promise<(Bool, Bool)>()
+        contactsWarningSuppressed.set(.single((false, false))
         |> then(account.postbox.combinedView(keys: [warningKey, preferencesKey])
-            |> map { combined -> Bool in
+            |> map { combined -> (Bool, Bool) in
                 let synchronizeDeviceContacts: Bool = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
-                if !synchronizeDeviceContacts {
-                    return true
+                let suppressed: Bool
+                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                if let timestamp = timestamp, timestamp > 0 {
+                    suppressed = true
                 } else {
-                    return false
+                    suppressed = false
                 }
-//                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
-//                if let timestamp = timestamp, timestamp > 0 {
-//                    return true
-//                } else {
-//                    return false
-//                }
+                return (suppressed, !synchronizeDeviceContacts)
             }))
         
         var authorizeImpl: (() -> Void)?
@@ -917,7 +915,7 @@ final class ContactListNode: ASDisplayNode {
                             peers.append(.deviceContact(stableId, contact))
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: true)
+                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true))
                         let previous = previousEntries.swap(entries)
                         return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none))
                     }

@@ -11,14 +11,16 @@ class PermissionInfoItem: ListViewItem {
     let subject: DeviceAccessSubject
     let type: AccessType
     let style: ItemListStyle
+    let suppressed: Bool
     let close: () -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, close: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, suppressed: Bool, close: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.subject = subject
         self.type = type
         self.style = style
+        self.suppressed = suppressed
         self.close = close
     }
     
@@ -59,9 +61,9 @@ class PermissionInfoItem: ListViewItem {
 class PermissionInfoItemListItem: PermissionInfoItem, ItemListItem {
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, sectionId: ItemListSectionId, close: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, sectionId: ItemListSectionId, suppressed: Bool, close: @escaping () -> Void) {
         self.sectionId = sectionId
-        super.init(theme: theme, strings: strings, subject: subject, type: type, style: style, close: close)
+        super.init(theme: theme, strings: strings, subject: subject, type: type, style: style, suppressed: suppressed, close: close)
     }
     
     override func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -271,8 +273,8 @@ class PermissionInfoItemNode: ListViewItemNode {
                     }
                     
                     if let item = strongSelf.item {
-                        switch (item.subject, item.type) {
-                            case (.contacts, _), (.notifications, .unreachable):
+                        switch (item.subject, item.type, item.suppressed) {
+                            case (.contacts, _, false), (.notifications, .unreachable, _):
                                 strongSelf.closeButton.isHidden = false
                             default:
                                 strongSelf.closeButton.isHidden = true
