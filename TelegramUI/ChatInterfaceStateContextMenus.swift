@@ -430,7 +430,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 })))
             }
             
-            if let _ = activePoll, messages[0].forwardInfo == nil {
+            if let _ = activePoll, messages[0].forwardInfo == nil, !messages[0].flags.contains(.Incoming) {
                 actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_StopPoll, action: {
                     interfaceInteraction.requestStopPollInMessage(messages[0].id)
                 })))
