@@ -3894,10 +3894,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     
                     configureLegacyAssetPicker(controller, account: strongSelf.account, peer: peer, presentWebSearch: { [weak self] in
                         if let strongSelf = self {
-                            let controller = WebSearchController(account: strongSelf.account, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { [weak self] selectionState, editingState in
+                            let controller = WebSearchController(account: strongSelf.account, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { [weak self, weak legacyController] results, selectionState, editingState in
+                                if let legacyController = legacyController {
+                                    legacyController.dismiss()
+                                }
                                 legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
                                     if let strongSelf = self {
-                                        strongSelf.enqueueChatContextResult(nil, result)
+                                        strongSelf.enqueueChatContextResult(results, result, hideVia: true)
                                     }
                                 }, enqueueMediaMessages: { [weak self] signals in
                                     if let strongSelf = self {
@@ -3941,10 +3944,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         |> deliverOnMainQueue).start(next: { [weak self] configuration in
             if let strongSelf = self {
-                let controller = WebSearchController(account: strongSelf.account, peer: peer, configuration: configuration, mode: .media(completion: { [weak self] selectionState, editingState in
+                let controller = WebSearchController(account: strongSelf.account, peer: peer, configuration: configuration, mode: .media(completion: { [weak self] results, selectionState, editingState in
                     legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
                         if let strongSelf = self {
-                            strongSelf.enqueueChatContextResult(nil, result)
+                            strongSelf.enqueueChatContextResult(results, result, hideVia: true)
                         }
                     }, enqueueMediaMessages: { [weak self] signals in
                         if let strongSelf = self {
@@ -4227,11 +4230,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }))
     }
     
-    private func enqueueChatContextResult(_ results: ChatContextResultCollection?, _ result: ChatContextResult) {
+    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false) {
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
-        if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result), canSendMessagesToChat(self.presentationInterfaceState) {
+        if let message = outgoingMessageWithChatContextResult(to: peerId, results: results, result: result, hideVia: hideVia), canSendMessagesToChat(self.presentationInterfaceState) {
             let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {

@@ -11,13 +11,15 @@ class PermissionInfoItem: ListViewItem {
     let subject: DeviceAccessSubject
     let type: AccessType
     let style: ItemListStyle
+    let close: () -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, close: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.subject = subject
         self.type = type
         self.style = style
+        self.close = close
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -57,9 +59,9 @@ class PermissionInfoItem: ListViewItem {
 class PermissionInfoItemListItem: PermissionInfoItem, ItemListItem {
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, sectionId: ItemListSectionId, close: @escaping () -> Void) {
         self.sectionId = sectionId
-        super.init(theme: theme, strings: strings, subject: subject, type: type, style: style)
+        super.init(theme: theme, strings: strings, subject: subject, type: type, style: style, close: close)
     }
     
     override func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -145,14 +147,16 @@ class PermissionInfoItemNode: ListViewItemNode {
         self.closeButton = HighlightableButtonNode()
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.displaysAsynchronously = false
-    
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.badgeNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
-        //self.addSubnode(self.closeButton)
+        self.addSubnode(self.closeButton)
+        
+        self.closeButton.addTarget(self, action: #selector(self.closeButtonPressed), forControlEvents: .touchUpInside)
     }
     
     func asyncLayout() -> (_ item: PermissionInfoItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors?) -> (ListViewItemNodeLayout, () -> Void) {
@@ -297,7 +301,7 @@ class PermissionInfoItemNode: ListViewItemNode {
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + 9.0), size: textLayout.size)
                     
-                    strongSelf.closeButton.frame = CGRect(x: params.width - rightInset - 20.0, y: 2.0, width: 32.0, height: 32.0)
+                    strongSelf.closeButton.frame = CGRect(x: params.width - rightInset - 21.0, y: 10.0, width: 32.0, height: 32.0)
                 }
             })
         }
@@ -313,5 +317,11 @@ class PermissionInfoItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    @objc func closeButtonPressed() {
+        if let item = self.item {
+            item.close()
+        }
     }
 }

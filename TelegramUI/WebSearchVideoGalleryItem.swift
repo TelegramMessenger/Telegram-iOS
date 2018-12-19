@@ -199,13 +199,11 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if initialBuffering {
                             strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
                         } else {
-                            var state: RadialStatusNodeState = .play(.white)
+                            var state: RadialStatusNodeState = .none
                             
                             if let fetchStatus = fetchStatus {
                                 if strongSelf.requiresDownload {
                                     switch fetchStatus {
-                                        case .Remote:
-                                            state = .download(.white)
                                         case let .Fetching(_, progress):
                                             fetching = true
                                             isPaused = true
@@ -229,7 +227,6 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             videoNode.playbackCompleted = { [weak videoNode] in
                 Queue.mainQueue().async {
-                    //item.playbackCompleted()
                     if !isAnimated {
                         videoNode?.seek(0.0)
                     }

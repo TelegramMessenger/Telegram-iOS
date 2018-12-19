@@ -72,11 +72,13 @@ private enum ContactListNodeEntryId: Hashable {
 private final class ContactListNodeInteraction {
     let activateSearch: () -> Void
     let authorize: () -> Void
+    let suppressWarning: () -> Void
     let openPeer: (ContactListPeer) -> Void
     
-    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, openPeer: @escaping (ContactListPeer) -> Void) {
+    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer) -> Void) {
         self.activateSearch = activateSearch
         self.authorize = authorize
+        self.suppressWarning = suppressWarning
         self.openPeer = openPeer
     }
 }
@@ -160,7 +162,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     interaction.activateSearch()
                 })
             case let .permissionInfo(theme, strings):
-                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied, style: .plain)
+                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied, style: .plain, close: {
+                    interaction.suppressWarning()
+                })
             case let .permissionEnable(theme, text):
                 return ContactListActionItem(theme: theme, title: text, icon: nil, header: nil, action: {
                     interaction.authorize()
@@ -366,7 +370,7 @@ private extension PeerIndexNameRepresentation {
     }
 }
 
-private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>, authorizationStatus: AccessType) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>, authorizationStatus: AccessType, warningSuppressed: Bool) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var commonHeader: ListViewItemHeader?
@@ -378,18 +382,20 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             entries.append(.search(theme, strings))
             
             var addHeader = false
-            if !peers.isEmpty {
-                switch authorizationStatus {
-                    case .denied:
-                        entries.append(.permissionInfo(theme, strings))
-                        entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
-                        addHeader = true
-                    case .notDetermined:
-                        entries.append(.permissionInfo(theme, strings))
-                        entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow_v0))
-                        addHeader = true
-                    default:
-                        break
+            if #available(iOSApplicationExtension 10.0, *) {
+                if !peers.isEmpty && !warningSuppressed {
+                    switch authorizationStatus {
+                        case .denied:
+                            entries.append(.permissionInfo(theme, strings))
+                            entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
+                            addHeader = true
+                        case .notDetermined:
+                            entries.append(.permissionInfo(theme, strings))
+                            entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow_v0))
+                            addHeader = true
+                        default:
+                            break
+                    }
                 }
             }
             
@@ -671,6 +677,7 @@ final class ContactListNode: ASDisplayNode {
     var activateSearch: (() -> Void)?
     var openPeer: ((ContactListPeer) -> Void)?
     var openPrivacyPolicy: (() -> Void)?
+    var suppressPermissionWarning: (() -> Void)?
     
     private let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
     private let disposable = MetaDisposable()
@@ -678,9 +685,6 @@ final class ContactListNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)>
-    
-    private let authorizationPromise: Promise<AccessType>
-    private var authorizationDisposable: Disposable?
     
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
@@ -706,7 +710,21 @@ final class ContactListNode: ASDisplayNode {
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.disableAnimations))
         
-        self.authorizationPromise = Promise(AccessType.allowed)
+        let contactsAuthorization = Promise<AccessType>()
+        contactsAuthorization.set(.single(.allowed)
+        |> then(DeviceAccess.authorizationStatus(account: account, subject: .contacts)))
+        
+        let contactsWarningSuppressed = Promise<Bool>()
+        contactsWarningSuppressed.set(.single(false)
+        |> then(account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())])
+            |> map { combined -> Bool in
+                let timestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
+                    return true
+                } else {
+                    return false
+                }
+            }))
         
         var authorizeImpl: (() -> Void)?
         var openPrivacyPolicyImpl: (() -> Void)?
@@ -739,6 +757,8 @@ final class ContactListNode: ASDisplayNode {
             self?.activateSearch?()
         }, authorize: {
             authorizeImpl?()
+        }, suppressWarning: { [weak self] in
+            self?.suppressPermissionWarning?()
         }, openPeer: { [weak self] peer in
             self?.openPeer?(peer)
         })
@@ -779,7 +799,6 @@ final class ContactListNode: ASDisplayNode {
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<ContactsListNodeTransition, NoError>
         let themeAndStringsPromise = self.themeAndStringsPromise
-        let authorizationsPromise = self.authorizationPromise
         if case let .search(query, searchChatList, searchDeviceContacts) = presentation {
             transition = query
             |> mapToSignal { query in
@@ -884,7 +903,7 @@ final class ContactListNode: ASDisplayNode {
                             peers.append(.deviceContact(stableId, contact))
                         }
                         
-                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed)
+                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: true)
                         let previous = previousEntries.swap(entries)
                         return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animated: false))
                     }
@@ -897,8 +916,8 @@ final class ContactListNode: ASDisplayNode {
                 }
             }
         } else {
-            transition = (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get(), authorizationsPromise.get())
-                |> mapToQueue { view, selectionState, themeAndStrings, authorizationStatus -> Signal<ContactsListNodeTransition, NoError> in
+            transition = (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get(), contactsAuthorization.get(), contactsWarningSuppressed.get())
+                |> mapToQueue { view, selectionState, themeAndStrings, authorizationStatus, warningSuppressed -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
                         var peers = view.peers.map({ ContactListPeer.peer(peer: $0, isGlobal: false) })
                         var existingPeerIds = Set<PeerId>()
@@ -927,7 +946,7 @@ final class ContactListNode: ASDisplayNode {
                         if (authorizationStatus == .notDetermined || authorizationStatus == .denied) && peers.isEmpty {
                             isEmpty = true
                         }
-                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus)
+                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed)
                         let previous = previousEntries.swap(entries)
                         let animated: Bool
                         if let previous = previous, !themeAndStrings.5 {
@@ -990,13 +1009,6 @@ final class ContactListNode: ASDisplayNode {
                         }
                     })
                 }
-            }
-        })
-        
-        self.authorizationDisposable = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
-        |> deliverOnMainQueue).start(next: { [weak self] status in
-            if let strongSelf = self {
-                strongSelf.authorizationPromise.set(.single(status))
             }
         })
         

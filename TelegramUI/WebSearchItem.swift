@@ -24,7 +24,7 @@ final class WebSearchItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = WebSearchItemNode()
-        node.setup(item: self)
+        node.setup(item: self, synchronousLoad: synchronousLoad)
         return node
     }
     
@@ -33,7 +33,7 @@ final class WebSearchItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(item: self)
+        node.setup(item: self, synchronousLoad: false)
     }
 }
 
@@ -56,7 +56,7 @@ final class WebSearchItemNode: GridItemNode {
         self.imageNodeBackground.isLayerBacked = true
         
         self.imageNode = TransformImageNode()
-        self.imageNode.contentAnimations = [.subsequentUpdates]
+        self.imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
         self.imageNode.displaysAsynchronously = false
         
         super.init()
@@ -80,7 +80,7 @@ final class WebSearchItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(recognizer)
     }
     
-    func setup(item: WebSearchItem) {
+    func setup(item: WebSearchItem, synchronousLoad: Bool) {
         if self.item !== item {
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
@@ -90,25 +90,28 @@ final class WebSearchItemNode: GridItemNode {
             var imageDimensions: CGSize?
             switch item.result {
                 case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
-                    if let content = content {
+                    if let content = content, type != "gif" {
                         imageResource = content.resource
                     } else if let thumbnail = thumbnail {
                         imageResource = thumbnail.resource
                     }
                     imageDimensions = content?.dimensions
-                    if type == "gif", let imageResource = imageResource, let content = content, let dimensions = content.dimensions {
-                        thumbnailResource = imageResource
-                        thumbnailDimensions = dimensions
-                    }
                 case let .internalReference(_, _, _, _, _, image, file, _):
                     if let image = image {
                         if let largestRepresentation = largestImageRepresentation(image.representations) {
                             imageDimensions = largestRepresentation.dimensions
                         }
                         imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0))?.resource
-                        if let thumbnailRepresentation = smallestImageRepresentation(image.representations) {
-                            thumbnailDimensions = thumbnailRepresentation.dimensions
-                            thumbnailResource = thumbnailRepresentation.resource
+                        if let file = file {
+                            if let thumbnailRepresentation = smallestImageRepresentation(file.previewRepresentations) {
+                                thumbnailDimensions = thumbnailRepresentation.dimensions
+                                thumbnailResource = thumbnailRepresentation.resource
+                            }
+                        } else {
+                            if let thumbnailRepresentation = smallestImageRepresentation(image.representations) {
+                                thumbnailDimensions = thumbnailRepresentation.dimensions
+                                thumbnailResource = thumbnailRepresentation.resource
+                            }
                         }
                     } else if let file = file {
                         if let dimensions = file.dimensions {
@@ -136,8 +139,8 @@ final class WebSearchItemNode: GridItemNode {
             
             if let updateImageSignal = updateImageSignal {
                 let editingContext = item.controllerInteraction.editingState
+                let editableItem = LegacyWebSearchItem(result: item.result)
                 let editedImageSignal = Signal<UIImage?, NoError> { subscriber in
-                    let editableItem = LegacyWebSearchItem(result: item.result)
                     if let signal = editingContext.thumbnailImageSignal(for: editableItem) {
                         let disposable = signal.start(next: { next in
                             if let image = next as? UIImage {
@@ -161,7 +164,8 @@ final class WebSearchItemNode: GridItemNode {
                         return { arguments in
                             let context = DrawingContext(size: arguments.drawingSize, clear: true)
                             let drawingRect = arguments.drawingRect
-                            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
+                            let imageSize = image.size
+                            let fittedSize = imageSize.aspectFilled(arguments.boundingSize).fitted(imageSize)
                             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
                             
                             context.withFlippedContext { c in
@@ -231,7 +235,7 @@ final class WebSearchItemNode: GridItemNode {
     }
     
     func transitionView() -> UIView {
-        let view = self.view.snapshotContentTree(unhide: true, keepTransform: true)!
+        let view = self.imageNode.view.snapshotContentTree(unhide: true, keepTransform: true)!
         view.frame = self.convert(self.bounds, to: nil)
         return view
     }

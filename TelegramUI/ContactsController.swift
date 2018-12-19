@@ -62,12 +62,22 @@ public class ContactsController: ViewController {
             }
         })
         
-        self.authorizationDisposable = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
-        |> deliverOnMainQueue).start(next: { [weak self] status in
-            if let strongSelf = self {
-                strongSelf.tabBarItem.badgeValue = status != .allowed ? "!" : nil
-            }
-        })
+        if #available(iOSApplicationExtension 10.0, *) {
+            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(account: account, subject: .contacts), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())])
+                |> map { combined -> Bool in
+                    let timestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                    if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+            |> deliverOnMainQueue).start(next: { [weak self] status, suppressed in
+                if let strongSelf = self {
+                    strongSelf.tabBarItem.badgeValue = status != .allowed && !suppressed ? "!" : nil
+                }
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -104,19 +114,20 @@ public class ContactsController: ViewController {
         
         self.contactsNode.requestOpenPeerFromSearch = { [weak self] peer in
             self?.contactsNode.contactListNode.openPeer?(peer)
-            /*if let strongSelf = self {
-                switch peer {
-                    case let .peer(peer, _):
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peer.id)))
-                    case let .deviceContact(stableId, _):
-                        break
-                }
-            }*/
         }
         
         self.contactsNode.contactListNode.openPrivacyPolicy = { [weak self] in
             if let strongSelf = self {
                 openExternalUrl(account: strongSelf.account, context: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
+            }
+        }
+        
+        self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
+            if let strongSelf = self {
+                let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                strongSelf.present(textAlertController(account: strongSelf.account, title: nil, text: presentationData.strings.Contacts_PermissionsSuppressWarning, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: strongSelf.account.postbox, value: Int32(Date().timeIntervalSince1970))
+                })]), in: .window(.root))
             }
         }
         

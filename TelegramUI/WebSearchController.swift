@@ -47,7 +47,7 @@ enum WebSearchMode {
 }
 
 enum WebSearchControllerMode {
-    case media(completion: (TGMediaSelectionContext, TGMediaEditingContext) -> Void)
+    case media(completion: (ChatContextResultCollection, TGMediaSelectionContext, TGMediaEditingContext) -> Void)
     case avatar(completion: (UIImage) -> Void)
     
     var mode: WebSearchMode {
@@ -65,13 +65,13 @@ final class WebSearchControllerInteraction {
     let setSearchQuery: (String) -> Void
     let deleteRecentQuery: (String) -> Void
     let toggleSelection: (ChatContextResult, Bool) -> Void
-    let sendSelected: (ChatContextResult?) -> Void
+    let sendSelected: (ChatContextResultCollection, ChatContextResult?) -> Void
     let avatarCompleted: (UIImage) -> Void
     let selectionState: TGMediaSelectionContext?
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Void, sendSelected: @escaping (ChatContextResult?) -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Void, sendSelected: @escaping (ChatContextResultCollection, ChatContextResult?) -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openResult = openResult
         self.setSearchQuery = setSearchQuery
         self.deleteRecentQuery = deleteRecentQuery
@@ -203,14 +203,14 @@ final class WebSearchController: ViewController {
                 let item = LegacyWebSearchItem(result: result)
                 strongSelf.controllerInteraction?.selectionState?.setItem(item, selected: value)
             }
-        }, sendSelected: { current in
+        }, sendSelected: { results, current in
             if let selectionState = selectionState {
                 if let current = current {
                     let currentItem = LegacyWebSearchItem(result: current)
                     selectionState.setItem(currentItem, selected: true)
                 }
                 if case let .media(sendSelected) = mode {
-                    sendSelected(selectionState, editingState)
+                    sendSelected(results, selectionState, editingState)
                 }
             }
         }, avatarCompleted: { result in
@@ -348,8 +348,8 @@ final class WebSearchController: ViewController {
     }
     
     private func signalForQuery(_ query: String, scope: WebSearchScope) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> {
-        var delayRequest = true
-        var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ _ in return .contextRequestResult(nil, nil) })
+        let delayRequest = true
+        let signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ _ in return .contextRequestResult(nil, nil) })
         
         guard let peerId = self.peer?.id else {
             return .single({ _ in return .contextRequestResult(nil, nil) })

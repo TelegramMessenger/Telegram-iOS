@@ -26,6 +26,7 @@ func presentLegacyWebSearchEditor(account: Account, theme: PresentationTheme, re
     }
     
     let _ = (screenImage
+    |> take(1)
     |> deliverOnMainQueue).start(next: { screenImage in
         let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
         legacyController.statusBar.statusBarStyle = .Ignore

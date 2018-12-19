@@ -577,7 +577,7 @@ class WebSearchControllerNode: ASDisplayNode {
             }
             
             self.hasMore = transition.hasMore
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: nil, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: completion)
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: nil, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: true), completion: completion)
         }
     }
     
@@ -623,7 +623,9 @@ class WebSearchControllerNode: ASDisplayNode {
     }
     
     @objc private func sendPressed() {
-        self.controllerInteraction.sendSelected(nil)
+        if let results = self.currentExternalResults {
+            self.controllerInteraction.sendSelected(results, nil)
+        }
         self.cancel?()
     }
     
@@ -636,10 +638,10 @@ class WebSearchControllerNode: ASDisplayNode {
                     }, initialLayout: self.containerLayout?.0, transitionHostView: { [weak self] in
                         return self?.gridNode.view
                     }, transitionView: { [weak self] result in
-                        return self?.transitionView(for: result)
+                        return self?.transitionNode(for: result)?.transitionView()
                     }, completed: { [weak self] result in
-                        if let strongSelf = self {
-                            strongSelf.controllerInteraction.sendSelected(result)
+                        if let strongSelf = self, let results = strongSelf.currentExternalResults {
+                            strongSelf.controllerInteraction.sendSelected(results, result)
                             strongSelf.cancel?()
                         }
                     }, present: present)
@@ -658,8 +660,8 @@ class WebSearchControllerNode: ASDisplayNode {
                     let controller = WebSearchGalleryController(account: self.account, peer: self.peer, selectionState: self.controllerInteraction.selectionState, editingState: self.controllerInteraction.editingState, entries: entries, centralIndex: centralIndex, replaceRootController: { (controller, _) in
                         
                     }, baseNavigationController: nil, sendCurrent: { [weak self] result in
-                        if let strongSelf = self {
-                            strongSelf.controllerInteraction.sendSelected(result)
+                        if let strongSelf = self, let results = strongSelf.currentExternalResults {
+                            strongSelf.controllerInteraction.sendSelected(results, result)
                             strongSelf.cancel?()
                         }
                     })
@@ -693,9 +695,9 @@ class WebSearchControllerNode: ASDisplayNode {
             presentLegacyWebSearchEditor(account: self.account, theme: self.theme, result: currentResult, initialLayout: self.containerLayout?.0, updateHiddenMedia: { [weak self] id in
                 self?.hiddenMediaId.set(.single(id))
             }, transitionHostView: { [weak self] in
-                    return self?.gridNode.view
+                return self?.gridNode.view
             }, transitionView: { [weak self] result in
-                return self?.transitionView(for: result)
+                return self?.transitionNode(for: result)?.transitionView()
             }, completed: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.controllerInteraction.avatarCompleted(result)
@@ -705,16 +707,13 @@ class WebSearchControllerNode: ASDisplayNode {
         }
     }
     
-    private func transitionView(for result: ChatContextResult) -> UIView? {
+    private func transitionNode(for result: ChatContextResult) -> WebSearchItemNode? {
         var transitionNode: WebSearchItemNode?
         self.gridNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? WebSearchItemNode, itemNode.item?.result.id == result.id {
                 transitionNode = itemNode
             }
         }
-        if let transitionNode = transitionNode {
-            return transitionNode.transitionView()
-        }
-        return nil
+        return transitionNode
     }
 }

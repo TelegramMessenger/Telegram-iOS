@@ -201,7 +201,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
             var videoFile: TelegramMediaFile?
             var imageDimensions: CGSize?
             switch item.result {
-                case let .externalReference(_, _, type, title, _, url, content, thumbnail, _):
+                case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
                     if let content = content {
                         imageResource = content.resource
                     } else if let thumbnail = thumbnail {
@@ -218,7 +218,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     } else if let imageResource = imageResource {
                         updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
                     }
-                case let .internalReference(_, _, _, title, _, image, file, _):
+                case let .internalReference(_, _, _, _, _, image, file, _):
                     if let image = image {
                         if let largestRepresentation = largestImageRepresentation(image.representations) {
                             imageDimensions = largestRepresentation.dimensions

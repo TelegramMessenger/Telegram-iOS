@@ -51,10 +51,24 @@ public enum AccessType {
 
 private let cachedMediaLibraryAccessStatus = Atomic<Bool?>(value: nil)
 
+func shouldDisplayNotificationsPermissionWarning(status: AccessType, suppressed: Bool) -> Bool {
+    switch (status, suppressed) {
+        case (.allowed, _), (.unreachable, true):
+            return false
+        default:
+            return true
+    }
+}
+
 public final class DeviceAccess {
     private static let contactsPromise = Promise<Bool?>(nil)
     static var contacts: Signal<Bool?, NoError> {
         return self.contactsPromise.get()
+    }
+    
+    private static let notificationsPromise = Promise<Bool?>(nil)
+    static var notifications: Signal<Bool?, NoError> {
+        return self.notificationsPromise.get()
     }
     
     public static func isMicrophoneAccessAuthorized() -> Bool? {
@@ -69,11 +83,11 @@ public final class DeviceAccess {
                         UNUserNotificationCenter.current().getNotificationSettings(completionHandler: { settings in
                             switch settings.authorizationStatus {
                                 case .authorized:
-//                                    if settings.alertSetting == .disabled || settings.soundSetting == .disabled || settings.badgeSetting == .disabled || settings.notificationCenterSetting == .disabled || settings.lockScreenSetting == .disabled {
-//                                        subscriber.putNext(.unreachable)
-//                                    } else {
+                                    if settings.alertSetting == .disabled || settings.soundSetting == .disabled || settings.badgeSetting == .disabled || settings.notificationCenterSetting == .disabled || settings.lockScreenSetting == .disabled {
+                                        subscriber.putNext(.unreachable)
+                                    } else {
                                         subscriber.putNext(.allowed)
-//                                    }
+                                    }
                                 case .denied:
                                     subscriber.putNext(.denied)
                                 case .notDetermined:
@@ -89,6 +103,14 @@ public final class DeviceAccess {
                     }
                     return EmptyDisposable
                 }
+                |> then(self.notifications
+                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                        if let authorized = authorized {
+                            return .single(authorized ? .allowed : .denied)
+                        } else {
+                            return .complete()
+                        }
+                    })
                 return account.telegramApplicationContext.applicationBindings.applicationInForeground
                 |> distinctUntilChanged
                 |> mapToSignal { inForeground -> Signal<AccessType, NoError> in
@@ -346,6 +368,7 @@ public final class DeviceAccess {
                 case .notifications:
                     if let account = account {
                         account.telegramApplicationContext.applicationBindings.registerForNotifications({ result in
+                            self.notificationsPromise.set(.single(result))
                             completion(result)
                         })
                     }

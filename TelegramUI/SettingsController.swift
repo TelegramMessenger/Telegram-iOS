@@ -366,7 +366,7 @@ private struct SettingsState: Equatable {
     }
 }
 
-private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool) -> [SettingsEntry] {
+private func settingsEntries(presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -398,7 +398,8 @@ private func settingsEntries(presentationData: PresentationData, state: Settings
         entries.append(.recentCalls(presentationData.theme, SettingsItemIcons.recentCalls, presentationData.strings.CallSettings_RecentCalls))
         entries.append(.stickers(presentationData.theme, SettingsItemIcons.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         
-        entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsAuthorizationStatus != .allowed))
+        let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
+        entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
         entries.append(.privacyAndSecurity(presentationData.theme, SettingsItemIcons.security, presentationData.strings.Settings_PrivacySettings))
         entries.append(.dataAndStorage(presentationData.theme, SettingsItemIcons.dataAndStorage, presentationData.strings.Settings_ChatSettings))
         entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.Settings_Appearance))
@@ -719,9 +720,25 @@ public func settingsController(account: Account, accountManager: AccountManager)
     }
     updatePassport()
     
-    let notificationAuthorizationStatus = Promise<AccessType>(.allowed)
-    notificationAuthorizationStatus.set(.single(.allowed)
-    |> then(DeviceAccess.authorizationStatus(account: account, subject: .notifications)))
+    let notificationsAuthorizationStatus = Promise<AccessType>(.allowed)
+    if #available(iOSApplicationExtension 10.0, *) {
+        notificationsAuthorizationStatus.set(.single(.allowed)
+        |> then(DeviceAccess.authorizationStatus(account: account, subject: .notifications)))
+    }
+    
+    let notificationsWarningSuppressed = Promise<Bool>(true)
+    if #available(iOSApplicationExtension 10.0, *) {
+        notificationsWarningSuppressed.set(.single(true)
+        |> then(account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())])
+            |> map { combined -> Bool in
+                let timestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                if let timestamp = timestamp, timestamp > 0 || timestamp == -1 {
+                    return true
+                } else {
+                    return false
+                }
+            }))
+    }
     
     let notifyExceptions = Promise<NotificationExceptionsList?>(nil)
     let updateNotifyExceptions: () -> Void = {
@@ -733,12 +750,11 @@ public func settingsController(account: Account, accountManager: AccountManager)
         hasWatchApp.set(watchManager.watchAppInstalled)
     }
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, combineLatest(account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), notifyExceptions.get(), notificationAuthorizationStatus.get()), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()))
+    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get(), peerView, combineLatest(account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings]), notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(account.viewTracker.featuredStickerPacks(), archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()))
         |> map { presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let proxySettings: ProxySettings = preferencesAndExceptions.0.values[PreferencesKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
             
-            
-            let peer = peerViewMainPeer(view)
+        
             let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                 arguments.openEditing()
             })
@@ -753,8 +769,7 @@ public func settingsController(account: Account, accountManager: AccountManager)
             }
             
             let (hasPassport, hasWatchApp) = hasPassportAndWatch
-            
-            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp), style: .blocks)
+            let listState = ItemListNodeState(entries: settingsEntries(presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp), style: .blocks)
             
             return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -763,8 +778,9 @@ public func settingsController(account: Account, accountManager: AccountManager)
     
     let icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
     
-    let controller = ItemListController(account: account, state: signal, tabBarItem: combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, notificationAuthorizationStatus.get()) |> map { presentationData, status in
-        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon, badgeValue: status != .allowed ? "!" : nil)
+    let controller = ItemListController(account: account, state: signal, tabBarItem: combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()) |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed in
+        let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
+        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon, badgeValue: notificationsWarning ? "!" : nil)
     })
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)

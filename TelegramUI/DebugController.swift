@@ -258,7 +258,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     }
     entries.append(.sendTthumb(presentationData.theme))
     entries.append(.previewTthumb(presentationData.theme))
-    entries.append(.animatedStickers(presentationData.theme))
+    //entries.append(.animatedStickers(presentationData.theme))
     entries.append(.versionInfo(presentationData.theme))
     
     return entries

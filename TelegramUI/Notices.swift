@@ -123,6 +123,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case profileCallTips = 4
     case setPublicChannelLink = 5
     case passcodeLockTips = 6
+    case contactsPermissionWarning = 7
+    case notificationsPermissionWarning = 8
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
         v.setInt32(0, value: self.rawValue)
@@ -165,6 +167,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func passcodeLockTips() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.passcodeLockTips.key)
+    }
+    
+    static func contactsPermissionWarning() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: permissionsNamespace), key: ApplicationSpecificGlobalNotice.contactsPermissionWarning.key)
+    }
+    
+    static func notificationsPermissionWarning() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: permissionsNamespace), key: ApplicationSpecificGlobalNotice.notificationsPermissionWarning.key)
     }
 }
 
@@ -329,6 +339,34 @@ public struct ApplicationSpecificNotice {
         }
     }
     
+    public static func contactsPermissionWarningKey() -> NoticeEntryKey {
+        return ApplicationSpecificNoticeKeys.contactsPermissionWarning()
+    }
+    
+    public static func setContactsPermissionWarning(postbox: Postbox, value: Int32) {
+        let _ =  postbox.transaction { transaction -> Void in
+            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.contactsPermissionWarning(), value: ApplicationSpecificTimestampNotice(value: value))
+        }.start()
+    }
+    
+    public static func notificationsPermissionWarningKey() -> NoticeEntryKey {
+        return ApplicationSpecificNoticeKeys.notificationsPermissionWarning()
+    }
+    
+    public static func getTimestampValue(_ entry: NoticeEntry) -> Int32? {
+        if let value = entry as? ApplicationSpecificTimestampNotice {
+            return value.value
+        } else {
+            return nil
+        }
+    }
+    
+    public static func setNotificationsPermissionWarning(postbox: Postbox, value: Int32) {
+        let _ = postbox.transaction { transaction -> Void in
+            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.notificationsPermissionWarning(), value: ApplicationSpecificTimestampNotice(value: value))
+        }.start()
+    }
+
     static func reset(postbox: Postbox) -> Signal<Void, NoError> {
         return postbox.transaction { transaction -> Void in
             

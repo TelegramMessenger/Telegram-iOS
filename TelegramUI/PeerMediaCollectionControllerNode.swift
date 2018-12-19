@@ -447,40 +447,40 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                     historyEmptyNode.frame = CGRect(origin: CGPoint(), size: containerLayout.0.size)
                     
                     self.candidateHistoryNodeReadyDisposable.set((node.historyState.get()
-                        |> deliverOnMainQueue).start(next: { [weak self, weak node] _ in
-                            if let strongSelf = self, let strongNode = node, strongNode == strongSelf.candidateHistoryNode?.0 {
-                                strongSelf.candidateHistoryNode = nil
-                                strongSelf.insertSubnode(strongNode, belowSubnode: strongSelf.historyNode)
-                                strongSelf.insertSubnode(historyEmptyNode, aboveSubnode: strongNode)
-                                
-                                let previousNode = strongSelf.historyNode
-                                let previousEmptyNode = strongSelf.historyEmptyNode
-                                strongSelf.historyNode = strongNode
-                                strongSelf.historyEmptyNode = historyEmptyNode
-                                updateLoadNodeState(strongSelf.historyEmptyNode, strongSelf.historyNode.loadState)
-                                strongSelf.historyNode.setLoadStateUpdated { loadState, _ in
-                                    if let strongSelf = self {
-                                        updateLoadNodeState(strongSelf.historyEmptyNode, loadState)
-                                    }
+                    |> deliverOnMainQueue).start(next: { [weak self, weak node] _ in
+                        if let strongSelf = self, let strongNode = node, strongNode == strongSelf.candidateHistoryNode?.0 {
+                            strongSelf.candidateHistoryNode = nil
+                            strongSelf.insertSubnode(strongNode, belowSubnode: strongSelf.historyNode)
+                            strongSelf.insertSubnode(historyEmptyNode, aboveSubnode: strongNode)
+                            
+                            let previousNode = strongSelf.historyNode
+                            let previousEmptyNode = strongSelf.historyEmptyNode
+                            strongSelf.historyNode = strongNode
+                            strongSelf.historyEmptyNode = historyEmptyNode
+                            updateLoadNodeState(strongSelf.historyEmptyNode, strongSelf.historyNode.loadState)
+                            strongSelf.historyNode.setLoadStateUpdated { loadState, _ in
+                                if let strongSelf = self {
+                                    updateLoadNodeState(strongSelf.historyEmptyNode, loadState)
                                 }
-                                
-                                let directionMultiplier: CGFloat
-                                if previousMode.rawValue < mediaCollectionInterfaceState.mode.rawValue {
-                                    directionMultiplier = 1.0
-                                } else {
-                                    directionMultiplier = -1.0
-                                }
-                                
-                                previousNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -directionMultiplier * strongSelf.bounds.width, y: 0.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak previousNode] _ in
-                                    previousNode?.removeFromSupernode()
-                                })
-                                previousEmptyNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -directionMultiplier * strongSelf.bounds.width, y: 0.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak previousEmptyNode] _ in
-                                    previousEmptyNode?.removeFromSupernode()
-                                })
-                                strongSelf.historyNode.layer.animatePosition(from: CGPoint(x: directionMultiplier * strongSelf.bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                                strongSelf.historyEmptyNode.layer.animatePosition(from: CGPoint(x: directionMultiplier * strongSelf.bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                             }
-                        }))
+                            
+                            let directionMultiplier: CGFloat
+                            if previousMode.rawValue < mediaCollectionInterfaceState.mode.rawValue {
+                                directionMultiplier = 1.0
+                            } else {
+                                directionMultiplier = -1.0
+                            }
+                            
+                            previousNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -directionMultiplier * strongSelf.bounds.width, y: 0.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak previousNode] _ in
+                                previousNode?.removeFromSupernode()
+                            })
+                            previousEmptyNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -directionMultiplier * strongSelf.bounds.width, y: 0.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak previousEmptyNode] _ in
+                                previousEmptyNode?.removeFromSupernode()
+                            })
+                            strongSelf.historyNode.layer.animatePosition(from: CGPoint(x: directionMultiplier * strongSelf.bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            strongSelf.historyEmptyNode.layer.animatePosition(from: CGPoint(x: directionMultiplier * strongSelf.bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        }
+                    }))
                 }
             }
             

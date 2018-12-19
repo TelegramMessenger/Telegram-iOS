@@ -238,9 +238,9 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
                 case .Local:
                     return 1.0
                 case .Remote:
-                    return 0.0
+                    return 0.027
                 case let .Fetching(_, progress):
-                    return progress
+                    return max(progress, 0.1)
             }
         }
         
@@ -294,8 +294,8 @@ private func galleryItems(account: Account, results: [ChatContextResult], curren
 }
 
 func presentLegacyWebSearchGallery(account: Account, peer: Peer?, theme: PresentationTheme, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, present: (ViewController, Any?) -> Void) {
-    let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
-    legacyController.statusBar.statusBarStyle = .Ignore
+    let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: nil)
+    legacyController.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
     
     let controller = TGModernGalleryController(context: legacyController.context)!
     controller.asyncTransitionIn = true
@@ -303,7 +303,7 @@ func presentLegacyWebSearchGallery(account: Account, peer: Peer?, theme: Present
     
     let (items, focusItem) = galleryItems(account: account, results: results, current: current, selectionContext: selectionContext, editingContext: editingContext)
     
-    let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: true, allowCaptionEntities: true, hasTimer: false, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: false, hasCamera: false, recipientName: peer?.displayTitle)!
+    let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: false, allowCaptionEntities: true, hasTimer: false, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: false, hasCamera: false, recipientName: peer?.displayTitle)!
     if let peer = peer {
         model.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
     }
@@ -336,7 +336,7 @@ func presentLegacyWebSearchGallery(account: Account, peer: Peer?, theme: Present
     }
     model.interfaceView.donePressed = { item in
         if let item = item as? LegacyWebSearchGalleryItem {
-            controller.dismissWhenReady(animated: false)
+            controller.dismissWhenReady(animated: true)
             completed(item.item.result)
         }
     }
