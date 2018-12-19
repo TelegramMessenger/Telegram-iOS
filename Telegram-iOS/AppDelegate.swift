@@ -602,6 +602,31 @@ private enum QueuedWakeup: Int32 {
                     self.registerForNotifications(account: context.account, authorize: true, completion: completion)
                 }
             })
+        }, requestSiriAuthorization: { completion in
+            if #available(iOS 10, *) {
+                INPreferences.requestSiriAuthorization { status in
+                    if case .authorized = status {
+                        completion(true)
+                    } else {
+                        completion(false)
+                    }
+                }
+            } else {
+                completion(false)
+            }
+        }, siriAuthorization: {
+            if #available(iOS 10, *) {
+                switch INPreferences.siriAuthorizationStatus() {
+                    case .authorized:
+                        return .allowed
+                    case .denied, .restricted:
+                        return .denied
+                    case .notDetermined:
+                        return .notDetermined
+                }
+            } else {
+                return .denied
+            }
         }, getWindowHost: {
             return self.nativeWindow
         }, presentNativeController: { controller in

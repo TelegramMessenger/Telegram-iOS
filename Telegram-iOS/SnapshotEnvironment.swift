@@ -80,7 +80,7 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
     }, openSettings: {
     }, openAppStorePage: {
     }, registerForNotifications: { _ in
-    }, getWindowHost: {
+    }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {
         return nil
     }, presentNativeController: { _ in
     }, dismissNativeController: {
