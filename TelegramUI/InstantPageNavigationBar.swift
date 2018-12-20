@@ -107,6 +107,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 1
+        self.titleNode.truncationMode = .byTruncatingTail
         
         self.progressNode = InstantPageProgressNode()
         
@@ -209,7 +210,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
             if let title = title {
                 self.titleNode.transform = CATransform3DIdentity
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
-                let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 30.0 - 88.0, height: size.height))
+                let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 170.0, height: size.height))
                 self.titleNode.frame = CGRect(origin: CGPoint(x: (size.width - titleSize.width) / 2.0, y: size.height - 30.0), size: titleSize)
             }
         }
