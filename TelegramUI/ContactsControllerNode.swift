@@ -57,20 +57,23 @@ final class ContactsControllerNode: ASDisplayNode {
         })
         
         inviteImpl = { [weak self] in
-            let _ = (DeviceAccess.contacts
+            let _ = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
             |> take(1)
             |> deliverOnMainQueue).start(next: { value in
                 guard let strongSelf = self else {
                     return
                 }
                 
-                if let value = value, value {
-                    strongSelf.openInvite?()
-                } else {
-                    let presentationData = strongSelf.presentationData
-                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                        self?.account.telegramApplicationContext.applicationBindings.openSettings()
-                    })]), nil)
+                switch value {
+                    case .allowed:
+                        strongSelf.openInvite?()
+                    case .notDetermined:
+                        DeviceAccess.authorizeAccess(to: .contacts)
+                    default:
+                        let presentationData = strongSelf.presentationData
+                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                            self?.account.telegramApplicationContext.applicationBindings.openSettings()
+                        })]), nil)
                 }
             })
         }

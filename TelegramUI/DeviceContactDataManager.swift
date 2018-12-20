@@ -413,13 +413,13 @@ private final class DeviceContactDataManagerImpl {
     
     init(queue: Queue) {
         self.queue = queue
-        self.accessDisposable = (DeviceAccess.contacts
+        self.accessDisposable = (DeviceAccess.authorizationStatus(subject: .contacts)
         |> deliverOn(self.queue)).start(next: { [weak self] authorizationStatus in
-            guard let strongSelf = self, let authorizationStatus = authorizationStatus else {
+            guard let strongSelf = self, authorizationStatus != .notDetermined else {
                 return
             }
             strongSelf.accessInitialized = true
-            if authorizationStatus {
+            if authorizationStatus == .allowed {
                 if #available(iOSApplicationExtension 9.0, *) {
                     let dataContext = DeviceContactDataModernContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
                         guard let strongSelf = self else {

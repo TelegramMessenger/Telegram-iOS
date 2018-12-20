@@ -80,7 +80,7 @@ public final class DeviceAccess {
         return AVAudioSession.sharedInstance().recordPermission() == .granted
     }
     
-    public static func authorizationStatus(account: Account, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
+    public static func authorizationStatus(account: Account? = nil, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
         switch subject {
             case .notifications:
                 let status = Signal<AccessType, NoError> { subscriber in
@@ -116,9 +116,13 @@ public final class DeviceAccess {
                             return .complete()
                         }
                     })
-                return account.telegramApplicationContext.applicationBindings.applicationInForeground
-                |> distinctUntilChanged
-                |> mapToSignal { inForeground -> Signal<AccessType, NoError> in
+                if let account = account {
+                    return account.telegramApplicationContext.applicationBindings.applicationInForeground
+                    |> distinctUntilChanged
+                    |> mapToSignal { inForeground -> Signal<AccessType, NoError> in
+                        return status
+                    }
+                } else {
                     return status
                 }
             case .contacts:
@@ -184,20 +188,24 @@ public final class DeviceAccess {
                     return EmptyDisposable
             }
             case .siri:
-                return Signal { subscriber in
-                    let status = account.telegramApplicationContext.applicationBindings.siriAuthorization()
-                    subscriber.putNext(status)
-                    subscriber.putCompletion()
-                    return EmptyDisposable
+                if let account = account {
+                    return Signal { subscriber in
+                        let status = account.telegramApplicationContext.applicationBindings.siriAuthorization()
+                        subscriber.putNext(status)
+                        subscriber.putCompletion()
+                        return EmptyDisposable
+                    }
+                    |> then(self.siri
+                        |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                            if let authorized = authorized {
+                                return .single(authorized ? .allowed : .denied)
+                            } else {
+                                return .complete()
+                            }
+                        })
+                } else {
+                    return .single(.denied)
                 }
-                |> then(self.siri
-                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
-                        if let authorized = authorized {
-                            return .single(authorized ? .allowed : .denied)
-                        } else {
-                            return .complete()
-                        }
-                    })
             default:
                 return .single(.notDetermined)
         }
