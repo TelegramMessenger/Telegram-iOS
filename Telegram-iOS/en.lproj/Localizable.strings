@@ -1002,7 +1002,7 @@
 "EnterPasscode.EnterNewPasscodeChange" = "Enter your new passcode";
 "EnterPasscode.RepeatNewPasscode" = "Re-enter your new passcode";
 "EnterPasscode.EnterCurrentPasscode" = "Enter your current passcode";
-"EnterPasscode.TouchId" = "Enter your passcode";
+"EnterPasscode.TouchId" = "Unlock Telegram";
 
 "DialogList.PasscodeLockHelp" = "Tap to lock Telegram";
 
