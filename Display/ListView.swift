@@ -2513,6 +2513,23 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 var previousUpperBound: CGFloat?
                 var previousLowerBound: CGFloat?
                 if case .visible = scrollToItem.position {
+                    for (previousNode, previousFrame) in previousApparentFrames {
+                        if previousNode.supernode == nil {
+                            temporaryPreviousNodes.append(previousNode)
+                            previousNode.frame = previousFrame
+                            if previousUpperBound == nil || previousUpperBound! > previousFrame.minY {
+                                previousUpperBound = previousFrame.minY
+                            }
+                            if previousLowerBound == nil || previousLowerBound! < previousFrame.maxY {
+                                previousLowerBound = previousFrame.maxY
+                            }
+                        } else {
+                            if previousNode.canBeUsedAsScrollToItemAnchor {
+                                offset = previousNode.apparentFrame.minY - previousFrame.minY
+                                break
+                            }
+                        }
+                    }
                 } else {
                     for (previousNode, previousFrame) in previousApparentFrames {
                         if previousNode.supernode == nil {
