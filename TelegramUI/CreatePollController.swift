@@ -7,6 +7,14 @@ import TelegramCore
 private let maxTextLength = 255
 private let maxOptionLength = 100
 
+private func processPollText(_ text: String) -> String {
+    var text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    while text.contains("\n\n\n") {
+        text = text.replacingOccurrences(of: "\n\n\n", with: "\n\n")
+    }
+    return text
+}
+
 private final class CreatePollControllerArguments {
     let updatePollText: (String) -> Void
     let updateOptionText: (Int, String) -> Void
@@ -296,7 +304,7 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
         let limitsConfiguration: LimitsConfiguration = (combinedView.views[limitsKey] as? PreferencesView)?.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         
         var enabled = true
-        if state.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if processPollText(state.text).isEmpty {
             enabled = false
         }
         if state.text.count > maxTextLength {
@@ -324,7 +332,7 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
                     options.append(TelegramMediaPollOption(text: optionText, opaqueIdentifier: "\(i)".data(using: .utf8)!))
                 }
             }
-            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), text: state.text.trimmingCharacters(in: .whitespacesAndNewlines), options: options, results: TelegramMediaPollResults(voters: nil, totalVoters: nil), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil))
+            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), text: processPollText(state.text), options: options, results: TelegramMediaPollResults(voters: nil, totalVoters: nil), isClosed: false)), replyToMessageId: nil, localGroupingKey: nil))
             dismissImpl?()
         })
         
