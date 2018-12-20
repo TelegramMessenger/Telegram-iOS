@@ -72,15 +72,7 @@ struct PresentationResourcesItemList {
     
     static func itemListDeleteIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListDeleteIndicatorIcon.rawValue, { theme in
-            generateImage(CGSize(width: 22.0, height: 26.0), contextGenerator: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(UIColor(white: 0.0, alpha: 0.06).cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 22.0, height: 22.0)))
-                context.setFillColor(theme.list.itemDisclosureActions.destructive.fillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: 22.0, height: 22.0)))
-                context.setFillColor(theme.list.itemDisclosureActions.destructive.foregroundColor.cgColor)
-                context.fill(CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - 11.0) / 2.0), y: 2.0 + floorToScreenPixels((size.width - 1.0) / 2.0)), size: CGSize(width: 11.0, height: 1.0)))
-            })
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/RemoveItemIcon"), color: theme.list.itemDestructiveColor)
         })
     }
     
@@ -111,16 +103,7 @@ struct PresentationResourcesItemList {
     
     static func addPhoneIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddPhoneIcon.rawValue, { theme in
-            generateImage(CGSize(width: 22.0, height: 26.0), contextGenerator: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(UIColor(white: 0.0, alpha: 0.06).cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 22.0, height: 22.0)))
-                context.setFillColor(theme.list.itemDisclosureActions.constructive.fillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: 22.0, height: 22.0)))
-                context.setFillColor(theme.list.itemDisclosureActions.constructive.foregroundColor.cgColor)
-                context.fill(CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - 11.0) / 2.0), y: 2.0 + floorToScreenPixels((size.width - 1.0) / 2.0)), size: CGSize(width: 11.0, height: 1.0)))
-                context.fill(CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - 1.0) / 2.0), y: 2.0 + floorToScreenPixels((size.width - 11.0) / 2.0)), size: CGSize(width: 1.0, height: 11.0)))
-            })
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/AddItemIcon"), color: theme.list.itemAccentColor)
         })
     }
     

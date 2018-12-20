@@ -420,7 +420,8 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
                     }
                     return false
                 })
-            } else {
+            }
+            if resultItemNode == nil {
                 let _ = controller.frameForItemNode({ itemNode in
                     if let itemNode = itemNode as? ItemListItemNode {
                         if let tag = itemNode.tag, tag.isEqual(to: CreatePollEntryTag.option(id)) {

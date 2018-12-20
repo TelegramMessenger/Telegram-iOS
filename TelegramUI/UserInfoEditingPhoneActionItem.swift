@@ -168,7 +168,7 @@ class UserInfoEditingPhoneActionItemNode: ListViewItemNode {
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     
                     if let iconImage = iconImage {
-                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((layout.contentSize.height - iconImage.size.height) / 2.0) - 1.0), size: iconImage.size)
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((layout.contentSize.height - iconImage.size.height) / 2.0)), size: iconImage.size)
                     }
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + 30.0, y: 12.0), size: titleLayout.size)
