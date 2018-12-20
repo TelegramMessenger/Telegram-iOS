@@ -202,8 +202,8 @@
         if (primaryLanguage != nil && [primaryLanguage isEqualToString:_initialPrimaryLanguage]) {
           return inputMode;
         }
-      }*/
-    }
+      }
+    }*/
   }
   return [super textInputMode];
 }
