@@ -225,7 +225,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                         case let .Fetching(_, progress):
                                             fetching = true
                                             isPaused = true
-                                            state = .progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: false)
+                                            state = .progress(color: .white, lineWidth: nil, value: CGFloat(max(0.0027, progress)), cancelEnabled: false)
                                         default:
                                             break
                                     }

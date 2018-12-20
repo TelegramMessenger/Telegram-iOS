@@ -142,7 +142,6 @@ final class WebSearchController: ViewController {
         }
         
         let settings = self.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.webSearchSettings])
-        |> take(1)
         |> map { view -> WebSearchSettings in
             if let current = view.values[ApplicationSpecificPreferencesKeys.webSearchSettings] as? WebSearchSettings {
                 return current
