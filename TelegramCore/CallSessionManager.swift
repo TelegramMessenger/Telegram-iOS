@@ -82,7 +82,7 @@ public enum CallSessionTerminationReason: Equatable {
     }
 }
 
-public struct ReportCallRating  {
+public struct CallId  {
     public let id: Int64
     public let accessHash: Int64
     
@@ -101,7 +101,7 @@ enum CallSessionInternalState {
     case confirming(id: Int64, accessHash: Int64, key: Data, keyId: Int64, keyVisualHash: Data, disposable: Disposable)
     case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, allowsP2P: Bool)
     case dropping(Disposable)
-    case terminated(reason: CallSessionTerminationReason, reportRating: ReportCallRating?)
+    case terminated(reason: CallSessionTerminationReason, reportRating: CallId?)
 }
 
 public typealias CallSessionInternalId = UUID
@@ -127,9 +127,9 @@ public enum CallSessionState {
     case ringing
     case accepting
     case requesting(ringing: Bool)
-    case active(key: Data, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, allowsP2P: Bool)
+    case active(id: CallId, key: Data, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, allowsP2P: Bool)
     case dropping
-    case terminated(reason: CallSessionTerminationReason, reportRating: ReportCallRating?)
+    case terminated(reason: CallSessionTerminationReason, reportRating: CallId?)
     
     fileprivate init(_ context: CallSessionContext) {
         switch context.state {
@@ -141,8 +141,8 @@ public enum CallSessionState {
                 self = .requesting(ringing: false)
             case let .requested(_, _, _, _, _, remoteConfirmationTimestamp):
                 self = .requesting(ringing: remoteConfirmationTimestamp != nil)
-            case let .active(_, _, _, key, _, keyVisualHash, connections, maxLayer, allowsP2P):
-                self = .active(key: key, keyVisualHash: keyVisualHash, connections: connections, maxLayer: maxLayer, allowsP2P: allowsP2P)
+            case let .active(id, accessHash, _, key, _, keyVisualHash, connections, maxLayer, allowsP2P):
+                self = .active(id: CallId(id: id, accessHash: accessHash), key: key, keyVisualHash: keyVisualHash, connections: connections, maxLayer: maxLayer, allowsP2P: allowsP2P)
             case .dropping:
                 self = .dropping
             case let .terminated(reason, reportRating):
@@ -393,7 +393,7 @@ private final class CallSessionManagerContext {
                 context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, reason: reason) |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLog in
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
-                            context.state = .terminated(reason: .ended(.hungUp), reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                            context.state = .terminated(reason: .ended(.hungUp), reportRating: reportRating ? CallId(id: id, accessHash: accessHash) : nil)
                             strongSelf.contextUpdated(internalId: internalId)
                             if context.isEmpty {
                                 strongSelf.contexts.removeValue(forKey: internalId)
@@ -530,27 +530,27 @@ private final class CallSessionManagerContext {
                     switch context.state {
                         case let .accepting(id, accessHash, _, _, disposable):
                             disposable.dispose()
-                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? CallId(id: id, accessHash: accessHash) : nil)
                             self.contextUpdated(internalId: internalId)
                         case .active(let id, let accessHash, _, _, _, _, _, _, _):
-                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? CallId(id: id, accessHash: accessHash) : nil)
                             self.contextUpdated(internalId: internalId)
                         case .awaitingConfirmation(let id, let accessHash, _, _, _):
-                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? CallId(id: id, accessHash: accessHash) : nil)
                             self.contextUpdated(internalId: internalId)
                         case .requested(let id, let accessHash, _, _, _, _):
-                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? CallId(id: id, accessHash: accessHash) : nil)
                             self.contextUpdated(internalId: internalId)
                         case let .confirming(id, accessHash, _, _, _, disposable):
                             disposable.dispose()
-                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accessHash) : nil)
+                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? CallId(id: id, accessHash: accessHash) : nil)
                             self.contextUpdated(internalId: internalId)
                         case let .requesting(_, disposable):
                             disposable.dispose()
                             context.state = .terminated(reason: parsedReason, reportRating: nil)
                             self.contextUpdated(internalId: internalId)
                         case .ringing(let id, let accesshash, _, _):
-                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? ReportCallRating(id: id, accessHash: accesshash) : nil)
+                            context.state = .terminated(reason: parsedReason, reportRating: reportRating ? CallId(id: id, accessHash: accesshash) : nil)
                             self.ringingStatesUpdated()
                             self.contextUpdated(internalId: internalId)
                         case .dropping, .terminated:
