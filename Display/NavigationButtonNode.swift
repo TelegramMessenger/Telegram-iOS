@@ -1,6 +1,10 @@
 import UIKit
 import AsyncDisplayKit
 
+public protocol NavigationButtonCustomDisplayNode {
+    var isHighlightable: Bool { get }
+}
+
 private final class NavigationButtonItemNode: ASTextNode {
     private func fontForCurrentState() -> UIFont {
         return self.bold ? UIFont.boldSystemFont(ofSize: 17.0) : UIFont.systemFont(ofSize: 17.0)
@@ -192,17 +196,15 @@ private final class NavigationButtonItemNode: ASTextNode {
         if _highlighted != highlighted {
             _highlighted = highlighted
             
-            let alpha: CGFloat = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+            var shouldChangeHighlight = true
+            if let node = self.node as? NavigationButtonCustomDisplayNode {
+                shouldChangeHighlight = node.isHighlightable
+            }
             
-            /*if animated {
-             UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions.beginFromCurrentState, animations: { () -> Void in
-             self.alpha = alpha
-             }, completion: nil)
-             }
-             else {*/
-            self.alpha = alpha
-            self.highlightChanged(highlighted)
-            //}
+            if shouldChangeHighlight {
+                self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+                self.highlightChanged(highlighted)
+            }
         }
     }
     
