@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-final class GalleryNavigationCheckNode: ASDisplayNode {
+final class GalleryNavigationCheckNode: ASDisplayNode, NavigationButtonCustomDisplayNode {
     private var checkNode: CheckNode
     
     init(theme: PresentationTheme) {
@@ -11,6 +11,10 @@ final class GalleryNavigationCheckNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.checkNode)
+    }
+    
+    var isHighlightable: Bool {
+        return false
     }
     
     var isChecked: Bool {

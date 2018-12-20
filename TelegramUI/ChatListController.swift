@@ -4,6 +4,10 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 
+public func useSpecialTabBarIcons() -> Bool {
+    return (Date(timeIntervalSince1970: 1545642000)...Date(timeIntervalSince1970: 1546387200)).contains(Date())
+}
+
 public class ChatListController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -64,7 +68,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.navigationItem.titleView = self.titleView
             self.tabBarItem.title = self.presentationData.strings.DialogList_Title
             
-            let icon = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
+            let icon: UIImage?
+            if (useSpecialTabBarIcons()) {
+                icon = UIImage(bundleImageName: "Chat List/Tabs/NY/IconChats")
+            } else {
+                icon = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
+            }
+            
             self.tabBarItem.image = icon
             self.tabBarItem.selectedImage = icon
             

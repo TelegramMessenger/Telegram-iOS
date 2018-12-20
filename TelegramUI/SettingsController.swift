@@ -777,7 +777,12 @@ public func settingsController(account: Account, accountManager: AccountManager)
         actionsDisposable.dispose()
     }
     
-    let icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
+    let icon: UIImage?
+    if (useSpecialTabBarIcons()) {
+        icon = UIImage(bundleImageName: "Chat List/Tabs/NY/IconSettings")
+    } else {
+        icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
+    }
     
     let controller = ItemListController(account: account, state: signal, tabBarItem: combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()) |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed in
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)

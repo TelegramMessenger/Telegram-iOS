@@ -234,7 +234,7 @@ final class OngoingCallContext {
     }
     
     func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
-        var logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
+        let logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         self.audioSessionDisposable.set((audioSessionActive
         |> filter { $0 }
         |> take(1)).start(next: { [weak self] _ in

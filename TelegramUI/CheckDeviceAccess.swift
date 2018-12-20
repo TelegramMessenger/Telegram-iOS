@@ -83,7 +83,7 @@ public final class DeviceAccess {
     public static func authorizationStatus(account: Account, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
         switch subject {
             case .notifications:
-                let status = Signal<AccessType, NoError> { subscriber in
+                let status = (Signal<AccessType, NoError> { subscriber in
                     if #available(iOSApplicationExtension 10.0, *) {
                         UNUserNotificationCenter.current().getNotificationSettings(completionHandler: { settings in
                             switch settings.authorizationStatus {
@@ -107,7 +107,14 @@ public final class DeviceAccess {
                         subscriber.putCompletion()
                     }
                     return EmptyDisposable
-                }
+                } |> afterNext { status in
+                    switch status {
+                        case .allowed, .unreachable:
+                            DeviceAccess.notificationsPromise.set(.single(nil))
+                        default:
+                            break
+                    }
+                } )
                 |> then(self.notifications
                     |> mapToSignal { authorized -> Signal<AccessType, NoError> in
                         if let authorized = authorized {

@@ -79,7 +79,7 @@ final class PermissionContentNode: ASDisplayNode {
     func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         let sidePadding: CGFloat
         let fontSize: CGFloat
-        if size.width > 330.0 {
+        if min(size.width, size.height) > 330.0 {
             fontSize = 24.0
             sidePadding = 38.0
         } else {
@@ -91,28 +91,32 @@ final class PermissionContentNode: ASDisplayNode {
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
-        let buttonHeight = self.actionButton.updateLayout(width: size.width, transition: transition)
+        let buttonWidth = min(size.width, size.height)
+        let buttonHeight = self.actionButton.updateLayout(width: buttonWidth, transition: transition)
         let privacyButtonSize = self.privacyPolicyButton.measure(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         
-        let titleSubtitleSpacing: CGFloat = 26.0
-        let buttonSpacing: CGFloat = 36.0
-        let privacySpacing: CGFloat = 45.0
+        let availableHeight = floor(size.height - insets.top - insets.bottom - titleSize.height - textSize.height - buttonHeight)
+        
+        let titleSubtitleSpacing: CGFloat = max(15.0, floor(availableHeight * 0.055))
+        let buttonSpacing: CGFloat = max(19.0, floor(availableHeight * 0.075))
         var contentHeight = titleSize.height + titleSubtitleSpacing + textSize.height + buttonHeight + buttonSpacing
         
         var imageSize = CGSize()
         var imageSpacing: CGFloat = 0.0
-        if let icon = self.iconNode.image {
-            imageSpacing = 60.0
+        if let icon = self.iconNode.image, size.width < size.height {
+            imageSpacing = floor(availableHeight * 0.12)
             imageSize = icon.size
             contentHeight += imageSize.height + imageSpacing
         }
+
+        let privacySpacing: CGFloat = max(30.0 + privacyButtonSize.height, (availableHeight - titleSubtitleSpacing - buttonSpacing - imageSize.height - imageSpacing) / 2.0)
         
         let contentOrigin = insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0)
         let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: iconFrame.maxY + imageSpacing), size: titleSize)
         let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSubtitleSpacing), size: textSize)
-        let buttonFrame = CGRect(origin: CGPoint(x: 0.0, y: textFrame.maxY + buttonSpacing), size: CGSize(width: size.width, height: buttonHeight))
-        let privacyButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - privacyButtonSize.width) / 2.0), y: buttonFrame.maxY + privacySpacing), size: privacyButtonSize)
+        let buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonWidth) / 2.0), y: textFrame.maxY + buttonSpacing), size: CGSize(width: buttonWidth, height: buttonHeight))
+        let privacyButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - privacyButtonSize.width) / 2.0), y: buttonFrame.maxY + floor((privacySpacing - privacyButtonSize.height) / 2.0)), size: privacyButtonSize)
         
         
         transition.updateFrame(node: self.iconNode, frame: iconFrame)

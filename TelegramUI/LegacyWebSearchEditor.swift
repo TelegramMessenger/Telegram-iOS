@@ -31,7 +31,7 @@ func presentLegacyWebSearchEditor(account: Account, theme: PresentationTheme, re
         let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
         legacyController.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         
-        let controller = TGPhotoEditorController(context: legacyController.context, item: item, intent: TGPhotoEditorControllerAvatarIntent, adjustments: nil, caption: nil, screenImage: screenImage, availableTabs: TGPhotoEditorController.defaultTabsForAvatarIntent(), selectedTab: .cropTab)!
+        let controller = TGPhotoEditorController(context: legacyController.context, item: item, intent: TGPhotoEditorControllerAvatarIntent, adjustments: nil, caption: nil, screenImage: screenImage ?? UIImage(), availableTabs: TGPhotoEditorController.defaultTabsForAvatarIntent(), selectedTab: .cropTab)!
         legacyController.bind(controller: controller)
         
         controller.editingContext = TGMediaEditingContext()

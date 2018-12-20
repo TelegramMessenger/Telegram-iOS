@@ -154,9 +154,17 @@ public class TelegramController: ViewController {
                     switch locationBroadcastPanelSource {
                         case let .peer(peerId):
                             self.locationBroadcastMode = .peer
-                            signal = liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
-                            |> map { peersAndMessages in
-                                let peers = peersAndMessages?.map { $0.0 }
+                            signal = combineLatest(liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId), liveLocationManager.summaryManager.broadcastingToMessages())
+                            |> map { peersAndMessages, outgoingMessages in
+                                var peers = peersAndMessages?.map { $0.0 }
+                                for message in outgoingMessages.values {
+                                    if message.id.peerId == peerId, let author = message.author {
+                                        if peers == nil {
+                                            peers = []
+                                        }
+                                        peers?.append(author)
+                                    }
+                                }
                                 return (peers, nil)
                             }
                         default:

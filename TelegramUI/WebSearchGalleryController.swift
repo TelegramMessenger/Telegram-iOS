@@ -55,6 +55,8 @@ final class WebSearchGalleryControllerPresentationArguments {
 }
 
 class WebSearchGalleryController: ViewController {
+    private static let navigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+    
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
     }
@@ -98,7 +100,7 @@ class WebSearchGalleryController: ViewController {
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: WebSearchGalleryController.navigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
         self.controllerInteraction = WebSearchGalleryControllerInteraction(dismiss: { [weak self] animated in
             self?.dismiss(forceAway: false)

@@ -1042,6 +1042,10 @@ final class ContactListNode: ASDisplayNode {
                             itemHeaderNode.updateTheme(theme: presentationData.theme)
                         }
                     })
+                    
+                    if let validLayout = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(validLayout, transition: .immediate)
+                    }
                 }
             }
         })
@@ -1136,10 +1140,8 @@ final class ContactListNode: ASDisplayNode {
             indexNode.update(size: indexNodeFrame.size, color: self.presentationData.theme.list.itemAccentColor, sections: indexSections, transition: transition)
         }
         
-        //if let authorizationNode = self.authorizationNode {
-            authorizationNode.updateLayout(size: layout.size, insets: insets, transition: transition)
-            transition.updateFrame(node: authorizationNode, frame: self.bounds)
-        //}
+        self.authorizationNode.updateLayout(size: layout.size, insets: insets, transition: transition)
+        transition.updateFrame(node: self.authorizationNode, frame: self.bounds)
             
         if !hadValidLayout {
             self.dequeueTransitions()

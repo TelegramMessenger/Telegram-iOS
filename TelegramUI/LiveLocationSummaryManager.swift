@@ -169,9 +169,6 @@ private final class LiveLocationPeerSummaryContext {
                                 }
                             }
                         }
-                        if let accountPeer = accountPeer, strongSelf.isActive {
-                            //peers.append(accountPeer)
-                        }
                         if peersAndMessages.isEmpty {
                             strongSelf.peersAndMessages = nil
                         } else {
