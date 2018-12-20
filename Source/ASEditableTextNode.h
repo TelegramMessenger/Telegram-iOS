@@ -140,8 +140,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) BOOL enablesReturnKeyAutomatically;                  // default is NO (when YES, will automatically disable return key when text widget has zero-length contents, and will automatically enable when text widget has non-zero-length contents)
 @property (nonatomic, getter=isSecureTextEntry) BOOL secureTextEntry;      // default is NO
 
-- (void)dropAutocorrection;
+@property (nonatomic, strong) NSString * _Nullable initialPrimaryLanguage;
 
+- (void)dropAutocorrection;
 
 @end
 

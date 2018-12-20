@@ -83,12 +83,15 @@
 @interface ASPanningOverriddenUITextView : ASTextKitComponentsTextView
 {
   BOOL _shouldBlockPanGesture;
+  BOOL _initializedPrimaryInputLanguage;
 }
 
 @property (nonatomic, copy) bool (^shouldPaste)();
 @property (nonatomic, copy) ASEditableTextNodeTargetForAction *(^targetForActionImpl)(SEL);
 @property (nonatomic, copy) bool (^shouldReturn)();
 @property (nonatomic, copy) void (^backspaceWhileEmpty)();
+
+@property (nonatomic, strong) NSString * _Nullable initialPrimaryLanguage;
 
 @end
 
@@ -188,6 +191,21 @@
       _backspaceWhileEmpty();
     }
   }
+}
+
+- (UITextInputMode *)textInputMode {
+  if (!_initializedPrimaryInputLanguage) {
+    _initializedPrimaryInputLanguage = true;
+      /*if (_initialPrimaryLanguage != nil) {
+      for (UITextInputMode *inputMode in [UITextInputMode activeInputModes]) {
+        NSString *primaryLanguage = inputMode.primaryLanguage;
+        if (primaryLanguage != nil && [primaryLanguage isEqualToString:_initialPrimaryLanguage]) {
+          return inputMode;
+        }
+      }*/
+    }
+  }
+  return [super textInputMode];
 }
 
 #endif
@@ -316,6 +334,7 @@
 
   // Create and configure our text view.
   ASPanningOverriddenUITextView *textView = [[ASPanningOverriddenUITextView alloc] initWithFrame:CGRectZero textContainer:_textKitComponents.textContainer];
+  textView.initialPrimaryLanguage = _initialPrimaryLanguage;
   __weak ASEditableTextNode *weakSelf = self;
   textView.shouldPaste = ^bool{
     __strong ASEditableTextNode *strongSelf = weakSelf;
