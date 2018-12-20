@@ -321,22 +321,35 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     }
 }
 
-private func rateCallAndSendLogs(account: Account, report: ReportCallRating, starsCount: Int, comment: String, includeLogs: Bool) -> Signal<Void, NoError> {
-    var signal = rateCall(account: account, report: report, starsCount: Int32(starsCount), comment: comment)
-    if includeLogs {
-        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 4244000)
-//        signal = signal
-//        |> then(
-//            enqueueMessages(account: account, peerId: peerId, messages: EnqueueMessage.message(text: "", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-//            |> map { _ -> Void in
-//                    
-//            }
-//        )
+private func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comment: String, includeLogs: Bool) -> Signal<Void, NoError> {
+    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 4244000)
+    
+    var rateSignal = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment)
+    if !comment.isEmpty {
+        rateSignal = rateSignal
+        |> then(enqueueMessages(account: account, peerId: peerId, messages: [.message(text: comment, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+        |> mapToSignal({ _ -> Signal<Void, NoError> in
+            return .single(Void())
+        }))
     }
-    return signal
+    if includeLogs {
+        let id = arc4random64()
+        let name = "\(callId.id)_\(callId.accessHash).log"
+        let path = callLogsPath(account: account) + "/" + name
+        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
+        let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+        
+        return rateSignal
+        |> then(enqueueMessages(account: account, peerId: peerId, messages: [message])
+        |> mapToSignal({ _ -> Signal<Void, NoError> in
+            return .single(Void())
+        }))
+    } else {
+        return rateSignal
+    }
 }
 
-func callRatingController(account: Account, report: ReportCallRating, present: @escaping (ViewController) -> Void) -> AlertController {
+func callRatingController(account: Account, callId: CallId, present: @escaping (ViewController) -> Void) -> AlertController {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
@@ -350,13 +363,13 @@ func callRatingController(account: Account, report: ReportCallRating, present: @
         if let contentNode = contentNode, let rating = contentNode.rating {
             if rating < 4 {
                 let controller = textAlertController(account: account, title: strings.Call_ReportIncludeLog, text: strings.Call_ReportIncludeLogDescription, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Call_ReportSkip, action: {
-                    let _ = rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: false).start()
+                    let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: false).start()
                 }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Call_ReportSend, action: {
-                    let _ = rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: true).start()
+                    let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: true).start()
                 })])
                 present(controller)
             } else {
-                let _ = rateCallAndSendLogs(account: account, report: report, starsCount: rating, comment: contentNode.comment, includeLogs: false).start
+                let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: false).start
             }
         }
     })]

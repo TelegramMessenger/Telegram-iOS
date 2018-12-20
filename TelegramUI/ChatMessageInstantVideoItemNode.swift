@@ -14,6 +14,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
     private var selectionNode: ChatMessageSelectionNode?
+    private var shareButtonNode: HighlightableButtonNode?
+    
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
     
@@ -54,7 +56,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { _ in
+        recognizer.tapActionAtPoint = { [weak self] point in
+            if let strongSelf = self {
+                if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
+                    return .fail
+                }
+            }
             return .waitForSingleTap
         }
         self.view.addGestureRecognizer(recognizer)
@@ -80,6 +87,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let currentReplyBackgroundNode = self.replyBackgroundNode
+        let currentShareButtonNode = self.shareButtonNode
         
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         let currentForwardBackgroundNode = self.forwardBackgroundNode
@@ -119,6 +127,45 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 avatarInset = layoutConstants.avatarDiameter
             } else {
                 avatarInset = 0.0
+            }
+            
+            var needShareButton = false
+            if item.message.id.peerId == item.account.peerId {
+                for attribute in item.content.firstMessage.attributes {
+                    if let _ = attribute as? SourceReferenceMessageAttribute {
+                        needShareButton = true
+                        break
+                    }
+                }
+            } else if item.message.effectivelyIncoming(item.account.peerId) {
+                if let peer = item.message.peers[item.message.id.peerId] {
+                    if let channel = peer as? TelegramChannel {
+                        if case .broadcast = channel.info {
+                            needShareButton = true
+                        }
+                    }
+                }
+                if !needShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty {
+                    needShareButton = true
+                }
+                if !needShareButton {
+                    loop: for media in item.message.media {
+                        if media is TelegramMediaGame || media is TelegramMediaInvoice {
+                            needShareButton = true
+                            break loop
+                        } else if let media = media as? TelegramMediaWebpage, case .Loaded = media.content {
+                            needShareButton = true
+                            break loop
+                        }
+                    }
+                } else {
+                    loop: for media in item.message.media {
+                        if media is TelegramMediaAction {
+                            needShareButton = false
+                            break loop
+                        }
+                    }
+                }
             }
             
             var layoutInsets = layoutConstants.instantVideo.insets
@@ -189,6 +236,34 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 
                 let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
+            }
+            
+            var updatedShareButtonBackground: UIImage?
+            
+            var updatedShareButtonNode: HighlightableButtonNode?
+            if needShareButton {
+                if currentShareButtonNode != nil {
+                    updatedShareButtonNode = currentShareButtonNode
+                    if item.presentationData.theme !== currentItem?.presentationData.theme {
+                        let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                        if item.message.id.peerId == item.account.peerId {
+                            updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
+                        } else {
+                            updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
+                        }
+                    }
+                } else {
+                    let buttonNode = HighlightableButtonNode()
+                    let buttonIcon: UIImage?
+                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                    if item.message.id.peerId == item.account.peerId {
+                        buttonIcon = graphics.chatBubbleNavigateButtonImage
+                    } else {
+                        buttonIcon = graphics.chatBubbleShareButtonImage
+                    }
+                    buttonNode.setBackgroundImage(buttonIcon, for: [.normal])
+                    updatedShareButtonNode = buttonNode
+                }
             }
             
             let availableContentWidth = params.width - params.leftInset - params.rightInset - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left
@@ -262,6 +337,27 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         videoLayoutData = .constrained(left: max(0.0, availableContentWidth - videoFrame.width), right: 0.0)
                     }
                     videoApply(videoLayoutData, transition)
+                    
+                    if let updatedShareButtonNode = updatedShareButtonNode {
+                        if updatedShareButtonNode !== strongSelf.shareButtonNode {
+                            if let shareButtonNode = strongSelf.shareButtonNode {
+                                shareButtonNode.removeFromSupernode()
+                            }
+                            strongSelf.shareButtonNode = updatedShareButtonNode
+                            strongSelf.addSubnode(updatedShareButtonNode)
+                            updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                        if let updatedShareButtonBackground = updatedShareButtonBackground {
+                            strongSelf.shareButtonNode?.setBackgroundImage(updatedShareButtonBackground, for: [.normal])
+                        }
+                    } else if let shareButtonNode = strongSelf.shareButtonNode {
+                        shareButtonNode.removeFromSupernode()
+                        strongSelf.shareButtonNode = nil
+                    }
+                    
+                    if let shareButtonNode = strongSelf.shareButtonNode {
+                        shareButtonNode.frame = CGRect(origin: CGPoint(x: videoFrame.maxX - 7.0, y: videoFrame.maxY - 54.0), size: CGSize(width: 29.0, height: 29.0))
+                    }
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {
@@ -426,6 +522,21 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         }
     }
     
+    @objc func shareButtonPressed() {
+        if let item = self.item {
+            if item.content.firstMessage.id.peerId == item.account.peerId {
+                for attribute in item.content.firstMessage.attributes {
+                    if let attribute = attribute as? SourceReferenceMessageAttribute {
+                        item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)
+                        break
+                    }
+                }
+            } else {
+                item.controllerInteraction.openMessageShareMenu(item.message.id)
+            }
+        }
+    }
+    
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         switch recognizer.state {
         case .began:
@@ -490,6 +601,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
+            return shareButtonNode.view
+        }
         if !self.bounds.contains(point) {
             return nil
         }

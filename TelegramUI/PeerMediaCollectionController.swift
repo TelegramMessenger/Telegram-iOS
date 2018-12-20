@@ -248,7 +248,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, navigateToFirstDateMessage: { _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
-        }, rateCall: { _ in
+        }, rateCall: { _, _ in
         }, requestSelectMessagePollOption: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {

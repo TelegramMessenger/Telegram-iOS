@@ -513,9 +513,27 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.messageActions.options.contains(.rateCall) {
-            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Call_RateCall, action: {
-                let _ = controllerInteraction.rateCall(message)
-            })))
+            var callId: CallId?
+            for media in message.media {
+                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _) = action.action {
+                    if discardReason != .busy && discardReason != .missed {
+                        if let logName = callLogNameForId(id: id, account: account) {
+                            let start = logName.index(logName.startIndex, offsetBy: "\(id)".count + 1)
+                            let end = logName.index(logName.endIndex, offsetBy: -4)
+                            let accessHash = logName[start..<end]
+                            if let accessHash = Int64(accessHash) {
+                                callId = CallId(id: id, accessHash: accessHash)
+                            }
+                        }
+                    }
+                    break
+                }
+            }
+            if let callId = callId {
+                actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Call_RateCall, action: {
+                    let _ = controllerInteraction.rateCall(message, callId)
+                })))
+            }
         }
         
         if data.messageActions.options.contains(.forward) {

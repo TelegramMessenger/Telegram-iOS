@@ -11,7 +11,23 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
 
 private let callLogsLimit = 20
 
-private func callLogsPath(account: Account) -> String {
+func callLogNameForId(id: Int64, account: Account) -> String? {
+    let path = callLogsPath(account: account)
+    let namePrefix = "\(id)_"
+    
+    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+        for url in enumerator {
+            if let url = url as? URL {
+                if url.lastPathComponent.hasPrefix(namePrefix) {
+                    return url.lastPathComponent
+                }
+            }
+        }
+    }
+    return nil
+}
+
+func callLogsPath(account: Account) -> String {
     return account.basePath + "/calls"
 }
 
@@ -115,7 +131,7 @@ final class OngoingCallContext {
     let internalId: CallSessionInternalId
     
     private let queue = Queue()
-    private let postbox: Postbox
+    private let account: Account
     private let callSessionManager: CallSessionManager
     
     private var contextRef: Unmanaged<OngoingCallThreadLocalContext>?
@@ -149,12 +165,12 @@ final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, logPath: String) {
+    init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
         self.internalId = internalId
-        self.postbox = account.postbox
+        self.account = account
         self.callSessionManager = callSessionManager
         
         let queue = self.queue
@@ -168,7 +184,7 @@ final class OngoingCallContext {
                         break
                 }
             }
-            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), logPath: logPath, derivedState: derivedState.data)
+            let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: derivedState.data)
             self.contextRef = Unmanaged.passRetained(context)
             context.stateChanged = { [weak self] state in
                 self?.contextState.set(.single(state))
@@ -194,6 +210,8 @@ final class OngoingCallContext {
                 context.setNetworkType(ongoingNetworkTypeForType(networkType))
             }
         })
+        
+        cleanupCallLogs(account: account)
     }
     
     deinit {
@@ -215,13 +233,14 @@ final class OngoingCallContext {
         }
     }
     
-    func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>) {
+    func start(key: Data, isOutgoing: Bool, connections: CallSessionConnectionSet, maxLayer: Int32, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
+        var logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         self.audioSessionDisposable.set((audioSessionActive
         |> filter { $0 }
         |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.withContext { context in
-                    context.start(withKey: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P)
+                    context.start(withKey: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
                 }
             }
         }))
@@ -231,7 +250,7 @@ final class OngoingCallContext {
         self.withContext { context in
             context.stop()
             let derivedState = context.getDerivedState()
-            let _ = updateVoipDerivedStateInteractively(postbox: self.postbox, { _ in
+            let _ = updateVoipDerivedStateInteractively(postbox: self.account.postbox, { _ in
                 return VoipDerivedState(data: derivedState)
             }).start()
         }

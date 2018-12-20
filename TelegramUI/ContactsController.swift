@@ -221,32 +221,35 @@ public class ContactsController: ViewController {
     }
     
     @objc func addPressed() {
-        let _ = (DeviceAccess.contacts
+        let _ = (DeviceAccess.authorizationStatus(account: self.account, subject: .contacts)
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let strongSelf = self else {
                 return
             }
             
-            if let value = value, value {
-                let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: "")]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
-                strongSelf.present(deviceContactInfoController(account: strongSelf.account, subject: .create(peer: nil, contactData: contactData, completion: { peer, stableId, contactData in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let peer = peer {
-                        if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+            switch status {
+                case .allowed:
+                    let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: "")]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+                    strongSelf.present(deviceContactInfoController(account: strongSelf.account, subject: .create(peer: nil, contactData: contactData, completion: { peer, stableId, contactData in
+                        guard let strongSelf = self else {
+                            return
                         }
-                    } else {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(deviceContactInfoController(account: strongSelf.account, subject: .vcard(nil, stableId, contactData)))
-                    }
-                })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            } else {
-                let presentationData = strongSelf.presentationData
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                    self?.account.telegramApplicationContext.applicationBindings.openSettings()
-                })]), in: .window(.root))
+                        if let peer = peer {
+                            if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                                (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                            }
+                        } else {
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(deviceContactInfoController(account: strongSelf.account, subject: .vcard(nil, stableId, contactData)))
+                        }
+                    })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                case .notDetermined:
+                    DeviceAccess.authorizeAccess(to: .contacts, account: strongSelf.account)
+                default:
+                    let presentationData = strongSelf.presentationData
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                        self?.account.telegramApplicationContext.applicationBindings.openSettings()
+                    })]), in: .window(.root))
             }
         })
     }

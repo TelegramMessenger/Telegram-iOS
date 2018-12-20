@@ -350,7 +350,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
-        }, rateCall: { _ in
+        }, rateCall: { _, _ in
         }, requestSelectMessagePollOption: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
