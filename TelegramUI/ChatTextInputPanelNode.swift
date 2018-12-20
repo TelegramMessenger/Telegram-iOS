@@ -220,6 +220,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
+    var storedInputLanguage: String?
+    var effectiveInputLanguage: String? {
+        if let textInputNode = textInputNode, textInputNode.isFirstResponder() {
+            return textInputNode.textInputMode.primaryLanguage
+        } else {
+            return self.storedInputLanguage
+        }
+    }
+    
     override var account: Account? {
         didSet {
             self.actionButtons.micButton.account = self.account
@@ -389,6 +398,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private func loadTextInputNode() {
         let textInputNode = EditableTextNode()
+        textInputNode.initialPrimaryLanguage = self.presentationInterfaceState?.interfaceState.inputLanguage
         var textColor: UIColor = .black
         var tintColor: UIColor = .blue
         var baseFontSize: CGFloat = 17.0
@@ -1243,6 +1253,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+        self.storedInputLanguage = editableTextNode.textInputMode.primaryLanguage
         self.inputMenu.deactivate()
     }
     

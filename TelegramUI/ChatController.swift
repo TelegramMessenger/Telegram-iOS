@@ -3251,6 +3251,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
                 interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
             }
+            interfaceState = interfaceState.withUpdatedInputLanguage(self.chatDisplayNode.currentTextInputLanguage)
             let _ = updatePeerChatInterfaceState(account: account, peerId: peerId, state: interfaceState).start()
         }
     }
