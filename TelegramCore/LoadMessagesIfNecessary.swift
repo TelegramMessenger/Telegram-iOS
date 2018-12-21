@@ -61,7 +61,7 @@ public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Postb
                             switch result {
                                 case let .messages(messages, chats, users):
                                     return (messages, chats, users)
-                                case let .messagesSlice(_, messages, chats, users):
+                                case let .messagesSlice(_, _, messages, chats, users):
                                     return (messages, chats, users)
                                 case let .channelMessages(_, _, _, messages, chats, users):
                                     return (messages, chats, users)

@@ -6005,6 +6005,7 @@ extension Api {
         case photoSizeEmpty(type: String)
         case photoSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, size: Int32)
         case photoCachedSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, bytes: Buffer)
+        case photoStrippedSize(type: String, bytes: Buffer)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6034,6 +6035,13 @@ extension Api {
                     serializeInt32(h, buffer: buffer, boxed: false)
                     serializeBytes(bytes, buffer: buffer, boxed: false)
                     break
+                case .photoStrippedSize(let type, let bytes):
+                    if boxed {
+                        buffer.appendInt32(-525288402)
+                    }
+                    serializeString(type, buffer: buffer, boxed: false)
+                    serializeBytes(bytes, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -6045,6 +6053,8 @@ extension Api {
                 return ("photoSize", [("type", type), ("location", location), ("w", w), ("h", h), ("size", size)])
                 case .photoCachedSize(let type, let location, let w, let h, let bytes):
                 return ("photoCachedSize", [("type", type), ("location", location), ("w", w), ("h", h), ("bytes", bytes)])
+                case .photoStrippedSize(let type, let bytes):
+                return ("photoStrippedSize", [("type", type), ("bytes", bytes)])
     }
     }
     
@@ -6104,6 +6114,20 @@ extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.PhotoSize.photoCachedSize(type: _1!, location: _2!, w: _3!, h: _4!, bytes: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_photoStrippedSize(_ reader: BufferReader) -> PhotoSize? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PhotoSize.photoStrippedSize(type: _1!, bytes: _2!)
             }
             else {
                 return nil

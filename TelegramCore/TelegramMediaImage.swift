@@ -216,7 +216,8 @@ public func ==(lhs: TelegramMediaImageRepresentation, rhs: TelegramMediaImageRep
     return true
 }
 
-func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> [TelegramMediaImageRepresentation] {
+func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> (immediateThumbnail: Data?, representations:  [TelegramMediaImageRepresentation]) {
+    var immediateThumbnailData: Data?
     var representations: [TelegramMediaImageRepresentation] = []
     for size in sizes {
         switch size {
@@ -228,17 +229,20 @@ func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSize]) -> 
                 if let resource = mediaResourceFromApiFileLocation(location, size: Int(size)) {
                     representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
                 }
+            case let .photoStrippedSize(_, data):
+                immediateThumbnailData = data.makeData()
             case .photoSizeEmpty:
                 break
         }
     }
-    return representations
+    return (immediateThumbnailData, representations)
 }
 
 func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
         case let .photo(_, id, accessHash, fileReference, _, sizes):
-            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes), immediateThumbnailData: nil, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil)
+            let (immediateThumbnailData, representations) = telegramMediaImageRepresentationsFromApiSizes(sizes)
+            return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: .cloud(imageId: id, accessHash: accessHash, fileReference: fileReference.makeData()), partialReference: nil)
         case .photoEmpty:
             return nil
     }

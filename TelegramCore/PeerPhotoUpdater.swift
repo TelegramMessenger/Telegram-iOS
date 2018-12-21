@@ -79,7 +79,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                                         if sizes.count == 3 {
                                                             sizes.remove(at: 1)
                                                         }
-                                                        representations = telegramMediaImageRepresentationsFromApiSizes(sizes)
+                                                        representations = telegramMediaImageRepresentationsFromApiSizes(sizes).1
                                                         if let resource = result.resource as? LocalFileReferenceMediaResource {
                                                             if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
                                                                 for representation in representations {

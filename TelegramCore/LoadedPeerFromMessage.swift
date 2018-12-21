@@ -39,7 +39,7 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                                     switch result {
                                         case let .messages(_, _, users):
                                             apiUsers = users
-                                        case let .messagesSlice(_, _, _, users):
+                                        case let .messagesSlice(_, _, _, _, users):
                                             apiUsers = users
                                         case let .channelMessages(_, _, _, _, _, users):
                                             apiUsers = users

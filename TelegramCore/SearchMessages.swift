@@ -115,7 +115,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 chats = apiChats
                 users = apiUsers
                 totalCount = Int32(messages.count)
-            case let.messagesSlice(count, apiMessages, apiChats, apiUsers):
+            case let.messagesSlice(_, count, apiMessages, apiChats, apiUsers):
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers
@@ -216,7 +216,7 @@ public func downloadMessage(postbox: Postbox, network: Network, messageId: Messa
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
-                        case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
+                        case let.messagesSlice(_, _, apiMessages, apiChats, apiUsers):
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
@@ -299,7 +299,7 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers
-            case let .messagesSlice(_, apiMessages, apiChats, apiUsers):
+            case let .messagesSlice(_, _, apiMessages, apiChats, apiUsers):
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers
@@ -369,7 +369,7 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
                             messages = apiMessages
                         case let .channelMessages(_, _, _, apiMessages, _, _):
                             messages = apiMessages
-                        case let.messagesSlice(_, apiMessages, _, _):
+                        case let.messagesSlice(_, _, apiMessages, _, _):
                             messages = apiMessages
                         case .messagesNotModified:
                             messages = []

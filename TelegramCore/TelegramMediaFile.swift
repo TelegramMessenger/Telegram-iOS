@@ -541,7 +541,7 @@ func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMedia
         case let .document(id, accessHash, fileReference, _, mimeType, size, thumb, dcId, attributes):
             let parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes)
             
-            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: telegramMediaImageRepresentationsFromApiSizes([thumb]), mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: telegramMediaImageRepresentationsFromApiSizes([thumb]).1, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
         case .documentEmpty:
             return nil
     }

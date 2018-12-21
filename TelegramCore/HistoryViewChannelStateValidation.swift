@@ -342,7 +342,7 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
-                            case let .messagesSlice(_, messages: apiMessages, chats: apiChats, users: apiUsers):
+                            case let .messagesSlice(_, _, messages: apiMessages, chats: apiChats, users: apiUsers):
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
