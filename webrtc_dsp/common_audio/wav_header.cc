@@ -86,7 +86,39 @@ static inline std::string ReadFourCC(uint32_t x) {
   return std::string(reinterpret_cast<char*>(&x), 4);
 }
 #else
-#error "Write be-to-le conversion functions"
+static inline void WriteLE16(uint16_t* f, uint16_t x) {
+  *f = ((x << 8) & 0xff00)  | ( ( x >> 8) & 0x00ff);
+}
+
+static inline void WriteLE32(uint32_t* f, uint32_t x) {
+    *f = ( (x & 0x000000ff) << 24 )
+      | ((x & 0x0000ff00) << 8)
+      | ((x & 0x00ff0000) >> 8)
+      | ((x & 0xff000000) >> 24 );
+}
+
+static inline void WriteFourCC(uint32_t* f, char a, char b, char c, char d) {
+    *f = (static_cast<uint32_t>(a) << 24 )
+      |  (static_cast<uint32_t>(b) << 16)
+      |  (static_cast<uint32_t>(c) << 8)
+      |  (static_cast<uint32_t>(d) );
+}
+
+static inline uint16_t ReadLE16(uint16_t x) {
+  return  (( x & 0x00ff) << 8 )| ((x & 0xff00)>>8);
+}
+
+static inline uint32_t ReadLE32(uint32_t x) {
+  return   ( (x & 0x000000ff) << 24 )
+         | ( (x & 0x0000ff00) << 8 )
+         | ( (x & 0x00ff0000) >> 8)
+         | ( (x & 0xff000000) >> 24 );
+}
+
+static inline std::string ReadFourCC(uint32_t x) {
+  x = ReadLE32(x);
+  return std::string(reinterpret_cast<char*>(&x), 4);
+}
 #endif
 
 static inline uint32_t RiffChunkSize(size_t bytes_in_payload) {
