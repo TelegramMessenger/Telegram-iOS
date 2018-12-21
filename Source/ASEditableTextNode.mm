@@ -196,14 +196,14 @@
 - (UITextInputMode *)textInputMode {
   if (!_initializedPrimaryInputLanguage) {
     _initializedPrimaryInputLanguage = true;
-      /*if (_initialPrimaryLanguage != nil) {
+      if (_initialPrimaryLanguage != nil) {
       for (UITextInputMode *inputMode in [UITextInputMode activeInputModes]) {
         NSString *primaryLanguage = inputMode.primaryLanguage;
         if (primaryLanguage != nil && [primaryLanguage isEqualToString:_initialPrimaryLanguage]) {
           return inputMode;
         }
       }
-    }*/
+    }
   }
   return [super textInputMode];
 }
