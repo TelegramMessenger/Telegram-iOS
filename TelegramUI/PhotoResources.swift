@@ -27,7 +27,13 @@ func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single((nil, loadedData, true))
             } else {
-                let fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: photoReference.resourceReference(smallestRepresentation.resource), statsCategory: .image)
+                let decodedThumbnailData = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
+                let fetchedThumbnail: Signal<FetchResourceSourceType, NoError>
+                if let _ = decodedThumbnailData {
+                    fetchedThumbnail = .complete()
+                } else {
+                    fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: photoReference.resourceReference(smallestRepresentation.resource), statsCategory: .image)
+                }
                 let fetchedFullSize = fetchedMediaResource(postbox: postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image)
                 
                 let anyThumbnail: [Signal<MediaResourceData, NoError>]
@@ -43,14 +49,20 @@ func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference
                 }
                 
                 let mainThumbnail = Signal<Data?, NoError> { subscriber in
-                    let fetchedDisposable = fetchedThumbnail.start()
-                    let thumbnailDisposable = postbox.mediaBox.resourceData(smallestRepresentation.resource, attemptSynchronously: synchronousLoad).start(next: { next in
-                        subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
-                    }, error: subscriber.putError, completed: subscriber.putCompletion)
-                    
-                    return ActionDisposable {
-                        fetchedDisposable.dispose()
-                        thumbnailDisposable.dispose()
+                    if let decodedThumbnailData = decodedThumbnailData {
+                        subscriber.putNext(decodedThumbnailData)
+                        subscriber.putCompletion()
+                        return EmptyDisposable
+                    } else {
+                        let fetchedDisposable = fetchedThumbnail.start()
+                        let thumbnailDisposable = postbox.mediaBox.resourceData(smallestRepresentation.resource, attemptSynchronously: synchronousLoad).start(next: { next in
+                            subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                        }, error: subscriber.putError, completed: subscriber.putCompletion)
+                        
+                        return ActionDisposable {
+                            fetchedDisposable.dispose()
+                            thumbnailDisposable.dispose()
+                        }
                     }
                 }
                 
@@ -587,17 +599,17 @@ private func addCorners(_ context: DrawingContext, arguments: TransformImageArgu
 
 func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> Signal<UIImage?, NoError> {
     return chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, autoFetchFullSize: true)
-        |> map { (thumbnailData, fullSizeData, fullSizeComplete) -> UIImage? in
-            if let fullSizeData = fullSizeData {
-                if fullSizeComplete {
-                    return UIImage(data: fullSizeData)?.precomposed()
-                }
+    |> map { (thumbnailData, fullSizeData, fullSizeComplete) -> UIImage? in
+        if let fullSizeData = fullSizeData {
+            if fullSizeComplete {
+                return UIImage(data: fullSizeData)?.precomposed()
             }
-            if let thumbnailData = thumbnailData {
-                return UIImage(data: thumbnailData)?.precomposed()
-            }
-            return nil
         }
+        if let thumbnailData = thumbnailData {
+            return UIImage(data: thumbnailData)?.precomposed()
+        }
+        return nil
+    }
 }
 
 public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false, tinyThumbnailData: TinyThumbnailData? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
@@ -681,7 +693,7 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
                     c.interpolationQuality = .none
                     c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                 }
-                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                //telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
                 var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
                 if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
