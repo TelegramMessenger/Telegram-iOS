@@ -260,7 +260,7 @@ public:
     }
 public:
     T                                 mValue;
-    int                               mPropertyIndex; /* "ix" */
+    int                               mPropertyIndex{0}; /* "ix" */
     std::unique_ptr<LOTAnimInfo<T>>   mAnimInfo;
 };
 
@@ -354,13 +354,13 @@ public:
 
     MatteType            mMatteType{MatteType::None};
     VRect                mBound;
-    LayerType            mLayerType; //lottie layer type  (solid/shape/precomp)
+    LayerType            mLayerType{LayerType::Null}; //lottie layer type  (solid/shape/precomp)
     int                  mParentId{-1}; // Lottie the id of the parent in the composition
     int                  mId{-1};  // Lottie the group id  used for parenting.
     long                 mInFrame{0};
     long                 mOutFrame{0};
     long                 mStartFrame{0};
-    LottieBlendMode      mBlendMode;
+    LottieBlendMode      mBlendMode{LottieBlendMode::Normal};
     float                mTimeStreatch{1.0f};
     std::string          mPreCompRefId;
     LOTAnimatable<float> mTimeRemap;  /* "tm" */
@@ -372,7 +372,7 @@ public:
     bool                 mRoot{false};
     bool                 mAutoOrient{false};
     std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
-    LOTCompositionData   *mCompRef;
+    LOTCompositionData   *mCompRef{nullptr};
 };
 
 class LOTCompositionData : public LOTData
@@ -402,7 +402,7 @@ public:
     VSize                mSize;
     long                 mStartFrame{0};
     long                 mEndFrame{0};
-    float                mFrameRate;
+    float                mFrameRate{60};
     LottieBlendMode      mBlendMode;
     std::shared_ptr<LOTLayerData> mRootLayer;
     std::unordered_map<std::string,
@@ -506,8 +506,8 @@ public:
     LOTAnimatable<LottieColor>        mColor;      /* "c" */
     LOTAnimatable<int>                mOpacity{100};    /* "o" */
     LOTAnimatable<float>              mWidth{0};      /* "w" */
-    CapStyle                          mCapStyle;   /* "lc" */
-    JoinStyle                         mJoinStyle;  /* "lj" */
+    CapStyle                          mCapStyle{CapStyle::Flat};   /* "lc" */
+    JoinStyle                         mJoinStyle{JoinStyle::Miter};  /* "lj" */
     float                             mMeterLimit{0}; /* "ml" */
     LOTDashProperty                   mDash;
     bool                              mEnabled{true}; /* "fillEnabled" */
@@ -579,7 +579,7 @@ public:
 private:
     void populate(VGradientStops &stops, int frameNo);
 public:
-    int                                 mGradientType;        /* "t" Linear=1 , Radial = 2*/
+    int                                 mGradientType{1};        /* "t" Linear=1 , Radial = 2*/
     LOTAnimatable<VPointF>              mStartPoint;          /* "s" */
     LOTAnimatable<VPointF>              mEndPoint;            /* "e" */
     LOTAnimatable<float>                mHighlightLength{0};     /* "h" */
@@ -611,8 +611,8 @@ public:
     int getDashInfo(int frameNo, float *array) const;
 public:
     LOTAnimatable<float>           mWidth;       /* "w" */
-    CapStyle                       mCapStyle;    /* "lc" */
-    JoinStyle                      mJoinStyle;   /* "lj" */
+    CapStyle                       mCapStyle{CapStyle::Flat};    /* "lc" */
+    JoinStyle                      mJoinStyle{JoinStyle::Miter};   /* "lj" */
     float                          mMeterLimit{0};  /* "ml" */
     LOTDashProperty                mDash;
 };

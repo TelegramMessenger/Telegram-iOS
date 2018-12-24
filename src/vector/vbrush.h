@@ -65,7 +65,7 @@ public:
 public:
     VBrush::Type     mType{Type::NoBrush};
     VColor           mColor;
-    const VGradient *mGradient;
+    const VGradient *mGradient{nullptr};
 };
 
 V_END_NAMESPACE

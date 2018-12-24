@@ -75,15 +75,15 @@ public:
     int bytesPerLine() const { return mBytesPerLine; }
     int bytesPerPixel() const { return mBytesPerPixel; }
 
-    VBitmap::Format           mFormat;
+    VBitmap::Format           mFormat{VBitmap::Format::ARGB32_Premultiplied};
     VPainter::CompositionMode mCompositionMode;
 
 private:
-    int    mWidth;
-    int    mHeight;
-    int    mBytesPerLine;
-    int    mBytesPerPixel;
-    uchar *mBuffer;
+    int    mWidth{0};
+    int    mHeight{0};
+    int    mBytesPerLine{0};
+    int    mBytesPerPixel{0};
+    uchar *mBuffer{nullptr};
 };
 
 struct VGradientData {

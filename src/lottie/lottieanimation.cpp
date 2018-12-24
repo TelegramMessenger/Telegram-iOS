@@ -90,8 +90,8 @@ struct RenderTask {
     RenderTask() { receiver = sender.get_future(); }
     std::promise<Surface> sender;
     std::future<Surface>  receiver;
-    AnimationImpl     *playerImpl;
-    size_t              frameNo;
+    AnimationImpl     *playerImpl{nullptr};
+    size_t              frameNo{0};
     Surface            surface;
 };
 

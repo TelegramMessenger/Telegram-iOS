@@ -10,7 +10,7 @@ public:
         inline CacheInfo(VGradientStops s) : stops(std::move(s)) {}
         uint32_t       buffer32[VGradient::colorTableSize];
         VGradientStops stops;
-        bool           alpha;
+        bool           alpha{true};
     };
 
     typedef std::unordered_multimap<uint64_t, std::shared_ptr<const CacheInfo>>

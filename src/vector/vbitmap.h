@@ -37,7 +37,7 @@ public:
 private:
     void         detach();
     void         cleanUp(VBitmapData *x);
-    VBitmapData *d;
+    VBitmapData *d{nullptr};
 };
 
 V_END_NAMESPACE

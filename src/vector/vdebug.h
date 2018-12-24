@@ -78,8 +78,8 @@ private:
     void stringify(std::ostream& os, char* start, char const* const end);
 
 private:
-    size_t                  m_bytes_used;
-    size_t                  m_buffer_size;
+    size_t                  m_bytes_used{0};
+    size_t                  m_buffer_size{0};
     std::unique_ptr<char[]> m_heap_buffer;
     bool                    m_logAll;
     char m_stack_buffer[256 - sizeof(bool) - 2 * sizeof(size_t) -

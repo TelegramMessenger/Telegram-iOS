@@ -93,7 +93,7 @@ protected:
    float                                       mCombinedAlpha{0.0};
    int                                         mFrameNo{-1};
    DirtyFlag                                   mDirtyFlag{DirtyFlagBit::All};
-   bool                                        mStatic;
+   bool                                        mStatic{false};
 };
 
 class LOTCompLayerItem: public LOTLayerItem
@@ -109,7 +109,6 @@ protected:
 private:
    std::vector<LOTLayerNode *>                  mLayersCNode;
    std::vector<std::unique_ptr<LOTLayerItem>>   mLayers;
-   int                                          mLastFrame;
 };
 
 class LOTSolidLayerItem: public LOTLayerItem
@@ -333,10 +332,10 @@ protected:
    virtual void updateRenderNode();
    inline float parentAlpha() const {return mParentAlpha;}
 public:
-   float                            mParentAlpha;
+   float                            mParentAlpha{1.0f};
    VPath                            mPath;
    DirtyFlag                        mFlag;
-   int                              mFrameNo;
+   int                              mFrameNo{-1};
    std::vector<LOTPathDataItem *>   mPathItems;
    std::unique_ptr<VDrawable>       mDrawable;
    bool                             mStaticContent;
@@ -353,7 +352,7 @@ protected:
 private:
    LOTFillData             *mData;
    VColor                  mColor;
-   FillRule                mFillRule;
+   FillRule                mFillRule{FillRule::Winding};
 };
 
 class LOTGFillItem : public LOTPaintDataItem
@@ -366,7 +365,7 @@ protected:
 private:
    LOTGFillData                 *mData;
    std::unique_ptr<VGradient>    mGradient;
-   FillRule                      mFillRule;
+   FillRule                      mFillRule{FillRule::Winding};
 };
 
 class LOTStrokeItem : public LOTPaintDataItem
@@ -378,13 +377,13 @@ protected:
    void updateRenderNode() final;
 private:
    LOTStrokeData             *mData;
-   CapStyle                  mCap;
-   JoinStyle                 mJoin;
-   float                     mMiterLimit;
+   CapStyle                  mCap{CapStyle::Flat};
+   JoinStyle                 mJoin{JoinStyle::Miter};
+   float                     mMiterLimit{0};
    VColor                    mColor;
-   float                     mWidth;
+   float                     mWidth{0};
    float                     mDashArray[6];
-   int                       mDashArraySize;
+   int                       mDashArraySize{0};
 };
 
 class LOTGStrokeItem : public LOTPaintDataItem
@@ -397,13 +396,13 @@ protected:
 private:
    LOTGStrokeData               *mData;
    std::unique_ptr<VGradient>    mGradient;
-   CapStyle                      mCap;
-   JoinStyle                     mJoin;
-   float                         mMiterLimit;
+   CapStyle                      mCap{CapStyle::Flat};
+   JoinStyle                     mJoin{JoinStyle::Miter};
+   float                         mMiterLimit{0};
    VColor                        mColor;
-   float                         mWidth;
+   float                         mWidth{0};
    float                         mDashArray[6];
-   int                           mDashArraySize;
+   int                           mDashArraySize{0};
 };
 
 

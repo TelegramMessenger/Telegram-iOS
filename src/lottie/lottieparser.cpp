@@ -250,8 +250,8 @@ public:
 
 protected:
     std::shared_ptr<LOTCompositionData>        mComposition;
-    LOTCompositionData *                       compRef;
-    LOTLayerData *                             curLayerRef;
+    LOTCompositionData *                       compRef{nullptr};
+    LOTLayerData *                             curLayerRef{nullptr};
     std::vector<std::shared_ptr<LOTLayerData>> mLayersToUpdate;
     void                                       SkipOut(int depth);
 };

@@ -91,10 +91,10 @@ public:
      */
     Surface() = default;
 private:
-    uint32_t    *mBuffer;
-    size_t       mWidth;
-    size_t       mHeight;
-    size_t       mBytesPerLine;
+    uint32_t    *mBuffer{nullptr};
+    size_t       mWidth{0};
+    size_t       mHeight{0};
+    size_t       mBytesPerLine{0};
 };
 
 class LOT_EXPORT Animation {
