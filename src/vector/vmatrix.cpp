@@ -130,6 +130,7 @@ VMatrix &VMatrix::translate(float dx, float dy)
         break;
     case MatrixType::Project:
         m33 += dx * m13 + dy * m23;
+        VECTOR_FALLTHROUGH
     case MatrixType::Shear:
     case MatrixType::Rotate:
         mtx += dx * m11 + dy * m21;
@@ -153,10 +154,12 @@ VMatrix &VMatrix::scale(float sx, float sy)
     case MatrixType::Project:
         m13 *= sx;
         m23 *= sy;
+        VECTOR_FALLTHROUGH
     case MatrixType::Rotate:
     case MatrixType::Shear:
         m12 *= sx;
         m21 *= sy;
+        VECTOR_FALLTHROUGH
     case MatrixType::Scale:
         m11 *= sx;
         m22 *= sy;
@@ -185,6 +188,7 @@ VMatrix &VMatrix::shear(float sh, float sv)
         float tm23 = sh * m13;
         m13 += tm13;
         m23 += tm23;
+        VECTOR_FALLTHROUGH
     }
     case MatrixType::Rotate:
     case MatrixType::Shear: {
@@ -249,6 +253,7 @@ VMatrix &VMatrix::rotate(float a, Axis axis)
             float tm23 = -sina * m13 + cosa * m23;
             m13 = tm13;
             m23 = tm23;
+            VECTOR_FALLTHROUGH
         }
         case MatrixType::Rotate:
         case MatrixType::Shear: {

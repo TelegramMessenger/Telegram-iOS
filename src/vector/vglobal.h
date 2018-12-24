@@ -33,7 +33,11 @@ typedef uint8_t  uchar;
 
 #include "vdebug.h"
 
+#if __GNUC__ >= 7
+#define EINA_FALLTHROUGH __attribute__ ((fallthrough));
+#else
 #define VECTOR_FALLTHROUGH
+#endif
 
 #include <atomic>
 class RefCount {

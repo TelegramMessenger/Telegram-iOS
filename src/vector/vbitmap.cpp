@@ -53,6 +53,7 @@ VBitmapData *VBitmapData::create(int width, int height, VBitmap::Format format)
     switch (format) {
     case VBitmap::Format::Alpha8:
         depth = 8;
+        VECTOR_FALLTHROUGH
     case VBitmap::Format::ARGB32:
     case VBitmap::Format::ARGB32_Premultiplied:
         depth = 32;
