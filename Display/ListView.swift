@@ -2407,7 +2407,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             if k != 0 && k != 1 {
                                 speed = Float(1.0) / k
                             }
-                            springAnimation.speed = speed * Float(springAnimation.duration / duration)
+                            if !duration.isZero {
+                                springAnimation.speed = speed * Float(springAnimation.duration / duration)
+                            }
                             
                             springAnimation.isAdditive = true
                             animation = springAnimation
@@ -2621,7 +2623,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             if k != 0 && k != 1 {
                                 speed = Float(1.0) / k
                             }
-                            springAnimation.speed = speed * Float(springAnimation.duration / duration)
+                            if !duration.isZero {
+                                springAnimation.speed = speed * Float(springAnimation.duration / duration)
+                            }
                             
                             let reverseSpringAnimation = makeSpringAnimation("sublayerTransform")
                             reverseSpringAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))

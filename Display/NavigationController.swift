@@ -729,7 +729,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.pushViewController(controller, completion: {})
     }
     
-    public func pushViewController(_ controller: ViewController, completion: @escaping () -> Void) {
+    public func pushViewController(_ controller: ViewController, animated: Bool = true, completion: @escaping () -> Void) {
         let navigateAction: () -> Void = { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -756,7 +756,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                             if containerLayout != appliedLayout {
                                 controller.containerLayoutUpdated(containerLayout, transition: .immediate)
                             }
-                            strongSelf.pushViewController(controller, animated: true)
+                            strongSelf.pushViewController(controller, animated: animated)
                         }
                     }))
                 } else {
