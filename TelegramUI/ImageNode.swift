@@ -62,6 +62,22 @@ public struct ImageCorners: Equatable {
     public let bottomLeft: ImageCorner
     public let bottomRight: ImageCorner
     
+    public var isEmpty: Bool {
+        if self.topLeft != .Corner(0.0) {
+            return false
+        }
+        if self.topRight != .Corner(0.0) {
+            return false
+        }
+        if self.bottomLeft != .Corner(0.0) {
+            return false
+        }
+        if self.bottomRight != .Corner(0.0) {
+            return false
+        }
+        return true
+    }
+    
     public init(radius: CGFloat) {
         self.topLeft = .Corner(radius)
         self.topRight = .Corner(radius)

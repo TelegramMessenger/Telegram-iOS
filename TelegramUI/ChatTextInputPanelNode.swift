@@ -1219,7 +1219,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func editableTextNodeDidChangeSelection(_ editableTextNode: ASEditableTextNode, fromSelectedRange: NSRange, toSelectedRange: NSRange, dueToEditing: Bool) {
-        if !dueToEditing && !updatingInputState {
+        if !dueToEditing && !self.updatingInputState {
             let inputTextState = self.inputTextState
             self.interfaceInteraction?.updateTextInputStateAndMode({ _, inputMode in return (inputTextState, inputMode) })
         }
@@ -1307,6 +1307,34 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         self.updateActivity()
+        var cleanText = text
+        let removeSequences: [String] = ["\u{202d}", "\u{202c}"]
+        for sequence in removeSequences {
+            inner: while true {
+                if let range = cleanText.range(of: sequence) {
+                    cleanText.removeSubrange(range)
+                } else {
+                    break inner
+                }
+            }
+        }
+        if cleanText != text {
+            let string = NSMutableAttributedString(attributedString: editableTextNode.attributedText ?? NSAttributedString())
+            var textColor: UIColor = .black
+            var accentTextColor: UIColor = .blue
+            var baseFontSize: CGFloat = 17.0
+            if let presentationInterfaceState = self.presentationInterfaceState {
+                textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
+                accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
+                baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
+            }
+            let cleanReplacementString = textAttributedStringForStateText(NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor)
+            string.replaceCharacters(in: range, with: cleanReplacementString)
+            self.textInputNode?.attributedText = string
+            self.textInputNode?.selectedRange = NSMakeRange(range.lowerBound + cleanReplacementString.length, 0)
+            self.updateTextNodeText(animated: true)
+            return false
+        }
         return true
     }
     

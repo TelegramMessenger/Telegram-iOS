@@ -57,7 +57,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
     
     var theme: PresentationTheme {
         didSet {
-            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
             
             if self.isPasscodeSet {
                 self.lockView.setIsLocked(self.isManuallyLocked, theme: self.theme, animated: false)

@@ -4,6 +4,11 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
+private final class SoftwareVideoThumbnailLayerNullAction: NSNull {
+    @objc override func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
+    }
+}
+
 final class SoftwareVideoThumbnailLayer: CALayer {
     var disposable: Disposable?
     
@@ -49,6 +54,6 @@ final class SoftwareVideoThumbnailLayer: CALayer {
     }
     
     override func action(forKey event: String) -> CAAction? {
-        return NSNull()
+        return SoftwareVideoThumbnailLayerNullAction()
     }
 }

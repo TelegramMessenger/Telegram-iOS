@@ -1274,13 +1274,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             }
                             
                             var hasBots: Bool = false
-                            if let cachedGroupData = peerView.cachedData as? CachedGroupData {
-                                if !cachedGroupData.botInfos.isEmpty {
-                                    hasBots = true
-                                }
-                            } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
-                                if !cachedChannelData.botInfos.isEmpty {
-                                    hasBots = true
+                            if let peer = peerView.peers[peerView.peerId] {
+                                if let cachedGroupData = peerView.cachedData as? CachedGroupData {
+                                    if !cachedGroupData.botInfos.isEmpty {
+                                        hasBots = true
+                                    }
+                                } else if let cachedChannelData = peerView.cachedData as? CachedChannelData, let channel = peer as? TelegramChannel, case .group = channel.info {
+                                    if !cachedChannelData.botInfos.isEmpty {
+                                        hasBots = true
+                                    }
                                 }
                             }
                             

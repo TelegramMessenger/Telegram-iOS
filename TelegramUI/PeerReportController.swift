@@ -34,7 +34,7 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
     var items: [ActionSheetItem] = []
     for option in options {
         let title: String
-        var color: ActionSheetButtonColor = .accent
+        let color: ActionSheetButtonColor = .accent
         switch option {
             case .spam:
                 title = presentationData.strings.ReportPeer_ReasonSpam
@@ -44,7 +44,6 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                 title = presentationData.strings.ReportPeer_ReasonPornography
             case .childAbuse:
                 title = presentationData.strings.ReportPeer_ReasonChildAbuse
-                color = .destructive
             case .copyright:
                 title = presentationData.strings.ReportPeer_ReasonCopyright
             case .other:

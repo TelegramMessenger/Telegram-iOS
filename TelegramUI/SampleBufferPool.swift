@@ -3,9 +3,14 @@ import UIKit
 import AVFoundation
 import SwiftSignalKit
 
+private final class SampleBufferLayerImplNullAction: NSNull {
+    @objc override func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
+    }
+}
+
 private final class SampleBufferLayerImpl: AVSampleBufferDisplayLayer {
     override func action(forKey event: String) -> CAAction? {
-        return NSNull()
+        return SampleBufferLayerImplNullAction()
     }
     
     deinit {
