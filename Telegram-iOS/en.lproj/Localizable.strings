@@ -3657,3 +3657,6 @@ Unused sets are archived when you add more.";
 "Conversation.StopPollConfirmation" = "Stop Poll";
 
 "AttachmentMenu.WebSearch" = "Web Search";
+
+"Conversation.UnsupportedMediaPlaceholder" = "This message is not supported on your version of Telegram. Please update to the latest version.";
+"Conversation.UpdateTelegram" = "UPDATE TELEGRAM";
