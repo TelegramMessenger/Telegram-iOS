@@ -251,7 +251,7 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
         } else {
             return [.regularChatsAndPrivateGroups]
         }
-    })
+    }, additionalChatListIndexNamespace: Namespaces.Message.Cloud)
 }()
 
 public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {

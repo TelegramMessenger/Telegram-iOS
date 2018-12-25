@@ -369,7 +369,11 @@ public final class AccountStateManager {
                 |> take(1)
                 |> mapToSignal { state -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
                     if let authorizedState = state.state {
-                        let request = network.request(Api.functions.updates.getDifference(flags: 1 << 0, pts: authorizedState.pts, ptsTotalLimit: 1000, date: authorizedState.date, qts: authorizedState.qts))
+                        var ptsTotalLimit: Int32 = 10000
+                        #if DEBUG
+                        ptsTotalLimit = 1000
+                        #endif
+                        let request = network.request(Api.functions.updates.getDifference(flags: 1 << 0, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts))
                         |> retryRequest
                         
                         return request

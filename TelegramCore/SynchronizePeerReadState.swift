@@ -247,101 +247,101 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
     
     if peerId.namespace == Namespaces.Peer.SecretChat {
         return inputSecretChat(postbox: postbox, peerId: peerId)
-            |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in
-                switch readState {
-                    case .idBased:
+        |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in
+            switch readState {
+                case .idBased:
+                    return .single(readState)
+                case let .indexBased(maxIncomingReadIndex, _, _, _):
+                    return network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp))
+                    |> retryRequest
+                    |> mapToSignalPromotingError { _ -> Signal<PeerReadState, VerifyReadStateError> in
                         return .single(readState)
-                    case let .indexBased(maxIncomingReadIndex, _, _, _):
-                        return network.request(Api.functions.messages.readEncryptedHistory(peer: inputPeer, maxDate: maxIncomingReadIndex.timestamp))
-                        |> retryRequest
-                            |> mapToSignalPromotingError { _ -> Signal<PeerReadState, VerifyReadStateError> in
-                                return .single(readState)
-                        }
-                }
+                    }
             }
+        }
     } else {
         return inputPeer(postbox: postbox, peerId: peerId)
-            |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in
-                switch inputPeer {
-                    case let .inputPeerChannel(channelId, accessHash):
-                        switch readState {
-                            case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
-                                var pushSignal: Signal<Void, NoError> = network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), maxId: maxIncomingReadId))
+        |> mapToSignal { inputPeer -> Signal<PeerReadState, VerifyReadStateError> in
+            switch inputPeer {
+                case let .inputPeerChannel(channelId, accessHash):
+                    switch readState {
+                        case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
+                            var pushSignal: Signal<Void, NoError> = network.request(Api.functions.channels.readHistory(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), maxId: maxIncomingReadId))
+                            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                                return .complete()
+                            }
+                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                                return .complete()
+                            }
+                            if markedUnread {
+                                pushSignal = pushSignal
+                                |> then(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
                                 |> `catch` { _ -> Signal<Api.Bool, NoError> in
                                     return .complete()
                                 }
                                 |> mapToSignal { _ -> Signal<Void, NoError> in
                                     return .complete()
-                                }
-                                if markedUnread {
-                                    pushSignal = pushSignal
-                                    |> then(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
-                                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                                        return .complete()
+                                })
+                            }
+                            return pushSignal
+                            |> mapError { _ -> VerifyReadStateError in return VerifyReadStateError.Retry }
+                            |> mapToSignal { _ -> Signal<PeerReadState, VerifyReadStateError> in
+                                return .complete()
+                            }
+                            |> then(Signal<PeerReadState, VerifyReadStateError>.single(readState))
+                        case .indexBased:
+                            return .single(readState)
+                    }
+                
+                default:
+                    switch readState {
+                        case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
+                            var pushSignal: Signal<Void, NoError> = network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId))
+                            |> map(Optional.init)
+                            |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
+                                return .single(nil)
+                            }
+                            |> mapToSignal { result -> Signal<Void, NoError> in
+                                if let result = result {
+                                    switch result {
+                                        case let .affectedMessages(pts, ptsCount):
+                                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
                                     }
-                                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                                        return .complete()
-                                    })
                                 }
-                                return pushSignal
-                                |> mapError { _ -> VerifyReadStateError in return VerifyReadStateError.Retry }
-                                |> mapToSignal { _ -> Signal<PeerReadState, VerifyReadStateError> in
+                                return .complete()
+                            }
+                            
+                            if markedUnread {
+                                pushSignal = pushSignal
+                                |> then(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
+                                |> `catch` { _ -> Signal<Api.Bool, NoError> in
                                     return .complete()
                                 }
-                                |> then(Signal<PeerReadState, VerifyReadStateError>.single(readState))
-                            case .indexBased:
-                                return .single(readState)
-                        }
-                    
-                    default:
-                        switch readState {
-                            case let .idBased(maxIncomingReadId, _, _, _, markedUnread):
-                                var pushSignal: Signal<Void, NoError> = network.request(Api.functions.messages.readHistory(peer: inputPeer, maxId: maxIncomingReadId))
-                                |> map(Optional.init)
-                                |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
-                                    return .single(nil)
-                                }
-                                |> mapToSignal { result -> Signal<Void, NoError> in
-                                    if let result = result {
-                                        switch result {
-                                            case let .affectedMessages(pts, ptsCount):
-                                                stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
-                                        }
-                                    }
+                                |> mapToSignal { _ -> Signal<Void, NoError> in
                                     return .complete()
-                                }
-                                
-                                if markedUnread {
-                                    pushSignal = pushSignal
-                                    |> then(network.request(Api.functions.messages.markDialogUnread(flags: 1 << 0, peer: .inputDialogPeer(peer: inputPeer)))
-                                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                                        return .complete()
-                                    }
-                                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                                        return .complete()
-                                    })
-                                }
-                                    
-                                return pushSignal
-                                |> mapError { _ -> VerifyReadStateError in return VerifyReadStateError.Retry }
-                                |> mapToSignal { _ -> Signal<PeerReadState, VerifyReadStateError> in
-                                    return .complete()
-                                }
-                                |> then(Signal<PeerReadState, VerifyReadStateError>.single(readState))
-                            case .indexBased:
-                                return .single(readState)
-                        }
-                }
+                                })
+                            }
+                            
+                            return pushSignal
+                            |> mapError { _ -> VerifyReadStateError in return VerifyReadStateError.Retry }
+                            |> mapToSignal { _ -> Signal<PeerReadState, VerifyReadStateError> in
+                                return .complete()
+                            }
+                            |> then(Signal<PeerReadState, VerifyReadStateError>.single(readState))
+                        case .indexBased:
+                            return .single(readState)
+                    }
             }
+        }
     }
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Void, NoError> {
-    let currentReadState = postbox.transaction { transaction -> PeerReadState? in
+    let currentReadState = postbox.transaction { transaction -> (MessageId.Namespace, PeerReadState)? in
         if let readStates = transaction.getPeerReadStates(peerId) {
             for (namespace, readState) in readStates {
                 if namespace == Namespaces.Message.Cloud || namespace == Namespaces.Message.SecretIncoming {
-                    return readState
+                    return (namespace, readState)
                 }
             }
         }
@@ -349,20 +349,23 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
     }
     
     let pushedState = currentReadState
-    |> mapToSignalPromotingError { readState -> Signal<PeerReadState, VerifyReadStateError> in
-        if let readState = readState {
+    |> mapToSignalPromotingError { namespaceAndReadState -> Signal<(MessageId.Namespace, PeerReadState), VerifyReadStateError> in
+        if let (namespace, readState) = namespaceAndReadState {
             return pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, readState: readState)
+            |> map { updatedReadState -> (MessageId.Namespace, PeerReadState) in
+                return (namespace, updatedReadState)
+            }
         } else {
             return .complete()
         }
     }
     
     let verifiedState = pushedState
-    |> mapToSignal { readState -> Signal<Void, VerifyReadStateError> in
+    |> mapToSignal { namespaceAndReadState -> Signal<Void, VerifyReadStateError> in
         return stateManager.addCustomOperation(postbox.transaction { transaction -> VerifyReadStateError? in
             if let readStates = transaction.getPeerReadStates(peerId) {
-                for (namespace, currentReadState) in readStates where namespace == Namespaces.Message.Cloud {
-                    if currentReadState == readState {
+                for (namespace, currentReadState) in readStates where namespace == namespaceAndReadState.0 {
+                    if currentReadState == namespaceAndReadState.1 {
                         transaction.confirmSynchronizedIncomingReadState(peerId)
                         return nil
                     }

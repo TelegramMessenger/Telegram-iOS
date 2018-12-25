@@ -315,7 +315,7 @@ private final class MultipartUploadManager {
                         case let .data(data):
                             fileData = data
                     }
-                    if let fileData = fileData {
+                    if let fileData = fileData, fileData.count >= partOffset + partSize {
                         let partData = self.state.transform(data: fileData.subdata(in: partOffset ..< (partOffset + partSize)))
                         var currentBigTotalParts = self.bigTotalParts
                         if self.bigParts && resourceData.complete && partOffset + partSize == resourceData.size {

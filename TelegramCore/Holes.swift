@@ -567,8 +567,13 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
     } else {
         location = .general
     }
-    return fetchChatList(postbox: postbox, network: network, location: location, upperBound: hole.index)
+    return fetchChatList(postbox: postbox, network: network, location: location, upperBound: hole.index, hash: 0, limit: 100)
     |> mapToSignal { fetchedChats -> Signal<Void, NoError> in
+        guard let fetchedChats = fetchedChats else {
+            return postbox.transaction { transaction -> Void in
+                transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: nil)
+            }
+        }
         return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages in
             for peer in fetchedChats.peers {
                 updatePeers(transaction: transaction, peers: [peer], update: { _, updated -> Peer in

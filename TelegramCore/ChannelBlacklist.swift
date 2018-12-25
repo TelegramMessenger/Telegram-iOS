@@ -132,10 +132,10 @@ public func channelBlacklistParticipants(account: Account, peerId: PeerId) -> Si
         }
 }
 
-public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, rights: TelegramChannelBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> {
+public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, rights: TelegramChannelBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant?), NoError> {
     return fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
-    |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
-        return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
+    |> mapToSignal { currentParticipant -> Signal<(ChannelParticipant?, RenderedChannelParticipant?), NoError> in
+        return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant?), NoError> in
             if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = transaction.getPeer(account.peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
                 let updatedParticipant: ChannelParticipant
                 if let currentParticipant = currentParticipant, case let .member(_, invitedAt, _, currentBanInfo) = currentParticipant {
@@ -159,100 +159,102 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                 let effectiveRights: TelegramChannelBannedRights = rights ?? TelegramChannelBannedRights(flags: [], untilDate: 0)
                 
                 return account.network.request(Api.functions.channels.editBanned(channel: inputChannel, userId: inputUser, bannedRights: effectiveRights.apiBannedRights))
-                    |> retryRequest
-                    |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), NoError> in
-                        account.stateManager.addUpdates(result)
-                        
-                        return account.postbox.transaction { transaction -> (ChannelParticipant?, RenderedChannelParticipant) in
-                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                                if let cachedData = cachedData as? CachedChannelData {
-                                    var updatedData = cachedData
-                                    var wasKicked = false
-                                    var wasBanned = false
-                                    var wasMember = false
-                                    var wasAdmin = false
-                                    if let currentParticipant = currentParticipant {
-                                        switch currentParticipant {
-                                            case .creator:
-                                                break
-                                            case let .member(_, _, adminInfo, banInfo):
-                                                if let adminInfo = adminInfo {
-                                                    wasAdmin = true
-                                                }
-                                                if let banInfo = banInfo {
-                                                    if banInfo.rights.flags.contains(.banReadMessages) {
-                                                        wasKicked = true
-                                                    } else if !banInfo.rights.flags.isEmpty {
-                                                        wasBanned = true
-                                                    }
-                                                }
-                                                wasMember = true
-                                        }
+                |> retryRequest
+                |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant?), NoError> in
+                    account.stateManager.addUpdates(result)
+                    
+                    var wasKicked = false
+                    var wasBanned = false
+                    var wasMember = false
+                    var wasAdmin = false
+                    if let currentParticipant = currentParticipant {
+                        switch currentParticipant {
+                            case .creator:
+                                break
+                            case let .member(_, _, adminInfo, banInfo):
+                                if let _ = adminInfo {
+                                    wasAdmin = true
+                                }
+                                if let banInfo = banInfo {
+                                    if banInfo.rights.flags.contains(.banReadMessages) {
+                                        wasKicked = true
+                                    } else if !banInfo.rights.flags.isEmpty {
+                                        wasBanned = true
+                                        wasMember = true
                                     }
-                                    
-                                    
-                                    var isKicked = false
-                                    var isBanned = false
-                                    if effectiveRights.flags.contains(.banReadMessages) {
-                                        isKicked = true
-                                    } else if !effectiveRights.flags.isEmpty {
-                                        isBanned = true
-                                    }
-                                    
-                                    let isMember = !wasKicked && !effectiveRights.flags.contains(.banReadMessages)
-                                    
-                                    if isKicked != wasKicked {
-                                        if let kickedCount = updatedData.participantsSummary.kickedCount {
-                                            updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedKickedCount(max(0, kickedCount + (isKicked ? 1 : -1))))
-                                        }
-                                    }
-                                    
-                                    if isBanned != wasBanned {
-                                        if let bannedCount = updatedData.participantsSummary.bannedCount {
-                                            updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedBannedCount(max(0, bannedCount + (isBanned ? 1 : -1))))
-                                        }
-                                    }
-                                    
-                                    if wasAdmin {
-                                        if let adminCount = updatedData.participantsSummary.adminCount {
-                                            updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedAdminCount(max(0, adminCount - 1)))
-                                        }
-                                    }
-                                    
-                                    if isMember != wasMember {
-                                        if let memberCount = updatedData.participantsSummary.memberCount {
-                                            updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedMemberCount(max(0, memberCount + (isMember ? 1 : -1))))
-                                        }
-                                        
-                                        if !isMember, let topParticipants = updatedData.topParticipants {
-                                            var updatedParticipants = topParticipants.participants
-                                            if let index = updatedParticipants.index(where: { $0.peerId == memberId }) {
-                                                updatedParticipants.remove(at: index)
-                                                
-                                                updatedData = updatedData.withUpdatedTopParticipants(CachedChannelParticipants(participants: updatedParticipants))
-                                            }
-                                        }
-                                    }
-                                    
-                                    return updatedData
                                 } else {
-                                    return cachedData
+                                    wasMember = true
                                 }
-                            })
-                            var peers: [PeerId: Peer] = [:]
-                            var presences: [PeerId: PeerPresence] = [:]
-                            peers[memberPeer.id] = memberPeer
-                            if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
-                                presences[memberPeer.id] = presence
-                            }
-                            if case let .member(_, _, _, maybeBanInfo) = updatedParticipant, let banInfo = maybeBanInfo {
-                                if let peer = transaction.getPeer(banInfo.restrictedBy) {
-                                    peers[peer.id] = peer
-                                }
-                            }
-                            return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: memberPeer, peers: peers, presences: presences))
                         }
                     }
+                    
+                    var isKicked = false
+                    var isBanned = false
+                    if effectiveRights.flags.contains(.banReadMessages) {
+                        isKicked = true
+                    } else if !effectiveRights.flags.isEmpty {
+                        isBanned = true
+                    }
+                    
+                    let isMember = !wasKicked && !effectiveRights.flags.contains(.banReadMessages)
+                    
+                    return account.postbox.transaction { transaction -> (ChannelParticipant?, RenderedChannelParticipant?) in
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                            if let cachedData = cachedData as? CachedChannelData {
+                                var updatedData = cachedData
+                                if isKicked != wasKicked {
+                                    if let kickedCount = updatedData.participantsSummary.kickedCount {
+                                        updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedKickedCount(max(0, kickedCount + (isKicked ? 1 : -1))))
+                                    }
+                                }
+                                
+                                if isBanned != wasBanned {
+                                    if let bannedCount = updatedData.participantsSummary.bannedCount {
+                                        updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedBannedCount(max(0, bannedCount + (isBanned ? 1 : -1))))
+                                    }
+                                }
+                                
+                                if wasAdmin {
+                                    if let adminCount = updatedData.participantsSummary.adminCount {
+                                        updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedAdminCount(max(0, adminCount - 1)))
+                                    }
+                                }
+                                
+                                if isMember != wasMember {
+                                    if let memberCount = updatedData.participantsSummary.memberCount {
+                                        updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedMemberCount(max(0, memberCount + (isMember ? 1 : -1))))
+                                    }
+                                    
+                                    if !isMember, let topParticipants = updatedData.topParticipants {
+                                        var updatedParticipants = topParticipants.participants
+                                        if let index = updatedParticipants.index(where: { $0.peerId == memberId }) {
+                                            updatedParticipants.remove(at: index)
+                                            
+                                            updatedData = updatedData.withUpdatedTopParticipants(CachedChannelParticipants(participants: updatedParticipants))
+                                        }
+                                    }
+                                }
+                                
+                                return updatedData
+                            } else {
+                                return cachedData
+                            }
+                        })
+                        var peers: [PeerId: Peer] = [:]
+                        var presences: [PeerId: PeerPresence] = [:]
+                        peers[memberPeer.id] = memberPeer
+                        if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
+                            presences[memberPeer.id] = presence
+                        }
+                        if case let .member(_, _, _, maybeBanInfo) = updatedParticipant, let banInfo = maybeBanInfo {
+                            if let peer = transaction.getPeer(banInfo.restrictedBy) {
+                                peers[peer.id] = peer
+                            }
+                        }
+                        
+                        return (currentParticipant, isMember ? RenderedChannelParticipant(participant: updatedParticipant, peer: memberPeer, peers: peers, presences: presences) : nil)
+                    }
+                }
             } else {
                 return .complete()
             }

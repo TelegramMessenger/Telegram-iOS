@@ -23,7 +23,7 @@ struct ParsedDialogs {
     let readStates: [PeerId: [MessageId.Namespace: PeerReadState]]
     let mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
     let chatStates: [PeerId: PeerChatState]
-    
+    let topMessageIds: [PeerId: MessageId]
     let storeMessages: [StoreMessage]
     
     let lowerNonPinnedIndex: MessageIndex?
@@ -54,6 +54,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
     var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
     var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
     var chatStates: [PeerId: PeerChatState] = [:]
+    var topMessageIds: [PeerId: MessageId] = [:]
     
     var storeMessages: [StoreMessage] = []
     var nonPinnedDialogsTopMessageIds = Set<MessageId>()
@@ -104,6 +105,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
                 
                 if apiTopMessage != 0 {
                     mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
+                    topMessageIds[peerId] = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: apiTopMessage)
                 }
                 
                 if let apiChannelPts = apiChannelPts {
@@ -165,7 +167,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         readStates: readStates,
         mentionTagSummaries: mentionTagSummaries,
         chatStates: chatStates,
-    
+        topMessageIds: topMessageIds,
         storeMessages: storeMessages,
     
         lowerNonPinnedIndex: lowerNonPinnedIndex,
@@ -181,6 +183,7 @@ struct FetchedChatList {
     let mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary]
     let chatStates: [PeerId: PeerChatState]
     let storeMessages: [StoreMessage]
+    let topMessageIds: [PeerId: MessageId]
     
     let lowerNonPinnedIndex: MessageIndex?
     
@@ -188,7 +191,7 @@ struct FetchedChatList {
     let feeds: [(PeerGroupId, MessageIndex?)]
 }
 
-func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLocation, upperBound: MessageIndex) -> Signal<FetchedChatList, NoError> {
+func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLocation, upperBound: MessageIndex, hash: Int32, limit: Int32) -> Signal<FetchedChatList?, NoError> {
     return postbox.stateView()
     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
         if let state = view.state as? AuthorizedAccountState {
@@ -198,25 +201,25 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
         }
     }
     |> take(1)
-    |> mapToSignal { _ -> Signal<FetchedChatList, NoError> in
+    |> mapToSignal { _ -> Signal<FetchedChatList?, NoError> in
         let offset: Signal<(Int32, Int32, Api.InputPeer), NoError>
         if upperBound.id.peerId.namespace == Namespaces.Peer.Empty {
             offset = single((0, 0, Api.InputPeer.inputPeerEmpty), NoError.self)
         } else {
             offset = postbox.loadedPeerWithId(upperBound.id.peerId)
-                |> take(1)
-                |> map { peer in
-                    return (upperBound.timestamp, upperBound.id.id + 1, apiInputPeer(peer) ?? .inputPeerEmpty)
+            |> take(1)
+            |> map { peer in
+                return (upperBound.timestamp, upperBound.id.id + 1, apiInputPeer(peer) ?? .inputPeerEmpty)
             }
         }
         
         return offset
-        |> mapToSignal { (timestamp, id, peer) -> Signal<FetchedChatList, NoError> in
+        |> mapToSignal { (timestamp, id, peer) -> Signal<FetchedChatList?, NoError> in
             let additionalPinnedChats: Signal<Api.messages.PeerDialogs?, NoError>
             if case .general = location, case .inputPeerEmpty = peer, timestamp == 0 {
                 additionalPinnedChats = network.request(Api.functions.messages.getPinnedDialogs())
-                    |> retryRequest
-                    |> map(Optional.init)
+                |> retryRequest
+                |> map(Optional.init)
             } else {
                 additionalPinnedChats = .single(nil)
             }
@@ -233,11 +236,14 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     flags |= 1 << 1*/
                     break
             }
-            let requestChats = network.request(Api.functions.messages.getDialogs(flags: flags/*feed*//*, feedId: requestFeedId*/, offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100, hash: 0))
-                |> retryRequest
+            let requestChats = network.request(Api.functions.messages.getDialogs(flags: flags/*feed*//*, feedId: requestFeedId*/, offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: limit, hash: hash))
+            |> retryRequest
             
             return combineLatest(requestChats, additionalPinnedChats)
-            |> mapToSignal { remoteChats, pinnedChats -> Signal<FetchedChatList, NoError> in
+            |> mapToSignal { remoteChats, pinnedChats -> Signal<FetchedChatList?, NoError> in
+                if case .dialogsNotModified = remoteChats {
+                    return .single(nil)
+                }
                 let extractedRemoteDialogs = extractDialogsData(dialogs: remoteChats)
                 let parsedRemoteChats = parseDialogs(apiDialogs: extractedRemoteDialogs.apiDialogs, apiMessages: extractedRemoteDialogs.apiMessages, apiChats: extractedRemoteDialogs.apiChats, apiUsers: extractedRemoteDialogs.apiUsers, apiIsAtLowestBoundary: extractedRemoteDialogs.apiIsAtLowestBoundary)
                 var parsedPinnedChats: ParsedDialogs?
@@ -269,7 +275,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                 }
                 
                 return combineLatest(feedSignals)
-                |> map { feeds -> FetchedChatList in
+                |> map { feeds -> FetchedChatList? in
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
@@ -277,6 +283,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
                     var chatStates: [PeerId: PeerChatState] = [:]
                     var storeMessages: [StoreMessage] = []
+                    var topMessageIds: [PeerId: MessageId] = [:]
                     
                     peers.append(contentsOf: parsedRemoteChats.peers)
                     peerPresences.merge(parsedRemoteChats.peerPresences, uniquingKeysWith: { _, updated in updated })
@@ -285,6 +292,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     mentionTagSummaries.merge(parsedRemoteChats.mentionTagSummaries, uniquingKeysWith: { _, updated in updated })
                     chatStates.merge(parsedRemoteChats.chatStates, uniquingKeysWith: { _, updated in updated })
                     storeMessages.append(contentsOf: parsedRemoteChats.storeMessages)
+                    topMessageIds.merge(parsedRemoteChats.topMessageIds, uniquingKeysWith: { _, updated in updated })
                     
                     if let parsedPinnedChats = parsedPinnedChats {
                         peers.append(contentsOf: parsedPinnedChats.peers)
@@ -294,6 +302,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         mentionTagSummaries.merge(parsedPinnedChats.mentionTagSummaries, uniquingKeysWith: { _, updated in updated })
                         chatStates.merge(parsedPinnedChats.chatStates, uniquingKeysWith: { _, updated in updated })
                         storeMessages.append(contentsOf: parsedPinnedChats.storeMessages)
+                        topMessageIds.merge(parsedPinnedChats.topMessageIds, uniquingKeysWith: { _, updated in updated })
                     }
                     
                     for (_, feedChats) in feeds {
@@ -314,6 +323,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         mentionTagSummaries: mentionTagSummaries,
                         chatStates: chatStates,
                         storeMessages: storeMessages,
+                        topMessageIds: topMessageIds,
                     
                         lowerNonPinnedIndex: parsedRemoteChats.lowerNonPinnedIndex,
                     
