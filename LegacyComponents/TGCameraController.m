@@ -134,6 +134,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     bool _saveCapturedMedia;
     
     bool _shutterIsBusy;
+    
+    NSMutableSet *_previousQRCodes;
 }
 @end
 
@@ -167,6 +169,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             _allowCaptions = false;
         _saveEditedPhotos = saveEditedPhotos;
         _saveCapturedMedia = saveCapturedMedia;
+        
+        _previousQRCodes = [[NSMutableSet alloc] init];
     }
     return self;
 }
@@ -696,6 +700,19 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             return;
         
         [strongSelf handleDeviceOrientationChangedTo:orientation];
+    };
+    
+    _camera.captureSession.recognizedQRCode = ^(NSString *value, AVMetadataMachineReadableCodeObject *object)
+    {
+        __strong TGCameraController *strongSelf = weakSelf;
+        if (strongSelf != nil && strongSelf.recognizedQRCode != nil)
+        {
+            if (![strongSelf->_previousQRCodes containsObject:value])
+            {
+                strongSelf.recognizedQRCode(value);
+                [strongSelf->_previousQRCodes addObject:value];
+            }
+        }
     };
 }
 

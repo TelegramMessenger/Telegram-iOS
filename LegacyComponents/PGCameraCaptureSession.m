@@ -16,7 +16,7 @@
 
 const NSInteger PGCameraFrameRate = 30;
 
-@interface PGCameraCaptureSession () <AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudioDataOutputSampleBufferDelegate>
+@interface PGCameraCaptureSession () <AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudioDataOutputSampleBufferDelegate, AVCaptureMetadataOutputObjectsDelegate>
 {
     PGCameraMode _currentMode;
     
@@ -32,6 +32,7 @@ const NSInteger PGCameraFrameRate = 30;
     
     dispatch_queue_t _videoQueue;
     dispatch_queue_t _audioQueue;
+    dispatch_queue_t _metadataQueue;
     SQueue *_audioSessionQueue;
     
     bool _captureNextFrame;
@@ -65,6 +66,7 @@ const NSInteger PGCameraFrameRate = 30;
         
         _videoQueue = dispatch_queue_create(NULL, DISPATCH_QUEUE_SERIAL);
         _audioQueue = dispatch_queue_create(NULL, DISPATCH_QUEUE_SERIAL);
+        _metadataQueue = dispatch_queue_create(NULL, DISPATCH_QUEUE_SERIAL);
         _audioSessionQueue = [[SQueue alloc] init];
         
         _preferredCameraPosition = position;
@@ -79,6 +81,7 @@ const NSInteger PGCameraFrameRate = 30;
     [self endAudioSession];
     [_videoOutput setSampleBufferDelegate:nil queue:NULL];
     [_audioOutput setSampleBufferDelegate:nil queue:NULL];
+    [_metadataOutput setMetadataObjectsDelegate:nil queue:NULL];
 }
 
 - (void)performInitialConfigurationWithCompletion:(void (^)(void))completion
@@ -150,6 +153,23 @@ const NSInteger PGCameraFrameRate = 30;
     {
         _videoOutput = nil;
         TGLegacyLog(@"ERROR: camera can't add video output");
+    }
+    
+    AVCaptureMetadataOutput *metadataOutput = [[AVCaptureMetadataOutput alloc] init];
+    if ([self canAddOutput:metadataOutput])
+    {
+#if !TARGET_IPHONE_SIMULATOR
+        [self addOutput:metadataOutput];
+#endif
+        _metadataOutput = metadataOutput;
+
+        [metadataOutput setMetadataObjectsDelegate:self queue:_metadataQueue];
+        metadataOutput.metadataObjectTypes = @[AVMetadataObjectTypeQRCode];
+    }
+    else
+    {
+        _metadataOutput = nil;
+        TGLegacyLog(@"ERROR: camera can't add metadata output");
     }
     
     self.currentFlashMode = PGCameraFlashModeOff;
@@ -923,6 +943,26 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
                 }];
             });
         }];
+    }
+}
+
+#pragma mark - Metadata
+
+- (void)captureOutput:(AVCaptureOutput *)output didOutputMetadataObjects:(NSArray<__kindof AVMetadataObject *> *)metadataObjects fromConnection:(AVCaptureConnection *)connection
+{
+    if (!self.isRunning)
+        return;
+    
+    if ([metadataObjects.firstObject isKindOfClass:[AVMetadataMachineReadableCodeObject class]])
+    {
+        AVMetadataMachineReadableCodeObject *object = (AVMetadataMachineReadableCodeObject *)metadataObjects.firstObject;
+        if (object.type == AVMetadataObjectTypeQRCode && object.stringValue.length > 0)
+        {
+            TGDispatchOnMainThread(^{
+                if (self.recognizedQRCode != nil)
+                    self.recognizedQRCode(object.stringValue, object);
+            });
+        }
     }
 }
 

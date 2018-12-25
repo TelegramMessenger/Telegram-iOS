@@ -10,6 +10,7 @@
 @property (nonatomic, readonly) AVCaptureStillImageOutput *imageOutput;
 @property (nonatomic, readonly) AVCaptureVideoDataOutput *videoOutput;
 @property (nonatomic, readonly) AVCaptureAudioDataOutput *audioOutput;
+@property (nonatomic, readonly) AVCaptureMetadataOutput *metadataOutput;
 @property (nonatomic, readonly) PGCameraMovieWriter *movieWriter;
 
 @property (nonatomic, assign) bool alwaysSetFlash;
@@ -28,6 +29,8 @@
 
 @property (nonatomic, copy) void(^changingPosition)(void);
 @property (nonatomic, copy) bool(^requestPreviewIsMirrored)(void);
+
+@property (nonatomic, copy) void(^recognizedQRCode)(NSString *value, AVMetadataMachineReadableCodeObject *object);
 
 @property (nonatomic, assign) bool compressVideo;
 
