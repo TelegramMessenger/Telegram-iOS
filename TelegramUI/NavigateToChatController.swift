@@ -50,7 +50,7 @@ public func navigateToChatController(navigationController: NavigationController,
                 resolvedKeepStack = false
         }
         if resolvedKeepStack {
-            navigationController.pushViewController(controller, completion: completion)
+            navigationController.pushViewController(controller, animated: animated, completion: completion)
         } else {
             navigationController.replaceAllButRootController(controller, animated: animated, completion: completion)
         }

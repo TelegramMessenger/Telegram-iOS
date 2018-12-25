@@ -590,9 +590,15 @@ private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
     if message.timestamp + limits.maxMessageEditingInterval > timestamp {
         return true
-    } else {
-        return false
     }
+    
+    if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+        if peer.hasAdminRights(.canPinMessages) {
+            return true
+        }
+    }
+    
+    return false
 }
 
 func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
@@ -682,8 +688,14 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                                     for media in message.media {
                                         if let _ = media as? TelegramMediaImage {
                                             hasMediaToReport = true
-                                        } else if let file = media as? TelegramMediaFile, file.isVideo {
+                                        } else if let _ = media as? TelegramMediaFile {
                                             hasMediaToReport = true
+                                        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                            if let _ = content.image {
+                                                hasMediaToReport = true
+                                            } else if let _ = content.file {
+                                                hasMediaToReport = true
+                                            }
                                         }
                                     }
                                     if hasMediaToReport {
