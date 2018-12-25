@@ -1241,7 +1241,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         langCode = langPackDifference.langCode
                 }
                 updatedState.updateLangPack(langCode: langCode, difference: difference)
-            case let .updateMessagePoll(flags, pollId, poll, results):
+            case let .updateMessagePoll(_, pollId, poll, results):
                 updatedState.updateMessagePoll(MediaId(namespace: Namespaces.Media.CloudPoll, id: pollId), poll: poll, results: results)
             default:
                 break
@@ -1262,9 +1262,9 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
         }
         if !channelPeers.isEmpty {
             let resetSignal = resetChannels(network: network, peers: channelPeers, state: updatedState)
-                |> map { resultState -> (AccountMutableState, Bool, Int32?) in
-                    return (resultState, true, nil)
-                }
+            |> map { resultState -> (AccountMutableState, Bool, Int32?) in
+                return (resultState, true, nil)
+            }
             pollChannelSignals = [resetSignal]
         } else {
             pollChannelSignals = []

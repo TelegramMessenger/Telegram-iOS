@@ -371,7 +371,7 @@ public final class AccountStateManager {
                     if let authorizedState = state.state {
                         var ptsTotalLimit: Int32 = 10000
                         #if DEBUG
-                        ptsTotalLimit = 1000
+                        //ptsTotalLimit = 10
                         #endif
                         let request = network.request(Api.functions.updates.getDifference(flags: 1 << 0, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts))
                         |> retryRequest
