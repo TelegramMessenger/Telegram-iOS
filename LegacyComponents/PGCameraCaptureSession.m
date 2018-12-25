@@ -156,15 +156,17 @@ const NSInteger PGCameraFrameRate = 30;
     }
     
     AVCaptureMetadataOutput *metadataOutput = [[AVCaptureMetadataOutput alloc] init];
-    if ([self canAddOutput:metadataOutput])
+    if (_videoDevice.position == AVCaptureDevicePositionBack && [self canAddOutput:metadataOutput])
     {
 #if !TARGET_IPHONE_SIMULATOR
         [self addOutput:metadataOutput];
 #endif
         _metadataOutput = metadataOutput;
 
-        [metadataOutput setMetadataObjectsDelegate:self queue:_metadataQueue];
-        metadataOutput.metadataObjectTypes = @[AVMetadataObjectTypeQRCode];
+        if ([metadataOutput.availableMetadataObjectTypes containsObject:AVMetadataObjectTypeQRCode]) {
+            [metadataOutput setMetadataObjectsDelegate:self queue:_metadataQueue];
+            metadataOutput.metadataObjectTypes = @[AVMetadataObjectTypeQRCode];
+        }
     }
     else
     {
