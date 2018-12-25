@@ -104,6 +104,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         }, addContact: { _ in   
         }, rateCall: { _, _ in
         }, requestSelectMessagePollOption: { _, _ in
+        }, openAppStorePage: {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings,

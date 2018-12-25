@@ -474,8 +474,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         let scrubberVerticalOrigin: CGFloat = infoVerticalOrigin + 64.0
         
         transition.updateFrame(node: self.scrubberNode, frame: CGRect(origin: CGPoint(x: leftInset +  sideInset, y: scrubberVerticalOrigin - 8.0), size: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset, height: 10.0 + 8.0 * 2.0)))
-        transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 64.0, height: 20.0)))
-        transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 64.0, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 64.0, height: 20.0)))
+        transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 100.0, height: 20.0)))
+        transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 100.0, height: 20.0)))
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: width, height: panelHeight + 8.0)))
         

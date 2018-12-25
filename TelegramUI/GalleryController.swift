@@ -161,7 +161,11 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                         return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
-                            if file.size == nil || file.size! < 2 * 1024 * 1024 {
+                            var pixelsCount: Int = 0
+                            if let dimensions = file.dimensions {
+                                pixelsCount = Int(dimensions.width) * Int(dimensions.height)
+                            }
+                            if (file.size == nil || file.size! < 2 * 1024 * 1024) && pixelsCount < 4096 * 4096 {
                                 return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
                             } else {
                                 return ChatDocumentGalleryItem(account: account, presentationData: presentationData, message: message, location: location)

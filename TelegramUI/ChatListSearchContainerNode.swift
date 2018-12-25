@@ -778,7 +778,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 
                 var existingPeerIds = Set<PeerId>()
                 
-                if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
+                let lowercasedQuery = query.lowercased()
+                if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
                     if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
                         existingPeerIds.insert(accountPeer.id)
                         entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))

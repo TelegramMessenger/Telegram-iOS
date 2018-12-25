@@ -85,7 +85,7 @@ public enum RadialStatusNodeState: Equatable {
             case .none:
                 return nil
             case let .download(color):
-                return RadialStatusIconContentNode(icon: .download(color))
+                return RadialDownloadContentNode(color: color)
             case let .play(color):
                 return RadialStatusIconContentNode(icon: .play(color))
             case let .pause(color):
@@ -145,11 +145,12 @@ public final class RadialStatusNode: ASControlNode {
     
     public func transitionToState(_ state: RadialStatusNodeState, animated: Bool = true, completion: @escaping () -> Void) {
         if self.state != state {
+            let fromState = self.state
             self.state = state
             
             let contentNode = state.contentNode(current: self.contentNode)
             if contentNode !== self.contentNode {
-                self.transitionToContentNode(contentNode, backgroundColor: state.backgroundColor(color: self.backgroundNodeColor), animated: animated, completion: completion)
+                self.transitionToContentNode(contentNode, state: state, fromState: fromState, backgroundColor: state.backgroundColor(color: self.backgroundNodeColor), animated: animated, completion: completion)
             } else {
                 self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), animated: animated, completion: completion)
             }
@@ -158,31 +159,34 @@ public final class RadialStatusNode: ASControlNode {
         }
     }
     
-    private func transitionToContentNode(_ node: RadialStatusContentNode?, backgroundColor: UIColor?, animated: Bool, completion: @escaping () -> Void) {
+    private func transitionToContentNode(_ node: RadialStatusContentNode?, state: RadialStatusNodeState, fromState: RadialStatusNodeState, backgroundColor: UIColor?, animated: Bool, completion: @escaping () -> Void) {
         if let contentNode = self.contentNode {
             self.nextContentNode = node
             contentNode.enqueueReadyForTransition { [weak contentNode, weak self] in
-                if let strongSelf = self, let contentNode = contentNode, strongSelf.contentNode === contentNode {
+                if let strongSelf = self, let previousContentNode = contentNode, strongSelf.contentNode === contentNode {
                     if animated {
                         strongSelf.contentNode = strongSelf.nextContentNode
-                        contentNode.animateOut { [weak contentNode] in
+                        previousContentNode.animateOut(to: state, completion: { [weak contentNode] in
                             if let strongSelf = self, let contentNode = contentNode {
                                 if contentNode !== strongSelf.contentNode {
                                     contentNode.removeFromSupernode()
                                 }
                             }
-                        }
-                        if let contentNode = strongSelf.contentNode {
-                            strongSelf.addSubnode(contentNode)
-                            contentNode.frame = strongSelf.bounds
-                            if strongSelf.isNodeLoaded {
-                                contentNode.layout()
-                                contentNode.animateIn()
+                        })
+                        previousContentNode.prepareAnimateOut(completion: {
+                            if let contentNode = strongSelf.contentNode {
+                                strongSelf.addSubnode(contentNode)
+                                contentNode.frame = strongSelf.bounds
+                                contentNode.prepareAnimateIn()
+                                if strongSelf.isNodeLoaded {
+                                    contentNode.layout()
+                                    contentNode.animateIn(from: fromState)
+                                }
                             }
-                        }
-                        strongSelf.transitionToBackgroundColor(backgroundColor, animated: animated, completion: completion)
+                            strongSelf.transitionToBackgroundColor(backgroundColor, animated: animated, completion: completion)
+                        })
                     } else {
-                        contentNode.removeFromSupernode()
+                        previousContentNode.removeFromSupernode()
                         strongSelf.contentNode = strongSelf.nextContentNode
                         if let contentNode = strongSelf.contentNode {
                             strongSelf.addSubnode(contentNode)
@@ -199,6 +203,7 @@ public final class RadialStatusNode: ASControlNode {
             self.contentNode = node
             if let contentNode = self.contentNode {
                 contentNode.frame = self.bounds
+                contentNode.prepareAnimateIn()
                 self.addSubnode(contentNode)
             }
             self.transitionToBackgroundColor(backgroundColor, animated: animated, completion: completion)

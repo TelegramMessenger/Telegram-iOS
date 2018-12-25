@@ -86,13 +86,13 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         super.layout()
     }
     
-    override func animateOut(completion: @escaping () -> Void) {
+    override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
             completion()
         })
     }
     
-    override func animateIn() {
+    override func animateIn(from: RadialStatusNodeState) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
     }
     

@@ -72,6 +72,10 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                 break inner
             }
         }
+        
+        if isUnsupportedMedia {
+            result.append((message, ChatMessageUnsupportedBubbleContentNode.self))
+        }
     }
     
     if addFinalText && !item.content.firstMessage.text.isEmpty {

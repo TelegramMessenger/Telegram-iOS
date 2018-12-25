@@ -249,7 +249,8 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         
                         var existingPeerIds = Set<PeerId>()
                         
-                        if strings.DialogList_SavedMessages.lowercased().hasPrefix(query.lowercased()) {
+                        let lowercasedQuery = query.lowercased()
+                        if strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
                             if !existingPeerIds.contains(accountPeer.id) {
                                 existingPeerIds.insert(accountPeer.id)
                                 entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), theme: theme, strings: strings))

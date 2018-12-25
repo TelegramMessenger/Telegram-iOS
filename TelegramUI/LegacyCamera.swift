@@ -6,7 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void) {
+func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }) {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -139,6 +139,12 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
         }
         menuController?.dismiss(animated: false)
         legacyController?.dismissWithAnimation()
+    }
+    
+    controller.recognizedQRCode = { code in
+        if let code = code {
+            recognizedQRCode(code)
+        }
     }
     
     parentController.present(legacyController, in: .window(.root))

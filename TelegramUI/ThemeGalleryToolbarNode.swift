@@ -11,7 +11,7 @@ final class ThemeGalleryToolbarNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var done: (() -> Void)?
     
-    init(strings: PresentationStrings) {
+    init(theme: PresentationTheme, strings: PresentationStrings) {
         super.init()
         
         self.addSubnode(self.cancelButton)
@@ -19,12 +19,7 @@ final class ThemeGalleryToolbarNode: ASDisplayNode {
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.topSeparatorNode)
         
-        self.backgroundColor = UIColor(rgb: 0xeaebeb)
-        self.separatorNode.backgroundColor = .black
-        self.topSeparatorNode.backgroundColor = .black
-        
-        self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: .black, for: [])
-        self.doneButton.setTitle(strings.Wallpaper_Set, with: Font.regular(17.0), with: .black, for: [])
+        self.updateThemeAndStrings(theme: theme, strings: strings)
         
         self.cancelButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -52,6 +47,15 @@ final class ThemeGalleryToolbarNode: ASDisplayNode {
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         self.doneButton.addTarget(self, action: #selector(self.donePressed), forControlEvents: .touchUpInside)
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.backgroundColor = theme.rootController.tabBar.backgroundColor
+        self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
+        self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
+        
+        self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.rootController.navigationBar.primaryTextColor, for: [])
+        self.doneButton.setTitle(strings.Wallpaper_Set, with: Font.regular(17.0), with: theme.rootController.navigationBar.primaryTextColor, for: [])
     }
     
     func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

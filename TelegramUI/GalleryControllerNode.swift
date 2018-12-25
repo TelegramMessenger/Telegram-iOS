@@ -328,7 +328,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         self.updateDismissTransition(transition)
         
         if let toolbarNode = toolbarNode {
-            toolbarNode.layer.position = CGPoint(x: toolbarNode.layer.position.x, y: self.bounds.size.height - toolbarNode.bounds.size.height / 2.0 + (1.0 - transition) * toolbarNode.bounds.size.height)
+            toolbarNode.alpha = transition
         }
     }
     

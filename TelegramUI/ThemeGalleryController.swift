@@ -44,6 +44,9 @@ class ThemeGalleryController: ViewController {
     
     private let disposable = MetaDisposable()
     
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     private var entries: [ThemeGalleryEntry] = []
     private var centralEntryIndex: Int?
     
@@ -64,12 +67,12 @@ class ThemeGalleryController: ViewController {
     
     init(account: Account, wallpapers: [TelegramWallpaper], at centralWallpaper: TelegramWallpaper) {
         self.account = account
+        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: nil)
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(self.donePressed))
-        
-        self.statusBar.statusBarStyle = .Hide
+        self.title = "Chat Preview"
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         let initialEntries: [ThemeGalleryEntry] = wallpapers.map { ThemeGalleryEntry.wallpaper($0) }
         
@@ -90,6 +93,19 @@ class ThemeGalleryController: ViewController {
             }
         }))
         
+        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
+                }
+            }
+        })
+        
         self.centralItemAttributesDisposable.add(self.centralItemTitle.get().start(next: { [weak self] title in
             self?.navigationItem.title = title
         }))
@@ -103,34 +119,6 @@ class ThemeGalleryController: ViewController {
                 $0.withUpdatedFooterContentNode(footerContentNode)
             }, transition: .immediate)
         }))
-        
-        /*self.centralItemAttributesDisposable.add(self.centralItemNavigationStyle.get().start(next: { [weak self] style in
-            if let strongSelf = self {
-                switch style {
-                case .dark:
-                    strongSelf.statusBar.statusBarStyle = .White
-                    strongSelf.navigationBar.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
-                    strongSelf.navigationBar.stripeColor = UIColor.clear
-                    strongSelf.navigationBar.foregroundColor = UIColor.white
-                    strongSelf.navigationBar.accentColor = UIColor.white
-                    strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor.black
-                    strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = true
-                case .light:
-                    strongSelf.statusBar.statusBarStyle = .Black
-                    strongSelf.navigationBar.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
-                    strongSelf.navigationBar.foregroundColor = UIColor.black
-                    strongSelf.navigationBar.accentColor = UIColor(rgb: 0x007ee5)
-                    strongSelf.navigationBar.stripeColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
-                    strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor(rgb: 0xbdbdc2)
-                    strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = false
-                }
-            }
-        }))*/
-        
-        self.statusBar.statusBarStyle = .Hide
-        /*strongSelf.navigationBar.stripeColor = UIColor.clear
-        strongSelf.navigationBar.foregroundColor = UIColor.white
-        strongSelf.navigationBar.accentColor = UIColor.white*/
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -139,7 +127,13 @@ class ThemeGalleryController: ViewController {
     
     deinit {
         self.disposable.dispose()
+        self.presentationDataDisposable?.dispose()
         self.centralItemAttributesDisposable.dispose()
+    }
+    
+    private func updateThemeAndStrings() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }
     
     @objc func donePressed() {
@@ -147,32 +141,12 @@ class ThemeGalleryController: ViewController {
     }
     
     private func dismiss(forceAway: Bool) {
-        var animatedOutNode = true
-        var animatedOutInterface = false
-        
         let completion = { [weak self] in
-            if animatedOutNode && animatedOutInterface {
-                self?._hiddenMedia.set(.single(nil))
-                self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            }
+            self?._hiddenMedia.set(.single(nil))
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? ThemePreviewControllerPresentationArguments {
-            if !self.entries.isEmpty {
-                if centralItemNode.index == 0, let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]), !forceAway {
-                    animatedOutNode = false
-                    centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
-                        animatedOutNode = true
-                        completion()
-                    })
-                }
-            }
-        }
-        
-        self.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
-            animatedOutInterface = true
-            completion()
-        })
+        self.galleryNode.modalAnimateOut(completion: completion)
     }
     
     override func loadDisplayNode() {
@@ -182,15 +156,12 @@ class ThemeGalleryController: ViewController {
             }
         }, dismissController: { [weak self] in
             self?.dismiss(forceAway: true)
-        }, replaceRootController: { [weak self] controller, ready in
-            if let strongSelf = self {
-                //strongSelf.replaceRootController(controller, ready)
-            }
+        }, replaceRootController: { controller, ready in
         })
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
         self.displayNodeDidLoad()
         
-        //self.galleryNode.statusBar = self.statusBar
+        self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
         
         self.galleryNode.transitionDataForCentralItem = { [weak self] in
@@ -232,7 +203,7 @@ class ThemeGalleryController: ViewController {
         self.galleryNode.isBackgroundExtendedOverNavigationBar = true
         
         let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let toolbarNode = ThemeGalleryToolbarNode(strings: presentationData.strings)
+        let toolbarNode = ThemeGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings)
         self.toolbarNode = toolbarNode
         self.galleryNode.addSubnode(toolbarNode)
         self.galleryNode.toolbarNode = toolbarNode
@@ -271,23 +242,7 @@ class ThemeGalleryController: ViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        var nodeAnimatesItself = false
-        
-        if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? ThemePreviewControllerPresentationArguments {
-            self.centralItemTitle.set(centralItemNode.title())
-            self.centralItemTitleView.set(centralItemNode.titleView())
-            self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
-            self.centralItemFooterContentNode.set(centralItemNode.footerContent())
-            
-            if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
-                nodeAnimatesItself = true
-                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
-                
-                self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))
-            }
-        }
-        
-        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+        self.galleryNode.modalAnimateIn()
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -305,5 +260,17 @@ class ThemeGalleryController: ViewController {
         if replace {
             self.galleryNode.pager.replaceItems(self.entries.map({ ThemeGalleryItem(account: self.account, entry: $0) }), centralItemIndex: self.centralEntryIndex)
         }
+    }
+}
+
+private extension GalleryControllerNode {
+    func modalAnimateIn(completion: (() -> Void)? = nil) {
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+    }
+    
+    func modalAnimateOut(completion: (() -> Void)? = nil) {
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+            completion?()
+        })
     }
 }

@@ -657,13 +657,13 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         let (size, apply) = finalizeContentFileLayout(boundingWidth - insets.left - insets.right)
                         contentFileSizeAndApply = (size, apply)
                         
-                        var imageHeigthAddition = size.height + 6.0
+                        var imageHeightAddition = size.height + 6.0
                         if textFrame.size.height > CGFloat.ulpOfOne {
-                            imageHeigthAddition += 2.0
+                            imageHeightAddition += 6.0
                         }
                         
-                        adjustedBoundingSize.height += imageHeigthAddition + 5.0
-                        adjustedLineHeight += imageHeigthAddition + 4.0
+                        adjustedBoundingSize.height += imageHeightAddition + 5.0
+                        adjustedLineHeight += imageHeightAddition + 4.0
                     }
                     
                     if let (videoLayout, _) = contentInstantVideoSizeAndApply {
@@ -794,7 +794,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 if let (_, flags) = mediaAndFlags, flags.contains(.preferMediaBeforeText) {
                                     contentFileNode.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: contentFileSize)
                                 } else {
-                                    contentFileNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 4.0 : 0.0)), size: contentFileSize)
+                                    contentFileNode.frame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 8.0 : 0.0)), size: contentFileSize)
                                 }
                             } else if let contentFileNode = strongSelf.contentFileNode {
                                 contentFileNode.removeFromSupernode()

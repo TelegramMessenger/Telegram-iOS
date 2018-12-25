@@ -5,6 +5,20 @@ import Postbox
 import TelegramCore
 import MtProtoKitDynamic
 
+private func shareLink(for server: ProxyServerSettings) -> String {
+    var link: String
+    switch server.connection {
+    case let .mtp(secret):
+        let secret = hexString(secret)
+        link = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
+        link += "&secret=\(secret.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+    case let .socks5(username, password):
+        link = "https://t.me/socks?server=\(server.host)&port=\(server.port)"
+        link += "&user=\(username?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\(password?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+    }
+    return link
+}
+
 private final class proxyServerSettingsControllerArguments {
     let updateState: ((ProxyServerSettingsControllerState) -> ProxyServerSettingsControllerState) -> Void
     let share: () -> Void
@@ -232,6 +246,27 @@ private func proxyServerSettingsControllerEntries(presentationData: (theme: Pres
     return entries
 }
 
+private func proxyServerSettings(with state: ProxyServerSettingsControllerState) -> ProxyServerSettings? {
+    if state.isComplete, let port = Int32(state.port) {
+        switch state.mode {
+            case .socks5:
+                return ProxyServerSettings(host: state.host, port: port, connection: .socks5(username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password))
+            case .mtp:
+                let data = dataWithHexString(state.secret)
+                var secretIsValid = false
+                if data.count == 16 {
+                    secretIsValid = true
+                } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
+                    secretIsValid = true
+                }
+                if secretIsValid {
+                    return ProxyServerSettings(host: state.host, port: port, connection: .mtp(secret: data))
+                }
+        }
+    }
+    return nil
+}
+
 func proxyServerSettingsController(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
     var currentMode: ProxyServerSettingsControllerMode = .socks5
     var currentUsername: String?
@@ -301,25 +336,7 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
             dismissImpl?()
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
-            var proxyServerSettings: ProxyServerSettings?
-            if state.isComplete, let port = Int32(state.port) {
-                switch state.mode {
-                    case .socks5:
-                        proxyServerSettings = ProxyServerSettings(host: state.host, port: port, connection: .socks5(username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password))
-                    case .mtp:
-                        let data = dataWithHexString(state.secret)
-                        var secretIsValid = false
-                        if data.count == 16 {
-                            secretIsValid = true
-                        } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
-                            secretIsValid = true
-                        }
-                        if secretIsValid {
-                            proxyServerSettings = ProxyServerSettings(host: state.host, port: port, connection: .mtp(secret: data))
-                        }
-                }
-            }
-            if let proxyServerSettings = proxyServerSettings {
+            if let proxyServerSettings = proxyServerSettings(with: state) {
                 let _ = (updateProxySettingsInteractively(postbox: postbox, network: network, { settings in
                     var settings = settings
                     if let currentSettings = currentSettings {
@@ -356,33 +373,14 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
         let _ = controller?.dismiss()
     }
     
-    shareImpl = { [weak controller] in
-        guard let strongController = controller else {
+    shareImpl = {
+        let state = stateValue.with { $0 }
+        guard let server = proxyServerSettings(with: state) else {
             return
         }
         
-        let state = stateValue.with { $0 }
-        if state.isComplete {
-            var result: String
-            switch state.mode {
-            case .mtp:
-                result = "https://t.me/proxy?server=\(state.host)&port=\(state.port)"
-                result += "&secret=\((state.secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
-            case .socks5:
-                result = "https://t.me/socks?server=\(state.host)&port=\(state.port)"
-                if !state.username.isEmpty {
-                    result += "&user=\((state.username as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\((state.password as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
-                }
-            }
-            
-            let activityController = UIActivityViewController(activityItems: [result], applicationActivities: nil)
-            
-            if let window = strongController.view.window, let rootViewController = window.rootViewController {
-                activityController.popoverPresentationController?.sourceView = window
-                activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-                rootViewController.present(activityController, animated: true, completion: nil)
-            }
-        }
+        let controller = ShareProxyServerActionSheetController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, link: shareLink(for: server))
+        presentImpl?(controller, nil)
     }
     
     return controller

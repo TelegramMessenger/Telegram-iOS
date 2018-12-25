@@ -65,10 +65,14 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     let ready = ValuePromise<Bool>()
     
-    private let customWallpaperButton: HighlightableButtonNode
-    private var customWallpaperButtonBackground: ASDisplayNode
     private var customWallpaperBackground: ASDisplayNode
     private var customWallpaperSeparator: ASDisplayNode
+    
+    //private let photoLibraryButton: ThemeGridActionNode
+    //private let solidColorsButton: ThemeGridActionNode
+    
+    private let customWallpaperButton: HighlightableButtonNode
+    private var customWallpaperButtonBackground: ASDisplayNode
     private var customWallpaperButtonTopSeparator: ASDisplayNode
     private var customWallpaperButtonBottomSeparator: ASDisplayNode
     
@@ -78,7 +82,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, selectCustomWallpaper: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, mode: ThemeGridControllerMode, present: @escaping (ViewController, Any?) -> Void, selectCustomWallpaper: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.present = present

@@ -1131,6 +1131,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     strongSelf.selectPollOptionFeedback?.success()
                 }), forKey: id)
             }
+        }, openAppStorePage: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.account.telegramApplicationContext.applicationBindings.openAppStorePage()
+            }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -3757,6 +3761,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         } else {
                             self?.enqueueMediaMessages(signals: signals)
                         }
+                    }, recognizedQRCode: { code in
+                        self?.processQRCode(code)
                     })
                 }
             }, openFileGallery: {
@@ -5854,6 +5860,16 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         ]
         
         return inputShortcuts + otherShortcuts
+    }
+    
+    private func processQRCode(_ code: String) {
+        if let (host, port, username, password, secret) = parseProxyUrl(code) {
+            self.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
+        } else {
+            let _ = resolveUrl(account: self.account, url: code).start(next: { [weak self] resolved in
+                self?.openResolved(resolved)
+            })
+        }
     }
     
     func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> UIView?)? {

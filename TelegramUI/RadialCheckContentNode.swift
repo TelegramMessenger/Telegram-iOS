@@ -67,10 +67,6 @@ final class RadialCheckContentNode: RadialStatusContentNode {
         animation.completionBlock = { [weak self] _, _ in
             if let strongSelf = self {
                 strongSelf.animationCompletionTimer?.invalidate()
-                /*let animationCompletionTimer = SwiftSignalKit.Timer(timeout: 0.15, repeat: false, completion: {
-                }, queue: Queue.mainQueue())
-                strongSelf.animationCompletionTimer = animationCompletionTimer
-                animationCompletionTimer.start()*/
                 if let strongSelf = self {
                     strongSelf.animationCompletionTimer = nil
                     if let enqueuedReadyForTransition = strongSelf.enqueuedReadyForTransition {
@@ -158,20 +154,18 @@ final class RadialCheckContentNode: RadialStatusContentNode {
         }
     }
     
-    override func layout() {
-        super.layout()
-    }
+    private let duration: Double = 0.2
     
-    override func animateOut(completion: @escaping () -> Void) {
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
+    override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { _ in
             completion()
         })
-        self.layer.animateScale(from: 1.0, to: 0.6, duration: 0.15, removeOnCompletion: false)
+        self.layer.animateScale(from: 1.0, to: 0.6, duration: duration, removeOnCompletion: false)
     }
     
-    override func animateIn() {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-        self.layer.animateScale(from: 0.7, to: 1.0, duration: 0.15)
+    override func animateIn(from: RadialStatusNodeState) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        self.layer.animateScale(from: 0.7, to: 1.0, duration: duration)
         self.animateProgress()
     }
 }

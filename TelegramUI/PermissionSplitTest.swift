@@ -47,14 +47,14 @@ public struct PermissionUISplitTest: SplitTest {
             if let data = appConfiguration.data, let permissions = data["ui_permissions_modals"] as? [String: Any] {
                 let contacts: PermissionUIRequestVariation
                 if let modal = permissions["phonebook_modal"] as? [String: Any] {
-                    contacts = .modal(title: modal["popup_title_lang"] as? String ?? "", text: modal["popup_title_lang"] as? String ?? "", allowTitle: modal["popup_title_lang"] as? String ?? "", allowInSettingsTitle: modal["popup_title_lang"] as? String ?? "")
+                    contacts = .modal(title: modal["popup_title_lang"] as? String ?? "", text: modal["popup_text_lang"] as? String ?? "", allowTitle: modal["popup_allowbtn_lang"] as? String ?? "", allowInSettingsTitle: modal["popup_allowbtn_settings_lang"] as? String ?? "")
                 } else {
                     contacts = .default
                 }
                 
                 let notifications: PermissionUIRequestVariation
                 if let modal = permissions["notifications_modal"] as? [String: Any] {
-                    notifications = .modal(title: modal["popup_title_lang"] as? String ?? "", text: modal["popup_title_lang"] as? String ?? "", allowTitle: modal["popup_title_lang"] as? String ?? "", allowInSettingsTitle: modal["popup_title_lang"] as? String ?? "")
+                    notifications = .modal(title: modal["popup_title_lang"] as? String ?? "", text: modal["popup_text_lang"] as? String ?? "", allowTitle: modal["popup_allowbtn_lang"] as? String ?? "", allowInSettingsTitle: modal["popup_allowbtn_settings_lang"] as? String ?? "")
                 } else {
                     notifications = .default
                 }

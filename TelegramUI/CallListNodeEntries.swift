@@ -186,7 +186,7 @@ func callListNodeEntriesForView(_ view: CallListView, state: CallListNodeState, 
     }
     if showSettings {
         result.append(.displayTabInfo(state.theme, state.strings.CallSettings_TabIconDescription))
-        result.append(.displayTab(state.theme, state.strings.Calls_CallTabTitle, showCallsTab))
+        result.append(.displayTab(state.theme, state.strings.CallSettings_TabIcon, showCallsTab))
     }
     return result
 }

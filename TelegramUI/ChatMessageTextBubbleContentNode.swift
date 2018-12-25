@@ -126,9 +126,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         isUnsupportedMedia = true
                     }
                 }
-                
+                                
                 if isUnsupportedMedia {
-                    rawText = item.presentationData.strings.Conversation_UnsupportedMedia
+                    rawText = item.presentationData.strings.Conversation_UnsupportedMediaPlaceholder
+                    messageEntities = [MessageTextEntity(range: 0..<rawText.count, type: .Italic)]
                 } else {
                     rawText = item.message.text
                     for attribute in item.message.attributes {

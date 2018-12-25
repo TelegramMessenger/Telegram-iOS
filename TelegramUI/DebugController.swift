@@ -223,7 +223,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     GlobalExperimentalSettings.forceTinyThumbnailsPreview = value
                 })
             case let .animatedStickers(theme):
-                return ItemListSwitchItem(theme: theme, title: "Animated Stickers", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
+                return ItemListSwitchItem(theme: theme, title: "AJSON", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
                     GlobalExperimentalSettings.animatedStickers = value
                 })
             case let .versionInfo(theme):
@@ -258,7 +258,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     }
     entries.append(.sendTthumb(presentationData.theme))
     entries.append(.previewTthumb(presentationData.theme))
-    //entries.append(.animatedStickers(presentationData.theme))
+    entries.append(.animatedStickers(presentationData.theme))
     entries.append(.versionInfo(presentationData.theme))
     
     return entries

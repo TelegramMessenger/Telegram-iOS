@@ -246,7 +246,7 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
     if let peer = peerViewMainPeer(view) as? TelegramUser {
         let userInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: state.updatingName)
         entries.append(.userInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, view.cachedData, userInfoState, state.updatingAvatar))
-        entries.append(.userInfoNotice(presentationData.theme, presentationData.strings.Login_InfoHelp))
+        entries.append(.userInfoNotice(presentationData.theme, presentationData.strings.EditProfile_NameAndPhotoHelp))
         
         entries.append(.bioText(presentationData.theme, state.editingBioText, presentationData.strings.UserInfo_About_Placeholder))
         entries.append(.bioInfo(presentationData.theme, presentationData.strings.Settings_About_Help))
@@ -377,7 +377,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                 })
             }
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Common_Edit), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.EditProfile_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, wallpapers: wallpapers), style: .blocks)
             
             return (controllerState, (listState, arguments))

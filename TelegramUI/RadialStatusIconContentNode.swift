@@ -6,7 +6,6 @@ enum RadialStatusIcon {
     case custom(UIImage)
     case play(UIColor)
     case pause(UIColor)
-    case download(UIColor)
 }
 
 private final class RadialStatusIconContentNodeParameters: NSObject {
@@ -47,30 +46,6 @@ final class RadialStatusIconContentNode: RadialStatusContentNode {
         if let parameters = parameters as? RadialStatusIconContentNodeParameters {
             let diameter = min(bounds.size.width, bounds.size.height)
             switch parameters.icon {
-                case let .download(color):
-                    context.setStrokeColor(color.cgColor)
-                    var lineWidth: CGFloat = 2.0
-                    if diameter < 24.0 {
-                        lineWidth = 1.3
-                    }
-                    context.setLineWidth(lineWidth)
-                    context.setLineCap(.round)
-                    context.setLineJoin(.round)
-                    
-                    let factor = diameter / 50.0
-                    
-                    let arrowHeadSize: CGFloat = 15.0 * factor
-                    let arrowLength: CGFloat = 18.0 * factor
-                    let arrowHeadOffset: CGFloat = 1.0 * factor
-                    
-                    context.move(to: CGPoint(x: diameter / 2.0, y: diameter / 2.0 - arrowLength / 2.0 + arrowHeadOffset))
-                    context.addLine(to: CGPoint(x: diameter / 2.0, y: diameter / 2.0 + arrowLength / 2.0 - 1.0 + arrowHeadOffset))
-                    context.strokePath()
-                    
-                    context.move(to: CGPoint(x: diameter / 2.0 - arrowHeadSize / 2.0, y: diameter / 2.0 + arrowLength / 2.0 - arrowHeadSize / 2.0 + arrowHeadOffset))
-                    context.addLine(to: CGPoint(x: diameter / 2.0, y: diameter / 2.0 + arrowLength / 2.0 + arrowHeadOffset))
-                    context.addLine(to: CGPoint(x: diameter / 2.0 + arrowHeadSize / 2.0, y: diameter / 2.0 + arrowLength / 2.0 - arrowHeadSize / 2.0 + arrowHeadOffset))
-                    context.strokePath()
                 case let .play(color):
                     context.setFillColor(color.cgColor)
                     

@@ -352,6 +352,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, addContact: { _ in
         }, rateCall: { _, _ in
         }, requestSelectMessagePollOption: { _, _ in
+        }, openAppStorePage: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.account.telegramApplicationContext.applicationBindings.openAppStorePage()
+            }
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

@@ -16,9 +16,7 @@ class ThemeGalleryItem: GalleryItem {
     
     func node() -> GalleryItemNode {
         let node = ThemeGalleryItemNode(account: self.account)
-        
         node.setEntry(self.entry)
-        
         return node
     }
     
@@ -41,7 +39,6 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
-    //private let footerContentNode: ChatItemGalleryFooterContentNode
     
     private var fetchDisposable = MetaDisposable()
     
@@ -49,11 +46,10 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
         self.account = account
         
         self.imageNode = TransformImageNode()
-        //self.footerContentNode = ChatItemGalleryFooterContentNode(account: account)
         
         super.init()
         
-        self.backgroundColor = .white
+        self.backgroundColor = .clear
         
         self.imageNode.imageUpdated = { [weak self] in
             self?._ready.set(.single(Void()))
@@ -133,7 +129,6 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
         self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.07)
         
         transformedFrame.origin = CGPoint()
-        //self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         
         let transform = CATransform3DScale(self.imageNode.layer.transform, transformedFrame.size.width / self.imageNode.layer.bounds.size.width, transformedFrame.size.height / self.imageNode.layer.bounds.size.height, 1.0)
         self.imageNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.imageNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
@@ -188,11 +183,6 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
         
         transformedFrame.origin = CGPoint()
         
-        /*self.imageNode.layer.animateBounds(from: self.imageNode.layer.bounds, to: transformedFrame, duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-         boundsCompleted = true
-         intermediateCompletion()
-         })*/
-        
         let transform = CATransform3DScale(self.imageNode.layer.transform, transformedFrame.size.width / self.imageNode.layer.bounds.size.width, transformedFrame.size.height / self.imageNode.layer.bounds.size.height, 1.0)
         self.imageNode.layer.animate(from: NSValue(caTransform3D: self.imageNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
             boundsCompleted = true
@@ -209,5 +199,8 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func title() -> Signal<String, NoError> {
         return self._title.get()
+    }
+    
+    @objc override func contentTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
     }
 }

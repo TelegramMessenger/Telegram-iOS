@@ -5,6 +5,11 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+enum ThemeGridControllerMode {
+    case wallpapers
+    case solidColors
+}
+
 final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {
         return self.displayNode as! ThemeGridControllerNode
@@ -16,17 +21,24 @@ final class ThemeGridController: ViewController {
     }
     
     private let account: Account
+    private let mode: ThemeGridControllerMode
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account) {
+    init(account: Account, mode: ThemeGridControllerMode) {
         self.account = account
+        self.mode = mode
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.title = self.presentationData.strings.Wallpaper_Title
+        switch mode {
+            case .wallpapers:
+                self.title = self.presentationData.strings.Wallpaper_Title
+            case .solidColors:
+                self.title = "Solid Colors"
+        }
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.scrollToTop = { [weak self] in
@@ -34,18 +46,18 @@ final class ThemeGridController: ViewController {
         }
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
-                    
-                    strongSelf.presentationData = presentationData
-                    
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                        strongSelf.updateThemeAndStrings()
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
                 }
-            })
+            }
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -57,7 +69,12 @@ final class ThemeGridController: ViewController {
     }
     
     private func updateThemeAndStrings() {
-        self.title = self.presentationData.strings.Wallpaper_Title
+        switch mode {
+            case .wallpapers:
+                self.title = self.presentationData.strings.Wallpaper_Title
+            case .solidColors:
+                self.title = "Solid Colors"
+        }
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
@@ -68,7 +85,7 @@ final class ThemeGridController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, present: { [weak self] controller, arguments in
+        self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, mode: self.mode, present: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
         }, selectCustomWallpaper: { [weak self] in
             if let strongSelf = self {

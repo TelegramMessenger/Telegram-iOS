@@ -4,6 +4,29 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+func stickerFromLegacyDocument(_ documentAttachment: TGDocumentMediaAttachment) -> TelegramMediaFile? {
+    if documentAttachment.isSticker() {
+        for case let sticker as TGDocumentAttributeSticker in documentAttachment.attributes {
+            var attributes: [TelegramMediaFileAttribute] = []
+            var packReference: StickerPackReference?
+            if let legacyPackReference = sticker.packReference as? TGStickerPackIdReference {
+                packReference = .id(id: legacyPackReference.packId, accessHash: legacyPackReference.packAccessHash)
+            } else if let legacyPackReference = sticker.packReference as? TGStickerPackShortnameReference {
+                packReference = .name(legacyPackReference.shortName)
+            }
+            attributes.append(.Sticker(displayText: sticker.alt, packReference: packReference, maskData: nil))
+            
+            var fileReference: Data?
+            if let originInfo = documentAttachment.originInfo, let data = originInfo.fileReference {
+                fileReference = data
+            }
+            
+            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: documentAttachment.documentId), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(documentAttachment.datacenterId), fileId: documentAttachment.documentId, accessHash: documentAttachment.accessHash, size: Int(documentAttachment.size), fileReference: fileReference, fileName: documentAttachment.fileName()), previewRepresentations: [], mimeType: documentAttachment.mimeType, size: Int(documentAttachment.size), attributes: attributes)
+        }
+    }
+    return nil
+}
+
 func legacyComponentsStickers(postbox: Postbox, namespace: Int32) -> SSignal {
     return SSignal { subscriber in
         let disposable = (postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [namespace], aroundIndex: nil, count: 1000)).start(next: { view in

@@ -38,7 +38,7 @@ private struct StickerPackPreviewGridTransaction {
 
 final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let account: Account
-    private let openShare: () -> Void
+    private let openShare: (() -> Void)?
     private var presentationData: PresentationData
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -53,8 +53,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     private let contentGridNode: GridNode
     private let installActionButtonNode: ASButtonNode
     private let installActionSeparatorNode: ASDisplayNode
+    private let shareActionButtonNode: ASButtonNode
+    private let shareActionSeparatorNode: ASDisplayNode
     private let contentTitleNode: ImmediateTextNode
-    private let contentShareButtonNode: HighlightableButtonNode
     private let contentSeparatorNode: ASDisplayNode
     
     private var activityIndicator: ActivityIndicator?
@@ -77,7 +78,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private var hapticFeedback: HapticFeedback?
     
-    init(account: Account, openShare: @escaping () -> Void, openMention: @escaping (String) -> Void) {
+    init(account: Account, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
         self.account = account
         self.openShare = openShare
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
@@ -106,12 +107,13 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.installActionButtonNode.displaysAsynchronously = false
         self.installActionButtonNode.titleNode.displaysAsynchronously = false
         
+        self.shareActionButtonNode = HighlightTrackingButtonNode()
+        self.shareActionButtonNode.displaysAsynchronously = false
+        self.shareActionButtonNode.titleNode.displaysAsynchronously = false
+        
         self.contentTitleNode = ImmediateTextNode()
         self.contentTitleNode.displaysAsynchronously = false
         self.contentTitleNode.maximumNumberOfLines = 1
-        
-        self.contentShareButtonNode = HighlightableButtonNode()
-        self.contentShareButtonNode.isHidden = true
         
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
@@ -119,6 +121,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.installActionSeparatorNode = ASDisplayNode()
         self.installActionSeparatorNode.isLayerBacked = true
         self.installActionSeparatorNode.displaysAsynchronously = false
+        
+        self.shareActionSeparatorNode = ASDisplayNode()
+        self.shareActionSeparatorNode.isLayerBacked = true
+        self.shareActionSeparatorNode.displaysAsynchronously = false
         
         super.init()
         
@@ -143,6 +149,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         
         self.installActionButtonNode.addTarget(self, action: #selector(self.installActionButtonPressed), forControlEvents: .touchUpInside)
+        self.shareActionButtonNode.addTarget(self, action: #selector(self.sharePressed), forControlEvents: .touchUpInside)
         
         self.wrappingScrollNode.addSubnode(self.contentBackgroundNode)
         
@@ -150,8 +157,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.contentContainerNode.addSubnode(self.contentGridNode)
         self.contentContainerNode.addSubnode(self.installActionSeparatorNode)
         self.contentContainerNode.addSubnode(self.installActionButtonNode)
+        if openShare != nil {
+            self.contentContainerNode.addSubnode(self.shareActionSeparatorNode)
+            self.contentContainerNode.addSubnode(self.shareActionButtonNode)
+        }
         self.wrappingScrollNode.addSubnode(self.contentTitleNode)
-        //self.wrappingScrollNode.addSubnode(self.contentShareButtonNode)
         self.wrappingScrollNode.addSubnode(self.contentSeparatorNode)
         
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
@@ -171,8 +181,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 openMention(String(mention[mention.index(after:  mention.startIndex)...]))
             }
         }
-        
-        self.contentShareButtonNode.addTarget(self, action: #selector(self.sharePressed), forControlEvents: .touchUpInside)
     }
     
     override func didLoad() {
@@ -244,6 +252,18 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.presentationData = presentationData
         
         let theme = presentationData.theme
+        let solidBackground = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
+        let highlightedSolidBackground = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.actionSheet.opaqueItemHighlightedBackgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
+        
         let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
@@ -262,16 +282,25 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: presentationData.theme.actionSheet.opaqueItemHighlightedBackgroundColor)
         
         self.contentBackgroundNode.image = roundedBackground
-        self.contentShareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: presentationData.theme.actionSheet.controlAccentColor), for: [])
         
         self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
         self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
         
-        self.installActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
-        self.installActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        if self.shareActionButtonNode.supernode != nil {
+            self.installActionButtonNode.setBackgroundImage(solidBackground, for: .normal)
+            self.installActionButtonNode.setBackgroundImage(highlightedSolidBackground, for: .highlighted)
+        } else {
+            self.installActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
+            self.installActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        }
+        
+        self.shareActionButtonNode.setBackgroundImage(halfRoundedBackground, for: .normal)
+        self.shareActionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        self.shareActionButtonNode.setTitle(presentationData.strings.Conversation_ContextMenuShare, with: Font.regular(20.0), with: presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         
         self.contentSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
         self.installActionSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        self.shareActionSeparatorNode.backgroundColor = presentationData.theme.actionSheet.opaqueItemSeparatorColor
         
         self.cancelButtonNode.setTitle(presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
         
@@ -290,6 +319,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         var insets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         let cleanInsets = layout.insets(options: [.statusBar])
+        let hasShareButton = self.shareActionButtonNode.supernode != nil
         
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
@@ -356,10 +386,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.contentTitleNode.frame = titleFrame
         transition.animatePosition(node: self.contentTitleNode, from: CGPoint(x: titleFrame.midX + deltaTitlePosition.x, y: titleFrame.midY + deltaTitlePosition.y))
         
-//        let titleButtonSize = CGSize(width: 44.0, height: 44.0)
-//        let shareButtonFrame = CGRect(origin: CGPoint(x: contentContainerFrame.minX + contentContainerFrame.size.width - titleButtonSize.width - 4.0, y: titleFrame.minY - 13.0), size: titleButtonSize)
-//        transition.updateFrame(node: self.contentShareButtonNode, frame: shareButtonFrame)
-        
         transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
         transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: contentContainerFrame.minX, y: self.contentBackgroundNode.frame.minY + titleAreaHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
         
@@ -371,7 +397,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         let initiallyRevealedRowCount = min(minimallyRevealedRowCount, CGFloat(rowCount))
         
         let topInset = max(0.0, contentFrame.size.height - initiallyRevealedRowCount * itemWidth - titleAreaHeight - buttonHeight)
-        let bottomGridInset = buttonHeight
+        let bottomGridInset = hasShareButton ? buttonHeight * 2.0 : buttonHeight
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         
@@ -381,8 +407,12 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - indicatorSize.width) / 2.0), y: contentFrame.maxY - indicatorSize.height - 30.0), size: indicatorSize))
         }
         
-        transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
-        transition.updateFrame(node: self.installActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+        let installButtonOffset = hasShareButton ? buttonHeight * 2.0 : buttonHeight
+        transition.updateFrame(node: self.installActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - installButtonOffset), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
+        transition.updateFrame(node: self.installActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - installButtonOffset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+        
+        transition.updateFrame(node: self.shareActionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
+        transition.updateFrame(node: self.shareActionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
         
         let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))
         
@@ -390,12 +420,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         transition.updateFrame(node: self.contentGridNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
         
         if animateIn {
-            self.contentShareButtonNode.isHidden = false
-            self.contentShareButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            
             self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.installActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.shareActionButtonNode.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.shareActionSeparatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         
         if let _ = self.stickerPack, self.stickerPackUpdated {
@@ -448,11 +477,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             let titleSize = self.contentTitleNode.bounds.size
             let titleFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.size.width - titleSize.width) / 2.0), y: backgroundFrame.minY + 15.0), size: titleSize)
             transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
-            
-            let titleButtonSize = CGSize(width: 44.0, height: 44.0)
-            let shareButtonFrame = CGRect(origin: CGPoint(x: contentFrame.minX + contentFrame.size.width - titleButtonSize.width - 4.0, y: titleFrame.minY - 13.0), size: titleButtonSize)
-            transition.updateFrame(node: self.contentShareButtonNode, frame: shareButtonFrame)
-            
+        
             transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: backgroundFrame.minY + titleAreaHeight), size: CGSize(width: contentFrame.size.width, height: UIScreenPixel)))
             
             if !compactFrame && CGFloat(0.0).isLessThanOrEqualTo(presentationLayout.contentOffset.y) {
@@ -594,6 +619,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         if let result = self.installActionButtonNode.hitTest(self.installActionButtonNode.convert(point, from: self), with: event) {
             return result
         }
+        else if self.shareActionButtonNode.supernode != nil, let result = self.shareActionButtonNode.hitTest(self.shareActionButtonNode.convert(point, from: self), with: event) {
+            return result
+        }
         if self.bounds.contains(point) {
             if !self.contentBackgroundNode.bounds.contains(self.convert(point, to: self.contentBackgroundNode)) && !self.cancelButtonNode.bounds.contains(self.convert(point, to: self.cancelButtonNode)) {
                 return self.dimNode.view
@@ -624,6 +652,6 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     }
     
     @objc private func sharePressed() {
-        self.openShare()
+        self.openShare?()
     }
 }

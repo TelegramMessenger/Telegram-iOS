@@ -5,6 +5,11 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+enum StickerPackPreviewControllerMode {
+    case `default`
+    case settings
+}
+
 final class StickerPackPreviewController: ViewController {
     private var controllerNode: StickerPackPreviewControllerNode {
         return self.displayNode as! StickerPackPreviewControllerNode
@@ -14,6 +19,7 @@ final class StickerPackPreviewController: ViewController {
     private var dismissed = false
     
     private let account: Account
+    private let mode: StickerPackPreviewControllerMode
     private weak var parentNavigationController: NavigationController?
     
     private let stickerPack: StickerPackReference
@@ -45,8 +51,9 @@ final class StickerPackPreviewController: ViewController {
         }
     }
     
-    init(account: Account, stickerPack: StickerPackReference, parentNavigationController: NavigationController?) {
+    init(account: Account, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
         self.account = account
+        self.mode = mode
         self.parentNavigationController = parentNavigationController
         
         self.stickerPack = stickerPack
@@ -77,16 +84,20 @@ final class StickerPackPreviewController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = StickerPackPreviewControllerNode(account: self.account, openShare: { [weak self] in
-            guard let strongSelf = self else {
-                return
+        var openShareImpl: (() -> Void)?
+        if self.mode == .settings {
+            openShareImpl = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if let stickerPackContentsValue = strongSelf.stickerPackContentsValue, case let .result(info, _, _) = stickerPackContentsValue, !info.shortName.isEmpty {
+                    strongSelf.present(ShareController(account: strongSelf.account, subject: .url("https://t.me/addstickers/\(info.shortName)"), externalShare: true), in: .window(.root))
+                    strongSelf.dismiss()
+                }
             }
-            
-            if let stickerPackContentsValue = strongSelf.stickerPackContentsValue, case let .result(info, _, _) = stickerPackContentsValue, !info.shortName.isEmpty {
-                strongSelf.present(ShareController(account: strongSelf.account, subject: .url("https://t.me/addstickers/\(info.shortName)"), externalShare: true), in: .window(.root))
-                strongSelf.dismiss()
-            }
-        }, openMention: { [weak self] mention in
+        }
+        self.displayNode = StickerPackPreviewControllerNode(account: self.account, openShare: openShareImpl, openMention: { [weak self] mention in
             guard let strongSelf = self else {
                 return
             }
