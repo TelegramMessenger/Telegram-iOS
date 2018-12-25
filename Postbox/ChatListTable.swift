@@ -124,6 +124,33 @@ private func addOperation(_ operation: ChatListOperation, peerGroupId: PeerGroup
     operations[wrappedId]!.append(operation)
 }
 
+/*
+ dialog.unread_mark ? 1 : 0,
+ dialog.peer.channel_id || dialog.peer.chat_id || dialog.peer.user_id,
+ dialog.top_message.id,
+ top_message.edit_date || top_message.date,
+ dialog.read_inbox_max_id,
+ dialog.read_outbox_max_id,
+ dialog.unread_count,
+ dialog.unread_mentions_count,
+ draft.draft.date || 0
+
+ */
+
+public enum ChatListNamespaceEntry {
+    case peer(index: ChatListIndex, readState: PeerReadState?, topMessageAttributes: [MessageAttribute], tagSummary: MessageHistoryTagNamespaceSummary?, interfaceState: PeerChatInterfaceState?)
+    case hole(MessageIndex)
+    
+    public var index: ChatListIndex {
+        switch self {
+            case let .peer(peer):
+                return peer.index
+            case let .hole(index):
+                return ChatListIndex(pinningIndex: nil, messageIndex: index)
+        }
+    }
+}
+
 final class ChatListTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .binary)
@@ -652,6 +679,45 @@ final class ChatListTable: Table {
         return entries
     }
     
+    func entriesInRange(groupId: PeerGroupId?, upperBound: ChatListIndex, lowerBound: ChatListIndex) -> [ChatListEntryInfo] {
+        var entries: [ChatListEntryInfo] = []
+        let upperBoundKey: ValueBoxKey
+        if upperBound.messageIndex.timestamp == Int32.max {
+            upperBoundKey = self.upperBound(groupId: groupId)
+        } else {
+            upperBoundKey = self.key(groupId: groupId, index: upperBound, type: .message).successor
+        }
+        self.valueBox.range(self.table, start: upperBoundKey, end: self.key(groupId: groupId, index: lowerBound, type: .message).predecessor, values: { key, value in
+            let (keyGroupId, pinningIndex, messageIndex, type) = extractKey(key)
+            assert(groupId == keyGroupId)
+            
+            let index = ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex)
+            if type == ChatListEntryType.message.rawValue {
+                var messageIndex: MessageIndex?
+                if value.length != 0 {
+                    var idNamespace: Int32 = 0
+                    value.read(&idNamespace, offset: 0, length: 4)
+                    var idId: Int32 = 0
+                    value.read(&idId, offset: 0, length: 4)
+                    var indexTimestamp: Int32 = 0
+                    value.read(&indexTimestamp, offset: 0, length: 4)
+                    messageIndex = MessageIndex(id: MessageId(peerId: index.messageIndex.id.peerId, namespace: idNamespace, id: idId), timestamp: indexTimestamp)
+                }
+                entries.append(.message(index, messageIndex))
+            } else if type == ChatListEntryType.hole.rawValue {
+                entries.append(.hole(ChatListHole(index: index.messageIndex)))
+            } else if type == ChatListEntryType.groupReference.rawValue {
+                var groupIdValue: Int32 = 0
+                value.read(&groupIdValue, offset: 0, length: 4)
+                entries.append(.groupReference(PeerGroupId(rawValue: groupIdValue), index))
+            } else {
+                assertionFailure()
+            }
+            return true
+        }, limit: 0)
+        return entries
+    }
+    
     func getRelativeUnreadChatListIndex(postbox: Postbox, filtered: Bool, position: ChatListRelativePosition) -> ChatListIndex? {
         let groupId: PeerGroupId? = nil
         var result: ChatListIndex?
@@ -710,5 +776,70 @@ final class ChatListTable: Table {
     
     func debugList(groupId: PeerGroupId?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [ChatListIntermediateEntry] {
         return self.laterEntries(groupId: groupId, index: ChatListIndex.absoluteLowerBound, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, count: 1000)
+    }
+    
+    func getNamespaceEntries(groupId: PeerGroupId?, namespace: MessageId.Namespace, summaryTag: MessageTags?, messageIndexTable: MessageHistoryIndexTable, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, readStateTable: MessageHistoryReadStateTable, summaryTable: MessageHistoryTagsSummaryTable) -> [ChatListNamespaceEntry] {
+        var result: [ChatListNamespaceEntry] = []
+        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
+            let keyComponents = extractKey(key)
+            if keyComponents.type == ChatListEntryType.hole.rawValue {
+                if keyComponents.index.id.namespace == namespace {
+                    result.append(.hole(keyComponents.index))
+                }
+            } else {
+                var topMessage: IntermediateMessage?
+                var peerIndex: ChatListIndex?
+                if let pinningIndex = keyComponents.pinningIndex {
+                    if keyComponents.index.id.namespace == namespace {
+                        peerIndex = ChatListIndex(pinningIndex: pinningIndex, messageIndex: keyComponents.index)
+                    }
+                } else if keyComponents.index.id.namespace == namespace {
+                    peerIndex = ChatListIndex(pinningIndex: nil, messageIndex: keyComponents.index)
+                } else {
+                    if let entry = messageIndexTable.topMaybeUninitialized(keyComponents.index.id.peerId, namespace: namespace) {
+                        switch entry {
+                            case let .Message(index):
+                                peerIndex = ChatListIndex(pinningIndex: nil, messageIndex: index)
+                                topMessage = messageHistoryTable.getMessage(index)
+                            default:
+                                break
+                        }
+                    }
+                }
+                if topMessage == nil {
+                    if let entry = messageIndexTable.topMaybeUninitialized(keyComponents.index.id.peerId, namespace: namespace) {
+                        switch entry {
+                            case let .Message(index):
+                                topMessage = messageHistoryTable.getMessage(index)
+                            default:
+                                break
+                        }
+                    }
+                }
+                if let peerIndex = peerIndex {
+                    var readState: PeerReadState?
+                    if let combinedState = readStateTable.getCombinedState(peerIndex.messageIndex.id.peerId) {
+                        for item in combinedState.states {
+                            if item.0 == namespace {
+                                readState = item.1
+                            }
+                        }
+                    }
+                    var tagSummary: MessageHistoryTagNamespaceSummary?
+                    if let summaryTag = summaryTag {
+                        tagSummary = summaryTable.get(MessageHistoryTagsSummaryKey(tag: summaryTag, peerId: peerIndex.messageIndex.id.peerId, namespace: namespace))
+                    }
+                    var topMessageAttributes: [MessageAttribute] = []
+                    if let topMessage = topMessage {
+                        topMessageAttributes = MessageHistoryTable.renderMessageAttributes(topMessage)
+                    }
+                    result.append(.peer(index: peerIndex, readState: readState, topMessageAttributes: topMessageAttributes, tagSummary: tagSummary, interfaceState: peerChatInterfaceStateTable.get(peerIndex.messageIndex.id.peerId)))
+                }
+            }
+            return true
+        }, limit: 0)
+        return result.sorted(by: { lhs, rhs in
+            return lhs.index > rhs.index
+        })
     }
 }

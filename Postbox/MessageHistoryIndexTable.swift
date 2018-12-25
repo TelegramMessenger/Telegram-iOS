@@ -925,6 +925,16 @@ final class MessageHistoryIndexTable: Table {
         return entry
     }
     
+    func topMaybeUninitialized(_ peerId: PeerId, namespace: MessageId.Namespace) -> HistoryIndexEntry? {
+        var entry: HistoryIndexEntry?
+        self.valueBox.range(self.table, start: self.upperBound(peerId, namespace: namespace), end: self.lowerBound(peerId, namespace: namespace), values: { key, value in
+            entry = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value)
+            return false
+        }, limit: 1)
+        
+        return entry
+    }
+    
     func exists(_ id: MessageId) -> Bool {
         return self.valueBox.exists(self.table, key: self.key(id))
     }

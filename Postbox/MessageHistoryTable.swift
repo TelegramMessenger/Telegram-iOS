@@ -2610,6 +2610,26 @@ final class MessageHistoryTable: Table {
         }
     }
     
+    static func renderMessageAttributes(_ message: IntermediateMessage) -> [MessageAttribute] {
+        var parsedAttributes: [MessageAttribute] = []
+        
+        let attributesData = message.attributesData.sharedBufferNoCopy()
+        if attributesData.length > 4 {
+            var attributeCount: Int32 = 0
+            attributesData.read(&attributeCount, offset: 0, length: 4)
+            for _ in 0 ..< attributeCount {
+                var attributeLength: Int32 = 0
+                attributesData.read(&attributeLength, offset: 0, length: 4)
+                if let attribute = PostboxDecoder(buffer: MemoryBuffer(memory: attributesData.memory + attributesData.offset, capacity: Int(attributeLength), length: Int(attributeLength), freeWhenDone: false)).decodeRootObject() as? MessageAttribute {
+                    parsedAttributes.append(attribute)
+                }
+                attributesData.skip(Int(attributeLength))
+            }
+        }
+        
+        return parsedAttributes
+    }
+    
     func renderMessage(_ message: IntermediateMessage, peerTable: PeerTable, addAssociatedMessages: Bool = true) -> Message {
         var parsedAttributes: [MessageAttribute] = []
         var parsedMedia: [Media] = []

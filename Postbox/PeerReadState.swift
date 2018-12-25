@@ -14,10 +14,10 @@ public enum PeerReadState: Equatable, CustomStringConvertible {
     
     public var maxKnownId: MessageId.Id? {
         switch self {
-        case let .idBased(_, _, maxKnownId, _, _):
-            return maxKnownId
-        case  .indexBased:
-            return nil
+            case let .idBased(_, _, maxKnownId, _, _):
+                return maxKnownId
+            case  .indexBased:
+                return nil
         }
     }
     

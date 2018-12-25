@@ -903,7 +903,21 @@ public final class Transaction {
     }
     
     public func enumerateDeviceContactImportInfoItems(_ f: (ValueBoxKey, PostboxCoding) -> Bool) {
+        assert(!self.disposed)
         self.postbox?.deviceContactImportInfoTable.enumerateDeviceContactImportInfoItems(f)
+    }
+    
+    public func getChatListNamespaceEntries(groupId: PeerGroupId?, namespace: MessageId.Namespace, summaryTag: MessageTags?) -> [ChatListNamespaceEntry] {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return []
+        }
+        return postbox.chatListTable.getNamespaceEntries(groupId: groupId, namespace: namespace, summaryTag: summaryTag, messageIndexTable: postbox.messageHistoryIndexTable, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, readStateTable: postbox.readStateTable, summaryTable: postbox.messageHistoryTagsSummaryTable)
+    }
+    
+    public func resetChatList(keepPeerNamespaces: Set<PeerId.Namespace>, upperBound: ChatListIndex, lowerBound: ChatListIndex) -> [PeerId] {
+        assert(!self.disposed)
+        return self.postbox?.resetChatList(keepPeerNamespaces: keepPeerNamespaces, upperBound: upperBound, lowerBound: lowerBound) ?? []
     }
 }
 
@@ -1320,6 +1334,24 @@ public final class Postbox {
         }))
         
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+        
+        for id in self.messageHistoryUnsentTable.get() {
+            self.updateMessage(id, update: { message in
+                if !message.flags.contains(.Failed) {
+                    var flags = StoreMessageFlags(message.flags)
+                    flags.remove(.Unsent)
+                    flags.remove(.Sending)
+                    flags.insert(.Failed)
+                    var storeForwardInfo: StoreMessageForwardInfo?
+                    if let forwardInfo = message.forwardInfo {
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                    }
+                    return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, timestamp: message.timestamp, flags: flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: storeForwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media))
+                } else {
+                    return .skip
+                }
+            })
+        }
         
         do {
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -3410,6 +3442,31 @@ public final class Postbox {
         if let replacementHole = replacementHole {
             self.chatListTable.addHole(groupId: nil, hole: replacementHole, operations: &self.currentChatListOperations)
         }
+        return entries.compactMap { entry -> PeerId? in
+            switch entry {
+                case let .message(index, _):
+                    return index.messageIndex.id.peerId
+                default:
+                    return nil
+            }
+        }
+    }
+    
+    fileprivate func resetChatList(keepPeerNamespaces: Set<PeerId.Namespace>, upperBound: ChatListIndex, lowerBound: ChatListIndex) -> [PeerId] {
+        let entries = self.chatListTable.entriesInRange(groupId: nil, upperBound: upperBound.messageIndex.timestamp == Int32.max ? upperBound : upperBound.predecessor, lowerBound: lowerBound)
+        for entry in entries {
+            switch entry {
+                case let .message(chatListIndex, _):
+                    if !keepPeerNamespaces.contains(chatListIndex.messageIndex.id.peerId.namespace) {
+                        self.updatePeerChatListInclusion(chatListIndex.messageIndex.id.peerId, inclusion: .notSpecified)
+                    }
+                case let .hole(hole):
+                    self.chatListTable.replaceHole(groupId: nil, index: hole.index, hole: nil, operations: &self.currentChatListOperations)
+                case let .groupReference(_, index):
+                    break
+            }
+        }
+        
         return entries.compactMap { entry -> PeerId? in
             switch entry {
                 case let .message(index, _):

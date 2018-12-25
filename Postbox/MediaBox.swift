@@ -523,9 +523,13 @@ public final class MediaBox {
                     if let data = try? Data(contentsOf: URL(fileURLWithPath: result.path), options: .mappedRead) {
                         if result.complete {
                             if result.offset + result.size <= data.count {
-                                let resultData = data.subdata(in: result.offset ..< (result.offset + result.size))
-                                subscriber.putNext(resultData)
-                                subscriber.putCompletion()
+                                if data.count >= result.offset + result.size {
+                                    let resultData = data.subdata(in: result.offset ..< (result.offset + result.size))
+                                    subscriber.putNext(resultData)
+                                    subscriber.putCompletion()
+                                } else {
+                                    assertionFailure("data.count >= result.offset + result.size")
+                                }
                             } else {
                                 assertionFailure()
                             }
