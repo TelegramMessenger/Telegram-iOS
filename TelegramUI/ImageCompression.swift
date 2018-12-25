@@ -229,7 +229,7 @@ func decodeTinyThumbnail(data: Data) -> Data? {
     resultData.append(data.subdata(in: 3 ..< data.count))
     resultData.append(tinyThumbnailFooterPattern)
     resultData.withUnsafeMutableBytes({ (resultBytes: UnsafeMutablePointer<UInt8>) -> Void in
-        resultBytes[164] = width - 3
+        resultBytes[164] = width
         resultBytes[166] = height
     })
     return resultData
