@@ -56,11 +56,7 @@ public class CloudFileMediaResource: TelegramCloudMediaResource, TelegramMultipa
     }
     
     func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation? {
-        if let fileReference = fileReference {
-            return Api.InputFileLocation.inputFileLocation(volumeId: self.volumeId, localId: self.localId, secret: self.secret, fileReference: Buffer(data: fileReference))
-        } else {
-            return nil
-        }
+        return Api.InputFileLocation.inputFileLocation(volumeId: self.volumeId, localId: self.localId, secret: self.secret, fileReference: Buffer(data: fileReference ?? Data()))
     }
     
     public init(datacenterId: Int, volumeId: Int64, localId: Int32, secret: Int64, size: Int?, fileReference: Data?) {

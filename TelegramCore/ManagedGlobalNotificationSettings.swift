@@ -110,10 +110,11 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
     let chats = network.request(Api.functions.account.getNotifySettings(peer: Api.InputNotifyPeer.inputNotifyChats))
     let users = network.request(Api.functions.account.getNotifySettings(peer: Api.InputNotifyPeer.inputNotifyUsers))
     let channels = network.request(Api.functions.account.getNotifySettings(peer: Api.InputNotifyPeer.inputNotifyBroadcasts))
+    let contactsJoined = network.request(Api.functions.account.getContactSignUpNotification())
     
-    return combineLatest(chats, users, channels)
+    return combineLatest(chats, users, channels, contactsJoined)
     |> retryRequest
-    |> map { chats, users, channels in
+    |> map { chats, users, channels, contactsJoined in
         let chatsSettings: MessageNotificationSettings
         switch chats {
             case .peerNotifySettingsEmpty:
@@ -174,7 +175,7 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
                 channelSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
         }
         
-        return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings)
+        return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings, contactsJoined: contactsJoined == .boolTrue)
     }
 }
 
@@ -198,11 +199,11 @@ private func apiInputPeerNotifySettings(_ settings: MessageNotificationSettings)
 }
 
 private func pushedNotificationSettings(network: Network, settings: GlobalNotificationSettingsSet) -> Signal<Void, NoError> {
-    
     let pushedChats = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyChats, settings: apiInputPeerNotifySettings(settings.groupChats)))
     let pushedUsers = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyUsers, settings: apiInputPeerNotifySettings(settings.privateChats)))
     let pushedChannels = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyBroadcasts, settings: apiInputPeerNotifySettings(settings.channels)))
-    return combineLatest(pushedChats, pushedUsers, pushedChannels)
+    let pushedContactsJoined = network.request(Api.functions.account.setContactSignUpNotification(silent: settings.contactsJoined ? .boolTrue : .boolFalse))
+    return combineLatest(pushedChats, pushedUsers, pushedChannels, pushedContactsJoined)
     |> retryRequest
     |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
 }

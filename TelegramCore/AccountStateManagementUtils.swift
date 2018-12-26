@@ -2171,39 +2171,36 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                 switch subject {
                     case .privateChats:
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-                            var previous: GlobalNotificationSettings
+                            var updated: GlobalNotificationSettings
                             if let current = current as? GlobalNotificationSettings {
-                                previous = current
+                                updated = current
                             } else {
-                                previous = GlobalNotificationSettings.defaultSettings
+                                updated = GlobalNotificationSettings.defaultSettings
                             }
-                            return GlobalNotificationSettings(toBeSynchronized: previous.toBeSynchronized, remote: previous.remote.withUpdatedPrivateChats { _ in
-                                return notificationSettings
-                            })
+                            updated.remote.privateChats = notificationSettings
+                            return updated
                         })
                     case .groups:
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-                            var previous: GlobalNotificationSettings
+                            var updated: GlobalNotificationSettings
                             if let current = current as? GlobalNotificationSettings {
-                                previous = current
+                                updated = current
                             } else {
-                                previous = GlobalNotificationSettings.defaultSettings
+                                updated = GlobalNotificationSettings.defaultSettings
                             }
-                            return GlobalNotificationSettings(toBeSynchronized: previous.toBeSynchronized, remote: previous.remote.withUpdatedGroupChats { _ in
-                                return notificationSettings
-                            })
+                            updated.remote.groupChats = notificationSettings
+                            return updated
                         })
                     case .channels:
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-                            var previous: GlobalNotificationSettings
+                            var updated: GlobalNotificationSettings
                             if let current = current as? GlobalNotificationSettings {
-                                previous = current
+                                updated = current
                             } else {
-                                previous = GlobalNotificationSettings.defaultSettings
+                                updated = GlobalNotificationSettings.defaultSettings
                             }
-                            return GlobalNotificationSettings(toBeSynchronized: previous.toBeSynchronized, remote: previous.remote.withUpdatedChannels { _ in
-                                return notificationSettings
-                            })
+                            updated.remote.channels = notificationSettings
+                            return updated
                         })
                 }
             case let .MergeApiChats(chats):
