@@ -53,13 +53,13 @@ make %{?jobs:-j%jobs}
 %make_install
 
 mkdir -p %{buildroot}/%{_datadir}/license
-cp %{_builddir}/%{buildsubdir}/LICENSE %{buildroot}/%{_datadir}/license/%{name}
-
+cp %{_builddir}/%{buildsubdir}/COPYING %{buildroot}/%{_datadir}/license/COPYING
+cp %{_builddir}/%{buildsubdir}/licenses/* %{buildroot}/%{_datadir}/license/
 
 %files
 %defattr(-,root,root,-)
 %{_libdir}/liblottie-player.so.*
-%{_datadir}/license/%{name}
+%{_datadir}/license/COPYING*
 %manifest %{name}.manifest
 
 %files devel
