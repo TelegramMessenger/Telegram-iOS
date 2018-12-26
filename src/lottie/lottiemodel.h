@@ -403,7 +403,7 @@ public:
     long                 mStartFrame{0};
     long                 mEndFrame{0};
     float                mFrameRate{60};
-    LottieBlendMode      mBlendMode;
+    LottieBlendMode      mBlendMode{LottieBlendMode::Normal};
     std::shared_ptr<LOTLayerData> mRootLayer;
     std::unordered_map<std::string,
                        std::shared_ptr<VInterpolator>> mInterpolatorCache;

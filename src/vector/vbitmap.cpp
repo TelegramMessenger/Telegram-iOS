@@ -35,6 +35,7 @@ VBitmapData::VBitmapData()
       height(0),
       depth(0),
       stride(0),
+      nBytes(0),
       format(VBitmap::Format::ARGB32),
       data(nullptr),
       cleanupFunction(0),
