@@ -4,8 +4,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-private final class SoftwareVideoThumbnailLayerNullAction: NSNull {
-    @objc override func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
+private final class SoftwareVideoThumbnailLayerNullAction: NSObject, CAAction {
+    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
     }
 }
 
