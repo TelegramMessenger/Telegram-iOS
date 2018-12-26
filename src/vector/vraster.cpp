@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-﻿#include "vraster.h"
+#include "vraster.h"
 #include <cstring>
 #include <thread>
 #include "v_ft_raster.h"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-﻿#include "lottieloader.h"
+#include "lottieloader.h"
 #include "lottieparser.h"
 
 #include <fstream>
