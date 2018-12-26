@@ -12,7 +12,7 @@ import Foundation
 public enum AuthorizationCodeRequestError {
     case invalidPhoneNumber
     case limitExceeded
-    case generic
+    case generic(info: (Int, String)?)
     case phoneLimitExceeded
     case phoneBanned
     case timeout
@@ -52,7 +52,7 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
         } else if error.errorDescription == "PHONE_NUMBER_BANNED" {
             return .phoneBanned
         } else {
-            return .generic
+            return .generic(info: (Int(error.errorCode), error.errorDescription))
         }
     }
     |> timeout(20.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.timeout))
@@ -81,7 +81,7 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
             return account
         }
         |> mapError { _ -> AuthorizationCodeRequestError in
-            return .generic
+            return .generic(info: nil)
         }
     }
 }
@@ -103,7 +103,7 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
                                 } else if error.errorDescription == "PHONE_NUMBER_BANNED" {
                                     return .phoneBanned
                                 } else {
-                                    return .generic
+                                    return .generic(info: (Int(error.errorCode), error.errorDescription))
                                 }
                             }
                             |> mapToSignal { sentCode -> Signal<Void, AuthorizationCodeRequestError> in
@@ -129,20 +129,20 @@ public func resendAuthorizationCode(account: UnauthorizedAccount) -> Signal<Void
                                                 transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)).flatMap({ ($0, explicitTerms) }))))
                                         
                                     }
-                                } |> mapError { _ -> AuthorizationCodeRequestError in return .generic }
+                                    } |> mapError { _ -> AuthorizationCodeRequestError in return .generic(info: nil) }
                             }
                     } else {
-                        return .fail(.generic)
+                        return .fail(.generic(info: nil))
                     }
                 default:
                     return .complete()
             }
         } else {
-            return .fail(.generic)
+            return .fail(.generic(info: nil))
         }
     }
     |> mapError { _ -> AuthorizationCodeRequestError in
-        return .generic
+        return .generic(info: nil)
     }
     |> switchToLatest
 }
