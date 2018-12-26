@@ -34,13 +34,15 @@ private final class NotificationsAndSoundsArguments {
     let updateIncludeTag: (PeerSummaryCounterTags, Bool) -> Void
     let updateTotalUnreadCountCategory: (Bool) -> Void
     
+    let updateJoinedNotifications: (Bool) -> Void
+    
     let resetNotifications: () -> Void
     
     let updatedExceptionMode: (NotificationExceptionMode) -> Void
     
     let openAppSettings: () -> Void
     
-    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, suppressWarning: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void) {
+    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, suppressWarning: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void, updateJoinedNotifications: @escaping (Bool) -> Void) {
         self.account = account
         self.presentController = presentController
         self.pushController = pushController
@@ -66,6 +68,7 @@ private final class NotificationsAndSoundsArguments {
         self.resetNotifications = resetNotifications
         self.updatedExceptionMode = updatedExceptionMode
         self.openAppSettings = openAppSettings
+        self.updateJoinedNotifications = updateJoinedNotifications
     }
 }
 
@@ -77,6 +80,7 @@ private enum NotificationsAndSoundsSection: Int32 {
     case inApp
     case displayNamesOnLockscreen
     case badge
+    case joinedNotifications
     case reset
 }
 
@@ -121,6 +125,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     case unreadCountCategory(PresentationTheme, String, Bool)
     case unreadCountCategoryInfo(PresentationTheme, String)
     
+    case joinedNotifications(PresentationTheme, String, Bool)
+    
     case reset(PresentationTheme, String)
     case resetNotice(PresentationTheme, String)
     
@@ -140,6 +146,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return NotificationsAndSoundsSection.displayNamesOnLockscreen.rawValue
             case .badgeHeader, .unreadCountStyle, .includePublicGroups, .includeChannels, .unreadCountCategory, .unreadCountCategoryInfo:
                 return NotificationsAndSoundsSection.badge.rawValue
+            case .joinedNotifications:
+                return NotificationsAndSoundsSection.joinedNotifications.rawValue
             case .reset, .resetNotice:
                 return NotificationsAndSoundsSection.reset.rawValue
         }
@@ -211,10 +219,12 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return 30
             case .unreadCountCategoryInfo:
                 return 31
-            case .reset:
+            case .joinedNotifications:
                 return 32
-            case .resetNotice:
+            case .reset:
                 return 33
+            case .resetNotice:
+                return 34
         }
     }
     
@@ -412,6 +422,12 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .joinedNotifications(lhsTheme, lhsText, lhsValue):
+                if case let .joinedNotifications(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
             case let .reset(lhsTheme, lhsText):
                 if case let .reset(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -555,6 +571,10 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .unreadCountCategoryInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .joinedNotifications(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                    arguments.updateJoinedNotifications(updatedValue)
+                })
             case let .reset(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetNotifications()
@@ -639,6 +659,7 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     entries.append(.includeChannels(presentationData.theme, presentationData.strings.Notifications_Badge_IncludeChannels, inAppSettings.totalUnreadCountIncludeTags.contains(.channels)))
     entries.append(.unreadCountCategory(presentationData.theme, presentationData.strings.Notifications_Badge_CountUnreadMessages, inAppSettings.totalUnreadCountDisplayCategory == .messages))
     entries.append(.unreadCountCategoryInfo(presentationData.theme, inAppSettings.totalUnreadCountDisplayCategory == .chats ? presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOff : presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOn))
+    entries.append(.joinedNotifications(presentationData.theme, presentationData.strings.NotificationSettings_ContactJoined, globalSettings.contactsJoined))
     
     entries.append(.reset(presentationData.theme, presentationData.strings.Notifications_ResetAllNotifications))
     entries.append(.resetNotice(presentationData.theme, presentationData.strings.Notifications_ResetAllNotificationsHelp))
@@ -685,57 +706,57 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         })]), nil)
     }, updateMessageAlerts: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedPrivateChats {
-                return $0.withUpdatedEnabled(value)
-            }
+            var settings = settings
+            settings.privateChats.enabled = value
+            return settings
         }).start()
     }, updateMessagePreviews: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedPrivateChats {
-                return $0.withUpdatedDisplayPreviews(value)
-            }
+            var settings = settings
+            settings.privateChats.displayPreviews = value
+            return settings
         }).start()
     }, updateMessageSound: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedPrivateChats {
-                return $0.withUpdatedSound(value)
-            }
+            var settings = settings
+            settings.privateChats.sound = value
+            return settings
         }).start()
     }, updateGroupAlerts: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedGroupChats {
-                return $0.withUpdatedEnabled(value)
-            }
+            var settings = settings
+            settings.groupChats.enabled = value
+            return settings
         }).start()
     }, updateGroupPreviews: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedGroupChats {
-                return $0.withUpdatedDisplayPreviews(value)
-            }
+            var settings = settings
+            settings.groupChats.displayPreviews = value
+            return settings
         }).start()
     }, updateGroupSound: {value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedGroupChats {
-                return $0.withUpdatedSound(value)
-            }
+            var settings = settings
+            settings.groupChats.sound = value
+            return settings
         }).start()
     }, updateChannelAlerts: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedChannels {
-                return $0.withUpdatedEnabled(value)
-            }
+            var settings = settings
+            settings.channels.enabled = value
+            return settings
         }).start()
     }, updateChannelPreviews: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedChannels {
-                return $0.withUpdatedDisplayPreviews(value)
-            }
+            var settings = settings
+            settings.channels.displayPreviews = value
+            return settings
         }).start()
     }, updateChannelSound: {value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            return settings.withUpdatedChannels {
-                return $0.withUpdatedSound(value)
-            }
+            var settings = settings
+            settings.channels.sound = value
+            return settings
         }).start()
     }, updateInAppSounds: { value in
         let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
@@ -819,6 +840,12 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         })
     }, openAppSettings: {
         account.telegramApplicationContext.applicationBindings.openSettings()
+    }, updateJoinedNotifications: { value in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+            var settings = settings
+            settings.contactsJoined = value
+            return settings
+        }).start()
     })
     
     let preferences = account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications, ApplicationSpecificPreferencesKeys.inAppNotificationSettings])
