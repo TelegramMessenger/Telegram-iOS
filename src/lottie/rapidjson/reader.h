@@ -2197,7 +2197,7 @@ private:
     static const size_t kDefaultStackCapacity = 256;    //!< Default stack capacity in bytes for storing a single decoded string.
     internal::Stack<StackAllocator> stack_;  //!< A stack for storing decoded string temporarily during non-destructive parsing.
     ParseResult parseResult_;
-    IterativeParsingState state_;
+    IterativeParsingState state_{IterativeParsingStartState};
 }; // class GenericReader
 
 //! Reader with UTF8 encoding and default allocator.
