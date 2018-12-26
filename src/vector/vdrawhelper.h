@@ -92,7 +92,7 @@ public:
     int bytesPerPixel() const { return mBytesPerPixel; }
 
     VBitmap::Format           mFormat{VBitmap::Format::ARGB32_Premultiplied};
-    VPainter::CompositionMode mCompositionMode;
+    VPainter::CompositionMode mCompositionMode{VPainter::CompositionMode::CompModeSrc};
 
 private:
     int    mWidth{0};
