@@ -1,7 +1,9 @@
 
 subdir('freetype')
+subdir('pixman')
 
 vector_dep = [freetype_dep]
+vector_dep += pixman_dep
 
 source_file   = files('vdasher.cpp')
 source_file  += files('vbrush.cpp')
@@ -13,7 +15,6 @@ source_file  += files('vdrawhelper_sse2.cpp')
 source_file  += files('vdrawable.cpp')
 
 
-source_file  += files('vregion.cpp')
 source_file  += files('vrle.cpp')
 source_file  += files('vpath.cpp')
 source_file  += files('vpathmesure.cpp')
