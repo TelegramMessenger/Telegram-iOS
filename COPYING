@@ -1,6 +1,6 @@
 Licensing
 
-lottie-player basically comes with Flora license(see: licenses/COPYING.FLR)
+lottie-player basically comes with Flora license(licenses/COPYING.FLR)
 but some parts of shared code are covered by different licenses. Listed
 below are the folder names and the license file covering it. Note that this
 license would cover all of the source invovled in each folders, unless
@@ -9,6 +9,7 @@ for details.
 
 Dependencies and licenses:
 
+src/vector/                    licenses/COPYING.LGPL, licenses/COPYING.FLR, licenses/COPYING.MPL
 src/vector/freetype            licenses/COPYING.FTL
 src/vector/pixman              licenses/COPYING.PIX
 src/vector/lottie/rapidjson    licenses/COPYING.RPD
