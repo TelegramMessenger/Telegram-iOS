@@ -3,7 +3,7 @@ Summary:    lottie player library
 Version:    0.0.1
 Release:    1
 Group:      UI Framework/Services
-License:    Apache-2.0
+License:    LGPL-v2.1
 URL:        http://www.tizen.org/
 Source0:    %{name}-%{version}.tar.gz
 BuildRequires:  cmake
