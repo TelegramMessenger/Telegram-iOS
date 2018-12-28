@@ -39,7 +39,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.displayDeviceContacts = displayDeviceContacts
         
-        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: options))
+        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(displaySearch: true, options: options)))
         
         self.dimNode = ASDisplayNode()
         

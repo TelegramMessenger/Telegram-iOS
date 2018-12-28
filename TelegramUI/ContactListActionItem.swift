@@ -3,14 +3,59 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
+public enum ContactListActionItemInlineIconPosition {
+    case left
+    case right
+}
+
+public enum ContactListActionItemIcon : Equatable {
+    case none
+    case generic(UIImage)
+    case inline(UIImage, ContactListActionItemInlineIconPosition)
+    
+    var image: UIImage? {
+        switch self {
+            case .none:
+                return nil
+            case let .generic(image):
+                return image
+            case let .inline(image, _):
+                return image
+        }
+    }
+    
+    public static func ==(lhs: ContactListActionItemIcon, rhs: ContactListActionItemIcon) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .generic(image):
+                if case .generic(image) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .inline(image, position):
+                if case .inline(image, position) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 class ContactListActionItem: ListViewItem {
     let theme: PresentationTheme
     let title: String
-    let icon: UIImage?
+    let icon: ContactListActionItemIcon
     let action: () -> Void
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, title: String, icon: UIImage?, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, icon: ContactListActionItemIcon, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.icon = icon
@@ -152,13 +197,13 @@ class ContactListActionItemNode: ListViewItemNode {
             }
             
             var leftInset: CGFloat = 16.0 + params.leftInset
-            if item.icon != nil {
+            if case .generic = item.icon {
                 leftInset += 49.0
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - 10.0 - leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: 48.0)
+            let contentSize = CGSize(width: params.width, height: 50.0)
             let insets = UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             let separatorHeight = UIScreenPixel
             
@@ -174,13 +219,13 @@ class ContactListActionItemNode: ListViewItemNode {
                         strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
+                        
+                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: item.theme.list.itemAccentColor)
                     }
                     
                     let _ = titleApply()
-                    
-                    strongSelf.iconNode.image = item.icon
-                    
-                    if let image = item.icon {
+
+                    if let image = item.icon.image {
                         strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                     }
                     
@@ -200,7 +245,7 @@ class ContactListActionItemNode: ListViewItemNode {
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 48.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))
                 }
             })
         }

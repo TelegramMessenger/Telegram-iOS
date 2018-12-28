@@ -189,9 +189,9 @@ class ContactsAddItemNode: ListViewItemNode {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 48.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 50.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
-            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 13.0), size: titleLayout.size)
+            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 14.0), size: titleLayout.size)
 
             return (nodeLayout, { [weak self] animated in
                 if let strongSelf = self {
@@ -216,7 +216,7 @@ class ContactsAddItemNode: ListViewItemNode {
                     if let updatedIcon = updatedIcon {
                         strongSelf.iconNode.image = updatedIcon
                     }
-                    transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(x: 14.0, y: 4.0, width: 40.0, height: 40.0))
+                    transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(x: 14.0, y: 5.0, width: 40.0, height: 40.0))
                     
                     let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))

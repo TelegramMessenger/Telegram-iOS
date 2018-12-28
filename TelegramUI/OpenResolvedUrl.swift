@@ -80,7 +80,6 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             dismissInput()
             present(LanguageLinkPreviewController(account: account, identifier: identifier), nil)
         case let .proxy(host, port, username, password, secret):
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             let server: ProxyServerSettings
             if let secret = secret {
                 server = ProxyServerSettings(host: host, port: abs(port), connection: .mtp(secret: secret))
@@ -128,23 +127,26 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
                 present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             })
             dismissInput()
-        case let .share(url, text):
-            let controller = PeerSelectionController(account: account)
-            controller.peerSelected = { [weak controller] peerId in
-                if let strongController = controller {
-                    strongController.dismiss()
-                    
-                    let textInputState: ChatTextInputState
-                    if let text = text, !text.isEmpty {
+        case let .share(url, text, to):
+            let continueWithPeer: (PeerId) -> Void = { peerId in
+                let textInputState: ChatTextInputState?
+                if let text = text, !text.isEmpty {
+                    if let url = url, !url.isEmpty {
                         let urlString = NSMutableAttributedString(string: "\(url)\n")
                         let textString = NSAttributedString(string: "\(text)")
                         let selectionRange: Range<Int> = urlString.length ..< (urlString.length + textString.length)
                         urlString.append(textString)
                         textInputState = ChatTextInputState(inputText: urlString, selectionRange: selectionRange)
                     } else {
-                        textInputState = ChatTextInputState(inputText: NSAttributedString(string: "\(url)"))
+                        textInputState = ChatTextInputState(inputText: NSAttributedString(string: "\(text)"))
                     }
-                    
+                } else if let url = url, !url.isEmpty {
+                    textInputState = ChatTextInputState(inputText: NSAttributedString(string: "\(url)"))
+                } else {
+                    textInputState = nil
+                }
+                
+                if let textInputState = textInputState {
                     let _ = (account.postbox.transaction({ transaction -> Void in
                         transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
                             if let currentState = currentState as? ChatInterfaceState {
@@ -159,9 +161,21 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
                     })
                 }
             }
-            if let navigationController = navigationController {
-                account.telegramApplicationContext.applicationBindings.dismissNativeController()
-                (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+            
+            if let to = to {
+                
+            } else {
+                let controller = PeerSelectionController(account: account)
+                controller.peerSelected = { [weak controller] peerId in
+                    if let strongController = controller {
+                        strongController.dismiss()
+                        continueWithPeer(peerId)
+                    }
+                }
+                if let navigationController = navigationController {
+                    account.telegramApplicationContext.applicationBindings.dismissNativeController()
+                    (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                }
             }
     }
 }

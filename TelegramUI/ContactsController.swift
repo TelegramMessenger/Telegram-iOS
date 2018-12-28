@@ -22,6 +22,7 @@ public class ContactsController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private var authorizationDisposable: Disposable?
+    private let sortOrderPromise = Promise<ContactsSortOrder>()
     
     public init(account: Account) {
         self.account = account
@@ -46,6 +47,7 @@ public class ContactsController: ViewController {
         self.tabBarItem.selectedImage = icon
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Sort", style: .plain, target: self, action: #selector(self.sortPressed))
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
         
         self.scrollToTop = { [weak self] in
@@ -68,26 +70,36 @@ public class ContactsController: ViewController {
             }
         })
         
+        let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
         if #available(iOSApplicationExtension 10.0, *) {
             let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
-            let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
             self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(account: account, subject: .contacts), account.postbox.combinedView(keys: [warningKey, preferencesKey])
-                |> map { combined -> Bool in
-                    let synchronizeDeviceContacts: Bool = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
+                |> map { combined -> (Bool, ContactsSortOrder) in
+                    let settings = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)
+                    let synchronizeDeviceContacts: Bool = settings?.synchronizeDeviceContacts ?? true
+                    let sortOrder: ContactsSortOrder = settings?.sortOrder ?? .presence
                     if !synchronizeDeviceContacts {
-                        return true
+                        return (true, sortOrder)
                     }
                     let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                     if let timestamp = timestamp, timestamp > 0 {
-                        return true
+                        return (true, sortOrder)
                     } else {
-                        return false
+                        return (false, sortOrder)
                     }
                 })
-            |> deliverOnMainQueue).start(next: { [weak self] status, suppressed in
+            |> deliverOnMainQueue).start(next: { [weak self] status, suppressedAndSortOrder in
                 if let strongSelf = self {
+                    let (suppressed, sortOrder) = suppressedAndSortOrder
                     strongSelf.tabBarItem.badgeValue = status != .allowed && !suppressed ? "!" : nil
+                    strongSelf.sortOrderPromise.set(.single(sortOrder))
                 }
+            })
+        } else {
+            self.sortOrderPromise.set(account.postbox.combinedView(keys: [preferencesKey])
+            |> map { combined -> ContactsSortOrder in
+                let settings = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)
+                return settings?.sortOrder ?? .presence
             })
         }
     }
@@ -113,7 +125,7 @@ public class ContactsController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContactsControllerNode(account: self.account, present: { [weak self] c, a in
+        self.displayNode = ContactsControllerNode(account: self.account, sortOrder: sortOrderPromise.get() |> distinctUntilChanged, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         })
         self._ready.set(self.contactsNode.contactListNode.ready)
@@ -224,6 +236,40 @@ public class ContactsController: ViewController {
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
             self.contactsNode.deactivateSearch()
         }
+    }
+    
+    func updateSortOrder(_ sortOrder: ContactsSortOrder) {
+        self.sortOrderPromise.set(.single(sortOrder))
+        let _ = updateContactSettingsInteractively(postbox: self.account.postbox) { current -> ContactSynchronizationSettings in
+            var updated = current
+            updated.sortOrder = sortOrder
+            return updated
+        }.start()
+    }
+    
+    @objc func sortPressed() {
+        let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+        
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetTextItem(title: self.presentationData.strings.Contacts_SortBy))
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByName, color: .accent, action: { [weak self, weak actionSheet] in
+            actionSheet?.dismissAnimated()
+            if let strongSelf = self {
+                strongSelf.updateSortOrder(.natural)
+            }
+        }))
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByPresence, color: .accent, action: { [weak self, weak actionSheet] in
+            actionSheet?.dismissAnimated()
+            if let strongSelf = self {
+                strongSelf.updateSortOrder(.presence)
+            }
+        }))
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            })
+        ])])
+        self.present(actionSheet, in: .window(.root))
     }
     
     @objc func addPressed() {

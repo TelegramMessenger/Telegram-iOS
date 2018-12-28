@@ -431,6 +431,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     strongSelf.performMessageButtonAction(button: button)
                                 }
                             }
+                            actionButtonsNode.buttonLongTapped = { button in
+                                if let strongSelf = self {
+                                    strongSelf.presentMessageButtonContextMenu(button: button)
+                                }
+                            }
                             strongSelf.addSubnode(actionButtonsNode)
                         } else {
                             if case let .System(duration) = animation {

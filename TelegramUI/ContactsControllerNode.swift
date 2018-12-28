@@ -22,15 +22,27 @@ final class ContactsControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account, present: @escaping (ViewController, Any?) -> Void) {
+    init(account: Account, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void) {
         self.account = account
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         
         var inviteImpl: (() -> Void)?
-        self.contactListNode = ContactListNode(account: account, presentation: .orderedByPresence(options: [ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/AddMemberIcon"), color: self.presentationData.theme.list.itemAccentColor), action: {
+        let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
             inviteImpl?()
-        })]))
+        })]
+        
+        let presentation = sortOrder
+        |> map { sortOrder -> ContactListPresentation in
+            switch sortOrder {
+                case .presence:
+                    return .orderedByPresence(options: options)
+                case .natural:
+                    return .natural(displaySearch: true, options: options)
+            }
+        }
+        
+        self.contactListNode = ContactListNode(account: account, presentation: presentation)
         
         super.init()
         

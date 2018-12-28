@@ -56,7 +56,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
         
-        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: false, options: options), filters: filters, selectionState: ContactListNodeGroupSelectionState())
+        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(displaySearch: false, options: options)), filters: filters, selectionState: ContactListNodeGroupSelectionState())
         self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.chatList.searchBarKeyboardColor), placeholder: placeholder)
         
         super.init()
@@ -99,7 +99,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         if case let .peerSelection(value) = mode {
                             searchChatList = value
                         }
-                        let searchResultsNode = ContactListNode(account: account, presentation: .search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false), filters: filters, selectionState: selectionState)
+                        let searchResultsNode = ContactListNode(account: account, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false)), filters: filters, selectionState: selectionState)
                         searchResultsNode.openPeer = { peer in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)

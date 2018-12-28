@@ -196,43 +196,54 @@ public class ChatMessageItemView: ListViewItemNode {
     func performMessageButtonAction(button: ReplyMarkupButton) {
         if let item = self.item {
             switch button.action {
-            case .text:
-                item.controllerInteraction.sendMessage(button.title)
-            case let .url(url):
-                item.controllerInteraction.openUrl(url, true, nil)
-            case .requestMap:
-                item.controllerInteraction.shareCurrentLocation()
-            case .requestPhone:
-                item.controllerInteraction.shareAccountContact()
-            case .openWebApp:
-                item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true)
-            case let .callback(data):
-                item.controllerInteraction.requestMessageActionCallback(item.message.id, data, false)
-            case let .switchInline(samePeer, query):
-                var botPeer: Peer?
-                
-                var found = false
-                for attribute in item.message.attributes {
-                    if let attribute = attribute as? InlineBotMessageAttribute {
-                        if let peerId = attribute.peerId {
-                            botPeer = item.message.peers[peerId]
-                            found = true
+                case .text:
+                    item.controllerInteraction.sendMessage(button.title)
+                case let .url(url):
+                    item.controllerInteraction.openUrl(url, true, nil)
+                case .requestMap:
+                    item.controllerInteraction.shareCurrentLocation()
+                case .requestPhone:
+                    item.controllerInteraction.shareAccountContact()
+                case .openWebApp:
+                    item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true)
+                case let .callback(data):
+                    item.controllerInteraction.requestMessageActionCallback(item.message.id, data, false)
+                case let .switchInline(samePeer, query):
+                    var botPeer: Peer?
+                    
+                    var found = false
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? InlineBotMessageAttribute {
+                            if let peerId = attribute.peerId {
+                                botPeer = item.message.peers[peerId]
+                                found = true
+                            }
                         }
                     }
-                }
-                if !found {
-                    botPeer = item.message.author
-                }
-                
-                var peerId: PeerId?
-                if samePeer {
-                    peerId = item.message.id.peerId
-                }
-                if let botPeer = botPeer, let addressName = botPeer.addressName {
-                    item.controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)")
-                }
-            case .payment:
-                item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
+                    if !found {
+                        botPeer = item.message.author
+                    }
+                    
+                    var peerId: PeerId?
+                    if samePeer {
+                        peerId = item.message.id.peerId
+                    }
+                    if let botPeer = botPeer, let addressName = botPeer.addressName {
+                        item.controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)")
+                    }
+                case .payment:
+                    item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
+            }
+        }
+    }
+    
+    func presentMessageButtonContextMenu(button: ReplyMarkupButton) {
+        if let item = self.item {
+            switch button.action {
+                case let .url(url):
+                    item.controllerInteraction.longTap(.url(url))
+                default:
+                    break
             }
         }
     }

@@ -71,7 +71,7 @@ class ThemeGalleryController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
-        self.title = "Chat Preview"
+        self.title = self.presentationData.strings.Wallpaper_Title
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         let initialEntries: [ThemeGalleryEntry] = wallpapers.map { ThemeGalleryEntry.wallpaper($0) }
@@ -152,7 +152,7 @@ class ThemeGalleryController: ViewController {
     override func loadDisplayNode() {
         let controllerInteraction = GalleryControllerInteraction(presentController: { [weak self] controller, arguments in
             if let strongSelf = self {
-                strongSelf.present(controller, in: .window(.root), with: arguments)
+                strongSelf.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
             }
         }, dismissController: { [weak self] in
             self?.dismiss(forceAway: true)

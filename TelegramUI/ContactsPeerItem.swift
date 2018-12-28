@@ -478,31 +478,31 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         }
                         
                         switch item.status {
-                        case .none:
-                            break
-                        case let .presence(presence, dateTimeFormat):
-                            let presence = (presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none, lastActivity: 0)
-                            userPresence = presence
-                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                            let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
-                            statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
-                        case let .addressName(suffix):
-                            if let addressName = peer.addressName {
-                                let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.theme.list.itemAccentColor)
-                                if !suffix.isEmpty {
-                                    let suffixString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
-                                    let finalString = NSMutableAttributedString()
-                                    finalString.append(addressNameString)
-                                    finalString.append(suffixString)
-                                    statusAttributedString = finalString
-                                } else {
-                                    statusAttributedString = addressNameString
+                            case .none:
+                                break
+                            case let .presence(presence, dateTimeFormat):
+                                let presence = (presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none, lastActivity: 0)
+                                userPresence = presence
+                                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                                let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
+                                statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.theme.list.itemAccentColor : item.theme.list.itemSecondaryTextColor)
+                            case let .addressName(suffix):
+                                if let addressName = peer.addressName {
+                                    let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.theme.list.itemAccentColor)
+                                    if !suffix.isEmpty {
+                                        let suffixString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                                        let finalString = NSMutableAttributedString()
+                                        finalString.append(addressNameString)
+                                        finalString.append(suffixString)
+                                        statusAttributedString = finalString
+                                    } else {
+                                        statusAttributedString = addressNameString
+                                    }
+                                } else if !suffix.isEmpty {
+                                    statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                                 }
-                            } else if !suffix.isEmpty {
-                                statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
-                            }
-                        case let .custom(text):
-                            statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                            case let .custom(text):
+                                statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                         }
                     }
                 case let .deviceContact(_, contact):
@@ -562,13 +562,13 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - badgeSize), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 48.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 50.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             let titleFrame: CGRect
             if statusAttributedString != nil {
-                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 4.0), size: titleLayout.size)
+                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 6.0), size: titleLayout.size)
             } else {
-                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 13.0), size: titleLayout.size)
+                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 14.0), size: titleLayout.size)
             }
             
             let peerRevealOptions: [ItemListRevealOption]
@@ -641,7 +641,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                             }
                             
-                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 51.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0)))
+                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
                             
                             let _ = titleApply()
                             transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame.offsetBy(dx: revealOffset, dy: 0.0))
@@ -650,7 +650,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.statusNode.alpha = item.enabled ? 1.0 : 1.0
                             
                             let _ = statusApply()
-                            let statusFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 25.0), size: statusLayout.size)
+                            let statusFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 27.0), size: statusLayout.size)
                             let previousStatusFrame = strongSelf.statusNode.frame
                             
                             strongSelf.statusNode.frame = statusFrame
@@ -776,7 +776,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             }
             
             var avatarFrame = self.avatarNode.frame
-            avatarFrame.origin.x = offset + leftInset - 51.0
+            avatarFrame.origin.x = offset + leftInset - 50.0
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
             
             var titleFrame = self.titleNode.frame

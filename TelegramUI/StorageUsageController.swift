@@ -251,7 +251,7 @@ private func stringForCategory(strings: PresentationStrings, category: PeerCache
     }
 }
 
-func storageUsageController(account: Account) -> ViewController {
+func storageUsageController(account: Account, isModal: Bool = false) -> ViewController {
     let cacheSettingsPromise = Promise<CacheStorageSettings>()
     cacheSettingsPromise.set(account.postbox.preferencesView(keys: [PreferencesKeys.cacheStorageSettings])
         |> map { view -> CacheStorageSettings in
@@ -672,10 +672,15 @@ func storageUsageController(account: Account) -> ViewController {
         })
     })
     
+    var dismissImpl: (() -> Void)?
+    
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState<StorageUsageEntry>, StorageUsageEntry.ItemGenerationArguments)) in
+            let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+                dismissImpl?()
+            }) : nil
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Cache_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Cache_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: storageUsageControllerEntries(presentationData: presentationData, cacheSettings: cacheSettings, cacheStats: cacheStats), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
@@ -687,6 +692,8 @@ func storageUsageController(account: Account) -> ViewController {
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
-    
+    dismissImpl = { [weak controller] in
+        controller?.dismiss()
+    }
     return controller
 }

@@ -336,7 +336,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     self.recursivelyEnsureDisplaySynchronously(true)
                     contactListNode.enableUpdates = true
                 } else {
-                    let contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: []))
+                    let contactListNode = ContactListNode(account: account, presentation: .single(.natural(displaySearch: true, options: [])))
                     self.contactListNode = contactListNode
                     contactListNode.enableUpdates = true
                     contactListNode.activateSearch = { [weak self] in

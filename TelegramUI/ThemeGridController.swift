@@ -33,12 +33,8 @@ final class ThemeGridController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        switch mode {
-            case .wallpapers:
-                self.title = self.presentationData.strings.Wallpaper_Title
-            case .solidColors:
-                self.title = "Solid Colors"
-        }
+        self.title = self.presentationData.strings.Wallpaper_Title
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.scrollToTop = { [weak self] in
@@ -69,12 +65,7 @@ final class ThemeGridController: ViewController {
     }
     
     private func updateThemeAndStrings() {
-        switch mode {
-            case .wallpapers:
-                self.title = self.presentationData.strings.Wallpaper_Title
-            case .solidColors:
-                self.title = "Solid Colors"
-        }
+        self.title = self.presentationData.strings.Wallpaper_Title
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
