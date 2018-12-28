@@ -4,8 +4,8 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import AVFoundation
 
-private final class MediaPlayerNodeLayerNullAction: NSNull {
-    @objc override func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
+private final class MediaPlayerNodeLayerNullAction: NSObject, CAAction {
+    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
     }
 }
 

@@ -136,15 +136,57 @@ public final class AuthorizationSequenceController: NavigationController {
                                     text = strongSelf.strings.Login_CodeFloodError
                                 case .invalidPhoneNumber:
                                     text = strongSelf.strings.Login_InvalidPhoneError
-                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_PhoneNumberHelp, action: {
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                        guard let strongSelf = self, let controller = controller else {
+                                            return
+                                        }
+                                        let formattedNumber = formatPhoneNumber(number)
+                                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                                        let systemVersion = UIDevice.current.systemVersion
+                                        let locale = Locale.current.identifier
+                                        let carrier = CTCarrier()
+                                        let mnc = carrier.mobileNetworkCode ?? "none"
                                         
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.strings.Login_InvalidPhoneEmailSubject(formattedNumber).0, body: strongSelf.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0, from: controller)
                                     }))
                                 case .phoneLimitExceeded:
                                     text = strongSelf.strings.Login_PhoneFloodError
                                 case .phoneBanned:
                                     text = strongSelf.strings.Login_PhoneBannedError
-                                case .generic:
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                        guard let strongSelf = self, let controller = controller else {
+                                            return
+                                        }
+                                        let formattedNumber = formatPhoneNumber(number)
+                                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                                        let systemVersion = UIDevice.current.systemVersion
+                                        let locale = Locale.current.identifier
+                                        let carrier = CTCarrier()
+                                        let mnc = carrier.mobileNetworkCode ?? "none"
+                                        
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.strings.Login_PhoneBannedEmailSubject(formattedNumber).0, body: strongSelf.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0, from: controller)
+                                    }))
+                                case let .generic(info):
                                     text = strongSelf.strings.Login_UnknownError
+                                    actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_PhoneNumberHelp, action: { [weak controller] in
+                                        guard let strongSelf = self, let controller = controller else {
+                                            return
+                                        }
+                                        let formattedNumber = formatPhoneNumber(number)
+                                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                                        let systemVersion = UIDevice.current.systemVersion
+                                        let locale = Locale.current.identifier
+                                        let carrier = CTCarrier()
+                                        let mnc = carrier.mobileNetworkCode ?? "none"
+                                        let errorString: String
+                                        if let (code, description) = info {
+                                            errorString = "\(code): \(description)"
+                                        } else {
+                                            errorString = "unknown"
+                                        }
+                                        
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.strings.Login_PhoneGenericEmailSubject(formattedNumber).0, body: strongSelf.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).0, from: controller)
+                                    }))
                                 case .timeout:
                                     text = strongSelf.strings.Login_NetworkError
                                     actions.append(TextAlertAction(type: .genericAction, title: strongSelf.strings.ChatSettings_ConnectionType_UseProxy, action: { [weak controller] in
@@ -184,35 +226,6 @@ public final class AuthorizationSequenceController: NavigationController {
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
                     controller?.inProgress = true
-                    
-                    /*
-                     if let (termsOfService, exclusuve) = self.termsOfService, exclusuve {
-                     
-                     var acceptImpl: (() -> Void)?
-                     var declineImpl: (() -> Void)?
-                     let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(authTheme: self.theme), strings: self.strings, text: termsOfService.text, entities: termsOfService.entities, ageConfirmation: termsOfService.ageConfirmation, signingUp: true, accept: { _ in
-                     acceptImpl?()
-                     }, decline: {
-                     declineImpl?()
-                     }, openUrl: { [weak self] url in
-                     self?.openUrl(url)
-                     })
-                     acceptImpl = { [weak self, weak controller] in
-                     controller?.dismiss()
-                     if let strongSelf = self {
-                     strongSelf.termsOfService = nil
-                     strongSelf.loginWithCode?(code)
-                     }
-                     }
-                     declineImpl = { [weak self, weak controller] in
-                     controller?.dismiss()
-                     self?.reset?()
-                     self?.controllerNode.activateInput()
-                     }
-                     self.view.endEditing(true)
-                     self.present(controller, in: .window(.root))
-                     } else {
-                     */
                     
                     strongSelf.actionDisposable.set((authorizeWithCode(account: strongSelf.account, code: code, termsOfService: termsOfService?.0)
                     |> deliverOnMainQueue).start(next: { result in
@@ -654,6 +667,19 @@ public final class AuthorizationSequenceController: NavigationController {
     public func applyConfirmationCode(_ code: Int) {
         if let controller = self.viewControllers.last as? AuthorizationSequenceCodeEntryController {
             controller.applyConfirmationCode(code)
+        }
+    }
+    
+    private func presentEmailComposeController(address: String, subject: String, body: String, from controller: ViewController) {
+        if MFMailComposeViewController.canSendMail() {
+            let composeController = MFMailComposeViewController()
+            composeController.setToRecipients([address])
+            composeController.setSubject(subject)
+            composeController.setMessageBody(body, isHTML: false)
+            
+            controller.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
+        } else {
+            controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
         }
     }
 }
