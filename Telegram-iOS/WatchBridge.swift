@@ -243,6 +243,12 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
                 bridgeAttachment.title = ""
                 bridgeMedia.append(bridgeAttachment)
             }
+        } else if let poll = m as? TelegramMediaPoll {
+            let bridgeAttachment = TGBridgeUnsupportedMediaAttachment()
+            bridgeAttachment.compactTitle = strings.Watch_Message_Poll
+            bridgeAttachment.title = strings.Watch_Message_Poll
+            bridgeAttachment.subtitle = poll.text
+            bridgeMedia.append(bridgeAttachment)
         } else if let contact = m as? TelegramMediaContact {
             let bridgeContact = TGBridgeContactMediaAttachment()
             if let peerId = contact.peerId {
@@ -295,6 +301,12 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
             bridgeAttachment.compactTitle = invoice.title
             bridgeAttachment.title = strings.Watch_Message_Invoice
             bridgeAttachment.subtitle = invoice.title
+            bridgeMedia.append(bridgeAttachment)
+        } else if let _ = m as? TelegramMediaUnsupported {
+            let bridgeAttachment = TGBridgeUnsupportedMediaAttachment()
+            bridgeAttachment.compactTitle = strings.Watch_Message_Unsupported
+            bridgeAttachment.title = strings.Watch_Message_Unsupported
+            bridgeAttachment.subtitle = ""
             bridgeMedia.append(bridgeAttachment)
         }
     }
