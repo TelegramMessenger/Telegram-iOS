@@ -232,6 +232,16 @@
 "Login.InvalidFirstNameError" = "Invalid first name. Please try again.";
 "Login.InvalidLastNameError" = "Invalid last name. Please try again.";
 
+"Login.InvalidPhoneEmailSubject" = "Invalid phone number: %@";
+"Login.InvalidPhoneEmailBody" = "I'm trying to use my mobile phone number: %1$@\nBut Telegram says it's invalid. Please help.\n\nApp version: %2$@\nOS version: %3$@\nLocale: %4$@\nMNC: %5$@";
+
+"Login.PhoneBannedEmailSubject" = "Banned phone number: %@";
+"Login.PhoneBannedEmailBody" = "I'm trying to use my mobile phone number: %1$@\nBut Telegram says it's banned. Please help.\n\nApp version: %2$@\nOS version: %3$@\nLocale: %4$@\nMNC: %5$@";
+
+"Login.PhoneGenericEmailSubject" = "Telegram iOS error: %@";
+"Login.PhoneGenericEmailBody" = "I'm trying to use my mobile phone number: %1$@\nBut Telegram shows an error. Please help.\n\nError: %2$@\nApp version: %3$@\nOS version: %4$@\nLocale: %5$@\nMNC: %6$@";
+
+
 "Login.PhoneTitle" = "Your Phone";
 "Login.PhonePlaceholder" = "Your phone number";
 "Login.CountryCode" = "Country Code";
