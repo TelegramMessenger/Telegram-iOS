@@ -51,6 +51,17 @@ public extension UIColor {
         self.init(red: CGFloat((argb >> 16) & 0xff) / 255.0, green: CGFloat((argb >> 8) & 0xff) / 255.0, blue: CGFloat(argb & 0xff) / 255.0, alpha: CGFloat((argb >> 24) & 0xff) / 255.0)
     }
     
+    var alpha: CGFloat {
+        var alpha: CGFloat = 0.0
+        if self.getRed(nil, green: nil, blue: nil, alpha: &alpha) {
+            return alpha
+        } else if self.getWhite(nil, alpha: &alpha) {
+            return alpha
+        } else {
+            return 0.0
+        }
+    }
+    
     var argb: UInt32 {
         var red: CGFloat = 0.0
         var green: CGFloat = 0.0
