@@ -25,6 +25,8 @@
 #include <cstdlib>
 #include <cstdio>
 #include <limits>
+#include <sstream>
+#include <locale>
 
 namespace json11 {
 
@@ -618,7 +620,11 @@ struct JsonParser final {
                 i++;
         }
 
-        return std::strtod(str.c_str() + start_pos, nullptr);
+		std::istringstream stm(std::string(str.begin()+start_pos, str.end()));
+		stm.imbue(std::locale("C"));
+        double result;
+        stm >> result;
+        return result;
     }
 
     /* expect(str, res)

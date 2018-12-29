@@ -47,8 +47,7 @@ using namespace tgvoip;
 using namespace tgvoip::audio;
 using namespace std;
 
-AudioIO* AudioIO::Create(){
-	std::string inputDevice="default", outputDevice="default";
+AudioIO* AudioIO::Create(std::string inputDevice, std::string outputDevice){
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 	return new AudioIOCallback();
 #elif defined(__ANDROID__)
@@ -59,7 +58,7 @@ AudioIO* AudioIO::Create(){
 		return new ContextlessAudioIO<AudioInputAudioUnitLegacy, AudioOutputAudioUnitLegacy>(inputDevice, outputDevice);
 
 #endif
-	return new AudioUnitIO();
+	return new AudioUnitIO(inputDevice, outputDevice);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
 	if(LOBYTE(LOWORD(GetVersion()))<6)

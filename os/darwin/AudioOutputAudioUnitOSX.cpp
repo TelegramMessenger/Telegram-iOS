@@ -222,6 +222,8 @@ void AudioOutputAudioUnitLegacy::EnumerateDevices(std::vector<AudioOutputDevice>
 		dev.displayName=std::string(buf);
 		CFStringGetCString(deviceUID, buf, 1024, kCFStringEncodingUTF8);
 		dev.id=std::string(buf);
+		if(dev.id.rfind("VPAUAggregateAudioDevice-0x")==0)
+			continue;
 		devs.push_back(dev);
 	}
 	

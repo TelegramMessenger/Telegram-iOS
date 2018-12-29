@@ -19,7 +19,7 @@ class AudioOutputAudioUnit;
 
 	class AudioUnitIO : public AudioIO{
 	public:
-		AudioUnitIO();
+		AudioUnitIO(std::string inputDeviceID, std::string outputDeviceID);
 		~AudioUnitIO();
 		void EnableInput(bool enabled);
 		void EnableOutput(bool enabled);
@@ -27,6 +27,7 @@ class AudioOutputAudioUnit;
 		virtual AudioOutput* GetOutput();
 #if TARGET_OS_OSX
 		void SetCurrentDevice(bool input, std::string deviceID);
+		void SetDuckingEnabled(bool enabled);
 #endif
 	
 	private:
@@ -37,10 +38,13 @@ class AudioOutputAudioUnit;
 		static OSStatus DefaultDeviceChangedCallback(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData);
 		std::string currentInputDevice;
 		std::string currentOutputDevice;
+		bool duckingEnabled=true;
+		bool actualDuckingEnabled=true;
 #endif
 		AudioComponentInstance unit;
 		AudioInputAudioUnit* input;
 		AudioOutputAudioUnit* output;
+		AudioDeviceID currentOutputDeviceID;
 		AudioBufferList inBufferList;
 		bool inputEnabled;
 		bool outputEnabled;

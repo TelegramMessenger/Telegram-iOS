@@ -87,6 +87,10 @@ void MessageThread::Run(){
 			}
 #endif
 		}
+		if(!running){
+			queueMutex.Unlock();
+			return;
+		}
 		currentTime=VoIPController::GetCurrentTime();
 		std::vector<Message> msgsToDeliverNow;
 		for(std::vector<Message>::iterator m=queue.begin();m!=queue.end();){

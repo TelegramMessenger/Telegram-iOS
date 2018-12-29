@@ -21,7 +21,7 @@ namespace tgvoip{
 			AudioIO(){};
 			virtual ~AudioIO(){};
 			TGVOIP_DISALLOW_COPY_AND_ASSIGN(AudioIO);
-			static AudioIO* Create();
+			static AudioIO* Create(std::string inputDevice, std::string outputDevice);
 			virtual AudioInput* GetInput()=0;
 			virtual AudioOutput* GetOutput()=0;
 			bool Failed();

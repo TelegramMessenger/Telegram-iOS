@@ -158,7 +158,24 @@ namespace tgvoip{
 	};
 
 	class AudioInputDevice : public AudioDevice{
-
+	
+	};
+	
+	class AudioInputTester{
+	public:
+		AudioInputTester(const std::string deviceID);
+		~AudioInputTester();
+		TGVOIP_DISALLOW_COPY_AND_ASSIGN(AudioInputTester);
+		float GetAndResetLevel();
+		bool Failed(){
+			return io && io->Failed();
+		}
+	private:
+		void Update(int16_t* samples, size_t count);
+		audio::AudioIO* io=NULL;
+		audio::AudioInput* input=NULL;
+		int16_t maxSample=0;
+		std::string deviceID;
 	};
 
 	class VoIPController{
@@ -194,6 +211,7 @@ namespace tgvoip{
 			bool enableCallUpgrade;
 
 			bool logPacketStats=false;
+			bool enableVolumeControl=false;
 		};
 
 		struct TrafficStats{
@@ -399,6 +417,12 @@ namespace tgvoip{
 		};
 		void SetVideoSource(video::VideoSource* source);
 		void SetVideoRenderer(video::VideoRenderer* renderer);
+		
+		void SetInputVolume(float level);
+		void SetOutputVolume(float level);
+#if defined(__APPLE__) && defined(TARGET_OS_OSX)
+		void SetAudioOutputDuckingEnabled(bool enabled);
+#endif
 
 	private:
 		struct Stream;
@@ -659,8 +683,6 @@ namespace tgvoip{
 		std::string proxyPassword;
 		IPv4Address* resolvedProxyAddress;
 
-		AutomaticGainControl* outputAGC;
-		bool outputAGCEnabled;
 		uint32_t peerCapabilities;
 		Callbacks callbacks;
 		bool didReceiveGroupCallKey;
@@ -696,10 +718,16 @@ namespace tgvoip{
 		uint32_t initTimeoutID=MessageThread::INVALID_ID;
 		uint32_t noStreamsNopID=MessageThread::INVALID_ID;
 		uint32_t udpPingTimeoutID=MessageThread::INVALID_ID;
+		
+		effects::Volume outputVolume;
+		effects::Volume inputVolume;
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 		std::function<void(int16_t*, size_t)> audioInputDataCallback;
 		std::function<void(int16_t*, size_t)> audioOutputDataCallback;
+#endif
+#if defined(__APPLE__) && defined(TARGET_OS_OSX)
+		bool macAudioDuckingEnabled=true;
 #endif
 		
 		video::VideoSource* videoSource=NULL;

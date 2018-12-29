@@ -191,8 +191,6 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	udpConnectivityState=UDP_UNKNOWN;
 	echoCancellationStrength=1;
 
-	outputAGC=NULL;
-	outputAGCEnabled=false;
 	peerCapabilities=0;
 	callbacks={0};
 	didReceiveGroupCallKey=false;
@@ -299,8 +297,6 @@ VoIPController::~VoIPController(){
 	if(resolvedProxyAddress)
 		delete resolvedProxyAddress;
 	delete selectCanceller;
-	if(outputAGC)
-		delete outputAGC;
 	LOGD("Left VoIPController::~VoIPController");
 }
 
@@ -741,9 +737,6 @@ void VoIPController::SetCallbacks(VoIPController::Callbacks callbacks){
 
 void VoIPController::SetAudioOutputGainControlEnabled(bool enabled){
 	LOGD("New output AGC state: %d", enabled);
-	outputAGCEnabled=enabled;
-	if(outputAGC)
-		outputAGC->SetPassThrough(!enabled);
 }
 
 uint32_t VoIPController::GetPeerCapabilities(){
@@ -884,6 +877,24 @@ vector<uint8_t> VoIPController::GetPersistentState(){
 	const char* jstr=Json(obj).dump().c_str();
 	return vector<uint8_t>(jstr, jstr+strlen(jstr));
 }
+
+void VoIPController::SetOutputVolume(float level){
+	outputVolume.SetLevel(level);
+}
+
+void VoIPController::SetInputVolume(float level){
+	inputVolume.SetLevel(level);
+}
+
+#if defined(__APPLE__) && defined(TARGET_OS_OSX)
+void VoIPController::SetAudioOutputDuckingEnabled(bool enabled){
+	macAudioDuckingEnabled=enabled;
+	audio::AudioUnitIO* osxAudio=dynamic_cast<audio::AudioUnitIO*>(audioIO);
+	if(osxAudio){
+		osxAudio->SetDuckingEnabled(enabled);
+	}
+}
+#endif
 
 #pragma mark - Internal intialization
 
@@ -1093,7 +1104,7 @@ void VoIPController::InitializeAudio(){
 	double t=GetCurrentTime();
 	shared_ptr<Stream>& outgoingAudioStream=outgoingStreams[0];
 	LOGI("before create audio io");
-	audioIO=audio::AudioIO::Create();
+	audioIO=audio::AudioIO::Create(currentAudioInput, currentAudioOutput);
 	audioInput=audioIO->GetInput();
 	audioOutput=audioIO->GetOutput();
 #ifdef __ANDROID__
@@ -1109,6 +1120,8 @@ void VoIPController::InitializeAudio(){
 			LOGI("Forcing software NS because built-in is not good");
 		}
 	}
+#elif defined(__APPLE__) && defined(TARGET_OS_OSX)
+	SetAudioOutputDuckingEnabled(macAudioDuckingEnabled);
 #endif
 	LOGI("AEC: %d NS: %d AGC: %d", config.enableAEC, config.enableNS, config.enableAGC);
 	echoCanceller=new EchoCanceller(config.enableAEC, config.enableNS, config.enableAGC);
@@ -1117,6 +1130,9 @@ void VoIPController::InitializeAudio(){
 	encoder->SetOutputFrameDuration(outgoingAudioStream->frameDuration);
 	encoder->SetEchoCanceller(echoCanceller);
 	encoder->SetSecondaryEncoderEnabled(false);
+	if(config.enableVolumeControl){
+		encoder->AddAudioEffect(&inputVolume);
+	}
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 	dynamic_cast<audio::AudioInputCallback*>(audioInput)->SetDataCallback(audioInputDataCallback);
@@ -1153,11 +1169,11 @@ void VoIPController::StartAudio(){
 void VoIPController::OnAudioOutputReady(){
 	LOGI("Audio I/O ready");
 	shared_ptr<Stream>& stm=incomingStreams[0];
-	outputAGC=new AutomaticGainControl();
-	outputAGC->SetPassThrough(!outputAGCEnabled);
 	stm->decoder=make_shared<OpusDecoder>(audioOutput, true, peerVersion>=6);
-	stm->decoder->AddAudioEffect(outputAGC);
 	stm->decoder->SetEchoCanceller(echoCanceller);
+	if(config.enableVolumeControl){
+		stm->decoder->AddAudioEffect(&outputVolume);
+	}
 	stm->decoder->SetJitterBuffer(stm->jitterBuffer);
 	stm->decoder->SetFrameDuration(stm->frameDuration);
 	stm->decoder->Start();
@@ -3616,4 +3632,47 @@ Endpoint::~Endpoint(){
 		socket->Close();
 		delete socket;
 	}
+}
+
+#pragma mark - AudioInputTester
+
+AudioInputTester::AudioInputTester(std::string deviceID) : deviceID(deviceID){
+	io=audio::AudioIO::Create(deviceID, "default");
+	if(io->Failed()){
+		LOGE("Audio IO failed");
+		return;
+	}
+	input=io->GetInput();
+	input->SetCallback([](unsigned char* data, size_t size, void* ctx) -> size_t{
+		reinterpret_cast<AudioInputTester*>(ctx)->Update(reinterpret_cast<int16_t*>(data), size/2);
+		return 0;
+	}, this);
+	input->Start();
+	/*thread=new MessageThread();
+	thread->Start();
+	thread->Post([this]{
+		this->callback(maxSample/(float)INT16_MAX);
+		maxSample=0;
+	}, updateInterval, updateInterval);*/
+}
+
+AudioInputTester::~AudioInputTester(){
+	//thread->Stop();
+	//delete thread;
+	input->Stop();
+	delete io;
+}
+
+void AudioInputTester::Update(int16_t *samples, size_t count){
+	for(size_t i=0;i<count;i++){
+		int16_t s=abs(samples[i]);
+		if(s>maxSample)
+			maxSample=s;
+	}
+}
+
+float AudioInputTester::GetAndResetLevel(){
+	float s=maxSample;
+	maxSample=0;
+	return s/(float)INT16_MAX;
 }

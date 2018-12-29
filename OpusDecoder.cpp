@@ -187,8 +187,8 @@ void tgvoip::OpusDecoder::RunThread(){
 			unsigned char *buf=bufferPool->Get();
 			if(buf){
 				if(remainingDataLen>0){
-					for(std::vector<AudioEffect*>::iterator effect=postProcEffects.begin();effect!=postProcEffects.end();++effect){
-						(*effect)->Process(reinterpret_cast<int16_t*>(processedBuffer+(PACKET_SIZE*i)), 960);
+					for(effects::AudioEffect*& effect:postProcEffects){
+						effect->Process(reinterpret_cast<int16_t*>(processedBuffer+(PACKET_SIZE*i)), 960);
 					}
 					memcpy(buf, processedBuffer+(PACKET_SIZE*i), PACKET_SIZE);
 				}else{
@@ -279,12 +279,12 @@ void tgvoip::OpusDecoder::SetLevelMeter(AudioLevelMeter *levelMeter){
 	this->levelMeter=levelMeter;
 }
 
-void tgvoip::OpusDecoder::AddAudioEffect(AudioEffect *effect){
+void tgvoip::OpusDecoder::AddAudioEffect(effects::AudioEffect *effect){
 	postProcEffects.push_back(effect);
 }
 
-void tgvoip::OpusDecoder::RemoveAudioEffect(AudioEffect *effect){
-	std::vector<AudioEffect*>::iterator i=std::find(postProcEffects.begin(), postProcEffects.end(), effect);
+void tgvoip::OpusDecoder::RemoveAudioEffect(effects::AudioEffect *effect){
+	std::vector<effects::AudioEffect*>::iterator i=std::find(postProcEffects.begin(), postProcEffects.end(), effect);
 	if(i!=postProcEffects.end())
 		postProcEffects.erase(i);
 }
