@@ -52,6 +52,16 @@ public final class Transaction {
         self.postbox?.addHole(messageId)
     }
     
+    public func getHole(messageId: MessageId) -> MessageHistoryHole? {
+        assert(!self.disposed)
+        if let entry = self.postbox?.messageHistoryIndexTable.getMaybeUninitialized(messageId) {
+            if case let .Hole(hole) = entry {
+                return hole
+            }
+        }
+        return nil
+    }
+    
     public func fillHole(_ hole: MessageHistoryHole, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage]) {
         assert(!self.disposed)
         self.postbox?.fillHole(hole, fillType: fillType, tagMask: tagMask, messages: messages)
