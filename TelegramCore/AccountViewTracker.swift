@@ -941,51 +941,6 @@ public final class AccountViewTracker {
         }
     }
     
-    public func updatedCachedChannelParticipants(_ peerId: PeerId, forceImmediateUpdate: Bool = false) -> Signal<Void, NoError> {
-        let queue = self.queue
-        return Signal { [weak self] subscriber in
-            let disposable = MetaDisposable()
-            queue.async {
-                if let strongSelf = self {
-                    let context: CachedChannelParticipantsContext
-                    if let currentContext = strongSelf.cachedChannelParticipantsContexts[peerId] {
-                        context = currentContext
-                    } else {
-                        context = CachedChannelParticipantsContext()
-                        strongSelf.cachedChannelParticipantsContexts[peerId] = context
-                    }
-                    
-                    let viewId = OSAtomicIncrement32(&strongSelf.nextViewId)
-                    let begin = forceImmediateUpdate || context.subscribers.isEmpty
-                    let index = context.subscribers.add(viewId)
-                    
-                    if begin {
-                        if let account = strongSelf.account {
-                            let signal = (fetchAndUpdateCachedParticipants(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)
-                            |> then(Signal<Void, NoError>.complete()
-                            |> suspendAwareDelay(10 * 60, queue: Queue.concurrentDefaultQueue())))
-                            |> restart
-                            context.disposable.set(signal.start())
-                        }
-                    }
-                    
-                    disposable.set(ActionDisposable {
-                        if let strongSelf = self {
-                            if let currentContext = strongSelf.cachedChannelParticipantsContexts[peerId] {
-                                currentContext.subscribers.remove(index)
-                                currentContext.disposable.dispose()
-                                if currentContext.subscribers.isEmpty {
-                                    strongSelf.cachedChannelParticipantsContexts.removeValue(forKey: peerId)
-                                }
-                            }
-                        }
-                    })
-                }
-            }
-            return disposable
-        }
-    }
-    
     public func featuredStickerPacks() -> Signal<[FeaturedStickerPackItem], NoError> {
         return Signal { subscriber in
             if let account = self.account {

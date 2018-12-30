@@ -13,18 +13,18 @@ private enum ChannelParticipantValue: Int32 {
 }
 
 public struct ChannelParticipantAdminInfo: PostboxCoding, Equatable {
-    public let rights: TelegramChannelAdminRights
+    public let rights: TelegramChatAdminRights
     public let promotedBy: PeerId
     public let canBeEditedByAccountPeer: Bool
     
-    public init(rights: TelegramChannelAdminRights, promotedBy: PeerId, canBeEditedByAccountPeer: Bool) {
+    public init(rights: TelegramChatAdminRights, promotedBy: PeerId, canBeEditedByAccountPeer: Bool) {
         self.rights = rights
         self.promotedBy = promotedBy
         self.canBeEditedByAccountPeer = canBeEditedByAccountPeer
     }
     
     public init(decoder: PostboxDecoder) {
-        self.rights = decoder.decodeObjectForKey("r", decoder: { TelegramChannelAdminRights(decoder: $0) }) as! TelegramChannelAdminRights
+        self.rights = decoder.decodeObjectForKey("r", decoder: { TelegramChatAdminRights(decoder: $0) }) as! TelegramChatAdminRights
         self.promotedBy = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.canBeEditedByAccountPeer = decoder.decodeInt32ForKey("e", orElse: 0) != 0
     }
@@ -41,30 +41,34 @@ public struct ChannelParticipantAdminInfo: PostboxCoding, Equatable {
 }
 
 public struct ChannelParticipantBannedInfo: PostboxCoding, Equatable {
-    public let rights: TelegramChannelBannedRights
+    public let rights: TelegramChatBannedRights
     public let restrictedBy: PeerId
+    public let timestamp: Int32
     public let isMember: Bool
     
-    public init(rights: TelegramChannelBannedRights, restrictedBy: PeerId, isMember: Bool) {
+    public init(rights: TelegramChatBannedRights, restrictedBy: PeerId, timestamp: Int32, isMember: Bool) {
         self.rights = rights
         self.restrictedBy = restrictedBy
+        self.timestamp = timestamp
         self.isMember = isMember
     }
     
     public init(decoder: PostboxDecoder) {
-        self.rights = decoder.decodeObjectForKey("r", decoder: { TelegramChannelBannedRights(decoder: $0) }) as! TelegramChannelBannedRights
+        self.rights = decoder.decodeObjectForKey("r", decoder: { TelegramChatBannedRights(decoder: $0) }) as! TelegramChatBannedRights
         self.restrictedBy = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
         self.isMember = decoder.decodeInt32ForKey("m", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.rights, forKey: "r")
         encoder.encodeInt64(self.restrictedBy.toInt64(), forKey: "p")
+        encoder.encodeInt32(self.timestamp, forKey: "t")
         encoder.encodeInt32(self.isMember ? 1 : 0, forKey: "m")
     }
     
     public static func ==(lhs: ChannelParticipantBannedInfo, rhs: ChannelParticipantBannedInfo) -> Bool {
-        return lhs.rights == rhs.rights && lhs.restrictedBy == rhs.restrictedBy && lhs.isMember == rhs.isMember
+        return lhs.rights == rhs.rights && lhs.restrictedBy == rhs.restrictedBy && lhs.timestamp == rhs.timestamp && lhs.isMember == rhs.isMember
     }
 }
 
@@ -174,10 +178,10 @@ extension ChannelParticipant {
                 self = .creator(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
             case let .channelParticipantBanned(flags, userId, restrictedBy, date, bannedRights):
                 let hasLeft = (flags & (1 << 0)) != 0
-                let banInfo = ChannelParticipantBannedInfo(rights: TelegramChannelBannedRights(apiBannedRights: bannedRights), restrictedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: restrictedBy), isMember: !hasLeft)
+                let banInfo = ChannelParticipantBannedInfo(rights: TelegramChatBannedRights(apiBannedRights: bannedRights), restrictedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: restrictedBy), timestamp: date, isMember: !hasLeft)
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: banInfo)
             case let .channelParticipantAdmin(flags, userId, _, promotedBy, date, adminRights):
-                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChannelAdminRights(apiAdminRights: adminRights), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: promotedBy), canBeEditedByAccountPeer: (flags & (1 << 0)) != 0), banInfo: nil)
+                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: promotedBy), canBeEditedByAccountPeer: (flags & (1 << 0)) != 0), banInfo: nil)
             case let .channelParticipantSelf(userId, _, date):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: nil)
         }

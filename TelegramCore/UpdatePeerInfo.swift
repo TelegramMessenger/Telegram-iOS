@@ -64,23 +64,24 @@ public enum UpdatePeerDescriptionError {
 public func updatePeerDescription(account: Account, peerId: PeerId, description: String?) -> Signal<Void, UpdatePeerDescriptionError> {
     return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerDescriptionError> in
         if let peer = transaction.getPeer(peerId) {
-            if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
-                return account.network.request(Api.functions.channels.editAbout(channel: inputChannel, about: description ?? ""))
-                    |> mapError { _ -> UpdatePeerDescriptionError in
-                        return .generic
+            if (peer is TelegramChannel || peer is TelegramGroup), let inputPeer = apiInputPeer(peer) {
+                return account.network.request(Api.functions.messages.editChatAbout(peer: inputPeer, about: description ?? ""))
+                |> mapError { _ -> UpdatePeerDescriptionError in
+                    return .generic
+                }
+                |> mapToSignal { result -> Signal<Void, UpdatePeerDescriptionError> in
+                    return account.postbox.transaction { transaction -> Void in
+                        if case .boolTrue = result {
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                if let current = current as? CachedChannelData {
+                                    return current.withUpdatedAbout(description)
+                                } else {
+                                    return current
+                                }
+                            })
+                        }
                     }
-                    |> mapToSignal { result -> Signal<Void, UpdatePeerDescriptionError> in
-                        return account.postbox.transaction { transaction -> Void in
-                            if case .boolTrue = result {
-                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                    if let current = current as? CachedChannelData {
-                                        return current.withUpdatedAbout(description)
-                                    } else {
-                                        return current
-                                    }
-                                })
-                            }
-                        } |> mapError { _ -> UpdatePeerDescriptionError in return .generic }
+                    |> mapError { _ -> UpdatePeerDescriptionError in return .generic }
                 }
             } else {
                 return .fail(.generic)

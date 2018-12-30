@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public struct TelegramChannelAdminRightsFlags: OptionSet {
+public struct TelegramChatAdminRightsFlags: OptionSet {
     public var rawValue: Int32
     
     public init(rawValue: Int32) {
@@ -16,17 +16,17 @@ public struct TelegramChannelAdminRightsFlags: OptionSet {
         self.rawValue = 0
     }
     
-    public static let canChangeInfo = TelegramChannelAdminRightsFlags(rawValue: 1 << 0)
-    public static let canPostMessages = TelegramChannelAdminRightsFlags(rawValue: 1 << 1)
-    public static let canEditMessages = TelegramChannelAdminRightsFlags(rawValue: 1 << 2)
-    public static let canDeleteMessages = TelegramChannelAdminRightsFlags(rawValue: 1 << 3)
-    public static let canBanUsers = TelegramChannelAdminRightsFlags(rawValue: 1 << 4)
-    public static let canInviteUsers = TelegramChannelAdminRightsFlags(rawValue: 1 << 5)
-    public static let canChangeInviteLink = TelegramChannelAdminRightsFlags(rawValue: 1 << 6)
-    public static let canPinMessages = TelegramChannelAdminRightsFlags(rawValue: 1 << 7)
-    public static let canAddAdmins = TelegramChannelAdminRightsFlags(rawValue: 1 << 9)
+    public static let canChangeInfo = TelegramChatAdminRightsFlags(rawValue: 1 << 0)
+    public static let canPostMessages = TelegramChatAdminRightsFlags(rawValue: 1 << 1)
+    public static let canEditMessages = TelegramChatAdminRightsFlags(rawValue: 1 << 2)
+    public static let canDeleteMessages = TelegramChatAdminRightsFlags(rawValue: 1 << 3)
+    public static let canBanUsers = TelegramChatAdminRightsFlags(rawValue: 1 << 4)
+    public static let canInviteUsers = TelegramChatAdminRightsFlags(rawValue: 1 << 5)
+    public static let canChangeInviteLink = TelegramChatAdminRightsFlags(rawValue: 1 << 6)
+    public static let canPinMessages = TelegramChatAdminRightsFlags(rawValue: 1 << 7)
+    public static let canAddAdmins = TelegramChatAdminRightsFlags(rawValue: 1 << 9)
     
-    public static var groupSpecific: TelegramChannelAdminRightsFlags = [
+    public static var groupSpecific: TelegramChatAdminRightsFlags = [
         .canChangeInfo,
         .canDeleteMessages,
         .canBanUsers,
@@ -36,7 +36,7 @@ public struct TelegramChannelAdminRightsFlags: OptionSet {
         .canAddAdmins
     ]
     
-    public static var broadcastSpecific: TelegramChannelAdminRightsFlags = [
+    public static var broadcastSpecific: TelegramChatAdminRightsFlags = [
         .canChangeInfo,
         .canInviteUsers,
         .canPostMessages,
@@ -64,22 +64,22 @@ public struct TelegramChannelAdminRightsFlags: OptionSet {
     }
 }
 
-public struct TelegramChannelAdminRights: PostboxCoding, Equatable {
-    public let flags: TelegramChannelAdminRightsFlags
+public struct TelegramChatAdminRights: PostboxCoding, Equatable {
+    public let flags: TelegramChatAdminRightsFlags
     
-    public init(flags: TelegramChannelAdminRightsFlags) {
+    public init(flags: TelegramChatAdminRightsFlags) {
         self.flags = flags
     }
     
     public init(decoder: PostboxDecoder) {
-        self.flags = TelegramChannelAdminRightsFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.flags = TelegramChatAdminRightsFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
     }
     
-    public static func ==(lhs: TelegramChannelAdminRights, rhs: TelegramChannelAdminRights) -> Bool {
+    public static func ==(lhs: TelegramChatAdminRights, rhs: TelegramChatAdminRights) -> Bool {
         return lhs.flags == rhs.flags
     }
     
@@ -88,15 +88,15 @@ public struct TelegramChannelAdminRights: PostboxCoding, Equatable {
     }
 }
 
-extension TelegramChannelAdminRights {
-    init(apiAdminRights: Api.ChannelAdminRights) {
+extension TelegramChatAdminRights {
+    init(apiAdminRights: Api.ChatAdminRights) {
         switch apiAdminRights {
-            case let .channelAdminRights(flags):
-                self.init(flags: TelegramChannelAdminRightsFlags(rawValue: flags))
+            case let .chatAdminRights(flags):
+                self.init(flags: TelegramChatAdminRightsFlags(rawValue: flags))
         }
     }
     
-    var apiAdminRights: Api.ChannelAdminRights {
-        return Api.ChannelAdminRights.channelAdminRights(flags: self.flags.rawValue)
+    var apiAdminRights: Api.ChatAdminRights {
+        return .chatAdminRights(flags: self.flags.rawValue)
     }
 }

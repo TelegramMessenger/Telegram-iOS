@@ -33,14 +33,6 @@ public func peerParticipants(postbox: Postbox, id: PeerId) -> Signal<[Peer], NoE
                 }
             }
             return PeerParticipants(peers: peers)
-        } else if let cachedChannelData = view.cachedData as? CachedChannelData, let participants = cachedChannelData.topParticipants {
-            var peers: [Peer] = []
-            for participant in participants.participants {
-                if let peer = view.peers[participant.peerId] {
-                    peers.append(peer)
-                }
-            }
-            return PeerParticipants(peers: peers)
         } else {
             return PeerParticipants(peers: [])
         }

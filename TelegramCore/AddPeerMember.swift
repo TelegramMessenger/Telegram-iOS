@@ -9,53 +9,24 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public enum AddPeerMemberError {
+public enum AddGroupMemberError {
     case generic
 }
 
-public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddPeerMemberError> {
-    return account.postbox.transaction { transaction -> Signal<Void, AddPeerMemberError> in
+public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddGroupMemberError> {
+    return account.postbox.transaction { transaction -> Signal<Void, AddGroupMemberError> in
         if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
                 return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id, userId: inputUser, fwdLimit: 100))
-                    |> mapError { error -> AddPeerMemberError in
-                        return .generic
-                    }
-                    |> mapToSignal { result -> Signal<Void, AddPeerMemberError> in
-                        account.stateManager.addUpdates(result)
-                        return account.postbox.transaction { transaction -> Void in
-                            if let message = result.messages.first, let timestamp = message.timestamp {
-                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                                    if let cachedData = cachedData as? CachedGroupData, let participants = cachedData.participants {
-                                        var updatedParticipants = participants.participants
-                                        var found = false
-                                        for participant in participants.participants {
-                                            if participant.peerId == memberId {
-                                                found = true
-                                                break
-                                            }
-                                        }
-                                        if !found {
-                                            updatedParticipants.append(.member(id: memberId, invitedBy: account.peerId, invitedAt: timestamp))
-                                        }
-                                        return cachedData.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
-                                    } else {
-                                        return cachedData
-                                    }
-                                })
-                            }
-                        } |> mapError { _ -> AddPeerMemberError in return .generic }
-                    }
-            } else if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-                return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: [inputUser]))
-                    |> mapError { error -> AddPeerMemberError in
-                        return .generic
-                    }
-                    |> mapToSignal { result -> Signal<Void, AddPeerMemberError> in
-                        account.stateManager.addUpdates(result)
-                        return account.postbox.transaction { transaction -> Void in
+                |> mapError { error -> AddGroupMemberError in
+                    return .generic
+                }
+                |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in
+                    account.stateManager.addUpdates(result)
+                    return account.postbox.transaction { transaction -> Void in
+                        if let message = result.messages.first, let timestamp = message.timestamp {
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                                if let cachedData = cachedData as? CachedChannelData, let participants = cachedData.topParticipants {
+                                if let cachedData = cachedData as? CachedGroupData, let participants = cachedData.participants {
                                     var updatedParticipants = participants.participants
                                     var found = false
                                     for participant in participants.participants {
@@ -64,20 +35,17 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
                                             break
                                         }
                                     }
-                                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                                     if !found {
-                                        updatedParticipants.insert(.member(id: memberId, invitedAt: timestamp, adminInfo: nil, banInfo: nil), at: 0)
+                                        updatedParticipants.append(.member(id: memberId, invitedBy: account.peerId, invitedAt: timestamp))
                                     }
-                                    var updatedMemberCount: Int32?
-                                    if let memberCount = cachedData.participantsSummary.memberCount {
-                                        updatedMemberCount = memberCount + 1
-                                    }
-                                    return cachedData.withUpdatedTopParticipants(CachedChannelParticipants(participants: updatedParticipants)).withUpdatedParticipantsSummary(cachedData.participantsSummary.withUpdatedMemberCount(updatedMemberCount))
+                                    return cachedData.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
                                 } else {
                                     return cachedData
                                 }
                             })
-                        } |> mapError { _ -> AddPeerMemberError in return .generic }
+                        }
+                    }
+                    |> mapError { _ -> AddGroupMemberError in return .generic }
                 }
             } else {
                 return .fail(.generic)
@@ -85,7 +53,7 @@ public func addPeerMember(account: Account, peerId: PeerId, memberId: PeerId) ->
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> AddPeerMemberError in return .generic } |> switchToLatest
+    } |> mapError { _ -> AddGroupMemberError in return .generic } |> switchToLatest
 }
 
 public enum AddChannelMemberError {
@@ -163,8 +131,8 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                                 }
                             }
                             return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: memberPeer, peers: peers, presences: presences))
-                            }
-                            |> mapError { _ -> AddChannelMemberError in return .generic }
+                        }
+                        |> mapError { _ -> AddChannelMemberError in return .generic }
                     }
                 } else {
                     return .fail(.generic)

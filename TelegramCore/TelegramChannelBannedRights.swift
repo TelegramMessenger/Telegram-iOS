@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public struct TelegramChannelBannedRightsFlags: OptionSet {
+public struct TelegramChatBannedRightsFlags: OptionSet {
     public var rawValue: Int32
     
     public init(rawValue: Int32) {
@@ -16,27 +16,31 @@ public struct TelegramChannelBannedRightsFlags: OptionSet {
         self.rawValue = 0
     }
     
-    public static let banReadMessages = TelegramChannelBannedRightsFlags(rawValue: 1 << 0)
-    public static let banSendMessages = TelegramChannelBannedRightsFlags(rawValue: 1 << 1)
-    public static let banSendMedia = TelegramChannelBannedRightsFlags(rawValue: 1 << 2)
-    public static let banSendStickers = TelegramChannelBannedRightsFlags(rawValue: 1 << 3)
-    public static let banSendGifs = TelegramChannelBannedRightsFlags(rawValue: 1 << 4)
-    public static let banSendGames = TelegramChannelBannedRightsFlags(rawValue: 1 << 5)
-    public static let banSendInline = TelegramChannelBannedRightsFlags(rawValue: 1 << 6)
-    public static let banEmbedLinks = TelegramChannelBannedRightsFlags(rawValue: 1 << 7)
+    public static let banReadMessages = TelegramChatBannedRightsFlags(rawValue: 1 << 0)
+    public static let banSendMessages = TelegramChatBannedRightsFlags(rawValue: 1 << 1)
+    public static let banSendMedia = TelegramChatBannedRightsFlags(rawValue: 1 << 2)
+    public static let banSendStickers = TelegramChatBannedRightsFlags(rawValue: 1 << 3)
+    public static let banSendGifs = TelegramChatBannedRightsFlags(rawValue: 1 << 4)
+    public static let banSendGames = TelegramChatBannedRightsFlags(rawValue: 1 << 5)
+    public static let banSendInline = TelegramChatBannedRightsFlags(rawValue: 1 << 6)
+    public static let banEmbedLinks = TelegramChatBannedRightsFlags(rawValue: 1 << 7)
+    public static let banSendPolls = TelegramChatBannedRightsFlags(rawValue: 1 << 8)
+    public static let banChangeInfo = TelegramChatBannedRightsFlags(rawValue: 1 << 10)
+    public static let banAddMembers = TelegramChatBannedRightsFlags(rawValue: 1 << 15)
+    public static let banPinMessages = TelegramChatBannedRightsFlags(rawValue: 1 << 17)
 }
 
-public struct TelegramChannelBannedRights: PostboxCoding, Equatable {
-    public let flags: TelegramChannelBannedRightsFlags
+public struct TelegramChatBannedRights: PostboxCoding, Equatable {
+    public let flags: TelegramChatBannedRightsFlags
     public let untilDate: Int32
     
-    public init(flags: TelegramChannelBannedRightsFlags, untilDate: Int32) {
+    public init(flags: TelegramChatBannedRightsFlags, untilDate: Int32) {
         self.flags = flags
         self.untilDate = untilDate
     }
     
     public init(decoder: PostboxDecoder) {
-        self.flags = TelegramChannelBannedRightsFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.flags = TelegramChatBannedRightsFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         self.untilDate = decoder.decodeInt32ForKey("d", orElse: 0)
     }
     
@@ -45,20 +49,20 @@ public struct TelegramChannelBannedRights: PostboxCoding, Equatable {
         encoder.encodeInt32(self.untilDate, forKey: "d")
     }
     
-    public static func ==(lhs: TelegramChannelBannedRights, rhs: TelegramChannelBannedRights) -> Bool {
+    public static func ==(lhs: TelegramChatBannedRights, rhs: TelegramChatBannedRights) -> Bool {
         return lhs.flags == rhs.flags && lhs.untilDate == rhs.untilDate
     }
 }
 
-extension TelegramChannelBannedRights {
-    init(apiBannedRights: Api.ChannelBannedRights) {
+extension TelegramChatBannedRights {
+    init(apiBannedRights: Api.ChatBannedRights) {
         switch apiBannedRights {
-        case let .channelBannedRights(flags, untilDate):
-            self.init(flags: TelegramChannelBannedRightsFlags(rawValue: flags), untilDate: untilDate)
+            case let .chatBannedRights(flags, untilDate):
+                self.init(flags: TelegramChatBannedRightsFlags(rawValue: flags), untilDate: untilDate)
         }
     }
     
-    var apiBannedRights: Api.ChannelBannedRights {
-        return Api.ChannelBannedRights.channelBannedRights(flags: self.flags.rawValue, untilDate: self.untilDate)
+    var apiBannedRights: Api.ChatBannedRights {
+        return .chatBannedRights(flags: self.flags.rawValue, untilDate: self.untilDate)
     }
 }

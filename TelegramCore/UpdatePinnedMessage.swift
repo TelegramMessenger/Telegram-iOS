@@ -30,12 +30,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
             return .fail(.generic)
         }
         if let channel = peer as? TelegramChannel, let inputPeer = apiInputPeer(channel) {
-            var canManagePin = false
-            if case .broadcast = channel.info {
-                canManagePin = channel.hasAdminRights([.canEditMessages])
-            } else {
-                canManagePin = channel.hasAdminRights([.canPinMessages])
-            }
+            let canManagePin = channel.hasPermission(.pinMessages)
             
             if canManagePin {
                 var flags: Int32 = 0

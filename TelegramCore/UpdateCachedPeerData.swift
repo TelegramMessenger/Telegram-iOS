@@ -184,6 +184,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                             let participants = CachedGroupParticipants(apiParticipants: chatFull.participants)
                                             let exportedInvitation = ExportedInvitation(apiExportedInvite: chatFull.exportedInvite)
                                             let pinnedMessageId = chatFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
+                                            let defaultBannedRights = chatFull.defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:))
                                         
                                             var peers: [Peer] = []
                                             var peerPresences: [PeerId: PeerPresence] = [:]
@@ -214,7 +215,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     previous = CachedGroupData()
                                                 }
                                                 
-                                                return previous.withUpdatedParticipants(participants).withUpdatedExportedInvitation(exportedInvitation).withUpdatedBotInfos(botInfos).withUpdatedPinnedMessageId(pinnedMessageId)
+                                                return previous.withUpdatedParticipants(participants)
+                                                    .withUpdatedExportedInvitation(exportedInvitation)
+                                                    .withUpdatedBotInfos(botInfos)
+                                                    .withUpdatedPinnedMessageId(pinnedMessageId)
+                                                    .withUpdatedDefaultBannedRights(defaultBannedRights)
                                             })
                                         case .channelFull:
                                             break
@@ -244,7 +249,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, apiDefaultBannedRights):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -287,6 +292,8 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                 migrationReference = ChannelMigrationReference(maxMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: migratedFromChatId), namespace: Namespaces.Message.Cloud, id: migratedFromMaxId))
                                             }
                                             
+                                            let defaultBannedRights = apiDefaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:))
+                                            
                                             var peers: [Peer] = []
                                             var peerPresences: [PeerId: PeerPresence] = [:]
                                             for chat in chats {
@@ -307,7 +314,6 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                             })
                                             
                                             updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-                                           
                                             
                                             let stickerPack: StickerPackCollectionInfo? = stickerSet.flatMap { apiSet -> StickerPackCollectionInfo in
                                                 let namespace: ItemCollectionId.Namespace
@@ -345,6 +351,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     .withUpdatedStickerPack(stickerPack)
                                                     .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                     .withUpdatedMigrationReference(migrationReference)
+                                                    .withUpdatedDefaultBannedRights(defaultBannedRights)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

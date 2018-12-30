@@ -64,8 +64,8 @@ public func telegramWallpapers(postbox: Postbox, network: Network) -> Signal<[Te
             var items: [TelegramWallpaper] = []
             for item in result {
                 switch item {
-                    case let .wallPaper(_, _, sizes, _):
-                        items.append(.image(telegramMediaImageRepresentationsFromApiSizes(sizes).1))
+                    case let .wallPaper(wallPaper):
+                        items.append(.image(telegramMediaImageRepresentationsFromApiSizes(wallPaper.sizes).1))
                     case let .wallPaperSolid(_, _, bgColor, _):
                         items.append(.color(bgColor))
                 }

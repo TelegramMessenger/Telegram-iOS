@@ -21,7 +21,7 @@ func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMed
 
 func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
     switch chat {
-        case let .chat(flags, id, title, photo, participantsCount, date, version, migratedTo):
+        case let .chat(flags, id, title, photo, participantsCount, date, version, migratedTo, adminRights, bannedRights):
             let left = (flags & ((1 << 1) | (1 << 2))) != 0
             var migrationReference: TelegramGroupToChannelMigrationReference?
             if let migratedTo = migratedTo {
@@ -62,10 +62,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             
             let info: TelegramChannelInfo
             if (flags & Int32(1 << 8)) != 0 {
-                var infoFlags = TelegramChannelGroupFlags()
-                if (flags & Int32(1 << 10)) != 0 {
-                    infoFlags.insert(.everyMemberCanInviteMembers)
-                }
+                let infoFlags = TelegramChannelGroupFlags()
                 info = .group(TelegramChannelGroupInfo(flags: infoFlags))
             } else {
                 var infoFlags = TelegramChannelBroadcastFlags()
@@ -90,7 +87,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 restrictionInfo = nil
             }
             
-            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: date, version: version, participationStatus: participationStatus, info: info, flags: channelFlags, restrictionInfo: restrictionInfo, adminRights: adminRights.flatMap(TelegramChannelAdminRights.init), bannedRights: bannedRights.flatMap(TelegramChannelBannedRights.init), peerGroupId: /*feed*/nil/*feedId.flatMap { PeerGroupId(rawValue: $0) }*/)
+            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: date, version: version, participationStatus: participationStatus, info: info, flags: channelFlags, restrictionInfo: restrictionInfo, adminRights: adminRights.flatMap(TelegramChatAdminRights.init), bannedRights: bannedRights.flatMap(TelegramChatBannedRights.init), peerGroupId: /*feed*/nil/*feedId.flatMap { PeerGroupId(rawValue: $0) }*/)
         case let .channelForbidden(flags, id, accessHash, title, untilDate):
             let info: TelegramChannelInfo
             if (flags & Int32(1 << 8)) != 0 {
@@ -99,7 +96,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 info = .broadcast(TelegramChannelBroadcastInfo(flags: []))
             }
             
-            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .kicked, info: info, flags: TelegramChannelFlags(), restrictionInfo: nil, adminRights: nil, bannedRights: TelegramChannelBannedRights(flags: [.banReadMessages], untilDate: untilDate ?? Int32.max), peerGroupId: nil)
+            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .kicked, info: info, flags: TelegramChannelFlags(), restrictionInfo: nil, adminRights: nil, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: untilDate ?? Int32.max), peerGroupId: nil)
     }
 }
 
@@ -122,10 +119,7 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
                     case .broadcast:
                         break
                     case .group:
-                        var infoFlags = TelegramChannelGroupFlags()
-                        if (flags & Int32(1 << 10)) != 0 {
-                            infoFlags.insert(.everyMemberCanInviteMembers)
-                        }
+                        let infoFlags = TelegramChannelGroupFlags()
                         info = .group(TelegramChannelGroupInfo(flags: infoFlags))
                 }
                 return TelegramChannel(id: lhs.id, accessHash: lhs.accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: lhs.creationDate, version: lhs.version, participationStatus: lhs.participationStatus, info: info, flags: channelFlags, restrictionInfo: lhs.restrictionInfo, adminRights: lhs.adminRights, bannedRights: lhs.bannedRights, peerGroupId: lhs.peerGroupId)

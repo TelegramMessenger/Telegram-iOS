@@ -161,8 +161,8 @@ extension Api.Message {
 extension Api.Chat {
     var peerId: PeerId {
         switch self {
-            case let .chat(_, id, _, _, _, _, _, _):
-                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: id)
+            case let .chat(chat):
+                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chat.id)
             case let .chatEmpty(id):
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: id)
             case let .chatForbidden(id, _):

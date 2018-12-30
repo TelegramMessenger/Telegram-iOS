@@ -11,12 +11,7 @@ public func canSendMessagesToPeer(_ peer: Peer) -> Bool {
     } else if let peer = peer as? TelegramSecretChat {
         return peer.embeddedState == .active
     } else if let peer = peer as? TelegramChannel {
-        switch peer.info {
-            case .broadcast:
-                return peer.hasAdminRights(.canPostMessages)
-            case .group:
-                return true
-        }
+        return peer.hasPermission(.sendMessages)
     } else {
         return false
     }
