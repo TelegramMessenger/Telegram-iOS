@@ -533,7 +533,7 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
                     }
                     
                     if let resolvedRights = resolvedRights, previousRights != resolvedRights {
-                        let cleanResolvedRightsFlags = resolvedRights.flags.intersection(initialRightFlags)
+                        let cleanResolvedRightsFlags = resolvedRights.flags.union(initialRightFlags)
                         let cleanResolvedRights = TelegramChatBannedRights(flags: cleanResolvedRightsFlags, untilDate: resolvedRights.untilDate)
                         
                         if cleanResolvedRights.flags.isEmpty && previousRights == nil {
