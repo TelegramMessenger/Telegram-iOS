@@ -99,7 +99,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
                 entries.insert(.ChatInfoEntry(botInfo.description, presentationData), at: 0)
             }
-            if view.entries.count == 1, case let .MessageEntry(entry) = view.entries[0] {
+            if entries.count == 1, case let .MessageEntry(entry) = entries[0] {
                 if let peer = entry.0.peers[entry.0.id.peerId] as? TelegramGroup, case .creator = peer.role {
                     entries.remove(at: 0)
                 }
