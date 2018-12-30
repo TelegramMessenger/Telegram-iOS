@@ -115,7 +115,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 chats = apiChats
                 users = apiUsers
                 totalCount = Int32(messages.count)
-            case let.messagesSlice(_, count, apiMessages, apiChats, apiUsers):
+            case let .messagesSlice(_, count, apiMessages, apiChats, apiUsers):
                 messages = apiMessages
                 chats = apiChats
                 users = apiUsers
