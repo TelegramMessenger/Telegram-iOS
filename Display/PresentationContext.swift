@@ -45,6 +45,17 @@ final class PresentationContext {
     
     var topLevelSubview: UIView?
     
+    var isCurrentlyOpaque: Bool {
+        for (controller, _) in self.controllers {
+            if controller.isOpaqueWhenInOverlay && controller.isNodeLoaded {
+                if traceIsOpaque(layer: controller.displayNode.layer, rect: controller.displayNode.bounds) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+    
     private func topLevelSubview(for level: PresentationSurfaceLevel) -> UIView? {
         var topController: ViewController?
         for (controller, controllerLevel) in self.controllers.reversed() {

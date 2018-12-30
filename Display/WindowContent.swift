@@ -857,7 +857,12 @@ public class Window1 {
                 self.updatedContainerLayout = childLayout
                 
                 if childLayoutUpdated {
-                    self._rootController?.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
+                    var rootLayout = childLayout
+                    let rootTransition = updatingLayout.transition
+                    if self.presentationContext.isCurrentlyOpaque {
+                        rootLayout.inputHeight = nil
+                    }
+                    self._rootController?.containerLayoutUpdated(rootLayout, transition: rootTransition)
                     self.presentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                     self.overlayPresentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                 

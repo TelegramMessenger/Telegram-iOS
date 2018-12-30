@@ -63,6 +63,8 @@ open class ViewControllerPresentationArguments {
         }
     }
     
+    public final var isOpaqueWhenInOverlay: Bool = false
+    
     public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         return self.supportedOrientations
     }
@@ -440,7 +442,7 @@ open class ViewControllerPresentationArguments {
     }
 }
 
-private func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
+func traceIsOpaque(layer: CALayer, rect: CGRect) -> Bool {
     if layer.bounds.contains(rect) {
         if layer.isHidden {
             return false
