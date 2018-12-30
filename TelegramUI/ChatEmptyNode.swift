@@ -231,7 +231,7 @@ private final class ChatEmptyNodeGroupChatContent: ASDisplayNode, ChatEmptyNodeC
             
             let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: serviceColor.primaryText) }
             
-            let lockIcon = PresentationResourcesChat.chatEmptyItemLockIcon(interfaceState.theme)
+            let lockIcon = PresentationResourcesChat.emptyChatListCheckIcon(interfaceState.theme)
             
             for i in 0 ..< lines.count {
                 if i >= self.lineNodes.count {
@@ -256,7 +256,7 @@ private final class ChatEmptyNodeGroupChatContent: ASDisplayNode, ChatEmptyNodeC
         let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
         let titleSpacing: CGFloat = 5.0
         let subtitleSpacing: CGFloat = 10.0
-        let iconInset: CGFloat = 14.0
+        let iconInset: CGFloat = 17.0
         
         var contentWidth: CGFloat = 100.0
         var contentHeight: CGFloat = 0.0
@@ -286,7 +286,7 @@ private final class ChatEmptyNodeGroupChatContent: ASDisplayNode, ChatEmptyNodeC
         var lineOffset = subtitleFrame.maxY + subtitleSpacing / 2.0
         for (textSize, iconNode, textNode) in lineNodes {
             if let image = iconNode.image {
-                transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.minX, y: lineOffset + 1.0), size: image.size))
+                transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.minX, y: lineOffset + 2.0), size: image.size))
             }
             transition.updateFrame(node: textNode, frame: CGRect(origin: CGPoint(x: contentRect.minX + iconInset, y: lineOffset), size: textSize))
             lineOffset += textSize.height + subtitleSpacing

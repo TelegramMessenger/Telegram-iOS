@@ -220,4 +220,6 @@ enum PresentationResourceKey: Int32 {
     case groupInfoPermissionsIcon
     case groupInfoMembersIcon
     case groupInfoBannedIcon
+    
+    case emptyChatListCheckIcon
 }

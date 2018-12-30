@@ -958,4 +958,10 @@ struct PresentationResourcesChat {
             return UIImage(bundleImageName: "Chat/Info/GroupBannedIcon")?.precomposed()
         })
     }
+    
+    static func emptyChatListCheckIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.emptyChatListCheckIcon.rawValue, { _ in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/ListCheckIcon"), color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText)
+        })
+    }
 }
