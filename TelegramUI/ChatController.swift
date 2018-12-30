@@ -4548,7 +4548,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             guard let strongSelf = self else {
                                 return
                             }
-                            let complete = results.count >= Int(totalCount)
+                            let complete = results.count == 0
                             var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search {
@@ -4563,7 +4563,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                         }
                                     }
                                     navigateIndex = currentIndex
-                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, totalCount: totalCount, complete: complete)))
+                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, totalCount: max(Int32(messageIndices.count), totalCount), complete: complete)))
                                 } else {
                                     return current
                                 }
@@ -4599,7 +4599,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             guard let strongSelf = self else {
                                 return
                             }
-                            let complete = results.count != 0
+                            let complete = results.count == 0
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
                                     let previousSet = Set(previousResultsState.messageIndices)
@@ -4607,7 +4607,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     var mergedIndices = messageIndices.filter({ !previousSet.contains($0) })
                                     mergedIndices.append(contentsOf: previousResultsState.messageIndices)
                                     
-                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: mergedIndices, currentId: previousResultsState.currentId, totalCount: totalCount, complete: complete)))
+                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: mergedIndices, currentId: previousResultsState.currentId, totalCount: max(totalCount, Int32(mergedIndices.count)), complete: complete)))
                                 } else {
                                     return current
                                 }

@@ -34,13 +34,6 @@ public final class AuthorizationSequenceController: NavigationController {
         super.init(mode: .single, theme: NavigationControllerTheme(navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black, emptyDetailIcon: nil))
         
         self.stateDisposable = (account.postbox.stateView()
-        |> filter { view in
-            if view.state is UnauthorizedAccountState || view.state == nil {
-                return true
-            } else {
-                return false
-            }
-        }
         |> map { view -> UnauthorizedAccountStateContents in
             if let state = view.state as? UnauthorizedAccountState {
                 return state.contents
@@ -114,6 +107,13 @@ public final class AuthorizationSequenceController: NavigationController {
         } else {
             controller = AuthorizationSequencePhoneEntryController(network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
                 self?.openUrl(url)
+            }, back: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                let _ = strongSelf.account.postbox.transaction({ transaction -> Void in
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty))
+                }).start()
             })
             controller.loginWithNumber = { [weak self, weak controller] number in
                 if let strongSelf = self {
@@ -222,6 +222,15 @@ public final class AuthorizationSequenceController: NavigationController {
         } else {
             controller = AuthorizationSequenceCodeEntryController(strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
                 self?.openUrl(url)
+            }, back: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                let countryCode = defaultCountryCode()
+                
+                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
+                }).start()
             })
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
@@ -390,7 +399,16 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePasswordEntryController(strings: self.strings, theme: self.theme)
+            controller = AuthorizationSequencePasswordEntryController(strings: self.strings, theme: self.theme, back: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                let countryCode = defaultCountryCode()
+                
+                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
+                }).start()
+            })
             controller.loginWithPassword = { [weak self, weak controller] password in
                 if let strongSelf = self {
                     controller?.inProgress = true
@@ -489,7 +507,16 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePasswordRecoveryController(strings: self.strings, theme: self.theme)
+            controller = AuthorizationSequencePasswordRecoveryController(strings: self.strings, theme: self.theme, back: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                let countryCode = defaultCountryCode()
+                
+                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
+                }).start()
+            })
             controller.recoverWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
                     controller?.inProgress = true
@@ -543,7 +570,16 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceAwaitingAccountResetController(strings: self.strings, theme: self.theme)
+            controller = AuthorizationSequenceAwaitingAccountResetController(strings: self.strings, theme: self.theme, back: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                let countryCode = defaultCountryCode()
+                
+                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
+                }).start()
+            })
             controller.reset = { [weak self, weak controller] in
                 if let strongSelf = self, let strongController = controller {
                     strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_ResetAccountConfirmation, actions: [
@@ -598,7 +634,16 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSignUpController(strings: self.strings, theme: self.theme)
+            controller = AuthorizationSequenceSignUpController(strings: self.strings, theme: self.theme, back: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                let countryCode = defaultCountryCode()
+                
+                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
+                }).start()
+            })
             controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData in
                 if let strongSelf = self {
                     controller?.inProgress = true

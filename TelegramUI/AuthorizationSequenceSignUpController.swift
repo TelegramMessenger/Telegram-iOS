@@ -33,7 +33,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(strings: PresentationStrings, theme: AuthorizationTheme, back: @escaping () -> Void) {
         self.strings = strings
         self.theme = theme
         
@@ -45,15 +45,17 @@ final class AuthorizationSequenceSignUpController: ViewController {
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
-        self.attemptNavigation = { [weak self] f in
+        self.attemptNavigation = { _ in
+            return false
+        }
+        self.navigationBar?.backPressed = { [weak self] in
             guard let strongSelf = self else {
-                return true
+                return
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Login_CancelSignUpConfirmation, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
             }), TextAlertAction(type: .defaultAction, title: strings.Login_CancelPhoneVerificationStop, action: {
-                f()
+                back()
             })]), in: .window(.root))
-            return false
         }
     }
     

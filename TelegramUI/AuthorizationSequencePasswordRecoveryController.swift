@@ -29,7 +29,7 @@ final class AuthorizationSequencePasswordRecoveryController: ViewController {
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(strings: PresentationStrings, theme: AuthorizationTheme, back: @escaping () -> Void) {
         self.strings = strings
         self.theme = theme
         
@@ -40,6 +40,13 @@ final class AuthorizationSequencePasswordRecoveryController: ViewController {
         self.hasActiveInput = true
         
         self.statusBar.statusBarStyle = theme.statusBarStyle
+        
+        self.attemptNavigation = { _ in
+            return false
+        }
+        self.navigationBar?.backPressed = {
+            back()
+        }
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
