@@ -219,4 +219,5 @@ enum PresentationResourceKey: Int32 {
     case groupInfoAdminsIcon
     case groupInfoPermissionsIcon
     case groupInfoMembersIcon
+    case groupInfoBannedIcon
 }

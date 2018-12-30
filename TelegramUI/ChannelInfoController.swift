@@ -320,7 +320,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     arguments.openMembers()
                 })
             case let .banned(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoPermissionsIcon(theme), title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoBannedIcon(theme), title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openBanned()
                 })
             case let .signMessages(theme, text, value):

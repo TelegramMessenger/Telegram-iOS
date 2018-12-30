@@ -952,4 +952,10 @@ struct PresentationResourcesChat {
             return UIImage(bundleImageName: "Chat/Info/GroupMembersIcon")?.precomposed()
         })
     }
+    
+    static func groupInfoBannedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.groupInfoBannedIcon.rawValue, { _ in
+            return UIImage(bundleImageName: "Chat/Info/GroupBannedIcon")?.precomposed()
+        })
+    }
 }
