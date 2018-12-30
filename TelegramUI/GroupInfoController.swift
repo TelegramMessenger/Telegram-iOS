@@ -765,9 +765,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         if canEditGroupInfo {
             entries.append(GroupInfoEntry.setGroupPhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
             
-            if view.peers[view.peerId] is TelegramChannel {
-                entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_About_Placeholder, editingState.editingDescriptionText))
-            }
+            entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_About_Placeholder, editingState.editingDescriptionText))
         }
         
         if let group = view.peers[view.peerId] as? TelegramGroup {
@@ -818,6 +816,11 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             }
             if let peer = view.peers[view.peerId] as? TelegramChannel, let username = peer.username, !username.isEmpty {
                 entries.append(.link(presentationData.theme, "t.me/" + username))
+            }
+        } else if let cachedGroupData = view.cachedData as? CachedGroupData {
+            if let about = cachedGroupData.about, !about.isEmpty {
+                entries.append(.aboutHeader(presentationData.theme, presentationData.strings.Channel_About_Title.uppercased()))
+                entries.append(.about(presentationData.theme, about))
             }
         }
         
@@ -1076,12 +1079,23 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
 
 private func valuesRequiringUpdate(state: GroupInfoState, view: PeerView) -> (title: String?, description: String?) {
     if let peer = view.peers[view.peerId] as? TelegramGroup {
+        var titleValue: String?
+        var descriptionValue: String?
         if let editingState = state.editingState {
             if let title = editingState.editingName?.composedTitle, title != peer.title {
-                return (title, nil)
+                titleValue = title
+            }
+            if let cachedData = view.cachedData as? CachedGroupData {
+                if let about = cachedData.about {
+                    if about != editingState.editingDescriptionText {
+                        descriptionValue = editingState.editingDescriptionText
+                    }
+                } else if !editingState.editingDescriptionText.isEmpty {
+                    descriptionValue = editingState.editingDescriptionText
+                }
             }
         }
-        return (nil, nil)
+        return (titleValue, descriptionValue)
     } else if let peer = view.peers[view.peerId] as? TelegramChannel {
         var titleValue: String?
         var descriptionValue: String?
@@ -1099,7 +1113,6 @@ private func valuesRequiringUpdate(state: GroupInfoState, view: PeerView) -> (ti
                 }
             }
         }
-        
         return (titleValue, descriptionValue)
     } else {
         return (nil, nil)
@@ -1756,8 +1769,12 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         } else {
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                 if let peer = peer as? TelegramGroup {
+                    var text = ""
+                    if let cachedData = view.cachedData as? CachedGroupData, let about = cachedData.about {
+                        text = about
+                    }
                     updateState { state in
-                        return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer), editingDescriptionText: ""))
+                        return state.withUpdatedEditingState(GroupInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(peer), editingDescriptionText: text))
                     }
                 } else if let channel = peer as? TelegramChannel, case .group = channel.info {
                     var text = ""
