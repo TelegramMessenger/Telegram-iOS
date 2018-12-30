@@ -172,7 +172,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     interaction.suppressWarning()
                 })
             case let .permissionEnable(theme, text):
-                return ContactListActionItem(theme: theme, title: text, icon: nil, header: nil, action: {
+                return ContactListActionItem(theme: theme, title: text, icon: .none, header: nil, action: {
                     interaction.authorize()
                 })
             case let .option(_, option, header, theme, _):
@@ -457,24 +457,29 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                 var indexHeader: unichar = 35
                 switch peer.indexName {
                     case let .title(title, _):
-                        if let c = title.uppercased().utf16.first {
+                        if let c = title.folding(options: .diacriticInsensitive, locale: .current).uppercased().utf16.first {
                             indexHeader = c
                         }
                     case let .personName(first, last, _, _):
                         switch sortOrder {
                             case .firstLast:
-                                if let c = first.uppercased().utf16.first {
+                                if let c = first.folding(options: .diacriticInsensitive, locale: .current).uppercased().utf16.first {
                                     indexHeader = c
-                                } else if let c = last.uppercased().utf16.first {
+                                } else if let c = last.folding(options: .diacriticInsensitive, locale: .current).uppercased().utf16.first {
                                     indexHeader = c
                                 }
                             case .lastFirst:
-                                if let c = last.uppercased().utf16.first {
+                                if let c = last.folding(options: .diacriticInsensitive, locale: .current).uppercased().utf16.first {
                                     indexHeader = c
-                                } else if let c = first.uppercased().utf16.first {
+                                } else if let c = first.folding(options: .diacriticInsensitive, locale: .current).uppercased().utf16.first {
                                     indexHeader = c
                                 }
                         }
+                }
+                if let scalar = UnicodeScalar(indexHeader), !NSCharacterSet.uppercaseLetters.contains(scalar) {
+                    if let c = "#".utf16.first {
+                        indexHeader = c
+                    }
                 }
                 let header: ContactListNameIndexHeader
                 if let cached = headerCache[indexHeader] {
@@ -590,11 +595,11 @@ private struct ContactsListNodeTransition {
 
 public struct ContactListAdditionalOption: Equatable {
     public let title: String
-    public let icon: UIImage?
+    public let icon: ContactListActionItemIcon
     public let action: () -> Void
     
     public static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {
-        return lhs.title == rhs.title && lhs.icon === rhs.icon
+        return lhs.title == rhs.title && lhs.icon == rhs.icon
     }
 }
 
@@ -638,11 +643,11 @@ enum ContactListFilter {
 
 final class ContactListNode: ASDisplayNode {
     private let account: Account
-    private let presentation: ContactListPresentation
+    private var presentation: ContactListPresentation?
     private let filters: [ContactListFilter]
     
     let listNode: ListView
-    private var indexNode: CollectionIndexNode?
+    private var indexNode: CollectionIndexNode
     private var indexSections: [String]?
     
     private var queuedTransitions: [ContactsListNodeTransition] = []
@@ -696,9 +701,8 @@ final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
-    init(account: Account, presentation: ContactListPresentation, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true) {
+    init(account: Account, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true) {
         self.account = account
-        self.presentation = presentation
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
         
@@ -707,13 +711,7 @@ final class ContactListNode: ASDisplayNode {
         self.listNode = ListView()
         self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
         
-        var generateSections = false
-        if case .natural = presentation {
-            generateSections = true
-            self.indexNode = CollectionIndexNode()
-        } else {
-            self.indexNode = nil
-        }
+        self.indexNode = CollectionIndexNode()
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.disableAnimations))
         
@@ -751,15 +749,13 @@ final class ContactListNode: ASDisplayNode {
         super.init()
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        if self.indexNode == nil {
-            self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
-        }
+        //self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         
         self.selectionStateValue = selectionState
         self.selectionStatePromise.set(.single(selectionState))
         
         self.addSubnode(self.listNode)
-        self.indexNode.flatMap(self.addSubnode)
+        self.addSubnode(self.indexNode)
         self.addSubnode(self.authorizationNode)
         
         let processingQueue = Queue()
@@ -775,7 +771,7 @@ final class ContactListNode: ASDisplayNode {
             self?.openPeer?(peer)
         })
         
-        self.indexNode?.indexSelected = { [weak self] section in
+        self.indexNode.indexSelected = { [weak self] section in
             guard let strongSelf = self, let entries = previousEntries.with({ $0 }) else {
                 return
             }
@@ -811,124 +807,132 @@ final class ContactListNode: ASDisplayNode {
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<ContactsListNodeTransition, NoError>
         let themeAndStringsPromise = self.themeAndStringsPromise
-        if case let .search(query, searchChatList, searchDeviceContacts) = presentation {
-            transition = query
-            |> mapToSignal { query in
-                let foundLocalContacts: Signal<([Peer], [PeerId : PeerPresence]), NoError>
-                if searchChatList {
-                    let foundChatListPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
-                    foundLocalContacts = foundChatListPeers
-                    |> mapToSignal { peers -> Signal<([Peer], [PeerId : PeerPresence]), NoError> in
-                        var resultPeers: [Peer] = []
-                        for peer in peers {
-                            if peer.peerId.namespace != Namespaces.Peer.CloudUser {
-                                continue
-                            }
-                            if let mainPeer = peer.chatMainPeer {
-                                resultPeers.append(mainPeer)
-                            }
-                        }
-                        return account.postbox.transaction { transaction -> ([Peer], [PeerId : PeerPresence]) in
-                            var resultPresences: [PeerId: PeerPresence] = [:]
-                            for peer in resultPeers {
-                                if let presence = transaction.getPeerPresence(peerId: peer.id) {
-                                    resultPresences[peer.id] = presence
+        
+        transition = presentation
+        |> mapToSignal { presentation in
+            var generateSections = false
+            if case .natural = presentation {
+                generateSections = true
+            }
+            
+            if case let .search(query, searchChatList, searchDeviceContacts) = presentation {
+                return query
+                |> mapToSignal { query in
+                    let foundLocalContacts: Signal<([Peer], [PeerId : PeerPresence]), NoError>
+                    if searchChatList {
+                        let foundChatListPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
+                        foundLocalContacts = foundChatListPeers
+                        |> mapToSignal { peers -> Signal<([Peer], [PeerId : PeerPresence]), NoError> in
+                            var resultPeers: [Peer] = []
+                            for peer in peers {
+                                if peer.peerId.namespace != Namespaces.Peer.CloudUser {
+                                    continue
+                                }
+                                if let mainPeer = peer.chatMainPeer {
+                                    resultPeers.append(mainPeer)
                                 }
                             }
-                            return (resultPeers, resultPresences)
+                            return account.postbox.transaction { transaction -> ([Peer], [PeerId : PeerPresence]) in
+                                var resultPresences: [PeerId: PeerPresence] = [:]
+                                for peer in resultPeers {
+                                    if let presence = transaction.getPeerPresence(peerId: peer.id) {
+                                        resultPresences[peer.id] = presence
+                                    }
+                                }
+                                return (resultPeers, resultPresences)
+                            }
                         }
+                    } else {
+                        foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
                     }
-                } else {
-                    foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
-                }
-                let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
-                |> then(
-                    searchPeers(account: account, query: query)
-                    |> map { ($0.0, $0.1) }
-                    |> delay(0.2, queue: Queue.concurrentDefaultQueue())
-                )
-                let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData], NoError>
-                if searchDeviceContacts {
-                    foundDeviceContacts = account.telegramApplicationContext.contactDataManager.search(query: query)
-                } else {
-                    foundDeviceContacts = .single([:])
-                }
-                
-                return combineLatest(foundLocalContacts, foundRemoteContacts, foundDeviceContacts, selectionStateSignal, themeAndStringsPromise.get())
-                |> mapToQueue { localPeersAndStatuses, remotePeers, deviceContacts, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
-                    let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
-                        var existingPeerIds = Set<PeerId>()
-                        var disabledPeerIds = Set<PeerId>()
-
-                        var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
-                        for filter in filters {
-                            switch filter {
-                                case .excludeSelf:
-                                    existingPeerIds.insert(account.peerId)
-                                case let .exclude(peerIds):
-                                    existingPeerIds = existingPeerIds.union(peerIds)
-                                case let .disable(peerIds):
-                                    disabledPeerIds = disabledPeerIds.union(peerIds)
-                            }
-                        }
-                        
-                        var peers: [ContactListPeer] = []
-                        for peer in localPeersAndStatuses.0 {
-                            if !existingPeerIds.contains(peer.id) {
-                                existingPeerIds.insert(peer.id)
-                                peers.append(.peer(peer: peer, isGlobal: false))
-                                if searchDeviceContacts, let user = peer as? TelegramUser, let phone = user.phone {
-                                    existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                                }
-                            }
-                        }
-                        for peer in remotePeers.0 {
-                            if peer.peer is TelegramUser {
-                                if !existingPeerIds.contains(peer.peer.id) {
-                                    existingPeerIds.insert(peer.peer.id)
-                                    peers.append(.peer(peer: peer.peer, isGlobal: true))
-                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
-                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                                    }
-                                }
-                            }
-                        }
-                        for peer in remotePeers.1 {
-                            if peer.peer is TelegramUser {
-                                if !existingPeerIds.contains(peer.peer.id) {
-                                    existingPeerIds.insert(peer.peer.id)
-                                    peers.append(.peer(peer: peer.peer, isGlobal: true))
-                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
-                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                                    }
-                                }
-                            }
-                        }
-                        
-                        outer: for (stableId, contact) in deviceContacts {
-                            inner: for phoneNumber in contact.phoneNumbers {
-                                let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
-                                if existingNormalizedPhoneNumbers.contains(normalizedNumber) {
-                                    continue outer
-                                }
-                            }
-                            peers.append(.deviceContact(stableId, contact))
-                        }
-                        
-                        let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true))
-                        let previous = previousEntries.swap(entries)
-                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none))
+                    let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
+                    |> then(
+                        searchPeers(account: account, query: query)
+                        |> map { ($0.0, $0.1) }
+                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                    )
+                    let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData], NoError>
+                    if searchDeviceContacts {
+                        foundDeviceContacts = account.telegramApplicationContext.contactDataManager.search(query: query)
+                    } else {
+                        foundDeviceContacts = .single([:])
                     }
                     
-                    if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
-                        return signal |> runOn(Queue.mainQueue())
-                    } else {
-                        return signal |> runOn(processingQueue)
+                    return combineLatest(foundLocalContacts, foundRemoteContacts, foundDeviceContacts, selectionStateSignal, themeAndStringsPromise.get())
+                    |> mapToQueue { localPeersAndStatuses, remotePeers, deviceContacts, selectionState, themeAndStrings -> Signal<ContactsListNodeTransition, NoError> in
+                        let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
+                            var existingPeerIds = Set<PeerId>()
+                            var disabledPeerIds = Set<PeerId>()
+
+                            var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
+                            for filter in filters {
+                                switch filter {
+                                    case .excludeSelf:
+                                        existingPeerIds.insert(account.peerId)
+                                    case let .exclude(peerIds):
+                                        existingPeerIds = existingPeerIds.union(peerIds)
+                                    case let .disable(peerIds):
+                                        disabledPeerIds = disabledPeerIds.union(peerIds)
+                                }
+                            }
+                            
+                            var peers: [ContactListPeer] = []
+                            for peer in localPeersAndStatuses.0 {
+                                if !existingPeerIds.contains(peer.id) {
+                                    existingPeerIds.insert(peer.id)
+                                    peers.append(.peer(peer: peer, isGlobal: false))
+                                    if searchDeviceContacts, let user = peer as? TelegramUser, let phone = user.phone {
+                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                    }
+                                }
+                            }
+                            for peer in remotePeers.0 {
+                                if peer.peer is TelegramUser {
+                                    if !existingPeerIds.contains(peer.peer.id) {
+                                        existingPeerIds.insert(peer.peer.id)
+                                        peers.append(.peer(peer: peer.peer, isGlobal: true))
+                                        if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                            existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                        }
+                                    }
+                                }
+                            }
+                            for peer in remotePeers.1 {
+                                if peer.peer is TelegramUser {
+                                    if !existingPeerIds.contains(peer.peer.id) {
+                                        existingPeerIds.insert(peer.peer.id)
+                                        peers.append(.peer(peer: peer.peer, isGlobal: true))
+                                        if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                            existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            outer: for (stableId, contact) in deviceContacts {
+                                inner: for phoneNumber in contact.phoneNumbers {
+                                    let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
+                                    if existingNormalizedPhoneNumbers.contains(normalizedNumber) {
+                                        continue outer
+                                    }
+                                }
+                                peers.append(.deviceContact(stableId, contact))
+                            }
+                            
+                            let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true))
+                            let previous = previousEntries.swap(entries)
+                            return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none))
+                        }
+                        
+                        if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
+                            return signal |> runOn(Queue.mainQueue())
+                        } else {
+                            return signal |> runOn(processingQueue)
+                        }
                     }
                 }
-            }
-        } else {
-            transition = (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get(), contactsAuthorization.get(), contactsWarningSuppressed.get())
+            } else {
+                return (combineLatest(self.contactPeersViewPromise.get(), selectionStateSignal, themeAndStringsPromise.get(), contactsAuthorization.get(), contactsWarningSuppressed.get())
                 |> mapToQueue { view, selectionState, themeAndStrings, authorizationStatus, warningSuppressed -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
                         var peers = view.peers.map({ ContactListPeer.peer(peer: $0, isGlobal: false) })
@@ -998,6 +1002,7 @@ final class ContactListNode: ASDisplayNode {
                     }
                 })
                 |> deliverOnMainQueue
+            }
         }
         self.disposable.set(transition.start(next: { [weak self] transition in
             self?.enqueueTransition(transition)
@@ -1127,7 +1132,7 @@ final class ContactListNode: ASDisplayNode {
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-        if let indexNode = self.indexNode, let indexSections = self.indexSections {
+        if let indexSections = self.indexSections {
             var insets = layout.insets(options: [.input])
             if let inputHeight = layout.inputHeight {
                 insets.bottom -= inputHeight
@@ -1137,7 +1142,7 @@ final class ContactListNode: ASDisplayNode {
             
             let indexNodeFrame = CGRect(origin: CGPoint(x: layout.size.width - insets.right - 20.0, y: insets.top), size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom))
             transition.updateFrame(node: indexNode, frame: indexNodeFrame)
-            indexNode.update(size: indexNodeFrame.size, color: self.presentationData.theme.list.itemAccentColor, sections: indexSections, transition: transition)
+            self.indexNode.update(size: indexNodeFrame.size, color: self.presentationData.theme.list.itemAccentColor, sections: indexSections, transition: transition)
         }
         
         self.authorizationNode.updateLayout(size: layout.size, insets: insets, transition: transition)
@@ -1168,11 +1173,11 @@ final class ContactListNode: ASDisplayNode {
                 } else if transition.animation != .none {
                     if transition.animation == .insertion {
                         options.insert(.AnimateInsertion)
-                    } else if case .orderedByPresence = self.presentation {
+                    } else if let presentation = self.presentation, case .orderedByPresence = presentation {
                         options.insert(.AnimateCrossfade)
                     }
                 }
-                if let indexNode = self.indexNode, let layout = self.validLayout {
+                if let layout = self.validLayout {
                     self.indexSections = transition.indexSections
                     
                     var insets = layout.insets(options: [.input])
@@ -1184,9 +1189,9 @@ final class ContactListNode: ASDisplayNode {
                     }
                     
                     let indexNodeFrame = CGRect(origin: CGPoint(x: layout.size.width - insets.right - 20.0, y: insets.top), size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom))
-                    indexNode.frame = indexNodeFrame
-                    
-                    indexNode.update(size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom), color: self.presentationData.theme.list.itemAccentColor, sections: transition.indexSections, transition: .immediate)
+                    self.indexNode.frame = indexNodeFrame
+
+                    self.indexNode.update(size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom), color: self.presentationData.theme.list.itemAccentColor, sections: transition.indexSections, transition: .animated(duration: 0.2, curve: .easeInOut))
                 }
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {

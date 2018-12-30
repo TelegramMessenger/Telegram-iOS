@@ -803,9 +803,8 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
             return nil
         } |> deliverOnMainQueue).start(next: { link in
             if let link = link {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                let controller = ShareProxyServerActionSheetController(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: .complete(), link: link)
-                presentControllerImpl?(controller, nil)
+                let shareController = ShareController(account: account, subject: .url(link))
+                presentControllerImpl?(shareController, nil)
             }
         })
     })

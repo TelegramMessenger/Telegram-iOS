@@ -222,6 +222,18 @@ public final class PrincipalThemeAdditionalGraphics {
     public let chatBubbleActionButtonOutgoingBottomRightImage: UIImage
     public let chatBubbleActionButtonOutgoingBottomSingleImage: UIImage
     
+    public let chatBubbleActionButtonIncomingMessageIconImage: UIImage
+    public let chatBubbleActionButtonIncomingLinkIconImage: UIImage
+    public let chatBubbleActionButtonIncomingShareIconImage: UIImage
+    public let chatBubbleActionButtonIncomingPhoneIconImage: UIImage
+    public let chatBubbleActionButtonIncomingLocationIconImage: UIImage
+    
+    public let chatBubbleActionButtonOutgoingMessageIconImage: UIImage
+    public let chatBubbleActionButtonOutgoingLinkIconImage: UIImage
+    public let chatBubbleActionButtonOutgoingShareIconImage: UIImage
+    public let chatBubbleActionButtonOutgoingPhoneIconImage: UIImage
+    public let chatBubbleActionButtonOutgoingLocationIconImage: UIImage
+    
     init(_ theme: PresentationThemeChat, wallpaper: TelegramWallpaper) {
         let serviceColor = serviceMessageColorComponents(chatTheme: theme, wallpaper: wallpaper)
         self.chatServiceBubbleFillImage = generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context -> Void in
@@ -243,5 +255,15 @@ public final class PrincipalThemeAdditionalGraphics {
         self.chatBubbleActionButtonOutgoingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsOutgoingStrokeColor, position: .bottomLeft)
         self.chatBubbleActionButtonOutgoingBottomRightImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsOutgoingStrokeColor, position: .bottomRight)
         self.chatBubbleActionButtonOutgoingBottomSingleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingFillColor, wallpaper: wallpaper), strokeColor: theme.bubble.actionButtonsOutgoingStrokeColor, position: .bottomSingle)
+        self.chatBubbleActionButtonIncomingMessageIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: theme.bubble.actionButtonsIncomingTextColor)!
+        self.chatBubbleActionButtonIncomingLinkIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: theme.bubble.actionButtonsIncomingTextColor)!
+        self.chatBubbleActionButtonIncomingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: theme.bubble.actionButtonsIncomingTextColor)!
+        self.chatBubbleActionButtonIncomingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: theme.bubble.actionButtonsIncomingTextColor)!
+        self.chatBubbleActionButtonIncomingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: theme.bubble.actionButtonsIncomingTextColor)!
+        self.chatBubbleActionButtonOutgoingMessageIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: theme.bubble.actionButtonsOutgoingTextColor)!
+        self.chatBubbleActionButtonOutgoingLinkIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: theme.bubble.actionButtonsOutgoingTextColor)!
+        self.chatBubbleActionButtonOutgoingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: theme.bubble.actionButtonsOutgoingTextColor)!
+        self.chatBubbleActionButtonOutgoingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: theme.bubble.actionButtonsOutgoingTextColor)!
+        self.chatBubbleActionButtonOutgoingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: theme.bubble.actionButtonsOutgoingTextColor)!
     }
 }

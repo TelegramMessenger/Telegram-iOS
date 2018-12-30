@@ -127,7 +127,7 @@ public enum RadialStatusNodeState: Equatable {
 public final class RadialStatusNode: ASControlNode {
     var backgroundNodeColor: UIColor {
         didSet {
-            self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), animated: false, completion: {})
+            self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: false, completion: {})
         }
     }
     
@@ -152,7 +152,7 @@ public final class RadialStatusNode: ASControlNode {
             if contentNode !== self.contentNode {
                 self.transitionToContentNode(contentNode, state: state, fromState: fromState, backgroundColor: state.backgroundColor(color: self.backgroundNodeColor), animated: animated, completion: completion)
             } else {
-                self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), animated: animated, completion: completion)
+                self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: animated, completion: completion)
             }
         } else {
             completion()
@@ -177,13 +177,13 @@ public final class RadialStatusNode: ASControlNode {
                             if let contentNode = strongSelf.contentNode {
                                 strongSelf.addSubnode(contentNode)
                                 contentNode.frame = strongSelf.bounds
-                                contentNode.prepareAnimateIn()
+                                contentNode.prepareAnimateIn(from: fromState)
                                 if strongSelf.isNodeLoaded {
                                     contentNode.layout()
                                     contentNode.animateIn(from: fromState)
                                 }
                             }
-                            strongSelf.transitionToBackgroundColor(backgroundColor, animated: animated, completion: completion)
+                            strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
                         })
                     } else {
                         previousContentNode.removeFromSupernode()
@@ -195,7 +195,7 @@ public final class RadialStatusNode: ASControlNode {
                                 contentNode.layout()
                             }
                         }
-                        strongSelf.transitionToBackgroundColor(backgroundColor, animated: animated, completion: completion)
+                        strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: nil, animated: animated, completion: completion)
                     }
                 }
             }
@@ -203,14 +203,14 @@ public final class RadialStatusNode: ASControlNode {
             self.contentNode = node
             if let contentNode = self.contentNode {
                 contentNode.frame = self.bounds
-                contentNode.prepareAnimateIn()
+                contentNode.prepareAnimateIn(from: nil)
                 self.addSubnode(contentNode)
             }
-            self.transitionToBackgroundColor(backgroundColor, animated: animated, completion: completion)
+            self.transitionToBackgroundColor(backgroundColor, previousContentNode: nil, animated: animated, completion: completion)
         }
     }
     
-    private func transitionToBackgroundColor(_ color: UIColor?, animated: Bool, completion: @escaping () -> Void) {
+    private func transitionToBackgroundColor(_ color: UIColor?, previousContentNode: RadialStatusContentNode?, animated: Bool, completion: @escaping () -> Void) {
         let currentColor = self.backgroundNode?.color
         
         var updated = false
@@ -235,7 +235,9 @@ public final class RadialStatusNode: ASControlNode {
             } else if let backgroundNode = self.backgroundNode {
                 self.backgroundNode = nil
                 if animated {
-                    backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak backgroundNode] _ in
+                    backgroundNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    previousContentNode?.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak backgroundNode] _ in
                         backgroundNode?.removeFromSupernode()
                         completion()
                     })

@@ -120,7 +120,7 @@ func legacyLocationPalette(from theme: PresentationTheme) -> TGLocationPallete {
     return TGLocationPallete(backgroundColor: listTheme.plainBackgroundColor, selectionColor: listTheme.itemHighlightedBackgroundColor, separatorColor: listTheme.itemPlainSeparatorColor, textColor: listTheme.itemPrimaryTextColor, secondaryTextColor: listTheme.itemSecondaryTextColor, accentColor: listTheme.itemAccentColor, destructiveColor: listTheme.itemDestructiveColor, locationColor: UIColor(rgb: 0x008df2), liveLocationColor: UIColor(rgb: 0xff6464), iconColor: searchTheme.backgroundColor, sectionHeaderBackgroundColor: theme.chatList.sectionHeaderFillColor, sectionHeaderTextColor: theme.chatList.sectionHeaderTextColor, searchBarPallete: TGSearchBarPallete(dark: theme.overallDarkAppearance, backgroundColor: searchTheme.backgroundColor, highContrastBackgroundColor: searchTheme.backgroundColor, textColor: searchTheme.inputTextColor, placeholderColor: searchTheme.inputPlaceholderTextColor, clearIcon: generateClearIcon(color: theme.rootController.activeNavigationSearchBar.inputClearButtonColor), barBackgroundColor: searchTheme.backgroundColor, barSeparatorColor: searchTheme.separatorColor, plainBackgroundColor: searchTheme.backgroundColor, accentColor: searchTheme.accentColor, accentContrastColor: searchTheme.backgroundColor, menuBackgroundColor: searchTheme.backgroundColor, segmentedControlBackgroundImage: nil, segmentedControlSelectedImage: nil, segmentedControlHighlightedImage: nil, segmentedControlDividerImage: nil), avatarPlaceholder: nil)
 }
 
-func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, account: Account, modal: Bool, openPeer: @escaping (Peer) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, stopLiveLocation: @escaping () -> Void, openUrl: @escaping (String) -> Void) -> ViewController {
+func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, account: Account, isModal: Bool, openPeer: @escaping (Peer) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, stopLiveLocation: @escaping () -> Void, openUrl: @escaping (String) -> Void) -> ViewController {
     let legacyLocation = TGLocationMediaAttachment()
     legacyLocation.latitude = mapMedia.latitude
     legacyLocation.longitude = mapMedia.longitude
@@ -130,7 +130,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, acc
     
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     
-    let legacyController = LegacyController(presentation: modal ? .modal(animateIn: true) : .navigation, theme: presentationData.theme, strings: presentationData.strings)
+    let legacyController = LegacyController(presentation: isModal ? .modal(animateIn: true) : .navigation, theme: presentationData.theme, strings: presentationData.strings)
     let controller: TGLocationViewController
     
     if let message = message {
@@ -227,7 +227,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, acc
     let theme = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme
     controller.pallete = legacyLocationPalette(from: theme)
     
-    controller.modalMode = modal
+    controller.modalMode = isModal
     controller.presentActionsMenu = { [weak legacyController] legacyLocation, directions in
         if let strongLegacyController = legacyController, let location = legacyLocation {
             let map = telegramMap(for: location)
@@ -249,7 +249,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, acc
         }
     }
     
-    if modal {
+    if isModal {
         let navigationController = TGNavigationController(controllers: [controller])!
         legacyController.bind(controller: navigationController)
         controller.navigation_setDismiss({ [weak legacyController] in

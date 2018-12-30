@@ -218,48 +218,50 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
     }
     
     let continueHandling: () -> Void = {
+        let handleRevolvedUrl: (ResolvedUrl) -> Void = { resolved in
+            if case let .externalUrl(value) = resolved {
+                applicationContext.applicationBindings.openUrl(value)
+            } else {
+                openResolvedUrl(resolved, account: account, navigationController: navigationController, openPeer: { peerId, navigation in
+                    switch navigation {
+                        case .info:
+                            let _ = (account.postbox.loadedPeerWithId(peerId)
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    if let infoController = peerInfoController(account: account, peer: peer) {
+                                        if let navigationController = navigationController {
+                                            navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                        }
+                                        navigationController?.pushViewController(infoController)
+                                    }
+                                })
+                        case let .chat(_, messageId):
+                            if let navigationController = navigationController {
+                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), messageId: messageId)
+                            }
+                        case let .withBotStartPayload(payload):
+                            if let navigationController = navigationController {
+                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
+                                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
+                            }
+                        default:
+                            break
+                    }
+                }, present: { c, a in
+                    account.telegramApplicationContext.applicationBindings.dismissNativeController()
+                    
+                    c.presentationArguments = a
+                    
+                    account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(c, on: .root, blockInteraction: false, completion: {})
+                }, dismissInput: {
+                    dismissInput()
+                })
+            }
+        }
+        
         let handleInternalUrl: (String) -> Void = { url in
             let _ = (resolveUrl(account: account, url: url)
-            |> deliverOnMainQueue).start(next: { resolved in
-                if case let .externalUrl(value) = resolved {
-                    applicationContext.applicationBindings.openUrl(value)
-                } else {
-                    openResolvedUrl(resolved, account: account, navigationController: navigationController, openPeer: { peerId, navigation in
-                        switch navigation {
-                            case .info:
-                                let _ = (account.postbox.loadedPeerWithId(peerId)
-                                    |> deliverOnMainQueue).start(next: { peer in
-                                        if let infoController = peerInfoController(account: account, peer: peer) {
-                                            if let navigationController = navigationController {
-                                                navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                            }
-                                            navigationController?.pushViewController(infoController)
-                                        }
-                                    })
-                            case let .chat(_, messageId):
-                                if let navigationController = navigationController {
-                                    navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                    navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), messageId: messageId)
-                                }
-                            case let .withBotStartPayload(payload):
-                                if let navigationController = navigationController {
-                                    navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                    navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
-                                }
-                            default:
-                                break
-                        }
-                    }, present: { c, a in
-                        account.telegramApplicationContext.applicationBindings.dismissNativeController()
-                        
-                        c.presentationArguments = a
-                            
-                        account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(c, on: .root, blockInteraction: false, completion: {})
-                    }, dismissInput: {
-                        dismissInput()
-                    })
-                }
-            })
+            |> deliverOnMainQueue).start(next: handleRevolvedUrl)
         }
         
         if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == applicationContext.applicationBindings.appSpecificScheme), let query = parsedUrl.query {
@@ -327,6 +329,26 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                     }
                     if let lang = lang {
                         convertedUrl = "https://t.me/setlanguage/\(lang)"
+                    }
+                }
+            } else if parsedUrl.host == "msg" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var sharePhoneNumber: String?
+                    var shareText: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "to" {
+                                    sharePhoneNumber = value
+                                } else if queryItem.name == "text" {
+                                    shareText = value
+                                }
+                            }
+                        }
+                    }
+                    if sharePhoneNumber != nil || shareText != nil {
+                        handleRevolvedUrl(.share(url: nil, text: shareText, to: sharePhoneNumber))
+                        return
                     }
                 }
             } else if parsedUrl.host == "msg_url" {

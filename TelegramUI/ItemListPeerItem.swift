@@ -381,7 +381,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             
             let editingOffset: CGFloat
             if item.editing.editing {
-                let sizeAndApply = editableControlLayout(48.0, item.theme, false)
+                let sizeAndApply = editableControlLayout(50.0, item.theme, false)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0.width
             } else {
@@ -425,7 +425,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     break
                 }
             }
-            let contentSize = CGSize(width: params.width, height: 48.0)
+            let contentSize = CGSize(width: params.width, height: 50.0)
             let separatorHeight = UIScreenPixel
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -544,8 +544,8 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: statusAttributedString == nil ? 13.0 : 5.0), size: titleLayout.size))
-                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 25.0), size: statusLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: statusAttributedString == nil ? 14.0 : 6.0), size: titleLayout.size))
+                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 27.0), size: statusLayout.size))
                     
                     if let currentSwitchNode = currentSwitchNode {
                         if currentSwitchNode !== strongSelf.switchNode {
@@ -608,7 +608,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
 
                     transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - rightLabelInset - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size))
                     
-                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0)))
+                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
                     
                     if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor)
@@ -616,7 +616,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 48.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))
                     
                     if let presence = item.presence as? TelegramUserPresence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)
@@ -711,7 +711,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         
         transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - self.labelNode.bounds.size.width - rightLabelInset, y: self.labelNode.frame.minY), size: self.labelNode.bounds.size))
         
-        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + params.leftInset + 12.0, y: self.avatarNode.frame.minY), size: CGSize(width: 40.0, height: 40.0)))
+        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + params.leftInset + 15.0, y: self.avatarNode.frame.minY), size: CGSize(width: 40.0, height: 40.0)))
     }
     
     override func revealOptionsInteractivelyOpened() {

@@ -1362,7 +1362,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             }
             
             if canCreateInviteLink {
-                options.append(ContactListAdditionalOption(title: presentationData.strings.GroupInfo_InviteByLink, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/LinkActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
+                options.append(ContactListAdditionalOption(title: presentationData.strings.GroupInfo_InviteByLink, icon: .generic(UIImage(bundleImageName: "Contact List/LinkActionIcon")!), action: {
                     inviteByLinkImpl?()
                 }))
             }

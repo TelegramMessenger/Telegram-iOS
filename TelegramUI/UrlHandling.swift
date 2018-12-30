@@ -19,7 +19,7 @@ enum ParsedInternalUrl {
     case internalInstantView(url: String)
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
-    case share(url: String, text: String?)
+    case share(url: String?, text: String?, to: String?)
 }
 
 private enum ParsedUrl {
@@ -40,7 +40,7 @@ enum ResolvedUrl {
     case localization(String)
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
-    case share(url: String, text: String?)
+    case share(url: String?, text: String?, to: String?)
 }
 
 func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -163,7 +163,7 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         }
                         
                         if let url = url {
-                            return .share(url: url, text: text)
+                            return .share(url: url, text: text, to: nil)
                         }
                     }
                     return nil
@@ -231,8 +231,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             return .single(.confirmationCode(code))
         case let .cancelAccountReset(phone, hash):
             return .single(.cancelAccountReset(phone: phone, hash: hash))
-        case let .share(url, text):
-            return .single(.share(url: url, text: text))
+        case let .share(url, text, to):
+            return .single(.share(url: url, text: text, to: to))
     }
 }
 

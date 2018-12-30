@@ -20,7 +20,7 @@ class RadialStatusContentNode: ASDisplayNode {
         self.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
     }
     
-    func prepareAnimateIn() {
+    func prepareAnimateIn(from: RadialStatusNodeState?) {
     }
     
     func animateIn(from: RadialStatusNodeState) {

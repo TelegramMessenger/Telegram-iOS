@@ -61,6 +61,14 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
+            var hasReplyMarkup: Bool = false
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
+                    hasReplyMarkup = true
+                    break
+                }
+            }
+            
             let bubbleInsets: UIEdgeInsets
             let sizeCalculation: InteractiveMediaNodeSizeCalculation
             
@@ -91,6 +99,8 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 var updatedPosition: ChatMessageBubbleContentPosition = position
                 if forceFullCorners, case .linear = updatedPosition {
                     updatedPosition = .linear(top: .None(.None(.None)), bottom: .None(.None(.None)))
+                } else if hasReplyMarkup, case let .linear(top, _) = updatedPosition {
+                    updatedPosition = .linear(top: top, bottom: .Neighbour)
                 }
                 
                 let imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: updatedPosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)

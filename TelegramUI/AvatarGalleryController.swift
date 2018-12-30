@@ -273,7 +273,7 @@ class AvatarGalleryController: ViewController {
     override func loadDisplayNode() {
         let controllerInteraction = GalleryControllerInteraction(presentController: { [weak self] controller, arguments in
             if let strongSelf = self {
-                strongSelf.present(controller, in: .window(.root), with: arguments)
+                strongSelf.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
             }
         }, dismissController: { [weak self] in
             self?.dismiss(forceAway: true)

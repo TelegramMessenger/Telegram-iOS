@@ -72,6 +72,7 @@
 		099529AE21D045C400805E13 /* ThemeGridActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AD21D045C400805E13 /* ThemeGridActionNode.swift */; };
 		099529B021D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */; };
 		099529B221D24F5800805E13 /* RadialDownloadContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */; };
+		099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B321D3E5D800805E13 /* CheckDiskSpace.swift */; };
 		09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */; };
 		09B4EE4721A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4621A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift */; };
 		09B4EE4D21A7B73800847FA6 /* PermissionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4C21A7B73800847FA6 /* PermissionController.swift */; };
@@ -1177,6 +1178,7 @@
 		099529AD21D045C400805E13 /* ThemeGridActionNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeGridActionNode.swift; sourceTree = "<group>"; };
 		099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageUnsupportedBubbleContentNode.swift; sourceTree = "<group>"; };
 		099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialDownloadContentNode.swift; sourceTree = "<group>"; };
+		099529B321D3E5D800805E13 /* CheckDiskSpace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckDiskSpace.swift; sourceTree = "<group>"; };
 		09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySecureIdScanController.swift; sourceTree = "<group>"; };
 		09B4EE4621A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSessionsEmptyStateItem.swift; sourceTree = "<group>"; };
 		09B4EE4C21A7B73800847FA6 /* PermissionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionController.swift; sourceTree = "<group>"; };
@@ -4668,6 +4670,7 @@
 				0902838C2194AEB90067EFBD /* ImageTransparency.swift */,
 				09C9EA32219F79F600E90146 /* ID3Artwork.h */,
 				09C9EA31219F79F500E90146 /* ID3Artwork.m */,
+				099529B321D3E5D800805E13 /* CheckDiskSpace.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5289,6 +5292,7 @@
 				D0E9BA671F055B5500F079A4 /* BotCheckoutNativeCardEntryControllerNode.swift in Sources */,
 				D0EC6D291EB9F58800EBF1C3 /* FetchVideoMediaResource.swift in Sources */,
 				D0AFCC791F4C8D2C000720C6 /* InstantPageSlideshowItem.swift in Sources */,
+				099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */,
 				D04281EF200E3D88009DDE36 /* GroupInfoSearchItem.swift in Sources */,
 				D02660941F34CE5C000E2DC5 /* LegacyLocationVenueIconDataSource.swift in Sources */,
 				D081E104217F57D2003CD921 /* LanguageLinkPreviewController.swift in Sources */,

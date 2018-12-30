@@ -199,7 +199,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
             case let .map(mapMedia):
                 dismissInput()
                 
-                let controller = legacyLocationController(message: message, mapMedia: mapMedia, account: account, modal: modal, openPeer: { peer in
+                let controller = legacyLocationController(message: message, mapMedia: mapMedia, account: account, isModal: modal, openPeer: { peer in
                     openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
                     let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)

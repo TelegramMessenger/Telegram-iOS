@@ -293,7 +293,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             let editingOffset: CGFloat
             var editableControlSizeAndApply: (CGSize, () -> ItemListEditableControlNode)?
             if item.editing {
-                let sizeAndApply = editableControlLayout(56.0, item.theme, false)
+                let sizeAndApply = editableControlLayout(50.0, item.theme, false)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0.width
             } else {
@@ -420,7 +420,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 56.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 50.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             let outgoingIcon = PresentationResourcesCallList.outgoingIcon(item.theme)
             let infoIcon = PresentationResourcesCallList.infoButton(item.theme)
@@ -522,13 +522,13 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 })
                             }
                             
-                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: 8.0), size: CGSize(width: 40.0, height: 40.0)))
+                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
                             
                             let _ = titleApply()
-                            transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 8.0), size: titleLayout.size))
+                            transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 6.0), size: titleLayout.size))
                             
                             let _ = statusApply()
-                            transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 30.0), size: statusLayout.size))
+                            transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 27.0), size: statusLayout.size))
                             
                             let _ = dateApply()
                             transition.updateFrame(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + params.width - dateRightInset - dateLayout.size.width, y: floor((nodeLayout.contentSize.height - dateLayout.size.height) / 2.0) + 2.0), size: dateLayout.size))

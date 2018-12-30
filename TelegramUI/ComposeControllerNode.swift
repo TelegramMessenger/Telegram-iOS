@@ -34,17 +34,17 @@ final class ComposeControllerNode: ASDisplayNode {
         var openCreateNewSecretChatImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
-        self.contactListNode = ContactListNode(account: account, presentation: .natural(displaySearch: true, options: [
-            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
+        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(displaySearch: true, options: [
+            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: .generic(UIImage(bundleImageName: "Contact List/CreateGroupActionIcon")!), action: {
                 openCreateNewGroupImpl?()
             }),
-            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewEncryptedChat, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateSecretChatActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
+            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewEncryptedChat, icon: .generic(UIImage(bundleImageName: "Contact List/CreateSecretChatActionIcon")!), action: {
                 openCreateNewSecretChatImpl?()
             }),
-            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateChannelActionIcon"), color: presentationData.theme.list.itemAccentColor), action: {
+            ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: .generic(UIImage(bundleImageName: "Contact List/CreateChannelActionIcon")!), action: {
                 openCreateNewChannelImpl?()
             })
-        ]), displayPermissionPlaceholder: false)
+        ])), displayPermissionPlaceholder: false)
         
         super.init()
         

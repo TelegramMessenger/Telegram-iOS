@@ -886,7 +886,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 }
                             }))
                         }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
@@ -2474,6 +2474,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             let requestId = strongSelf.beginMediaRecordingRequestId
             let begin: () -> Void = {
                 guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
+                    return
+                }
+                guard checkAvailableDiskSpace(account: strongSelf.account, present: { [weak self] c, a in
+                    self?.present(c, in: .window(.root), with: a)
+                }) else {
                     return
                 }
                 let hasOngoingCall: Signal<Bool, NoError>
@@ -4877,7 +4882,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         self.chatDisplayNode.dismissInput()
-        self.present(controller, in: .window(.root))
+        self.present(controller, in: .window(.root), blockInteraction: true)
     }
     
     private func openPeer(peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: Message?) {
@@ -5444,7 +5449,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 
                 switch strongSelf.peekActions {
                     case .standard:
-                        if let peer = data.peer {
+                        if let peer = data.peer, peer.id != strongSelf.account.peerId {
                             if let _ = data.peer as? TelegramUser {
                                 items.append(UIPreviewAction(title: "👍", style: .default, handler: { _, _ in
                                     if let strongSelf = self {

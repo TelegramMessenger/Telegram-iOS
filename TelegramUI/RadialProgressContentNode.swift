@@ -301,7 +301,7 @@ final class RadialProgressContentNode: RadialStatusContentNode {
         self.cancelNode.layer.animateRotation(from: 0.0, to: CGFloat.pi / 3.0, duration: duration)
     }
     
-    override func prepareAnimateIn() {
+    override func prepareAnimateIn(from: RadialStatusNodeState?) {
         self.ready = true
         self.spinnerNode.progress = self.progress
     }

@@ -9,10 +9,14 @@ private let titleFont = Font.medium(16.0)
 private final class ChatMessageActionButtonNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     private var titleNode: TextNode?
+    private var iconNode: ASImageNode?
     private var buttonView: HighlightTrackingButton?
     
     private var button: ReplyMarkupButton?
     var pressed: ((ReplyMarkupButton) -> Void)?
+    var longTapped: ((ReplyMarkupButton) -> Void)?
+    
+    var longTapRecognizer: UILongPressGestureRecognizer?
     
     override init() {
         self.backgroundNode = ASImageNode()
@@ -45,11 +49,22 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 }
             }
         }
+        
+        let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longTapGesture(_:)))
+        longTapRecognizer.minimumPressDuration = 0.3
+        buttonView.addGestureRecognizer(longTapRecognizer)
+        self.longTapRecognizer = longTapRecognizer
     }
     
     @objc func buttonPressed() {
         if let button = self.button, let pressed = self.pressed {
             pressed(button)
+        }
+    }
+    
+    @objc func longTapGesture(_ recognizer: UILongPressGestureRecognizer) {
+        if let button = self.button, let longTapped = self.longTapped, recognizer.state == .began {
+            longTapped(button)
         }
     }
     
@@ -83,9 +98,25 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 case .bottomLeft:
                     backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomLeftImage : graphics.chatBubbleActionButtonOutgoingBottomLeftImage
                 case .bottomRight:
-                    backgroundImage = incoming ?  graphics.chatBubbleActionButtonIncomingBottomRightImage : graphics.chatBubbleActionButtonOutgoingBottomRightImage
+                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomRightImage : graphics.chatBubbleActionButtonOutgoingBottomRightImage
                 case .bottomSingle:
-                    backgroundImage = incoming ?  graphics.chatBubbleActionButtonIncomingBottomSingleImage : graphics.chatBubbleActionButtonOutgoingBottomSingleImage
+                    backgroundImage = incoming ? graphics.chatBubbleActionButtonIncomingBottomSingleImage : graphics.chatBubbleActionButtonOutgoingBottomSingleImage
+            }
+            
+            let iconImage: UIImage?
+            switch button.action {
+                case .text:
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingMessageIconImage : graphics.chatBubbleActionButtonOutgoingMessageIconImage
+                case .url:
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLinkIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                case .requestPhone:
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPhoneIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                case .requestMap:
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLocationIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                case .switchInline:
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                default:
+                    iconImage = nil
             }
             
             return (titleSize.size.width + sideInset + sideInset, { width in
@@ -99,8 +130,28 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     
                     node.button = button
                     
+                    switch button.action {
+                        case .url:
+                            node.longTapRecognizer?.isEnabled = true
+                        default:
+                            node.longTapRecognizer?.isEnabled = false
+                    }
+                    
                     node.backgroundNode.image = backgroundImage
                     node.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
+                    
+                    if iconImage != nil {
+                        if node.iconNode == nil {
+                            let iconNode = ASImageNode()
+                            iconNode.contentMode = .center
+                            node.iconNode = iconNode
+                            node.addSubnode(iconNode)
+                        }
+                        node.iconNode?.image = iconImage
+                    } else if node.iconNode != nil {
+                        node.iconNode?.removeFromSupernode()
+                        node.iconNode = nil
+                    }
                     
                     let titleNode = titleApply()
                     if node.titleNode !== titleNode {
@@ -110,7 +161,9 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     }
                     titleNode.frame = CGRect(origin: CGPoint(x: floor((width - titleSize.size.width) / 2.0), y: floor((42.0 - titleSize.size.height) / 2.0) + 1.0), size: titleSize.size)
                     
+                    
                     node.buttonView?.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
+                    node.iconNode?.frame = CGRect(x: width - 16.0, y: 4.0, width: 12.0, height: 12.0)
                     
                     return node
                 })
@@ -123,7 +176,9 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
     private var buttonNodes: [ChatMessageActionButtonNode] = []
     
     private var buttonPressedWrapper: ((ReplyMarkupButton) -> Void)?
+    private var buttonLongTappedWrapper: ((ReplyMarkupButton) -> Void)?
     var buttonPressed: ((ReplyMarkupButton) -> Void)?
+    var buttonLongTapped: ((ReplyMarkupButton) -> Void)?
     
     override init() {
         super.init()
@@ -131,6 +186,12 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         self.buttonPressedWrapper = { [weak self] button in
             if let buttonPressed = self?.buttonPressed {
                 buttonPressed(button)
+            }
+        }
+        
+        self.buttonLongTappedWrapper = { [weak self] button in
+            if let buttonLongTapped = self?.buttonLongTapped {
+                buttonLongTapped(button)
             }
         }
     }
@@ -230,6 +291,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                         if buttonNode.supernode == nil {
                             node.addSubnode(buttonNode)
                             buttonNode.pressed = node.buttonPressedWrapper
+                            buttonNode.longTapped = node.buttonLongTappedWrapper
                         }
                         index += 1
                     }
