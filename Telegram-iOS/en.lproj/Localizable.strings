@@ -3595,6 +3595,8 @@ Unused sets are archived when you add more.";
 "Watch.Message.Call" = "Call";
 "Watch.Message.Game" = "Game";
 "Watch.Message.Invoice" = "Invoice";
+"Watch.Message.Poll" = "Poll";
+"Watch.Message.Unsupported" = "Unsupported Message";
 
 "Notifications.ExceptionsResetToDefaults" = "Reset to Defaults";
 
@@ -3690,7 +3692,7 @@ Unused sets are archived when you add more.";
 "Permissions.NotificationsAllow.v0" = "Turn Notifications ON";
 "Permissions.NotificationsAllowInSettings.v0" = "Turn ON in Settings";
 
-"Permissions.CellularDataTitle.v0" = "Turn ON Notifications";
+"Permissions.CellularDataTitle.v0" = "Enable Cellular Data";
 "Permissions.CellularDataText.v0" = "Don't worry, Telegram keeps network usage to a minimum. You can further control this in Settings > Data and Storage.";
 "Permissions.CellularDataAllowInSettings.v0" = "Turn ON in Settings";
 
@@ -3776,6 +3778,14 @@ Unused sets are archived when you add more.";
 
 "Conversation.UnsupportedMediaPlaceholder" = "This message is not supported on your version of Telegram. Please update to the latest version.";
 "Conversation.UpdateTelegram" = "UPDATE TELEGRAM";
+
+"Cache.LowDiskSpaceText" = "Your phone has run out of available storage. Please free some space to download or upload media.";
+
+"Contacts.SortBy" = "Sort by";
+"Contacts.SortByName" = "Name";
+"Contacts.SortByPresence" = "Last Seen";
+"Contacts.SortedByName" = "Sorted by Name";
+"Contacts.SortedByPresence" = "Sorted by Last Seen";
 
 "GroupInfo.Permissions" = "Permissions";
 "GroupInfo.Permissions.Title" = "Permissions";
