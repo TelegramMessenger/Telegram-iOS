@@ -108,7 +108,7 @@ open class NavigationBar: ASDisplayNode {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     private var requestedLayout: Bool = false
     
-    var backPressed: () -> () = { }
+    public var backPressed: () -> () = { }
     
     private var collapsed: Bool {
         get {
