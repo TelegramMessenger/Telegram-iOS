@@ -8,16 +8,14 @@ private final class ChannelAdminsControllerArguments {
     let account: Account
     
     let openRecentActions: () -> Void
-    let updateCurrentAdministrationType: () -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removeAdmin: (PeerId) -> Void
     let addAdmin: () -> Void
     let openAdmin: (ChannelParticipant) -> Void
     
-    init(account: Account, openRecentActions: @escaping () -> Void, updateCurrentAdministrationType: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removeAdmin: @escaping (PeerId) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void) {
+    init(account: Account, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removeAdmin: @escaping (PeerId) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void) {
         self.account = account
         self.openRecentActions = openRecentActions
-        self.updateCurrentAdministrationType = updateCurrentAdministrationType
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removeAdmin = removeAdmin
         self.addAdmin = addAdmin
@@ -63,8 +61,6 @@ private enum ChannelAdminsEntryStableId: Hashable {
 
 private enum ChannelAdminsEntry: ItemListNodeEntry {
     case recentActions(PresentationTheme, String)
-    case administrationType(PresentationTheme, String, String)
-    case administrationInfo(PresentationTheme, String)
     
     case adminsHeader(PresentationTheme, String)
     case adminPeerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Bool, Int32, RenderedChannelParticipant, ItemListPeerItemEditing, Bool)
@@ -73,7 +69,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .recentActions, .administrationType, .administrationInfo:
+            case .recentActions:
                 return ChannelAdminsSection.administration.rawValue
             case .adminsHeader, .adminPeerItem, .addAdmin, .adminsInfo:
                 return ChannelAdminsSection.admins.rawValue
@@ -84,10 +80,6 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
         switch self {
             case .recentActions:
                 return .index(0)
-            case .administrationType:
-                return .index(1)
-            case .administrationInfo:
-                return .index(2)
             case .adminsHeader:
                 return .index(3)
             case .addAdmin:
@@ -103,18 +95,6 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
         switch lhs {
             case let .recentActions(lhsTheme, lhsText):
                 if case let .recentActions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .administrationType(lhsTheme, lhsText, lhsValue):
-                if case let .administrationType(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .administrationInfo(lhsTheme, lhsText):
-                if case let .administrationInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -177,30 +157,16 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
         switch lhs {
             case .recentActions:
                 return true
-            case .administrationType:
+            case .adminsHeader:
                 switch rhs {
                     case .recentActions:
                         return false
                     default:
                         return true
                 }
-            case .administrationInfo:
-                switch rhs {
-                    case .recentActions, .administrationType:
-                        return false
-                    default:
-                        return true
-                }
-            case .adminsHeader:
-                switch rhs {
-                    case .recentActions, .administrationType, .administrationInfo:
-                        return false
-                    default:
-                        return true
-                }
             case let .adminPeerItem(_, _, _, _, _, index, _, _, _):
                 switch rhs {
-                    case .recentActions, .administrationType, .administrationInfo, .adminsHeader, .addAdmin:
+                    case .recentActions, .adminsHeader, .addAdmin:
                         return false
                     case let .adminPeerItem(_, _, _, _, _, rhsIndex, _, _, _):
                         return index < rhsIndex
@@ -209,7 +175,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 }
             case .addAdmin:
                 switch rhs {
-                    case .recentActions, .administrationType, .administrationInfo, .adminsHeader, .addAdmin:
+                    case .recentActions, .adminsHeader, .addAdmin:
                         return false
                     default:
                         return true
@@ -225,12 +191,6 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openRecentActions()
                 })
-            case let .administrationType(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    arguments.updateCurrentAdministrationType()
-                })
-            case let .administrationInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .adminsHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
             case let .adminPeerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled):
@@ -269,13 +229,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     }
 }
 
-private enum CurrentAdministrationType {
-    case everyoneCanAddMembers
-    case adminsCanAddMembers
-}
-
 private struct ChannelAdminsControllerState: Equatable {
-    let selectedType: CurrentAdministrationType?
     let editing: Bool
     let peerIdWithRevealedOptions: PeerId?
     let removingPeerId: PeerId?
@@ -284,7 +238,6 @@ private struct ChannelAdminsControllerState: Equatable {
     let searchingMembers: Bool
 
     init() {
-        self.selectedType = nil
         self.editing = false
         self.peerIdWithRevealedOptions = nil
         self.removingPeerId = nil
@@ -293,8 +246,7 @@ private struct ChannelAdminsControllerState: Equatable {
         self.searchingMembers = false
     }
     
-    init(selectedType: CurrentAdministrationType?, editing: Bool, peerIdWithRevealedOptions: PeerId?, removingPeerId: PeerId?, removedPeerIds: Set<PeerId>, temporaryAdmins: [RenderedChannelParticipant], searchingMembers: Bool) {
-        self.selectedType = selectedType
+    init(editing: Bool, peerIdWithRevealedOptions: PeerId?, removingPeerId: PeerId?, removedPeerIds: Set<PeerId>, temporaryAdmins: [RenderedChannelParticipant], searchingMembers: Bool) {
         self.editing = editing
         self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
         self.removingPeerId = removingPeerId
@@ -304,9 +256,6 @@ private struct ChannelAdminsControllerState: Equatable {
     }
     
     static func ==(lhs: ChannelAdminsControllerState, rhs: ChannelAdminsControllerState) -> Bool {
-        if lhs.selectedType != rhs.selectedType {
-            return false
-        }
         if lhs.editing != rhs.editing {
             return false
         }
@@ -330,31 +279,27 @@ private struct ChannelAdminsControllerState: Equatable {
     }
     
     func withUpdatedSearchingMembers(_ searchingMembers: Bool) -> ChannelAdminsControllerState {
-        return ChannelAdminsControllerState(selectedType: self.selectedType, editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: searchingMembers)
-    }
-    
-    func withUpdatedSelectedType(_ selectedType: CurrentAdministrationType?) -> ChannelAdminsControllerState {
-        return ChannelAdminsControllerState(selectedType: selectedType, editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
+        return ChannelAdminsControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: searchingMembers)
     }
     
     func withUpdatedEditing(_ editing: Bool) -> ChannelAdminsControllerState {
-        return ChannelAdminsControllerState(selectedType: self.selectedType, editing: editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
+        return ChannelAdminsControllerState(editing: editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> ChannelAdminsControllerState {
-        return ChannelAdminsControllerState(selectedType: self.selectedType, editing: self.editing, peerIdWithRevealedOptions: peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
+        return ChannelAdminsControllerState(editing: self.editing, peerIdWithRevealedOptions: peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedRemovingPeerId(_ removingPeerId: PeerId?) -> ChannelAdminsControllerState {
-        return ChannelAdminsControllerState(selectedType: self.selectedType, editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
+        return ChannelAdminsControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedRemovedPeerIds(_ removedPeerIds: Set<PeerId>) -> ChannelAdminsControllerState {
-        return ChannelAdminsControllerState(selectedType: self.selectedType, editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
+        return ChannelAdminsControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
     }
     
     func withUpdatedTemporaryAdmins(_ temporaryAdmins: [RenderedChannelParticipant]) -> ChannelAdminsControllerState {
-        return ChannelAdminsControllerState(selectedType: self.selectedType, editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: temporaryAdmins, searchingMembers: self.searchingMembers)
+        return ChannelAdminsControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: temporaryAdmins, searchingMembers: self.searchingMembers)
     }
 }
 
@@ -371,33 +316,6 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             isGroup = true
             
             entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
-            
-            if peer.flags.contains(.isCreator) {
-                let selectedType: CurrentAdministrationType
-                if let current = state.selectedType {
-                    selectedType = current
-                } else {
-                    if info.flags.contains(.everyMemberCanInviteMembers) {
-                        selectedType = .everyoneCanAddMembers
-                    } else {
-                        selectedType = .adminsCanAddMembers
-                    }
-                }
-                let selectedTypeValue: String
-                let infoText: String
-                switch selectedType {
-                    case .everyoneCanAddMembers:
-                        selectedTypeValue = presentationData.strings.ChannelMembers_WhoCanAddMembers_AllMembers
-                        infoText = presentationData.strings.ChannelMembers_WhoCanAddMembersAllHelp
-                    case .adminsCanAddMembers:
-                        selectedTypeValue = presentationData.strings.ChannelMembers_WhoCanAddMembers_Admins
-                        infoText = presentationData.strings.ChannelMembers_WhoCanAddMembersAdminsHelp
-                }
-                
-                entries.append(.administrationType(presentationData.theme, presentationData.strings.ChannelMembers_WhoCanAddMembers, selectedTypeValue))
-                
-                entries.append(.administrationInfo(presentationData.theme, infoText))
-            }
         } else {
             entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
         }
@@ -405,7 +323,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
         if let participants = participants {
             entries.append(.adminsHeader(presentationData.theme, isGroup ? presentationData.strings.ChannelMembers_GroupAdminsTitle : presentationData.strings.ChannelMembers_ChannelAdminsTitle))
             
-            if peer.hasAdminRights(.canAddAdmins) {
+            if peer.hasPermission(.addAdmins) {
                 entries.append(.addAdmin(presentationData.theme, presentationData.strings.Channel_Management_AddModerator, state.editing))
             }
             
@@ -462,7 +380,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 }
             }
             
-            if peer.hasAdminRights(.canAddAdmins) {
+            if peer.hasPermission(.addAdmins) {
                 let info = isGroup ? presentationData.strings.Group_Management_AddModeratorHelp : presentationData.strings.Channel_Management_AddModeratorHelp
                 entries.append(.adminsInfo(presentationData.theme, info))
             }
@@ -483,9 +401,6 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
-    
-    let updateAdministrationDisposable = MetaDisposable()
-    actionsDisposable.add(updateAdministrationDisposable)
 
     let removeAdminDisposable = MetaDisposable()
     actionsDisposable.add(removeAdminDisposable)
@@ -502,56 +417,6 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
         |> deliverOnMainQueue).start(next: { peer in
             pushControllerImpl?(ChatRecentActionsController(account: account, peer: peer))
         })
-    }, updateCurrentAdministrationType: {
-        let _ = (presentationDataSignal |> take(1) |> deliverOnMainQueue).start(next: { presentationData in
-            let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
-            let result = ValuePromise<Bool>()
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.ChannelMembers_WhoCanAddMembers_AllMembers, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    result.set(true)
-                }),
-                ActionSheetButtonItem(title: presentationData.strings.ChannelMembers_WhoCanAddMembers_Admins, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    result.set(false)
-                })
-            ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-            ])])
-            let updateSignal = result.get()
-                |> take(1)
-                |> mapToSignal { value -> Signal<Void, NoError> in
-                    updateState { state in
-                        return state.withUpdatedSelectedType(value ? .everyoneCanAddMembers : .adminsCanAddMembers)
-                    }
-                    
-                    return account.postbox.loadedPeerWithId(peerId)
-                    |> mapToSignal { peer -> Signal<Void, NoError> in
-                        if let peer = peer as? TelegramChannel, case let .group(info) = peer.info {
-                            var updatedValue: Bool?
-                            if value && !info.flags.contains(.everyMemberCanInviteMembers) {
-                                updatedValue = true
-                            } else if !value && info.flags.contains(.everyMemberCanInviteMembers) {
-                                updatedValue = false
-                            }
-                            if let updatedValue = updatedValue {
-                                return updateGroupManagementType(account: account, peerId: peerId, type: updatedValue ? .unrestricted : .restrictedToAdmins)
-                                |> `catch` { _ -> Signal<Void, NoError> in
-                                    return .complete()
-                                }
-                            } else {
-                                return .complete()
-                            }
-                        } else {
-                            return .complete()
-                        }
-                    }
-                }
-            updateAdministrationDisposable.set(updateSignal.start())
-            presentControllerImpl?(actionSheet, nil)
-        })
     }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
@@ -564,7 +429,7 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
         updateState {
             return $0.withUpdatedRemovingPeerId(adminId)
         }
-        removeAdminDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChannelAdminRights(flags: []))
+        removeAdminDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: []))
         |> deliverOnMainQueue).start(completed: {
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
@@ -572,8 +437,9 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
         }))
     }, addAdmin: {
         updateState { current in
-            
-            presentControllerImpl?(ChannelMembersSearchController(account: account, peerId: peerId, mode: .promote, filters: [], openPeer: { peer, participant in
+            var dismissController: (() -> Void)?
+            let controller = ChannelMembersSearchController(account: account, peerId: peerId, mode: .promote, filters: [], openPeer: { peer, participant in
+                dismissController?()
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 if peer.id == account.peerId {
                     return
@@ -591,7 +457,11 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                 }
                 presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
                 }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            })
+            dismissController = { [weak controller] in
+                controller?.dismiss()
+            }
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             
             return current
         }

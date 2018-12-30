@@ -215,4 +215,8 @@ enum PresentationResourceKey: Int32 {
     
     case inAppNotificationBackground
     case inAppNotificationSecretChatIcon
+    
+    case groupInfoAdminsIcon
+    case groupInfoPermissionsIcon
+    case groupInfoMembersIcon
 }

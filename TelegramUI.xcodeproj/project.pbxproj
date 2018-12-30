@@ -385,6 +385,7 @@
 		D0AB262F21C3D3DE008F6685 /* CreatePollController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262E21C3D3DE008F6685 /* CreatePollController.swift */; };
 		D0AB263121C3DB21008F6685 /* CreatePollOptionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB263021C3DB21008F6685 /* CreatePollOptionItem.swift */; };
 		D0AB263321C3DFEA008F6685 /* CreatePollOptionActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB263221C3DFEA008F6685 /* CreatePollOptionActionItem.swift */; };
+		D0AB269E21D56A12008F6685 /* ChannelPermissionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB269D21D56A12008F6685 /* ChannelPermissionsController.swift */; };
 		D0ACCB1A1EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB191EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift */; };
 		D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */; };
 		D0AD02E81FFFDE5F00C1DCFF /* ChatMessageLiveLocationTimerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD02E71FFFDE5F00C1DCFF /* ChatMessageLiveLocationTimerNode.swift */; };
@@ -1793,6 +1794,7 @@
 		D0AB262E21C3D3DE008F6685 /* CreatePollController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollController.swift; sourceTree = "<group>"; };
 		D0AB263021C3DB21008F6685 /* CreatePollOptionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollOptionItem.swift; sourceTree = "<group>"; };
 		D0AB263221C3DFEA008F6685 /* CreatePollOptionActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollOptionActionItem.swift; sourceTree = "<group>"; };
+		D0AB269D21D56A12008F6685 /* ChannelPermissionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelPermissionsController.swift; sourceTree = "<group>"; };
 		D0ACCB191EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerKeyPreviewNode.swift; sourceTree = "<group>"; };
 		D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageCallBubbleContentNode.swift; sourceTree = "<group>"; };
 		D0AD02E71FFFDE5F00C1DCFF /* ChatMessageLiveLocationTimerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageLiveLocationTimerNode.swift; sourceTree = "<group>"; };
@@ -4089,6 +4091,7 @@
 				D00BDA1E1EE5B69200C64C5E /* ChannelAdminController.swift */,
 				D0F680091EE750EE000E5906 /* ChannelBannedMemberController.swift */,
 				D0B98E7E1E575D2C008084B1 /* ChannelBlacklistController.swift */,
+				D0AB269D21D56A12008F6685 /* ChannelPermissionsController.swift */,
 				D0613FC71E5F8AB100202CDB /* ChannelInfoController.swift */,
 				D0613FCC1E60482300202CDB /* ChannelMembersController.swift */,
 				D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */,
@@ -5226,6 +5229,7 @@
 				D0EC6D0C1EB9F58800EBF1C3 /* stream.c in Sources */,
 				D0EC6D0D1EB9F58800EBF1C3 /* MediaFrameSource.swift in Sources */,
 				D0EC6D0E1EB9F58800EBF1C3 /* MediaPlaybackData.swift in Sources */,
+				D0AB269E21D56A12008F6685 /* ChannelPermissionsController.swift in Sources */,
 				D0EC6D0F1EB9F58800EBF1C3 /* MediaPlayer.swift in Sources */,
 				D0EC6D101EB9F58800EBF1C3 /* MediaPlayerAudioRenderer.swift in Sources */,
 				D0EC6D111EB9F58800EBF1C3 /* MediaPlayerNode.swift in Sources */,

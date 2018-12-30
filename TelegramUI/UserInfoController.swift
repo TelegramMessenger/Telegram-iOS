@@ -887,7 +887,7 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
                 viewSettings = GlobalNotificationSettingsSet.defaultSettings
             }
             
-            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.privateChats, updateSettings: { value in
+            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.privateChats, soundSettings: nil, openSoundSettings: {}, updateSettings: { value in
                 changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

@@ -54,7 +54,6 @@ private enum ChannelInfoSection: ItemListSectionId {
     case info
     case discriptionAndType
     case sharedMediaAndNotifications
-    case signMessages
     case members
     case reportOrLeave
 }
@@ -71,7 +70,6 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     case channelPhotoSetup(theme: PresentationTheme, text: String)
     case channelTypeSetup(theme: PresentationTheme, text: String, value: String)
     case channelDescriptionSetup(theme: PresentationTheme, placeholder: String, value: String)
-    case channelDescriptionSetupInfo(theme: PresentationTheme, text: String)
     case admins(theme: PresentationTheme, text: String, value: String)
     case members(theme: PresentationTheme, text: String, value: String)
     case banned(theme: PresentationTheme, text: String, value: String)
@@ -86,16 +84,14 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .info, .about, .addressName, .channelPhotoSetup:
+            case .info, .about, .addressName, .channelPhotoSetup, .channelDescriptionSetup:
                 return ChannelInfoSection.info.rawValue
-            case .channelDescriptionSetup, .channelDescriptionSetupInfo, .channelTypeSetup:
+            case .channelTypeSetup, .signMessages, .signInfo:
                 return ChannelInfoSection.discriptionAndType.rawValue
             case .admins, .members, .banned:
                 return ChannelInfoSection.members.rawValue
             case .sharedMedia, .notifications, .notificationSound:
                 return ChannelInfoSection.sharedMediaAndNotifications.rawValue
-            case .signMessages, .signInfo:
-                return ChannelInfoSection.signMessages.rawValue
             case .report, .leave, .deleteChannel:
                 return ChannelInfoSection.reportOrLeave.rawValue
         }
@@ -111,22 +107,20 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return 2
             case .about:
                 return 3
-            case .channelTypeSetup:
-                return 4
             case .channelDescriptionSetup:
+                return 4
+            case .channelTypeSetup:
                 return 5
-            case .channelDescriptionSetupInfo:
+            case .signMessages:
                 return 6
-            case .admins:
+            case .signInfo:
                 return 7
-            case .banned:
+            case .admins:
                 return 8
             case .members:
                 return 9
-            case .signMessages:
+            case .banned:
                 return 10
-            case .signInfo:
-                return 11
             case .notifications:
                 return 12
             case .notificationSound:
@@ -206,12 +200,6 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 }
             case let .channelDescriptionSetup(lhsTheme, lhsPlaceholder, lhsValue):
                 if case let .channelDescriptionSetup(rhsTheme, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .channelDescriptionSetupInfo(lhsTheme, lhsText):
-                if case let .channelDescriptionSetupInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -323,18 +311,16 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 }, action: {
                     
                 })
-            case let .channelDescriptionSetupInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section, style: .plain)
             case let .admins(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoAdminsIcon(theme), title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openAdmins()
                 })
             case let .members(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoMembersIcon(theme), title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openMembers()
                 })
             case let .banned(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoPermissionsIcon(theme), title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openBanned()
                 })
             case let .signMessages(theme, text, value):
@@ -437,73 +423,64 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
     var entries: [ChannelInfoEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramChannel {
-        let canEditChannel = peer.hasAdminRights(.canChangeInfo)
-        let canEditMembers = peer.hasAdminRights(.canBanUsers)
+        let canEditChannel = peer.hasPermission(.changeInfo)
+        let canEditMembers = peer.hasPermission(.banMembers)
         
         let infoState = ItemListAvatarAndNameInfoItemState(editingName: canEditChannel ? state.editingState?.editingName : nil, updatingName: nil)
         entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer, cachedData: view.cachedData, state: infoState, updatingAvatar: state.updatingAvatar))
         
-        if state.editingState != nil && canEditChannel {
+        if let editingState = state.editingState, canEditChannel {
             entries.append(.channelPhotoSetup(theme: presentationData.theme, text: presentationData.strings.Channel_UpdatePhotoItem))
+            entries.append(.channelDescriptionSetup(theme: presentationData.theme, placeholder: presentationData.strings.Channel_About_Placeholder, value: editingState.editingDescriptionText))
         }
         
-        if state.editingState != nil && peer.flags.contains(.isCreator) {
+        if let _ = state.editingState, peer.flags.contains(.isCreator) {
             let linkText: String
             if let username = peer.username {
                 linkText = "@\(username)"
             } else {
                 linkText = presentationData.strings.Channel_Setup_TypePrivate
             }
-            entries.append(.channelTypeSetup(theme: presentationData.theme, text: presentationData.strings.Channel_Edit_LinkItem, value: linkText))
+            entries.append(.channelTypeSetup(theme: presentationData.theme, text: presentationData.strings.Channel_TypeSetup_Title, value: linkText))
+            let messagesShouldHaveSignatures:Bool
+            switch peer.info {
+                case let .broadcast(info):
+                    messagesShouldHaveSignatures = info.flags.contains(.messagesShouldHaveSignatures)
+                default:
+                    messagesShouldHaveSignatures = false
+            }
             
-
+            entries.append(.signMessages(theme: presentationData.theme, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures))
+            entries.append(.signInfo(theme: presentationData.theme, text: presentationData.strings.Channel_SignMessages_Help))
         } else if let username = peer.username, !username.isEmpty, state.editingState == nil {
             entries.append(.addressName(theme: presentationData.theme, text: presentationData.strings.Channel_LinkItem, value: username))
         }
         
         if let cachedChannelData = view.cachedData as? CachedChannelData {
-            if let editingState = state.editingState, canEditChannel {
-                entries.append(.channelDescriptionSetup(theme: presentationData.theme, placeholder: presentationData.strings.Channel_Edit_AboutItem, value: editingState.editingDescriptionText))
-                entries.append(.channelDescriptionSetupInfo(theme: presentationData.theme, text: presentationData.strings.Channel_About_Help))
-                
-                let messagesShouldHaveSignatures:Bool
-                switch peer.info {
-                case let .broadcast(info):
-                    messagesShouldHaveSignatures = info.flags.contains(.messagesShouldHaveSignatures)
-                default:
-                    messagesShouldHaveSignatures = false
-                }
-                
-                entries.append(.signMessages(theme: presentationData.theme, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures))
-                entries.append(.signInfo(theme: presentationData.theme, text: presentationData.strings.Channel_SignMessages_Help))
-
+            if let _ = state.editingState, canEditChannel {
             } else {
                 if let about = cachedChannelData.about, !about.isEmpty {
                     entries.append(.about(theme: presentationData.theme, text: presentationData.strings.Channel_AboutItem, value: about))
                 }
             }
-            
-            
         }
         
-       
-        
         if let cachedChannelData = view.cachedData as? CachedChannelData {
-            if state.editingState == nil && canEditMembers {
+            if state.editingState != nil && canEditMembers {
                 if peer.adminRights != nil || peer.flags.contains(.isCreator) {
                     let adminCount = cachedChannelData.participantsSummary.adminCount ?? 0
-                    entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Management, value: "\(adminCount == 0 ? "" : "\(adminCount)")"))
+                    entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Administrators, value: "\(adminCount == 0 ? "" : "\(adminCount)")"))
                     
-                    let bannedCount = cachedChannelData.participantsSummary.kickedCount ?? 0
-                    entries.append(.banned(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Banned, value: "\(bannedCount == 0 ? "" : "\(bannedCount)")"))
-
                     let memberCount = cachedChannelData.participantsSummary.memberCount ?? 0
                     entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Subscribers, value: "\(memberCount == 0 ? "" : "\(memberCount)")"))
+                    
+                    let bannedCount = cachedChannelData.participantsSummary.kickedCount ?? 0
+                    entries.append(.banned(theme: presentationData.theme, text: presentationData.strings.GroupRemoved_Title, value: "\(bannedCount == 0 ? "" : "\(bannedCount)")"))
                 }
             }
         }
         
-        if let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings {
+        if state.editingState == nil, let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings {
             let notificationsText: String
             if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                 if until < Int32.max - 1 {
@@ -516,14 +493,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             }
             entries.append(ChannelInfoEntry.notifications(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Notifications, value: notificationsText))
         }
-        if state.editingState != nil {
-            var messageSound: PeerMessageSound = .default
-            if let settings = view.notificationSettings as? TelegramPeerNotificationSettings {
-                messageSound = settings.messageSound
-            }
-            
-            entries.append(ChannelInfoEntry.notificationSound(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Sound, value: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: messageSound, default: globalNotificationSettings.effective.channels.sound)))
-        } else {
+        if state.editingState == nil {
             entries.append(ChannelInfoEntry.sharedMedia(theme: presentationData.theme, text: presentationData.strings.GroupInfo_SharedMedia))
         }
         
@@ -580,10 +550,6 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     var endEditingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
-    
-    if peerId.namespace == Namespaces.Peer.CloudChannel {
-        actionsDisposable.add(account.viewTracker.updatedCachedChannelParticipants(peerId, forceImmediateUpdate: true).start())
-    }
     
     let updatePeerNameDisposable = MetaDisposable()
     actionsDisposable.add(updatePeerNameDisposable)
@@ -747,7 +713,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 viewSettings = GlobalNotificationSettingsSet.defaultSettings
             }
             
-            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.channels, updateSettings: { value in
+            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.channels, soundSettings: nil, openSoundSettings: {}, updateSettings: { value in
                 changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

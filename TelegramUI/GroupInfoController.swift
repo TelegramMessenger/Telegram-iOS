@@ -17,10 +17,10 @@ private final class GroupInfoArguments {
     let pushController: (ViewController) -> Void
     let presentController: (ViewController, ViewControllerPresentationArguments) -> Void
     let changeNotificationMuteSettings: () -> Void
-    let changeNotificationSoundSettings: () -> Void
     let openPreHistory: () -> Void
     let openSharedMedia: () -> Void
-    let openAdminManagement: () -> Void
+    let openAdministrators: () -> Void
+    let openPermissions: () -> Void
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updateEditingDescriptionText: (String) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
@@ -36,7 +36,7 @@ private final class GroupInfoArguments {
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let openStickerPackSetup: () -> Void
     
-    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdminManagement: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void) {
+    init(account: Account, peerId: PeerId, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, convertToSupergroup: @escaping () -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void) {
         self.account = account
         self.peerId = peerId
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
@@ -45,10 +45,10 @@ private final class GroupInfoArguments {
         self.pushController = pushController
         self.presentController = presentController
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
-        self.changeNotificationSoundSettings = changeNotificationSoundSettings
         self.openPreHistory = openPreHistory
         self.openSharedMedia = openSharedMedia
-        self.openAdminManagement = openAdminManagement
+        self.openAdministrators = openAdministrators
+        self.openPermissions = openPermissions
         self.updateEditingName = updateEditingName
         self.updateEditingDescriptionText = updateEditingDescriptionText
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -134,20 +134,16 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, peer: Peer?, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setGroupPhoto(PresentationTheme, String)
     case groupDescriptionSetup(PresentationTheme, String, String)
-    case groupDescriptionSetupInfo(PresentationTheme, String)
     case aboutHeader(PresentationTheme, String)
     case about(PresentationTheme, String)
     case link(PresentationTheme, String)
     case sharedMedia(PresentationTheme, String)
     case notifications(PresentationTheme, String, String)
-    case notificationSound(PresentationTheme, String, String)
     case stickerPack(PresentationTheme, String, String)
-    case adminManagement(PresentationTheme, String)
     case groupTypeSetup(PresentationTheme, String, String)
     case preHistory(PresentationTheme, String, String)
-    case groupManagementInfoLabel(PresentationTheme, String, String)
-    case membersAdmins(PresentationTheme, String, String)
-    case membersBlacklist(PresentationTheme, String, String)
+    case administrators(PresentationTheme, String, String)
+    case permissions(PresentationTheme, String, String)
     case addMember(PresentationTheme, String, editing: Bool)
     case member(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, index: Int, peerId: PeerId, peer: Peer, participant: RenderedChannelParticipant?, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus, editing: ItemListPeerItemEditing, revealActions: [ParticipantRevealAction], enabled: Bool)
     case convertToSupergroup(PresentationTheme, String)
@@ -155,17 +151,17 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .info, .setGroupPhoto, .groupDescriptionSetup, .groupDescriptionSetupInfo:
+            case .info, .setGroupPhoto, .groupDescriptionSetup:
                 return GroupInfoSection.info.rawValue
             case .aboutHeader, .about, .link:
                 return GroupInfoSection.about.rawValue
-            case .groupTypeSetup, .preHistory, .groupManagementInfoLabel:
+            case .groupTypeSetup, .preHistory:
                 return GroupInfoSection.infoManagement.rawValue
-            case .sharedMedia, .notifications, .notificationSound, .adminManagement:
+            case .sharedMedia, .notifications:
                 return GroupInfoSection.sharedMediaAndNotifications.rawValue
             case .stickerPack:
                 return GroupInfoSection.stickerPack.rawValue
-            case .membersAdmins, .membersBlacklist:
+            case .permissions, .administrators:
                 return GroupInfoSection.memberManagement.rawValue
             case .addMember, .member:
                 return GroupInfoSection.members.rawValue
@@ -223,12 +219,6 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .groupDescriptionSetupInfo(lhsTheme, lhsText):
-                if case let .groupDescriptionSetupInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
             case let .sharedMedia(lhsTheme, lhsText):
                 if case let .sharedMedia(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -243,12 +233,6 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 }
             case let .convertToSupergroup(lhsTheme, lhsText):
                 if case let .convertToSupergroup(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .adminManagement(lhsTheme, lhsText):
-                if case let .adminManagement(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -286,12 +270,6 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .notificationSound(lhsTheme, lhsTitle, lhsValue):
-                if case let .notificationSound(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
             case let .stickerPack(lhsTheme, lhsTitle, lhsValue):
                 if case let .stickerPack(rhsTheme, rhsTitle, rhsValue) = rhs {
                     if lhsTheme !== rhsTheme {
@@ -319,20 +297,14 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .groupManagementInfoLabel(lhsTheme, lhsTitle, lhsText):
-                if case let .groupManagementInfoLabel(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
+            case let .permissions(lhsTheme, lhsTitle, lhsText):
+                if case let .permissions(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .membersAdmins(lhsTheme, lhsTitle, lhsText):
-                if case let .membersAdmins(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .membersBlacklist(lhsTheme, lhsTitle, lhsText):
-                if case let .membersBlacklist(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
+            case let .administrators(lhsTheme, lhsTitle, lhsText):
+                if case let .administrators(rhsTheme, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -412,34 +384,26 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return 1
             case .groupDescriptionSetup:
                 return 2
-            case .groupDescriptionSetupInfo:
-                return 3
             case .aboutHeader:
                 return 4
             case .about:
                 return 5
             case .link:
                 return 6
-            case .adminManagement:
-                return 7
             case .groupTypeSetup:
                 return 8
             case .preHistory:
                 return 9
             case .notifications:
                 return 10
-            case .notificationSound:
-                return 11
             case .stickerPack:
                 return 12
             case .sharedMedia:
                 return 13
-            case .groupManagementInfoLabel:
+            case .permissions:
                 return 14
-            case .membersAdmins:
+            case .administrators:
                 return 15
-            case .membersBlacklist:
-                return 16
             case .addMember:
                 return 17
             case let .member(_, _, _, _, index, _, _, _, _, _, _, _, _):
@@ -485,10 +449,6 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.changeNotificationMuteSettings()
                 })
-            case let .notificationSound(theme, title, value):
-                return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
-                    arguments.changeNotificationSoundSettings()
-                })
             case let .stickerPack(theme, title, value):
                 return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openStickerPackSetup()
@@ -500,10 +460,6 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .sharedMedia(theme, title):
                 return ItemListDisclosureItem(theme: theme, title: title, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openSharedMedia()
-                })
-            case let .adminManagement(theme, title):
-                return ItemListDisclosureItem(theme: theme, title: title, label: "", sectionId: self.section, style: .blocks, action: {
-                    arguments.openAdminManagement()
                 })
             case let .addMember(theme, title, editing):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: title, sectionId: self.section, editing: editing, action: {
@@ -519,15 +475,13 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 }, action: {
                     
                 })
-            case let .groupDescriptionSetupInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .membersAdmins(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
-                    arguments.pushController(channelAdminsController(account: arguments.account, peerId: arguments.peerId))
+            case let .permissions(theme, title, text):
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoPermissionsIcon(theme), title: title, label: text, sectionId: self.section, style: .blocks, action: {
+                    arguments.openPermissions()
                 })
-            case let .membersBlacklist(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, title: title, label: text, sectionId: self.section, style: .blocks, action: {
-                    arguments.pushController(channelBlacklistController(account: arguments.account, peerId: arguments.peerId))
+            case let .administrators(theme, title, text):
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoAdminsIcon(theme), title: title, label: text, sectionId: self.section, style: .blocks, action: {
+                    arguments.openAdministrators()
                 })
             case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled):
                 let label: String?
@@ -710,6 +664,32 @@ private func canRemoveParticipant(account: Account, isAdmin: Bool, participantId
     return isAdmin
 }
 
+private func canRemoveParticipant(account: Account, channel: TelegramChannel, participant: ChannelParticipant) -> Bool {
+    if participant.peerId == account.peerId {
+        return false
+    }
+    
+    if channel.flags.contains(.isCreator) {
+        return true
+    }
+    
+    switch participant {
+        case .creator:
+            return false
+        case let .member(_, _, adminInfo, _):
+            if channel.hasPermission(.banMembers) {
+                if let adminInfo = adminInfo {
+                    return adminInfo.promotedBy == account.peerId
+                } else {
+                    return false
+                }
+            } else {
+                return false
+            }
+    }
+}
+
+
 private func groupInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, channelMembers: [RenderedChannelParticipant], globalNotificationSettings: GlobalNotificationSettings, state: GroupInfoState) -> [GroupInfoEntry] {
     var entries: [GroupInfoEntry] = []
     
@@ -752,15 +732,13 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         highlightAdmins = true
         isPublic = channel.username != nil
         isCreator = channel.flags.contains(.isCreator)
-        if channel.hasAdminRights(.canChangeInfo) {
+        if channel.hasPermission(.changeInfo) {
             canEditGroupInfo = true
         }
-        if channel.hasAdminRights(.canBanUsers) {
+        if channel.hasPermission(.banMembers) {
             canEditMembers = true
         }
-        if channel.hasAdminRights(.canInviteUsers) {
-            canAddMembers = true
-        } else if case let .group(info) = channel.info, info.flags.contains(.everyMemberCanInviteMembers) {
+        if channel.hasPermission(.inviteMembers) {
             canAddMembers = true
         }
     }
@@ -788,18 +766,14 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             entries.append(GroupInfoEntry.setGroupPhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
             
             if view.peers[view.peerId] is TelegramChannel {
-                entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, editingState.editingDescriptionText))
-                entries.append(GroupInfoEntry.groupDescriptionSetupInfo(presentationData.theme, isGroup ? presentationData.strings.Group_About_Help : presentationData.strings.Channel_About_Help))
+                entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_About_Placeholder, editingState.editingDescriptionText))
             }
         }
         
         if let group = view.peers[view.peerId] as? TelegramGroup {
             if case .creator = group.role {
-                entries.append(.adminManagement(presentationData.theme, presentationData.strings.GroupInfo_ChatAdmins))
+                entries.append(.administrators(presentationData.theme, presentationData.strings.GroupInfo_Administrators, ""))
             }
-            
-            entries.append(GroupInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsText))
-            entries.append(GroupInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: peerNotificationSettings.messageSound, default: globalNotificationSettings.effective.groupChats.sound)))
         } else if let cachedChannelData = view.cachedData as? CachedChannelData {
             if isCreator {
                 entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
@@ -807,9 +781,6 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                     entries.append(GroupInfoEntry.preHistory(presentationData.theme, presentationData.strings.GroupInfo_GroupHistory, cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden))
                 }
             }
-            
-            entries.append(GroupInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsText))
-            entries.append(GroupInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: peerNotificationSettings.messageSound, default: globalNotificationSettings.effective.groupChats.sound)))
             
             if cachedChannelData.flags.contains(.canSetStickerSet) && canEditGroupInfo {
                 entries.append(GroupInfoEntry.stickerPack(presentationData.theme, presentationData.strings.Stickers_GroupStickers, cachedChannelData.stickerPack?.title ?? presentationData.strings.GroupInfo_SharedMediaNone))
@@ -825,16 +796,18 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             }
             
             if canViewAdminsAndBanned {
-                entries.append(GroupInfoEntry.membersAdmins(presentationData.theme, presentationData.strings.Channel_Info_Management, cachedChannelData.participantsSummary.adminCount.flatMap { "\($0)" } ?? ""))
-                
-                var restrictedAndBannedCount: Int32 = 0
-                if let restrictedCount = cachedChannelData.participantsSummary.bannedCount {
-                    restrictedAndBannedCount += restrictedCount
+                var activePermissionCount: Int?
+                if let defaultBannedRights = cachedChannelData.defaultBannedRights {
+                    var count = 0
+                    for right in allGroupPermissionList {
+                        if !defaultBannedRights.flags.contains(right) {
+                            count += 1
+                        }
+                    }
+                    activePermissionCount = count
                 }
-                if let bannedCount = cachedChannelData.participantsSummary.kickedCount {
-                    restrictedAndBannedCount += bannedCount
-                }
-                entries.append(GroupInfoEntry.membersBlacklist(presentationData.theme, presentationData.strings.Channel_Info_Banned, restrictedAndBannedCount != 0 ? "\(restrictedAndBannedCount)" : "" ))
+                entries.append(GroupInfoEntry.permissions(presentationData.theme, presentationData.strings.GroupInfo_Permissions, activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""))
+                entries.append(GroupInfoEntry.administrators(presentationData.theme, presentationData.strings.GroupInfo_Administrators, cachedChannelData.participantsSummary.adminCount.flatMap { "\($0)" } ?? ""))
             }
         }
     } else {
@@ -860,9 +833,9 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 break
             }
         }
-    } else if let cachedChannelData = view.cachedData as? CachedChannelData, let participants = cachedChannelData.topParticipants {
-        for participant in participants.participants {
-            if canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: participant.peerId, invitedBy: nil) {
+    } else if let channel = view.peers[view.peerId] as? TelegramChannel {
+        for participant in channelMembers {
+            if canRemoveParticipant(account: account, channel: channel, participant: participant.participant) {
                 canRemoveAnyMember = true
                 break
             }
@@ -969,7 +942,6 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
 
         var peerPresences: [PeerId: PeerPresence] = view.peerPresences
         var peers: [PeerId: Peer] = view.peers
-        var disabledPeerIds = state.removingParticipantIds
         
         if !state.temporaryParticipants.isEmpty {
             for participant in state.temporaryParticipants {
@@ -1047,12 +1019,12 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                     canPromote = false
                     canRestrict = false
                 case let .member(_, _, adminRights, bannedRights):
-                    if channel.hasAdminRights([.canAddAdmins]) {
+                    if channel.hasPermission(.addAdmins) {
                         canPromote = true
                     } else {
                         canPromote = false
                     }
-                    if channel.hasAdminRights([.canBanUsers]) {
+                    if channel.hasPermission(.banMembers) {
                         canRestrict = true
                     } else {
                         canRestrict = false
@@ -1081,8 +1053,8 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 peerActions.append(ParticipantRevealAction(type: .warning, title: presentationData.strings.GroupInfo_ActionRestrict, action: .restrict))
                 peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
             }
-                
-            entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: !peerActions.isEmpty, editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: !disabledPeerIds.contains(participant.peer.id)))
+            
+            entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: !peerActions.isEmpty, editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: true))
         }
     }
     
@@ -1147,10 +1119,6 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     var endEditingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
-    
-    if peerId.namespace == Namespaces.Peer.CloudChannel {
-        actionsDisposable.add(account.viewTracker.updatedCachedChannelParticipants(peerId, forceImmediateUpdate: true).start())
-    }
     
     let updatePeerNameDisposable = MetaDisposable()
     actionsDisposable.add(updatePeerNameDisposable)
@@ -1300,28 +1268,25 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         presentControllerImpl?(controller, presentationArguments)
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        actionsDisposable.add((account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications]) |> take(1) |> deliverOnMainQueue).start(next: { view in
-            
-            let viewSettings: GlobalNotificationSettingsSet
-            if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
-                viewSettings = settings.effective
-            } else {
-                viewSettings = GlobalNotificationSettingsSet.defaultSettings
-            }
-            
-            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.groupChats, updateSettings: { value in
-                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
-            })
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        }))
-    }, changeNotificationSoundSettings: {
         let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
             let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
-        } |> deliverOnMainQueue).start(next: { settings in
-            let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: settings.0.messageSound, defaultSound: settings.1.effective.groupChats.sound, completion: { sound in
-                let _ = updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound).start()
+        }
+        |> deliverOnMainQueue).start(next: { peerSettings, globalSettings in
+            let soundSettings: NotificationSoundSettings?
+            if case .default = peerSettings.messageSound {
+                soundSettings = NotificationSoundSettings(value: nil)
+            } else {
+                soundSettings = NotificationSoundSettings(value: peerSettings.messageSound)
+            }
+            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: globalSettings.effective.groupChats, soundSettings: soundSettings, openSoundSettings: {
+                let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: peerSettings.messageSound, defaultSound: globalSettings.effective.groupChats.sound, completion: { sound in
+                    let _ = updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound).start()
+                })
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }, updateSettings: { value in
+                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
@@ -1331,8 +1296,17 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         if let controller = peerSharedMediaController(account: account, peerId: peerId) {
             pushControllerImpl?(controller)
         }
-    }, openAdminManagement: {
-        pushControllerImpl?(groupAdminsController(account: account, peerId: peerId))
+    }, openAdministrators: {
+        if peerId.namespace == Namespaces.Peer.CloudGroup {
+            pushControllerImpl?(groupAdminsController(account: account, peerId: peerId))
+        } else {
+            pushControllerImpl?(channelAdminsController(account: account, peerId: peerId))
+        }
+    }, openPermissions: {
+        if peerId.namespace == Namespaces.Peer.CloudGroup {
+        } else {
+            pushControllerImpl?(channelPermissionsController(account: account, peerId: peerId))
+        }
     }, updateEditingName: { editingName in
         updateState { state in
             if let editingState = state.editingState {
@@ -1369,7 +1343,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             members.set(.single([]))
         }
         
-        let _ = (combineLatest(account.postbox.loadedPeerWithId(peerId)
+        let _ = (combineLatest(queue: .mainQueue(), account.postbox.loadedPeerWithId(peerId)
             |> deliverOnMainQueue, members.get() |> take(1) |> deliverOnMainQueue)).start(next: { groupPeer, recentIds in
             var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
             var options: [ContactListAdditionalOption] = []
@@ -1382,9 +1356,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     canCreateInviteLink = true
                 }
             } else if let channel = groupPeer as? TelegramChannel {
-                if channel.hasAdminRights(.canInviteUsers) {
-                    canCreateInviteLink = true
-                } else if case let .group(info) = channel.info, info.flags.contains(.everyMemberCanInviteMembers) {
+                if channel.hasPermission(.manageInviteLink) {
                     canCreateInviteLink = true
                 }
             }
@@ -1461,7 +1433,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                             }
                         }
                         
-                        return addPeerMember(account: account, peerId: peerId, memberId: memberId)
+                        return addGroupMember(account: account, peerId: peerId, memberId: memberId)
                         |> deliverOnMainQueue
                         |> afterCompleted {
                             updateState { state in
@@ -1543,17 +1515,17 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             if let contactsController = contactsController as? ContactSelectionController {
                 selectAddMemberDisposable.set((contactsController.result
-                    |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
-                        guard let memberPeer = memberPeer else {
-                            return
-                        }
-                        
-                        contactsController?.displayProgress = true
-                        addMemberDisposable.set((addMember(memberPeer)
-                            |> deliverOnMainQueue).start(completed: {
-                                contactsController?.dismiss()
-                            }))
-                    }))
+                |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
+                    guard let memberPeer = memberPeer else {
+                        return
+                    }
+                    
+                    contactsController?.displayProgress = true
+                    addMemberDisposable.set((addMember(memberPeer)
+                        |> deliverOnMainQueue).start(completed: {
+                            contactsController?.dismiss()
+                        }))
+                }))
                 contactsController.dismissed = {
                     selectAddMemberDisposable.set(nil)
                     addMemberDisposable.set(nil)
@@ -1623,7 +1595,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     }
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChannelBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
                         |> afterDisposed {
                             Queue.mainQueue().async {
                                 updateState { state in
@@ -1707,10 +1679,11 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         channelMembersPromise.set(.single([]))
     }
     
+    let previousStateValue = Atomic<GroupInfoState?>(value: nil)
     let previousChannelMembers = Atomic<[PeerId]?>(value: nil)
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
+    let signal = combineLatest(queue: .mainQueue(), (account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
     |> map { presentationData, state, view, combinedView, channelMembers -> (ItemListControllerState, (ItemListNodeState<GroupInfoEntry>, GroupInfoEntry.ItemGenerationArguments)) in
         let peer = peerViewMainPeer(view)
         
@@ -1726,6 +1699,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         if let editingState = state.editingState {
             var doneEnabled = true
             if let editingName = editingState.editingName, editingName.isEmpty {
+                doneEnabled = false
+            }
+            if editingState.editingDescriptionText.count > 255 {
                 doneEnabled = false
             }
             if peer is TelegramChannel {
@@ -1830,10 +1806,10 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     break
             }
         }
-        
+        let previousState = previousStateValue.swap(state)
         let previousMembers = previousChannelMembers.swap(memberIds) ?? []
         
-        var animateChanges = previousMembers.count >= memberIds.count
+        var animateChanges = previousMembers.count > memberIds.count || (previousState != nil && (previousState!.editingState != nil) != (state.editingState != nil))
         if presentationData.disableAnimations {
             if Set(memberIds) == Set(previousMembers) && memberIds != previousMembers {
                 animateChanges = false

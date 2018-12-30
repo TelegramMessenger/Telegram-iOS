@@ -2659,11 +2659,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     var canManagePin = false
                     if let channel = peer as? TelegramChannel {
-                        if case .broadcast = channel.info {
-                            canManagePin = channel.hasAdminRights([.canEditMessages])
-                        } else {
-                            canManagePin = channel.hasAdminRights([.canPinMessages])
-                        }
+                        canManagePin = channel.hasPermission(.pinMessages)
                     } else if let group = peer as? TelegramGroup {
                         if group.flags.contains(.adminsEnabled) {
                             switch group.role {
@@ -2723,11 +2719,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     var canManagePin = false
                     if let channel = peer as? TelegramChannel {
-                        if case .broadcast = channel.info {
-                            canManagePin = channel.hasAdminRights([.canEditMessages])
-                        } else {
-                            canManagePin = channel.hasAdminRights([.canPinMessages])
-                        }
+                        canManagePin = channel.hasPermission(.pinMessages)
                     } else if let group = peer as? TelegramGroup {
                         if group.flags.contains(.adminsEnabled) {
                             switch group.role {
@@ -3289,7 +3281,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
-        
         self.chatTitleView?.layout = layout
         
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in

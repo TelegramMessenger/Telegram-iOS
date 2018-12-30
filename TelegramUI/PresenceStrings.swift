@@ -230,6 +230,27 @@ func stringForRelativeLiveLocationTimestamp(strings: PresentationStrings, relati
     }
 }
 
+func stringForRelativeSymbolicTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
+    var t: time_t = time_t(relativeTimestamp)
+    var timeinfo: tm = tm()
+    localtime_r(&t, &timeinfo)
+    
+    var now: time_t = time_t(timestamp)
+    var timeinfoNow: tm = tm()
+    localtime_r(&now, &timeinfoNow)
+    
+    let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+    
+    let hours = timeinfo.tm_hour
+    let minutes = timeinfo.tm_min
+    
+    if dayDifference == 0 {
+        return strings.Time_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
+    } else {
+        return stringForFullDate(timestamp: relativeTimestamp, strings: strings, dateTimeFormat: dateTimeFormat)
+    }
+}
+
 func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
     var t: time_t = time_t(relativeTimestamp)
     var timeinfo: tm = tm()

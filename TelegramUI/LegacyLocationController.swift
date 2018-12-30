@@ -162,7 +162,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, acc
                         if !message.flags.contains(.Incoming) {
                             isOwn = true
                         } else if let peer = message.peers[message.id.peerId] as? TelegramChannel {
-                            isOwn = peer.hasAdminRights(.canPostMessages)
+                            isOwn = peer.hasPermission(.sendMessages)
                         }
                         
                         let liveLocation = TGLiveLocation(message: legacyMessage, peer: legacyAuthor, hasOwnSession: hasOwnSession, isOwnLocation: isOwn, isExpired: remainingTime == 0)!

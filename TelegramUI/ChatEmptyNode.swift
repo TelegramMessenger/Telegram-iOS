@@ -181,6 +181,121 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
     }
 }
 
+private final class ChatEmptyNodeGroupChatContent: ASDisplayNode, ChatEmptyNodeContent {
+    private let titleNode: ImmediateTextNode
+    private let subtitleNode: ImmediateTextNode
+    private var lineNodes: [(ASImageNode, ImmediateTextNode)] = []
+    
+    private var currentTheme: PresentationTheme?
+    private var currentStrings: PresentationStrings?
+    
+    override init() {
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.maximumNumberOfLines = 0
+        self.titleNode.lineSpacing = 0.25
+        self.titleNode.textAlignment = .center
+        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.displaysAsynchronously = false
+        
+        self.subtitleNode = ImmediateTextNode()
+        self.subtitleNode.maximumNumberOfLines = 0
+        self.subtitleNode.lineSpacing = 0.25
+        self.subtitleNode.isUserInteractionEnabled = false
+        self.subtitleNode.displaysAsynchronously = false
+        
+        super.init()
+        
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.subtitleNode)
+    }
+    
+    func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
+            self.currentTheme = interfaceState.theme
+            self.currentStrings = interfaceState.strings
+            
+            let titleString: String = interfaceState.strings.EmptyGroupInfo_Title
+            
+            let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+            
+            self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: serviceColor.primaryText)
+            
+            self.subtitleNode.attributedText = NSAttributedString(string: interfaceState.strings.EmptyGroupInfo_Subtitle, font: messageFont, textColor: serviceColor.primaryText)
+            
+            let strings: [String] = [
+                interfaceState.strings.EmptyGroupInfo_Line1("100,000").0,
+                interfaceState.strings.EmptyGroupInfo_Line2,
+                interfaceState.strings.EmptyGroupInfo_Line3,
+                interfaceState.strings.EmptyGroupInfo_Line4
+            ]
+            
+            let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: serviceColor.primaryText) }
+            
+            let lockIcon = PresentationResourcesChat.chatEmptyItemLockIcon(interfaceState.theme)
+            
+            for i in 0 ..< lines.count {
+                if i >= self.lineNodes.count {
+                    let iconNode = ASImageNode()
+                    iconNode.isLayerBacked = true
+                    iconNode.displaysAsynchronously = false
+                    iconNode.displayWithoutProcessing = true
+                    let textNode = ImmediateTextNode()
+                    textNode.maximumNumberOfLines = 0
+                    textNode.isUserInteractionEnabled = false
+                    textNode.displaysAsynchronously = false
+                    self.addSubnode(iconNode)
+                    self.addSubnode(textNode)
+                    self.lineNodes.append((iconNode, textNode))
+                }
+                
+                self.lineNodes[i].0.image = lockIcon
+                self.lineNodes[i].1.attributedText = lines[i]
+            }
+        }
+        
+        let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
+        let titleSpacing: CGFloat = 5.0
+        let subtitleSpacing: CGFloat = 10.0
+        let iconInset: CGFloat = 14.0
+        
+        var contentWidth: CGFloat = 100.0
+        var contentHeight: CGFloat = 0.0
+        
+        var lineNodes: [(CGSize, ASImageNode, ImmediateTextNode)] = []
+        for (iconNode, textNode) in self.lineNodes {
+            let textSize = textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right - 10.0, height: CGFloat.greatestFiniteMagnitude))
+            contentWidth = max(contentWidth, iconInset + textSize.width)
+            contentHeight += textSize.height + subtitleSpacing
+            lineNodes.append((textSize, iconNode, textNode))
+        }
+        
+        let titleSize = self.titleNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))
+        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))
+        
+        contentWidth = max(contentWidth, max(titleSize.width, subtitleSize.width))
+        
+        contentHeight += titleSize.height + titleSpacing + subtitleSize.height
+        
+        let contentRect = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: contentWidth, height: contentHeight))
+        
+        let titleFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - titleSize.width) / 2.0), y: contentRect.minY), size: titleSize)
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        let subtitleFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: titleFrame.maxY + titleSpacing), size: subtitleSize)
+        transition.updateFrame(node: self.subtitleNode, frame: subtitleFrame)
+        
+        var lineOffset = subtitleFrame.maxY + subtitleSpacing / 2.0
+        for (textSize, iconNode, textNode) in lineNodes {
+            if let image = iconNode.image {
+                transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: contentRect.minX, y: lineOffset + 1.0), size: image.size))
+            }
+            transition.updateFrame(node: textNode, frame: CGRect(origin: CGPoint(x: contentRect.minX + iconInset, y: lineOffset), size: textSize))
+            lineOffset += textSize.height + subtitleSpacing
+        }
+        
+        return contentRect.insetBy(dx: -insets.left, dy: -insets.top).size
+    }
+}
+
 private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeContent {
     private let iconNode: ASImageNode
     private let titleNode: ImmediateTextNode
@@ -296,6 +411,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
 private enum ChatEmptyNodeContentType {
     case regular
     case secret
+    case group
     case cloud
 }
 
@@ -339,6 +455,8 @@ final class ChatEmptyNode: ASDisplayNode {
                 contentType = .cloud
             } else if let _ = peer as? TelegramSecretChat {
                 contentType = .secret
+            } else if let group = peer as? TelegramGroup, case .creator = group.role {
+                contentType = .group
             } else {
                 contentType = .regular
             }
@@ -357,6 +475,8 @@ final class ChatEmptyNode: ASDisplayNode {
                     node = ChatEmptyNodeRegularChatContent()
                 case .secret:
                     node = ChatEmptyNodeSecretChatContent()
+                case .group:
+                    node = ChatEmptyNodeGroupChatContent()
                 case .cloud:
                     node = ChatEmptyNodeCloudChatContent()
             }

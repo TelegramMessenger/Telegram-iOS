@@ -21,14 +21,20 @@ final class GroupInfoSearchNavigationContentNode: NavigationBarContentNode, Item
             searchBar.activity = activity
         }
     }
-    init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void, updateActivity: @escaping(@escaping(Bool)->Void) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, mode: ChannelMembersSearchMode, cancel: @escaping () -> Void, updateActivity: @escaping(@escaping(Bool)->Void) -> Void) {
         self.theme = theme
         self.strings = strings
         
         self.cancel = cancel
         
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings)
-        let placeholderText = strings.Conversation_SearchByName_Placeholder
+        let placeholderText: String
+        switch mode {
+            case .searchBanned:
+                placeholderText = strings.GroupInfo_Permissions_SearchPlaceholder
+            default:
+                placeholderText = strings.Conversation_SearchByName_Placeholder
+        }
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
         
         super.init()

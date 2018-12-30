@@ -376,7 +376,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                 canDelete = true
             } else if let channel = peer as? TelegramChannel {
                 if message.flags.contains(.Incoming) {
-                    canDelete = channel.hasAdminRights(.canDeleteMessages)
+                    canDelete = channel.hasPermission(.deleteAllMessages)
                 } else {
                     canDelete = true
                 }

@@ -38,10 +38,17 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             let controller = PeerSelectionController(account: account, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup)
             controller.peerSelected = { [weak controller] peerId in
                 if payload.isEmpty {
-                    let _ = (addPeerMember(account: account, peerId: peerId, memberId: botPeerId)
-                    |> deliverOnMainQueue).start(completed: {
-                        controller?.dismiss()
-                    })
+                    if peerId.namespace == Namespaces.Peer.CloudGroup {
+                        let _ = (addGroupMember(account: account, peerId: peerId, memberId: botPeerId)
+                        |> deliverOnMainQueue).start(completed: {
+                            controller?.dismiss()
+                        })
+                    } else {
+                        let _ = (addChannelMember(account: account, peerId: peerId, memberId: botPeerId)
+                        |> deliverOnMainQueue).start(completed: {
+                            controller?.dismiss()
+                        })
+                    }
                 } else {
                     let _ = (requestStartBotInGroup(account: account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
                     |> deliverOnMainQueue).start(next: { result in

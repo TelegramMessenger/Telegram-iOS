@@ -659,7 +659,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         if let author = message.author, let adminsState = self.adminsState {
             var canBan = author.id != self.account.peerId
             if let channel = self.peer as? TelegramChannel {
-                if !channel.hasAdminRights(.canBanUsers) {
+                if !channel.hasPermission(.banMembers) {
                     canBan = false
                 }
             }

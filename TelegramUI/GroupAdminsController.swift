@@ -325,7 +325,7 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
         }
         
         if value {
-            toggleAdminsDisposables.set((addPeerAdmin(account: account, peerId: peerId, adminId: memberId) |> deliverOnMainQueue).start(error: { _ in
+            toggleAdminsDisposables.set((addGroupAdmin(account: account, peerId: peerId, adminId: memberId) |> deliverOnMainQueue).start(error: { _ in
                 updateState { state in
                     var updatingAdminValue = state.updatingAdminValue
                     updatingAdminValue.removeValue(forKey: memberId)
@@ -339,7 +339,7 @@ public func groupAdminsController(account: Account, peerId: PeerId) -> ViewContr
                 }
             }), forKey: memberId)
         } else {
-            toggleAdminsDisposables.set((removePeerAdmin(account: account, peerId: peerId, adminId: memberId) |> deliverOnMainQueue).start(error: { _ in
+            toggleAdminsDisposables.set((removeGroupAdmin(account: account, peerId: peerId, adminId: memberId) |> deliverOnMainQueue).start(error: { _ in
                 updateState { state in
                     var updatingAdminValue = state.updatingAdminValue
                     updatingAdminValue.removeValue(forKey: memberId)

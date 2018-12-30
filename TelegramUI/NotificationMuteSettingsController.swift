@@ -10,9 +10,11 @@ private enum NotificationMuteOption {
     case disable
 }
 
-func notificationMuteSettingsController(presentationData: PresentationData, notificationSettings: MessageNotificationSettings, updateSettings: @escaping (Int32?) -> Void) -> ViewController {
-    
-    
+struct NotificationSoundSettings {
+    var value: PeerMessageSound?
+}
+
+func notificationMuteSettingsController(presentationData: PresentationData, notificationSettings: MessageNotificationSettings, soundSettings: NotificationSoundSettings?, openSoundSettings: @escaping () -> Void, updateSettings: @escaping (Int32?) -> Void) -> ViewController {
     let controller = ActionSheetController(presentationTheme: presentationData.theme)
     let dismissAction: () -> Void = { [weak controller] in
         controller?.dismissAnimated()
@@ -35,10 +37,8 @@ func notificationMuteSettingsController(presentationData: PresentationData, noti
     }
     
     let options: [NotificationMuteOption] = [
-       // .default,
         .enable,
         .interval(1 * 60 * 60),
-        .interval(8 * 60 * 60),
         .interval(2 * 24 * 60 * 60),
         .disable
     ]
@@ -78,10 +78,16 @@ func notificationMuteSettingsController(presentationData: PresentationData, noti
         }
         items.append(item)
     }
+    if let soundSettings = soundSettings {
+        items.append(ActionSheetButtonItem(title: soundSettings.value.flatMap({ presentationData.strings.Notification_Exceptions_Sound(localizedPeerNotificationSoundString(strings: presentationData.strings, sound: $0)).0 }) ?? presentationData.strings.GroupInfo_SetSound, action: {
+            dismissAction()
+            openSoundSettings()
+        }))
+    }
     
     controller.setItemGroups([
         ActionSheetItemGroup(items: items),
         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
+    ])
     return controller
 }

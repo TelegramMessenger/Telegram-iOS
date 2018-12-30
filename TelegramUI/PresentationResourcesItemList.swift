@@ -31,7 +31,8 @@ private func generatePlusIcon(_ theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 18.0, height: 18.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(theme.list.itemAccentColor.cgColor)
-        let lineWidth = min(1.5, UIScreenPixel * 4.0)
+        context.setLineCap(.round)
+        let lineWidth: CGFloat = 2.0
         context.fill(CGRect(x: floorToScreenPixels((18.0 - lineWidth) / 2.0), y: 0.0, width: lineWidth, height: 18.0))
         context.fill(CGRect(x: 0.0, y: floorToScreenPixels((18.0 - lineWidth) / 2.0), width: 18.0, height: lineWidth))
     })
