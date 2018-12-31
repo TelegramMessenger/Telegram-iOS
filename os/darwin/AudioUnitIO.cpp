@@ -46,6 +46,10 @@ AudioUnitIO::AudioUnitIO(std::string inputDeviceID, std::string outputDeviceID){
 	inBufferList.mBuffers[0].mDataByteSize=INPUT_BUFFER_SIZE;
 	inBufferList.mNumberBuffers=1;
 	
+#if TARGET_OS_IPHONE
+	DarwinSpecific::ConfigureAudioSession();
+#endif
+	
 	OSStatus status;
 	AudioComponentDescription desc;
 	AudioComponent inputComponent;
@@ -173,10 +177,12 @@ void AudioUnitIO::EnableInput(bool enabled){
 void AudioUnitIO::EnableOutput(bool enabled){
 	outputEnabled=enabled;
 	StartIfNeeded();
+#if TARGET_OS_OSX
 	if(actualDuckingEnabled!=duckingEnabled){
 		actualDuckingEnabled=duckingEnabled;
     	AudioDeviceDuck(currentOutputDeviceID, duckingEnabled ? 0.177828f : 1.0f, NULL, 0.1f);
 	}
+#endif
 }
 
 void AudioUnitIO::StartIfNeeded(){

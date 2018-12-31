@@ -886,7 +886,7 @@ void VoIPController::SetInputVolume(float level){
 	inputVolume.SetLevel(level);
 }
 
-#if defined(__APPLE__) && defined(TARGET_OS_OSX)
+#if defined(__APPLE__) && TARGET_OS_OSX
 void VoIPController::SetAudioOutputDuckingEnabled(bool enabled){
 	macAudioDuckingEnabled=enabled;
 	audio::AudioUnitIO* osxAudio=dynamic_cast<audio::AudioUnitIO*>(audioIO);
@@ -1120,7 +1120,7 @@ void VoIPController::InitializeAudio(){
 			LOGI("Forcing software NS because built-in is not good");
 		}
 	}
-#elif defined(__APPLE__) && defined(TARGET_OS_OSX)
+#elif defined(__APPLE__) && TARGET_OS_OSX
 	SetAudioOutputDuckingEnabled(macAudioDuckingEnabled);
 #endif
 	LOGI("AEC: %d NS: %d AGC: %d", config.enableAEC, config.enableNS, config.enableAGC);

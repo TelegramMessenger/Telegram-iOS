@@ -40,11 +40,11 @@ class AudioOutputAudioUnit;
 		std::string currentOutputDevice;
 		bool duckingEnabled=true;
 		bool actualDuckingEnabled=true;
+		AudioDeviceID currentOutputDeviceID;
 #endif
 		AudioComponentInstance unit;
 		AudioInputAudioUnit* input;
 		AudioOutputAudioUnit* output;
-		AudioDeviceID currentOutputDeviceID;
 		AudioBufferList inBufferList;
 		bool inputEnabled;
 		bool outputEnabled;

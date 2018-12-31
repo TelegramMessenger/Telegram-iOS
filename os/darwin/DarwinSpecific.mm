@@ -6,11 +6,13 @@
 
 #include "DarwinSpecific.h"
 #include "../../VoIPController.h"
+#include "../../logging.h"
 
 #import <Foundation/Foundation.h>
 #if TARGET_OS_IOS
 #import <CoreTelephony/CTTelephonyNetworkInfo.h>
 #import <CoreTelephony/CTCarrier.h>
+#import <AVFoundation/AVFoundation.h>
 #endif
 
 using namespace tgvoip;
@@ -87,4 +89,22 @@ CellularCarrierInfo DarwinSpecific::GetCarrierInfo(){
 	}
 #endif
 	return info;
+}
+
+void DarwinSpecific::ConfigureAudioSession(){
+#if TARGET_OS_IOS
+	AVAudioSession* session=[AVAudioSession sharedInstance];
+	NSError* error=nil;
+	[session setPreferredSampleRate:48000.0 error:&error];
+	if(error){
+		LOGE("Failed to set preferred sample rate on AVAudioSession: %s", [[error localizedDescription] cStringUsingEncoding:NSUTF8StringEncoding]);
+		return;
+	}
+	[session setPreferredIOBufferDuration:0.020 error:&error];
+	if(error){
+		LOGE("Failed to set preferred IO buffer duration on AVAudioSession: %s", [[error localizedDescription] cStringUsingEncoding:NSUTF8StringEncoding]);
+		return;
+	}
+	LOGI("Configured AVAudioSession: sampleRate=%f, IOBufferDuration=%f", session.sampleRate, session.IOBufferDuration);
+#endif
 }
