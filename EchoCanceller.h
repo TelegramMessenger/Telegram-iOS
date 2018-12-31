@@ -59,7 +59,7 @@ public:
 	virtual void Process(int16_t* inOut, size_t numSamples)=0;
 	virtual void SetPassThrough(bool passThrough);
 protected:
-	bool passThrough;
+	bool passThrough=false;
 };
 
 class Volume : public AudioEffect{

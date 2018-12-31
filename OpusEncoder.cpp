@@ -6,6 +6,7 @@
 
 #include "OpusEncoder.h"
 #include <assert.h>
+#include <algorithm>
 #include "logging.h"
 #include "VoIPServerConfig.h"
 #ifdef HAVE_CONFIG_H

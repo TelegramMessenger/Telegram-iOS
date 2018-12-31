@@ -31,7 +31,9 @@ AudioInputWASAPI::AudioInputWASAPI(std::string deviceID){
 	refCount=1;
 	HRESULT res;
 	res=CoInitializeEx(NULL, COINIT_MULTITHREADED);
-	CHECK_RES(res, "CoInitializeEx");
+	if(FAILED(res) && res!=RPC_E_CHANGED_MODE){
+		CHECK_RES(res, "CoInitializeEx");
+	}
 #ifdef TGVOIP_WINXP_COMPAT
 	HANDLE (WINAPI *__CreateEventExA)(LPSECURITY_ATTRIBUTES lpEventAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);
 	__CreateEventExA=(HANDLE (WINAPI *)(LPSECURITY_ATTRIBUTES, LPCSTR, DWORD, DWORD))GetProcAddress(GetModuleHandleA("kernel32.dll"), "CreateEventExA");
@@ -124,7 +126,9 @@ void AudioInputWASAPI::EnumerateDevices(std::vector<tgvoip::AudioInputDevice>& d
 #ifdef TGVOIP_WINDOWS_DESKTOP
 	HRESULT res;
 	res=CoInitializeEx(NULL, COINIT_MULTITHREADED);
-	SCHECK_RES(res, "CoInitializeEx");
+	if(FAILED(res) && res!=RPC_E_CHANGED_MODE){
+		SCHECK_RES(res, "CoInitializeEx");
+	}
 
 	IMMDeviceEnumerator *deviceEnumerator = NULL;
 	IMMDeviceCollection *deviceCollection = NULL;

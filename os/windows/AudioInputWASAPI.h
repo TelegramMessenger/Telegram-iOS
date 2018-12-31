@@ -64,8 +64,8 @@ private:
 	HANDLE audioSamplesReadyEvent;
 	HANDLE streamSwitchEvent;
 	HANDLE thread;
-	IAudioClient* audioClient;
-	IAudioCaptureClient* captureClient;
+	IAudioClient* audioClient=NULL;
+	IAudioCaptureClient* captureClient=NULL;
 #ifdef TGVOIP_WINDOWS_DESKTOP
 	IMMDeviceEnumerator* enumerator;
 	IAudioSessionControl* audioSessionControl;

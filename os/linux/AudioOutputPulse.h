@@ -28,6 +28,7 @@ private:
 	static void StreamStateCallback(pa_stream* s, void* arg);
 	static void StreamWriteCallback(pa_stream* stream, size_t requested_bytes, void* userdata);
 	void StreamWriteCallback(pa_stream* stream, size_t requestedBytes);
+	pa_stream* CreateAndInitStream();
 
 	pa_threaded_mainloop* mainloop;
 	pa_context* context;

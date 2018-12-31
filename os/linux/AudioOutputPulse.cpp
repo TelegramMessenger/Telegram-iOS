@@ -34,25 +34,8 @@ AudioOutputPulse::AudioOutputPulse(pa_context* context, pa_threaded_mainloop* ma
 	stream=NULL;
 	remainingDataSize=0;
 
-	pa_sample_spec sample_specifications{
-		.format=PA_SAMPLE_S16LE,
-		.rate=48000,
-		.channels=1
-	};
-
 	pa_threaded_mainloop_lock(mainloop);
-	pa_proplist* proplist=pa_proplist_new();
-	pa_proplist_sets(proplist, PA_PROP_FILTER_APPLY, ""); // according to PA sources, this disables any possible filters
-	stream=pa_stream_new_with_proplist(context, "libtgvoip playback", &sample_specifications, NULL, proplist);
-	pa_proplist_free(proplist);
-	if(!stream){
-		LOGE("Error initializing PulseAudio (pa_stream_new)");
-		pa_threaded_mainloop_unlock(mainloop);
-		failed=true;
-		return;
-	}
-	pa_stream_set_state_callback(stream, AudioOutputPulse::StreamStateCallback, this);
-	pa_stream_set_write_callback(stream, AudioOutputPulse::StreamWriteCallback, this);
+	stream=CreateAndInitStream();
 	pa_threaded_mainloop_unlock(mainloop);
 
 	SetCurrentDevice(devID);
@@ -63,6 +46,26 @@ AudioOutputPulse::~AudioOutputPulse(){
 		pa_stream_disconnect(stream);
 		pa_stream_unref(stream);
 	}
+}
+
+pa_stream* AudioOutputPulse::CreateAndInitStream(){
+	pa_sample_spec sampleSpec{
+		.format=PA_SAMPLE_S16LE,
+		.rate=48000,
+		.channels=1
+	};
+	pa_proplist* proplist=pa_proplist_new();
+	pa_proplist_sets(proplist, PA_PROP_FILTER_APPLY, ""); // according to PA sources, this disables any possible filters
+	pa_stream* stream=pa_stream_new_with_proplist(context, "libtgvoip playback", &sampleSpec, NULL, proplist);
+	pa_proplist_free(proplist);
+	if(!stream){
+		LOGE("Error initializing PulseAudio (pa_stream_new)");
+		failed=true;
+		return NULL;
+	}
+	pa_stream_set_state_callback(stream, AudioOutputPulse::StreamStateCallback, this);
+	pa_stream_set_write_callback(stream, AudioOutputPulse::StreamWriteCallback, this);
+	return stream;
 }
 
 void AudioOutputPulse::Start(){
@@ -94,7 +97,9 @@ void AudioOutputPulse::SetCurrentDevice(std::string devID){
 	currentDevice=devID;
 	if(isPlaying && isConnected){
 		pa_stream_disconnect(stream);
+		pa_stream_unref(stream);
 		isConnected=false;
+		stream=CreateAndInitStream();
 	}
 
 	pa_buffer_attr bufferAttr={

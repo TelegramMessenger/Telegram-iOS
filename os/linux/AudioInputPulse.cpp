@@ -33,25 +33,13 @@ AudioInputPulse::AudioInputPulse(pa_context* context, pa_threaded_mainloop* main
 	remainingDataSize=0;
 
 	pa_threaded_mainloop_lock(mainloop);
-	pa_sample_spec sample_specifications{
-		.format=PA_SAMPLE_S16LE,
-		.rate=48000,
-		.channels=1
-	};
 
-	pa_proplist* proplist=pa_proplist_new();
-	pa_proplist_sets(proplist, PA_PROP_FILTER_APPLY, ""); // according to PA sources, this disables any possible filters
-	stream=pa_stream_new_with_proplist(context, "libtgvoip capture", &sample_specifications, NULL, proplist);
-	pa_proplist_free(proplist);
-	if(!stream){
-		LOGE("Error initializing PulseAudio (pa_stream_new)");
-		failed=true;
-		return;
-	}
-	pa_stream_set_state_callback(stream, AudioInputPulse::StreamStateCallback, this);
-	pa_stream_set_read_callback(stream, AudioInputPulse::StreamReadCallback, this);
+	stream=CreateAndInitStream();
 	pa_threaded_mainloop_unlock(mainloop);
 	isLocked=false;
+	if(!stream){
+		return;
+	}
 
 	SetCurrentDevice(devID);
 }
@@ -61,6 +49,26 @@ AudioInputPulse::~AudioInputPulse(){
 		pa_stream_disconnect(stream);
 		pa_stream_unref(stream);
 	}
+}
+
+pa_stream* AudioInputPulse::CreateAndInitStream(){
+	pa_sample_spec sampleSpec{
+		.format=PA_SAMPLE_S16LE,
+		.rate=48000,
+		.channels=1
+	};
+	pa_proplist* proplist=pa_proplist_new();
+	pa_proplist_sets(proplist, PA_PROP_FILTER_APPLY, ""); // according to PA sources, this disables any possible filters
+	pa_stream* stream=pa_stream_new_with_proplist(context, "libtgvoip capture", &sampleSpec, NULL, proplist);
+	pa_proplist_free(proplist);
+	if(!stream){
+		LOGE("Error initializing PulseAudio (pa_stream_new)");
+		failed=true;
+		return NULL;
+	}
+	pa_stream_set_state_callback(stream, AudioInputPulse::StreamStateCallback, this);
+	pa_stream_set_read_callback(stream, AudioInputPulse::StreamReadCallback, this);
+	return stream;
 }
 
 void AudioInputPulse::Start(){
@@ -92,7 +100,9 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 	currentDevice=devID;
 	if(isRecording && isConnected){
 		pa_stream_disconnect(stream);
+		pa_stream_unref(stream);
 		isConnected=false;
+		stream=CreateAndInitStream();
 	}
 
 	pa_buffer_attr bufferAttr={
@@ -105,9 +115,12 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 	int streamFlags=PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE | PA_STREAM_ADJUST_LATENCY;
 
 	int err=pa_stream_connect_record(stream, devID=="default" ? NULL : devID.c_str(), &bufferAttr, (pa_stream_flags_t)streamFlags);
-	if(err!=0 && devID!="default"){
-		SetCurrentDevice("default");
-		return;
+	if(err!=0){
+		pa_threaded_mainloop_unlock(mainloop);
+		/*if(devID!="default"){
+			SetCurrentDevice("default");
+			return;
+		}*/
 	}
 	CHECK_ERROR(err, "pa_stream_connect_record");
 
@@ -115,6 +128,7 @@ void AudioInputPulse::SetCurrentDevice(std::string devID){
 		pa_stream_state_t streamState=pa_stream_get_state(stream);
 		if(!PA_STREAM_IS_GOOD(streamState)){
 			LOGE("Error connecting to audio device '%s'", devID.c_str());
+			pa_threaded_mainloop_unlock(mainloop);
 			failed=true;
 			return;
 		}
