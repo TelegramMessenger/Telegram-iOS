@@ -75,6 +75,8 @@ public func updatePeerDescription(account: Account, peerId: PeerId, description:
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                                 if let current = current as? CachedChannelData {
                                     return current.withUpdatedAbout(description)
+                                } else if let current = current as? CachedGroupData {
+                                    return current.withUpdatedAbout(description)
                                 } else {
                                     return current
                                 }

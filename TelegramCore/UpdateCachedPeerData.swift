@@ -220,6 +220,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     .withUpdatedBotInfos(botInfos)
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)
                                                     .withUpdatedDefaultBannedRights(defaultBannedRights)
+                                                    .withUpdatedAbout(chatFull.about)
                                             })
                                         case .channelFull:
                                             break

@@ -2044,6 +2044,16 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                             }
                         }
                         
+                        if case let .Id(id) = message.id {
+                            for media in message.media {
+                                if let action = media as? TelegramMediaAction, case .groupCreated = action.action {
+                                    if let hole = transaction.getHole(messageId: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1)) {
+                                        transaction.fillHole(hole, fillType: HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), tagMask: nil, messages: [])
+                                    }
+                                }
+                            }
+                        }
+                        
                         if !message.flags.contains(.Incoming), message.forwardInfo == nil {
                             inner: for media in message.media {
                                 if let file = media as? TelegramMediaFile {

@@ -36,6 +36,7 @@ public final class CachedGroupData: CachedPeerData {
     public let reportStatus: PeerReportStatus
     public let pinnedMessageId: MessageId?
     public let defaultBannedRights: TelegramChatBannedRights?
+    public let about: String?
     
     public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
@@ -50,9 +51,10 @@ public final class CachedGroupData: CachedPeerData {
         self.messageIds = Set()
         self.peerIds = Set()
         self.defaultBannedRights = nil
+        self.about = nil
     }
     
-    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], reportStatus: PeerReportStatus, pinnedMessageId: MessageId?, defaultBannedRights: TelegramChatBannedRights?) {
+    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], reportStatus: PeerReportStatus, pinnedMessageId: MessageId?, defaultBannedRights: TelegramChatBannedRights?, about: String?) {
         self.participants = participants
         self.exportedInvitation = exportedInvitation
         self.botInfos = botInfos
@@ -76,6 +78,7 @@ public final class CachedGroupData: CachedPeerData {
             peerIds.insert(botInfo.peerId)
         }
         self.peerIds = peerIds
+        self.about = about
     }
     
     public init(decoder: PostboxDecoder) {
@@ -90,6 +93,7 @@ public final class CachedGroupData: CachedPeerData {
             self.pinnedMessageId = nil
         }
         self.defaultBannedRights = decoder.decodeObjectForKey("defbr", decoder: { TelegramChatBannedRights(decoder: $0) }) as? TelegramChatBannedRights
+        self.about = decoder.decodeOptionalStringForKey("ab")
         
         var messageIds = Set<MessageId>()
         if let pinnedMessageId = self.pinnedMessageId {
@@ -137,6 +141,11 @@ public final class CachedGroupData: CachedPeerData {
         } else {
             encoder.encodeNil(forKey: "defbr")
         }
+        if let about = self.about {
+            encoder.encodeString(about, forKey: "ab")
+        } else {
+            encoder.encodeNil(forKey: "ab")
+        }
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
@@ -144,30 +153,34 @@ public final class CachedGroupData: CachedPeerData {
             return false
         }
         
-        return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos && self.reportStatus == other.reportStatus && self.pinnedMessageId == other.pinnedMessageId && self.defaultBannedRights == other.defaultBannedRights
+        return self.participants == other.participants && self.exportedInvitation == other.exportedInvitation && self.botInfos == other.botInfos && self.reportStatus == other.reportStatus && self.pinnedMessageId == other.pinnedMessageId && self.defaultBannedRights == other.defaultBannedRights && self.about == other.about
     }
     
     func withUpdatedParticipants(_ participants: CachedGroupParticipants?) -> CachedGroupData {
-        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights)
+        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights, about: self.about)
     }
     
     func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights)
+        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights, about: self.about)
     }
     
     func withUpdatedBotInfos(_ botInfos: [CachedPeerBotInfo]) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights, about: self.about)
     }
     
     func withUpdatedReportStatus(_ reportStatus: PeerReportStatus) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights, about: self.about)
     }
 
     func withUpdatedPinnedMessageId(_ pinnedMessageId: MessageId?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: pinnedMessageId, defaultBannedRights: self.defaultBannedRights)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: pinnedMessageId, defaultBannedRights: self.defaultBannedRights, about: self.about)
     }
 
     func withUpdatedDefaultBannedRights(_ defaultBannedRights: TelegramChatBannedRights?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: defaultBannedRights)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: defaultBannedRights, about: self.about)
+    }
+    
+    func withUpdatedAbout(_ about: String?) -> CachedGroupData {
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, reportStatus: self.reportStatus, pinnedMessageId: self.pinnedMessageId, defaultBannedRights: self.defaultBannedRights, about: about)
     }
 }
