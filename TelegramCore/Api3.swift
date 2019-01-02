@@ -5037,11 +5037,11 @@ extension Api {
                     })
                 }
             
-                static func uploadWallpaper(file: Api.InputFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WallPaper>) {
+                static func uploadWallPaper(file: Api.InputFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WallPaper>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-372068105)
+                    buffer.appendInt32(-748655323)
                     file.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.uploadWallpaper", parameters: [("file", file)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
+                    return (FunctionDescription(name: "account.uploadWallPaper", parameters: [("file", file)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
                         let reader = BufferReader(buffer)
                         var result: Api.WallPaper?
                         if let signature = reader.readInt32() {

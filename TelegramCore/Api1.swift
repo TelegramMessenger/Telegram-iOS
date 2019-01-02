@@ -11168,11 +11168,25 @@ extension Api {
     
     }
     enum WallPaper: TypeConstructorDescription {
+        case wallPaper(id: Int32, title: String, sizes: [Api.PhotoSize], color: Int32)
         case wallPaperSolid(id: Int32, title: String, bgColor: Int32, color: Int32)
-        case wallPaper(flags: Int32, id: Int64, accessHash: Int64, title: String, slug: String?, sizes: [Api.PhotoSize], color: Int32?)
+        case wallPaperDocument(flags: Int32, id: Int64, accessHash: Int64, title: String, slug: String?, document: Api.Document, color: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .wallPaper(let id, let title, let sizes, let color):
+                    if boxed {
+                        buffer.appendInt32(-860866985)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sizes.count))
+                    for item in sizes {
+                        item.serialize(buffer, true)
+                    }
+                    serializeInt32(color, buffer: buffer, boxed: false)
+                    break
                 case .wallPaperSolid(let id, let title, let bgColor, let color):
                     if boxed {
                         buffer.appendInt32(1662091044)
@@ -11182,20 +11196,16 @@ extension Api {
                     serializeInt32(bgColor, buffer: buffer, boxed: false)
                     serializeInt32(color, buffer: buffer, boxed: false)
                     break
-                case .wallPaper(let flags, let id, let accessHash, let title, let slug, let sizes, let color):
+                case .wallPaperDocument(let flags, let id, let accessHash, let title, let slug, let document, let color):
                     if boxed {
-                        buffer.appendInt32(-1948219267)
+                        buffer.appendInt32(-821868985)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(slug!, buffer: buffer, boxed: false)}
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sizes.count))
-                    for item in sizes {
-                        item.serialize(buffer, true)
-                    }
+                    document.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     break
     }
@@ -11203,13 +11213,37 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .wallPaper(let id, let title, let sizes, let color):
+                return ("wallPaper", [("id", id), ("title", title), ("sizes", sizes), ("color", color)])
                 case .wallPaperSolid(let id, let title, let bgColor, let color):
                 return ("wallPaperSolid", [("id", id), ("title", title), ("bgColor", bgColor), ("color", color)])
-                case .wallPaper(let flags, let id, let accessHash, let title, let slug, let sizes, let color):
-                return ("wallPaper", [("flags", flags), ("id", id), ("accessHash", accessHash), ("title", title), ("slug", slug), ("sizes", sizes), ("color", color)])
+                case .wallPaperDocument(let flags, let id, let accessHash, let title, let slug, let document, let color):
+                return ("wallPaperDocument", [("flags", flags), ("id", id), ("accessHash", accessHash), ("title", title), ("slug", slug), ("document", document), ("color", color)])
     }
     }
     
+        static func parse_wallPaper(_ reader: BufferReader) -> WallPaper? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.PhotoSize]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.WallPaper.wallPaper(id: _1!, title: _2!, sizes: _3!, color: _4!)
+            }
+            else {
+                return nil
+            }
+        }
         static func parse_wallPaperSolid(_ reader: BufferReader) -> WallPaper? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -11230,7 +11264,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_wallPaper(_ reader: BufferReader) -> WallPaper? {
+        static func parse_wallPaperDocument(_ reader: BufferReader) -> WallPaper? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -11241,9 +11275,9 @@ extension Api {
             _4 = parseString(reader)
             var _5: String?
             if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
-            var _6: [Api.PhotoSize]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
+            var _6: Api.Document?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Document
             }
             var _7: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_7 = reader.readInt32() }
@@ -11255,7 +11289,7 @@ extension Api {
             let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.WallPaper.wallPaper(flags: _1!, id: _2!, accessHash: _3!, title: _4!, slug: _5, sizes: _6!, color: _7)
+                return Api.WallPaper.wallPaperDocument(flags: _1!, id: _2!, accessHash: _3!, title: _4!, slug: _5, document: _6!, color: _7)
             }
             else {
                 return nil
