@@ -14,7 +14,6 @@ private final class ChannelInfoControllerArguments {
     let updateEditingDescriptionText: (String) -> Void
     let openChannelTypeSetup: () -> Void
     let changeNotificationMuteSettings: () -> Void
-    let changeNotificationSoundSettings: () -> Void
     let openSharedMedia: () -> Void
     let openAdmins: () -> Void
     let openMembers: () -> Void
@@ -26,7 +25,7 @@ private final class ChannelInfoControllerArguments {
     let displayContextMenu: (ChannelInfoEntryTag, String) -> Void
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let toggleSignatures:(Bool) -> Void
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, toggleSignatures: @escaping(Bool)->Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, toggleSignatures: @escaping(Bool)->Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -35,7 +34,6 @@ private final class ChannelInfoControllerArguments {
         self.updateEditingDescriptionText = updateEditingDescriptionText
         self.openChannelTypeSetup = openChannelTypeSetup
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
-        self.changeNotificationSoundSettings = changeNotificationSoundSettings
         self.openSharedMedia = openSharedMedia
         self.openAdmins = openAdmins
         self.openMembers = openMembers
@@ -74,7 +72,6 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     case members(theme: PresentationTheme, text: String, value: String)
     case banned(theme: PresentationTheme, text: String, value: String)
     case notifications(theme: PresentationTheme, text: String, value: String)
-    case notificationSound(theme: PresentationTheme, text: String, value: String)
     case sharedMedia(theme: PresentationTheme, text: String)
     case signMessages(theme: PresentationTheme, text: String, value: Bool)
     case signInfo(theme: PresentationTheme, text: String)
@@ -90,7 +87,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return ChannelInfoSection.discriptionAndType.rawValue
             case .admins, .members, .banned:
                 return ChannelInfoSection.members.rawValue
-            case .sharedMedia, .notifications, .notificationSound:
+            case .sharedMedia, .notifications:
                 return ChannelInfoSection.sharedMediaAndNotifications.rawValue
             case .report, .leave, .deleteChannel:
                 return ChannelInfoSection.reportOrLeave.rawValue
@@ -123,8 +120,6 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return 10
             case .notifications:
                 return 12
-            case .notificationSound:
-                return 13
             case .sharedMedia:
                 return 14
             case .report:
@@ -264,12 +259,6 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .notificationSound(lhsTheme, lhsText, lhsValue):
-                if case let .notificationSound(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
         }
     }
     
@@ -336,10 +325,6 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
             case let .notifications(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.changeNotificationMuteSettings()
-                })
-            case let .notificationSound(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
-                    arguments.changeNotificationSoundSettings()
                 })
             case let .report(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .plain, action: {
@@ -704,28 +689,25 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
         presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .generic), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        actionsDisposable.add((account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications]) |> take(1) |> deliverOnMainQueue).start(next: { view in
-            
-            let viewSettings: GlobalNotificationSettingsSet
-            if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
-                viewSettings = settings.effective
-            } else {
-                viewSettings = GlobalNotificationSettingsSet.defaultSettings
-            }
-            
-            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.channels, soundSettings: nil, openSoundSettings: {}, updateSettings: { value in
-                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
-            })
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        }))
-    }, changeNotificationSoundSettings: {
         let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
             let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
-        } |> deliverOnMainQueue).start(next: { settings in
-            let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: settings.0.messageSound, defaultSound: settings.1.effective.privateChats.sound, completion: { sound in
-                let _ = updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound).start()
+        }
+        |> deliverOnMainQueue).start(next: { peerSettings, globalSettings in
+            let soundSettings: NotificationSoundSettings?
+            if case .default = peerSettings.messageSound {
+                soundSettings = NotificationSoundSettings(value: nil)
+            } else {
+                soundSettings = NotificationSoundSettings(value: peerSettings.messageSound)
+            }
+            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: globalSettings.effective.groupChats, soundSettings: soundSettings, openSoundSettings: {
+                let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: peerSettings.messageSound, defaultSound: globalSettings.effective.groupChats.sound, completion: { sound in
+                    let _ = updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound).start()
+                })
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }, updateSettings: { value in
+                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
             })
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })

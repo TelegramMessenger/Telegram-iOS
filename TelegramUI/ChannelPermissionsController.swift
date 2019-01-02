@@ -44,7 +44,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case kicked(PresentationTheme, String, String)
     case exceptionsHeader(PresentationTheme, String)
     case add(PresentationTheme, String)
-    case peerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Int32, RenderedChannelParticipant, ItemListPeerItemEditing, Bool, Bool)
+    case peerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Int32, RenderedChannelParticipant, ItemListPeerItemEditing, Bool, Bool, TelegramChatBannedRightsFlags)
     
     var section: ItemListSectionId {
         switch self {
@@ -69,7 +69,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return .index(1001)
             case .add:
                 return .index(1002)
-            case let .peerItem(_, _, _, _, _, participant, _, _, _):
+            case let .peerItem(_, _, _, _, _, participant, _, _, _, _):
                 return .peer(participant.peer.id)
         }
     }
@@ -106,8 +106,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .peerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsIndex, lhsParticipant, lhsEditing, lhsEnabled, lhsCanOpen):
-                if case let .peerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsIndex, rhsParticipant, rhsEditing, rhsEnabled, rhsCanOpen) = rhs {
+            case let .peerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsIndex, lhsParticipant, lhsEditing, lhsEnabled, lhsCanOpen, lhsDefaultBannedRights):
+                if case let .peerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsIndex, rhsParticipant, rhsEditing, rhsEnabled, rhsCanOpen, rhsDefaultBannedRights) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -135,6 +135,9 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                     if lhsCanOpen != rhsCanOpen {
                         return false
                     }
+                    if lhsDefaultBannedRights != rhsDefaultBannedRights {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -144,9 +147,9 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     
     static func <(lhs: ChannelPermissionsEntry, rhs: ChannelPermissionsEntry) -> Bool {
         switch lhs {
-            case let .peerItem(_, _, _, _, index, _, _, _, _):
+            case let .peerItem(_, _, _, _, index, _, _, _, _, _):
                 switch rhs {
-                    case let .peerItem(_, _, _, _, rhsIndex, _, _, _, _):
+                    case let .peerItem(_, _, _, _, rhsIndex, _, _, _, _, _):
                         return index < rhsIndex
                     default:
                         return false
@@ -183,21 +186,23 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.addPeer()
                 })
-            case let .peerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, participant, editing, enabled, canOpen):
+            case let .peerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, participant, editing, enabled, canOpen, defaultBannedRights):
                 var text: ItemListPeerItemText = .none
                 switch participant.participant {
                     case let .member(_, _, _, banInfo):
                         var exceptionsString = ""
                         if let banInfo = banInfo {
                             for rights in allGroupPermissionList {
-                                if banInfo.rights.flags.contains(rights) {
+                                if !defaultBannedRights.contains(rights) && banInfo.rights.flags.contains(rights) {
                                     if !exceptionsString.isEmpty {
                                         exceptionsString.append(", ")
                                     }
                                     exceptionsString.append(compactStringForGroupPermission(strings: strings, right: rights))
                                 }
                             }
-                            text = .text(exceptionsString)
+                            if !exceptionsString.isEmpty {
+                                text = .text(exceptionsString)
+                            }
                         }
                     default:
                         break
@@ -320,16 +325,12 @@ private func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramC
 private func channelPermissionsControllerEntries(presentationData: PresentationData, view: PeerView, state: ChannelPermissionsControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelPermissionsEntry] {
     var entries: [ChannelPermissionsEntry] = []
     
-    if let _ = view.peers[view.peerId] as? TelegramChannel, let participants = participants {
-        let cachedData = view.cachedData as? CachedChannelData
-        
+    if let _ = view.peers[view.peerId] as? TelegramChannel, let participants = participants, let cachedData = view.cachedData as? CachedChannelData, let defaultBannedRights = cachedData.defaultBannedRights {
         let effectiveRightsFlags: TelegramChatBannedRightsFlags
         if let modifiedRightsFlags = state.modifiedRightsFlags {
             effectiveRightsFlags = modifiedRightsFlags
-        } else if let defaultBannedRightsFlags = cachedData?.defaultBannedRights?.flags {
-            effectiveRightsFlags = defaultBannedRightsFlags
         } else {
-            effectiveRightsFlags = TelegramChatBannedRightsFlags()
+            effectiveRightsFlags = defaultBannedRights.flags
         }
         
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
@@ -339,13 +340,13 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
             rightIndex += 1
         }
         
-        entries.append(.kicked(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Removed, cachedData?.participantsSummary.kickedCount.flatMap({ "\($0)" }) ?? ""))
+        entries.append(.kicked(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Removed, cachedData.participantsSummary.kickedCount.flatMap({ $0 == 0 ? "" : "\($0)" }) ?? ""))
         entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
         entries.append(.add(presentationData.theme, presentationData.strings.GroupInfo_Permissions_AddException))
         
         var index: Int32 = 0
         for participant in participants {
-            entries.append(.peerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index, participant, ItemListPeerItemEditing(editable: true, editing: false, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, true))
+            entries.append(.peerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index, participant, ItemListPeerItemEditing(editable: true, editing: false, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, true, effectiveRightsFlags))
             index += 1
         }
     }
@@ -414,7 +415,7 @@ public func channelPermissionsController(account: Account, peerId: PeerId) -> Vi
                 }
                 let state = stateValue.with { $0 }
                 if let modifiedRightsFlags = state.modifiedRightsFlags {
-                    updateDefaultRightsDisposable.set((updateDefaultChannelMemberBannedRights(account: account, peerId: peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), untilDate: Int32.max))
+                    updateDefaultRightsDisposable.set((updateDefaultChannelMemberBannedRights(account: account, peerId: peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), personal: false, untilDate: Int32.max))
                     |> deliverOnMainQueue).start())
                 }
             }

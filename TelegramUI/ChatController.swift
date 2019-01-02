@@ -2554,12 +2554,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 let banDescription: String
                 switch subject {
                     case .stickers:
-                        banDescription = strongSelf.presentationInterfaceState.strings.Group_ErrorSendRestrictedStickers
+                        if bannedRights.personal {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Group_ErrorSendRestrictedStickers
+                        } else {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedStickers
+                        }
                     case .mediaRecording:
                         if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
-                        } else {
+                        } else if bannedRights.personal {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
+                        } else {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedMedia
                         }
                 }
                 if strongSelf.recordingModeFeedback == nil {
@@ -3706,8 +3712,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 let banDescription: String
                 if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
                     banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
-                } else {
+                } else if bannedRights.personal {
                     banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
+                } else {
+                    banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedMedia
                 }
                 
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)

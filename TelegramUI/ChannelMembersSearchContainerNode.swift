@@ -260,7 +260,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     }
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], personal: false, untilDate: Int32.max))
                         |> afterDisposed {
                             Queue.mainQueue().async {
                                 updateState { state in
@@ -340,7 +340,9 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     foundMembers = Signal { subscriber in
                         let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                             if case .ready = state.loadingState {
-                                subscriber.putNext(state.list)
+                                subscriber.putNext(state.list.filter({ participant in
+                                    return participant.peer.id != account.peerId
+                                }))
                             }
                         })
                         return disposable

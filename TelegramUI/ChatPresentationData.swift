@@ -26,7 +26,7 @@ extension PresentationFontSize {
 extension TelegramWallpaper {
     var isEmpty: Bool {
         switch self {
-            case .builtin, .image:
+            case .builtin, .image, .file:
                 return false
             case .color:
                 return true

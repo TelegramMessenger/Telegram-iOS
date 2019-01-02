@@ -231,7 +231,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
             case let .rightsTitle(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .rightItem(theme, _, text, right, flags, value, enabled):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { _ in
+                return ItemListSwitchItem(theme: theme, title: text, value: value, type: .icon, enabled: enabled, sectionId: self.section, style: .blocks, updated: { _ in
                     arguments.toggleRight(right, flags)
                 })
             case let .addAdminsInfo(theme, text):
@@ -456,6 +456,7 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
     actionsDisposable.add(updateRightsDisposable)
     
     var dismissImpl: (() -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let arguments = ChannelAdminControllerArguments(account: account, toggleRight: { right, flags in
         updateState { current in
@@ -468,15 +469,28 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
             return current.withUpdatedUpdatedFlags(updated)
         }
     }, dismissAdmin: {
-        updateState { current in
-            return current.withUpdatedUpdating(true)
-        }
-        updateRightsDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: [])) |> deliverOnMainQueue).start(error: { _ in
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetButtonItem(title: presentationData.strings.Channel_Moderator_AccessLevelRevoke, color: .destructive, font: .default, enabled: true, action: { [weak actionSheet] in
+            actionSheet?.dismissAnimated()
             
-        }, completed: {
-            updated(TelegramChatAdminRights(flags: []))
-            dismissImpl?()
+            updateState { current in
+                return current.withUpdatedUpdating(true)
+            }
+            updateRightsDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: [])) |> deliverOnMainQueue).start(error: { _ in
+                
+            }, completed: {
+                updated(TelegramChatAdminRights(flags: []))
+                dismissImpl?()
+            }))
         }))
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            })
+        ])])
+        presentControllerImpl?(actionSheet, nil)
     })
     
     let combinedView = account.postbox.combinedView(keys: [.peer(peerId: peerId, components: .all), .peer(peerId: adminId, components: .all)])
@@ -605,6 +619,9 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
     let controller = ItemListController(account: account, state: signal)
     dismissImpl = { [weak controller] in
         controller?.dismiss()
+    }
+    presentControllerImpl = { [weak controller] value, presentationArguments in
+        controller?.present(value, in: .window(.root), with: presentationArguments)
     }
     return controller
 }

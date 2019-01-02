@@ -303,14 +303,14 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             }
             let _ = (account.postbox.loadedPeerWithId(peerId)
             |> deliverOnMainQueue).start(next: { channel in
-                guard let channel = channel as? TelegramChannel else {
+                guard let _ = channel as? TelegramChannel else {
                     return
                 }
                 
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 let progress = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
-                removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+                removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], personal: false, untilDate: Int32.max))
                     |> deliverOnMainQueue).start(error: { [weak progress] _ in
                         progress?.dismiss()
                         dismissController?()
@@ -348,7 +348,9 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
             let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             var items: [ActionSheetItem] = []
-            items.append(ActionSheetTextItem(title: participant.peer.displayTitle))
+            if !participant.peer.displayTitle.isEmpty {
+                items.append(ActionSheetTextItem(title: participant.peer.displayTitle))
+            }
             items.append(ActionSheetButtonItem(title: presentationData.strings.GroupRemoved_ViewUserInfo, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 if let infoController = peerInfoController(account: account, peer: participant.peer) {
@@ -406,7 +408,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
     })
     
     let (listDisposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.banned(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { listState in
-        if case .loading = listState.loadingState, listState.list.isEmpty {
+        if case .loading(true) = listState.loadingState, listState.list.isEmpty {
             blacklistPromise.set(.single(nil))
         } else {
             blacklistPromise.set(.single(listState.list))

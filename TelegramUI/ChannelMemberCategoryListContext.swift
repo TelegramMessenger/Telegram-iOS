@@ -9,7 +9,7 @@ private let headUpdateTimeout: Double = 30.0
 private let requestBatchSize: Int32 = 64
 
 enum ChannelMemberListLoadingState: Equatable {
-    case loading
+    case loading(initial: Bool)
     case ready(hasMore: Bool)
 }
 
@@ -111,7 +111,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
         
         self.listStateValue = ChannelMemberListState(list: [], loadingState: .ready(hasMore: true))
         self.listStatePromise = Promise(self.listStateValue)
-        self.loadMore()
+        self.loadMoreInternal(initial: true)
     }
     
     deinit {
@@ -121,6 +121,10 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
     }
     
     func loadMore() {
+        self.loadMoreInternal(initial: false)
+    }
+    
+    private func loadMoreInternal(initial: Bool) {
         guard case .ready(true) = self.listStateValue.loadingState else {
             return
         }
@@ -132,7 +136,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             loadCount = requestBatchSize
         }
         
-        self.listStateValue = self.listStateValue.withUpdatedLoadingState(.loading)
+        self.listStateValue = self.listStateValue.withUpdatedLoadingState(.loading(initial: initial))
         
         self.loadingDisposable.set((self.loadMoreSignal(count: loadCount)
         |> deliverOnMainQueue).start(next: { [weak self] members in
@@ -422,13 +426,13 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
     private static func reduceListStates(_ listStates: [ChannelMemberListState]) -> ChannelMemberListState {
         var allReady = true
         for listState in listStates {
-            if case .loading = listState.loadingState, listState.list.isEmpty {
+            if case .loading(true) = listState.loadingState, listState.list.isEmpty {
                 allReady = false
                 break
             }
         }
         if !allReady {
-            return ChannelMemberListState(list: [], loadingState: .loading)
+            return ChannelMemberListState(list: [], loadingState: .loading(initial: true))
         }
         
         var list: [RenderedChannelParticipant] = []
@@ -442,8 +446,8 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
                 }
             }
             switch listStates[i].loadingState {
-                case .loading:
-                    loadingState = .loading
+                case let .loading(initial):
+                    loadingState = .loading(initial: initial)
                     break loop
                 case let .ready(hasMore):
                     if hasMore {

@@ -765,9 +765,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         if canEditGroupInfo {
             entries.append(GroupInfoEntry.setGroupPhoto(presentationData.theme, presentationData.strings.GroupInfo_SetGroupPhoto))
             
-            if view.peers[view.peerId] is TelegramChannel {
-                entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_About_Placeholder, editingState.editingDescriptionText))
-            }
+            entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_About_Placeholder, editingState.editingDescriptionText))
         }
         
         if let group = view.peers[view.peerId] as? TelegramGroup {
@@ -1595,7 +1593,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                     }
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], personal: false, untilDate: Int32.max))
                         |> afterDisposed {
                             Queue.mainQueue().async {
                                 updateState { state in

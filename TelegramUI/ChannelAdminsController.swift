@@ -544,6 +544,9 @@ public func channelAdminsController(account: Account, peerId: PeerId) -> ViewCon
                 }, openPeer: { _, participant in
                     if let participant = participant?.participant, case .member = participant {
                         presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+                            updateState { state in
+                                return state.withUpdatedSearchingMembers(false)
+                            }
                         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
                 }, present: { c, a in

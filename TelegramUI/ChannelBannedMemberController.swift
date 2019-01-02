@@ -502,7 +502,7 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
                                 currentTimeout = Int32.max
                             }
                             
-                            resolvedRights = TelegramChatBannedRights(flags: completeRights(currentRightsFlags), untilDate: currentTimeout)
+                            resolvedRights = TelegramChatBannedRights(flags: completeRights(currentRightsFlags), personal: false, untilDate: currentTimeout)
                         }
                     } else if canEdit, let _ = channelView.peers[channelView.peerId] as? TelegramChannel {
                         var updateFlags: TelegramChatBannedRightsFlags?
@@ -523,7 +523,7 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
                         }
                         
                         if let updateFlags = updateFlags, let updateTimeout = updateTimeout {
-                           resolvedRights = TelegramChatBannedRights(flags: completeRights(updateFlags), untilDate: updateTimeout)
+                           resolvedRights = TelegramChatBannedRights(flags: completeRights(updateFlags), personal: false, untilDate: updateTimeout)
                         }
                     }
                     
@@ -534,7 +534,7 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
                     
                     if let resolvedRights = resolvedRights, previousRights != resolvedRights {
                         let cleanResolvedRightsFlags = resolvedRights.flags.union(initialRightFlags)
-                        let cleanResolvedRights = TelegramChatBannedRights(flags: cleanResolvedRightsFlags, untilDate: resolvedRights.untilDate)
+                        let cleanResolvedRights = TelegramChatBannedRights(flags: cleanResolvedRightsFlags, personal: false, untilDate: resolvedRights.untilDate)
                         
                         if cleanResolvedRights.flags.isEmpty && previousRights == nil {
                             dismissImpl?()
@@ -557,7 +557,7 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
                                         dismissImpl?()
                                     }))
                             }
-                            if previousRights == nil {
+                            if false && previousRights == nil {
                                 applyRights()
                             } else {
                                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }

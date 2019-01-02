@@ -108,6 +108,8 @@
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
 		D005808B21CAB8F000CB7CD3 /* VoipDerivedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */; };
+		D00580A021DCF0A200CB7CD3 /* WallpaperListPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */; };
+		D00580A221DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */; };
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
 		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
@@ -1225,6 +1227,8 @@
 		D003702F1DA43077004308D3 /* ItemListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListItem.swift; sourceTree = "<group>"; };
 		D00370311DA46C06004308D3 /* ItemListTextWithLabelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextWithLabelItem.swift; sourceTree = "<group>"; };
 		D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoipDerivedState.swift; sourceTree = "<group>"; };
+		D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperListPreviewController.swift; sourceTree = "<group>"; };
+		D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperListPreviewControllerNode.swift; sourceTree = "<group>"; };
 		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
 		D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegqacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
@@ -3084,6 +3088,8 @@
 				D06F31E3213597FF001A0F12 /* ThemeAutoNightTimeSelectionActionSheet.swift */,
 				D06F31E52135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift */,
 				099529AD21D045C400805E13 /* ThemeGridActionNode.swift */,
+				D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */,
+				D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";
@@ -5203,6 +5209,7 @@
 				D048B339203C532800038D05 /* ChatMediaInputPane.swift in Sources */,
 				D0E817502012027900B82BBB /* ChatMessageEventLogPreviousLinkContentNode.swift in Sources */,
 				D0EC6CFD1EB9F58800EBF1C3 /* AudioWaveform.swift in Sources */,
+				D00580A221DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift in Sources */,
 				D0EC6CFF1EB9F58800EBF1C3 /* OverlayMediaController.swift in Sources */,
 				D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */,
 				D02C81712177729000CD1006 /* NotificationExceptions.swift in Sources */,
@@ -5532,6 +5539,7 @@
 				D0EC6D9D1EB9F58900EBF1C3 /* ChatMessageTextBubbleContentNode.swift in Sources */,
 				D0E9BA2B1F0557A600F079A4 /* STPFormEncoder.m in Sources */,
 				D01BAA1C1ECC92F700295217 /* CallListViewTransition.swift in Sources */,
+				D00580A021DCF0A200CB7CD3 /* WallpaperListPreviewController.swift in Sources */,
 				D097C26C20DD1EA5007BB4B8 /* OverlayStatusController.swift in Sources */,
 				D0EC6D9E1EB9F58900EBF1C3 /* ChatMessageWebpageBubbleContentNode.swift in Sources */,
 				D06CF82720D0080200AC4CFF /* SecureIdAuthListContentNode.swift in Sources */,

@@ -101,6 +101,20 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
                             } else {
                                 self._ready.set(.single(Void()))
                             }
+                        case let .file(file):
+                            let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
+                            let displaySize = dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
+                            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
+                            
+                            var convertedRepresentations: [ImageRepresentationWithReference] = []
+                            for representation in file.file.previewRepresentations {
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
+                            }
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
+                            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations), dispatchOnDisplayLink: false)
+                            self.zoomableContent = (dimensions, self.imageNode)
+                            
+                            self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference).start())
                 }
             }
         }
