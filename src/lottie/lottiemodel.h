@@ -363,6 +363,7 @@ public:
     LottieColor solidColor() const noexcept{return mSolidLayer.mColor;}
     bool autoOrient() const noexcept{return mAutoOrient;}
     int timeRemap(int frameNo) const;
+    VSize layerSize() const {return mLayerSize;}
 public:
     struct SolidLayer {
         int            mWidth{0};
@@ -378,6 +379,7 @@ public:
     long                 mInFrame{0};
     long                 mOutFrame{0};
     long                 mStartFrame{0};
+    VSize                mLayerSize;
     LottieBlendMode      mBlendMode{LottieBlendMode::Normal};
     float                mTimeStreatch{1.0f};
     std::string          mPreCompRefId;

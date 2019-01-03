@@ -804,6 +804,10 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
             layer->mTransform = parseTransformObject(ddd);
         } else if (0 == strcmp(key, "shapes")) {
             parseShapesAttr(layer);
+        } else if (0 == strcmp(key, "w")) {
+            layer->mLayerSize.setWidth(GetInt());
+        } else if (0 == strcmp(key, "h")) {
+            layer->mLayerSize.setHeight(GetInt());
         } else if (0 == strcmp(key, "sw")) {
             layer->mSolidLayer.mWidth = GetInt();
         } else if (0 == strcmp(key, "sh")) {
@@ -1944,7 +1948,10 @@ public:
                << "Composition:: a: " << !obj->isStatic()
                << ", v: " << obj->mVersion
                << ", stFm: " << obj->startFrame()
-               << ", endFm: " << obj->endFrame()<< "\n";
+               << ", endFm: " << obj->endFrame()
+               << ", W: " << obj->size().width()
+               << ", H: " << obj->size().height()
+               << "\n";
         level.append("\t");
         visit(obj->mRootLayer.get(), level);
         level.erase(level.end() - 1, level.end());
@@ -1965,6 +1972,8 @@ public:
                << ", ts:" << obj->mTimeStreatch
                << ", ao:" << obj->autoOrient()
                << ", ddd:" << obj->mTransform->ddd()
+               << ", W:" << obj->layerSize().width()
+               << ", H:" << obj->layerSize().height()
                << "\n";
         visitChildren(static_cast<LOTGroupData *>(obj), level);
         vDebug << level
