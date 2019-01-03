@@ -145,7 +145,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         var insets = layout.insets(options: [.input])
-        insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
+        insets.top += navigationBarHeight
         insets.bottom = max(insets.bottom, cleanInsets.bottom)
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
@@ -193,107 +193,80 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch() {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
         guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar else {
             return
         }
         
         if self.chatListNode.supernode != nil {
-            var maybePlaceholderNode: SearchBarPlaceholderNode?
-            self.chatListNode.forEachItemNode { node in
-                if let node = node as? ChatListSearchItemNode {
-                    maybePlaceholderNode = node.searchBarNode
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
+                if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
+                    requestOpenPeerFromSearch(peer)
                 }
-            }
+            }, openRecentPeerOptions: { _ in
+            }, openMessage: { [weak self] peer, messageId in
+                if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
+                    requestOpenMessageFromSearch(peer, messageId)
+                }
+            }, addContact: nil), cancel: { [weak self] in
+                if let requestDeactivateSearch = self?.requestDeactivateSearch {
+                    requestDeactivateSearch()
+                }
+            })
             
-            if let _ = self.searchDisplayController {
-                return
-            }
+            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+                if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                    if isSearchBar {
+                        strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                    } else {
+                        strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
+                    }
+                }
+            }, placeholder: placeholderNode)
             
-            if let placeholderNode = maybePlaceholderNode {
-                self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
-                    if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
-                        requestOpenPeerFromSearch(peer)
-                    }
-                }, openRecentPeerOptions: { _ in
-                }, openMessage: { [weak self] peer, messageId in
-                    if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
-                        requestOpenMessageFromSearch(peer, messageId)
-                    }
-                }, addContact: nil), cancel: { [weak self] in
-                    if let requestDeactivateSearch = self?.requestDeactivateSearch {
-                        requestDeactivateSearch()
-                    }
-                })
-                
-                self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                self.searchDisplayController?.activate(insertSubnode: { subnode in
-                    self.insertSubnode(subnode, belowSubnode: navigationBar)
-                }, placeholder: placeholderNode)
-            }
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
-            var maybePlaceholderNode: SearchBarPlaceholderNode?
-            contactListNode.listNode.forEachItemNode { node in
-                if let node = node as? ChatListSearchItemNode {
-                    maybePlaceholderNode = node.searchBarNode
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+                if let strongSelf = self {
+                    switch peer {
+                        case let .peer(peer, _):
+                            let _ = (strongSelf.account.postbox.transaction { transaction -> Peer? in
+                                return transaction.getPeer(peer.id)
+                            } |> deliverOnMainQueue).start(next: { peer in
+                                if let strongSelf = self, let peer = peer {
+                                    strongSelf.requestOpenPeerFromSearch?(peer)
+                                }
+                            })
+                        case let .deviceContact(stableId, contact):
+                            break
+                    }
                 }
-            }
+            }), cancel: { [weak self] in
+                if let requestDeactivateSearch = self?.requestDeactivateSearch {
+                    requestDeactivateSearch()
+                }
+            })
             
-            if let _ = self.searchDisplayController {
-                return
-            }
-            
-            if let placeholderNode = maybePlaceholderNode {
-                self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
-                    if let strongSelf = self {
-                        switch peer {
-                            case let .peer(peer, _):
-                                let _ = (strongSelf.account.postbox.transaction { transaction -> Peer? in
-                                    return transaction.getPeer(peer.id)
-                                } |> deliverOnMainQueue).start(next: { peer in
-                                    if let strongSelf = self, let peer = peer {
-                                        strongSelf.requestOpenPeerFromSearch?(peer)
-                                    }
-                                })
-                            case let .deviceContact(stableId, contact):
-                                break
-                        }
+            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+                if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                    if isSearchBar {
+                        strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                    } else {
+                        strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                     }
-                }), cancel: { [weak self] in
-                    if let requestDeactivateSearch = self?.requestDeactivateSearch {
-                        requestDeactivateSearch()
-                    }
-                })
-                
-                self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                self.searchDisplayController?.activate(insertSubnode: { subnode in
-                    self.insertSubnode(subnode, belowSubnode: navigationBar)
-                }, placeholder: placeholderNode)
-            }
+                }
+            }, placeholder: placeholderNode)
         }
     }
     
-    func deactivateSearch() {
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
         if let searchDisplayController = self.searchDisplayController {
             if self.chatListNode.supernode != nil {
-                var maybePlaceholderNode: SearchBarPlaceholderNode?
-                self.chatListNode.forEachItemNode { node in
-                    if let node = node as? ChatListSearchItemNode {
-                        maybePlaceholderNode = node.searchBarNode
-                    }
-                }
-                
-                searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
+                searchDisplayController.deactivate(placeholder: placeholderNode)
                 self.searchDisplayController = nil
             } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
-                var maybePlaceholderNode: SearchBarPlaceholderNode?
-                contactListNode.listNode.forEachItemNode { node in
-                    if let node = node as? ChatListSearchItemNode {
-                        maybePlaceholderNode = node.searchBarNode
-                    }
-                }
-                
-                searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
+                searchDisplayController.deactivate(placeholder: placeholderNode)
                 self.searchDisplayController = nil
             }
         }

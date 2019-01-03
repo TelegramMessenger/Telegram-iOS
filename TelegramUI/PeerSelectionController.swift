@@ -42,6 +42,8 @@ public final class PeerSelectionController: ViewController {
     
     private let hasContactSelector: Bool
     
+    private var searchContentNode: NavigationBarSearchContentNode?
+    
     public init(account: Account, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil) {
         self.account = account
         self.filter = filter
@@ -74,6 +76,11 @@ public final class PeerSelectionController: ViewController {
                 }
             }
         })
+        
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -88,6 +95,7 @@ public final class PeerSelectionController: ViewController {
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Conversation_ForwardTitle
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
@@ -164,7 +172,9 @@ public final class PeerSelectionController: ViewController {
             if let scrollToTop = self.scrollToTop {
                 scrollToTop()
             }
-            self.peerSelectionNode.activateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.peerSelectionNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
             self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
         }
     }
@@ -172,7 +182,9 @@ public final class PeerSelectionController: ViewController {
     private func deactivateSearch() {
         if !self.displayNavigationBar {
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
-            self.peerSelectionNode.deactivateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.peerSelectionNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
         }
     }
     

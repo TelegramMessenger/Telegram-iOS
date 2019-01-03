@@ -24,6 +24,8 @@ public class ContactsController: ViewController {
     private var authorizationDisposable: Disposable?
     private let sortOrderPromise = Promise<ContactsSortOrder>()
     
+    private var searchContentNode: NavigationBarSearchContentNode?
+    
     public init(account: Account) {
         self.account = account
         
@@ -47,11 +49,13 @@ public class ContactsController: ViewController {
         self.tabBarItem.selectedImage = icon
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Sort", style: .plain, target: self, action: #selector(self.sortPressed))
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateExpansionProgress(1.0, animated: true)
+                }
                 strongSelf.contactsNode.contactListNode.scrollToTop()
             }
         }
@@ -102,6 +106,11 @@ public class ContactsController: ViewController {
                 return settings?.sortOrder ?? .presence
             })
         }
+        
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -116,6 +125,7 @@ public class ContactsController: ViewController {
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -200,6 +210,10 @@ public class ContactsController: ViewController {
             }
         }
         
+        self.contactsNode.contactListNode.openSortMenu = { [weak self] in
+            self?.presentSortMenu()
+        }
+        
         self.displayNodeDidLoad()
     }
     
@@ -226,7 +240,9 @@ public class ContactsController: ViewController {
             if let scrollToTop = self.scrollToTop {
                 scrollToTop()
             }
-            self.contactsNode.activateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
             self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
         }
     }
@@ -234,35 +250,34 @@ public class ContactsController: ViewController {
     private func deactivateSearch() {
         if !self.displayNavigationBar {
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
-            self.contactsNode.deactivateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
         }
     }
     
-    func updateSortOrder(_ sortOrder: ContactsSortOrder) {
-        self.sortOrderPromise.set(.single(sortOrder))
-        let _ = updateContactSettingsInteractively(postbox: self.account.postbox) { current -> ContactSynchronizationSettings in
-            var updated = current
-            updated.sortOrder = sortOrder
-            return updated
-        }.start()
-    }
-    
-    @objc func sortPressed() {
-        let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+    private func presentSortMenu() {
+        let updateSortOrder: (ContactsSortOrder) -> Void = { [weak self] sortOrder in
+            if let strongSelf = self {
+                strongSelf.sortOrderPromise.set(.single(sortOrder))
+                let _ = updateContactSettingsInteractively(postbox: strongSelf.account.postbox) { current -> ContactSynchronizationSettings in
+                    var updated = current
+                    updated.sortOrder = sortOrder
+                    return updated
+                }.start()
+            }
+        }
         
+        let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetTextItem(title: self.presentationData.strings.Contacts_SortBy))
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByName, color: .accent, action: { [weak self, weak actionSheet] in
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByName, color: .accent, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()
-            if let strongSelf = self {
-                strongSelf.updateSortOrder(.natural)
-            }
+            updateSortOrder(.natural)
         }))
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByPresence, color: .accent, action: { [weak self, weak actionSheet] in
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByPresence, color: .accent, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()
-            if let strongSelf = self {
-                strongSelf.updateSortOrder(.presence)
-            }
+            updateSortOrder(.presence)
         }))
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in

@@ -24,6 +24,9 @@ public class NotificationExceptionsController: ViewController {
     
     private let mode: NotificationExceptionMode
     private let updatedMode: (NotificationExceptionMode) -> Void
+    
+    private var searchContentNode: NavigationBarSearchContentNode?
+    
     public init(account: Account, mode: NotificationExceptionMode, updatedMode: @escaping(NotificationExceptionMode)->Void) {
         self.account = account
         self.mode = mode
@@ -46,18 +49,23 @@ public class NotificationExceptionsController: ViewController {
         }
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
-                    
-                    strongSelf.presentationData = presentationData
-                    
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                        strongSelf.updateThemeAndStrings()
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
                 }
-            })
+            }
+        })
+        
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -71,6 +79,7 @@ public class NotificationExceptionsController: ViewController {
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Notifications_ExceptionsTitle
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.controllerNode.updatePresentationData(self.presentationData)
@@ -130,7 +139,9 @@ public class NotificationExceptionsController: ViewController {
             if let scrollToTop = self.scrollToTop {
                 scrollToTop()
             }
-            self.controllerNode.activateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.controllerNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
             self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
         }
     }
@@ -138,7 +149,9 @@ public class NotificationExceptionsController: ViewController {
     private func deactivateSearch() {
         if !self.displayNavigationBar {
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
-            self.controllerNode.deactivateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.controllerNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
         }
     }
 }

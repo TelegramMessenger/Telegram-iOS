@@ -163,10 +163,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                         var statusState: RadialStatusNodeState = .none
                         switch status {
                             case let .Fetching(isActive, progress):
-                                var adjustedProgress = progress
-                                if isActive {
-                                    adjustedProgress = max(adjustedProgress, 0.027)
-                                }
+                                let adjustedProgress = max(progress, 0.027)
                                 statusState = .cloudProgress(color: UIColor.white, strokeBackgroundColor: UIColor.white.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
                             case .Local:
                                 break

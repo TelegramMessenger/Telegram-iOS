@@ -47,6 +47,8 @@ class ContactSelectionController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var searchContentNode: NavigationBarSearchContentNode?
+    
     var displayNavigationActivity: Bool = false {
         didSet {
             if self.displayNavigationActivity != oldValue {
@@ -96,6 +98,11 @@ class ContactSelectionController: ViewController {
                 }
             }
         })
+        
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -110,6 +117,7 @@ class ContactSelectionController: ViewController {
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.titleProducer(self.presentationData.strings)
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -195,7 +203,9 @@ class ContactSelectionController: ViewController {
             if let scrollToTop = self.scrollToTop {
                 scrollToTop()
             }
-            self.contactsNode.activateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
             self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
         }
     }
@@ -204,7 +214,9 @@ class ContactSelectionController: ViewController {
         if !self.displayNavigationBar {
             self.contactsNode.prepareDeactivateSearch()
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
-            self.contactsNode.deactivateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
         }
     }
     

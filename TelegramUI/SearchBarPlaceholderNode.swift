@@ -10,8 +10,7 @@ private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: templateLoupeIcon, color: color)
 }
 
-private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
-    let diameter: CGFloat = 10.0
+private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor, diameter: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.setFillColor(backgroundColor.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
@@ -29,10 +28,11 @@ private class SearchBarPlaceholderNodeView: UIView {
     }
 }
 
-class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
+class SearchBarPlaceholderNode: ASDisplayNode {
     var activate: (() -> Void)?
     
-    let backgroundNode: ASImageNode
+    private let fieldStyle: SearchBarStyle
+    let backgroundNode: ASDisplayNode
     private var fillBackgroundColor: UIColor
     private var foregroundColor: UIColor
     private var iconColor: UIColor
@@ -41,17 +41,23 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
     
     private(set) var placeholderString: NSAttributedString?
     
-    override init() {
-        self.backgroundNode = ASImageNode()
+    convenience override init() {
+        self.init(fieldStyle: .legacy)
+    }
+    
+    init(fieldStyle: SearchBarStyle = .legacy) {
+        self.fieldStyle = fieldStyle
+        
+        self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = false
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.displayWithoutProcessing = true
         
         self.fillBackgroundColor = UIColor.white
         self.foregroundColor = UIColor(rgb: 0xededed)
         self.iconColor = UIColor(rgb: 0x000000, alpha: 0.0)
         
-        self.backgroundNode.image = generateBackground(backgroundColor: self.fillBackgroundColor, foregroundColor: self.foregroundColor)
+        self.backgroundNode.backgroundColor = self.foregroundColor
+        self.backgroundNode.cornerRadius = self.fieldStyle.cornerDiameter / 2.0
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -78,19 +84,18 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
         self.backgroundNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(backgroundTap(_:))))
     }
     
-    func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor) -> (() -> Void) {
+    func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (() -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
-        let currentFillBackgroundColor = self.fillBackgroundColor
         let currentForegroundColor = self.foregroundColor
         let currentIconColor = self.iconColor
         
-        return { placeholderString, constrainedSize, iconColor, foregroundColor, backgroundColor in
+        return { placeholderString, constrainedSize, expansionProgress, iconColor, foregroundColor, backgroundColor, transition in
             let (labelLayoutResult, labelApply) = labelLayout(TextNodeLayoutArguments(attributedString: placeholderString, backgroundColor: foregroundColor, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            var updatedBackgroundImage: UIImage?
+            var updatedColor: UIColor?
             var updatedIconImage: UIImage?
-            if !currentFillBackgroundColor.isEqual(backgroundColor) || !currentForegroundColor.isEqual(foregroundColor) {
-                updatedBackgroundImage = generateBackground(backgroundColor: backgroundColor, foregroundColor: foregroundColor)
+            if !currentForegroundColor.isEqual(foregroundColor) {
+                updatedColor = foregroundColor
             }
             if !currentIconColor.isEqual(iconColor) {
                 updatedIconImage = generateLoupeIcon(color: iconColor)
@@ -103,9 +108,10 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
                     strongSelf.fillBackgroundColor = backgroundColor
                     strongSelf.foregroundColor = foregroundColor
                     strongSelf.iconColor = iconColor
-                    if let updatedBackgroundImage = updatedBackgroundImage {
-                        strongSelf.backgroundNode.image = updatedBackgroundImage
-                        strongSelf.labelNode.backgroundColor = foregroundColor
+                    strongSelf.backgroundNode.isUserInteractionEnabled = expansionProgress > 1.0 - CGFloat.ulpOfOne
+                    
+                    if let updatedColor = updatedColor {
+                        strongSelf.backgroundNode.backgroundColor = updatedColor
                     }
                     if let updatedIconImage = updatedIconImage {
                         strongSelf.iconNode.image = updatedIconImage
@@ -113,14 +119,32 @@ class SearchBarPlaceholderNode: ASDisplayNode, ASEditableTextNodeDelegate {
                     
                     strongSelf.placeholderString = placeholderString
                     
-                    let labelFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - labelLayoutResult.size.width) / 2.0), y: floorToScreenPixels((28.0 - labelLayoutResult.size.height) / 2.0)), size: labelLayoutResult.size)
-                    strongSelf.labelNode.frame = labelFrame
+                    var iconSize = CGSize()
+                    var totalWidth = labelLayoutResult.size.width
+                    let spacing: CGFloat = 7.0
+                    let height = constrainedSize.height * expansionProgress
+                    
                     if let iconImage = strongSelf.iconNode.image {
-                        let iconSize = iconImage.size
-                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: labelFrame.minX - 4.0 - iconSize.width, y: floorToScreenPixels((28.0 - iconSize.height) / 2.0)), size: iconSize)
+                        iconSize = iconImage.size
+                        totalWidth += iconSize.width + spacing
+                         transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: floor((constrainedSize.width - totalWidth) / 2.0), y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize))
                     }
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: 28.0))
-                    strongSelf.backgroundColor = backgroundColor
+                    var textOffset: CGFloat = 0.0
+                    if constrainedSize.height >= 36.0 {
+                        textOffset += UIScreenPixel
+                    }
+                    let labelFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - totalWidth) / 2.0) + iconSize.width + spacing, y: floorToScreenPixels((height - labelLayoutResult.size.height) / 2.0) + textOffset), size: labelLayoutResult.size)
+                    transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)
+               
+                    let innerAlpha = max(0.0, expansionProgress - 0.77) / 0.23
+                    transition.updateAlpha(node: strongSelf.labelNode, alpha: innerAlpha)
+                    transition.updateAlpha(node: strongSelf.iconNode, alpha: innerAlpha)
+                    let outerAlpha = min(0.3, expansionProgress) / 0.3
+                    
+                    let cornerRadius = min(strongSelf.fieldStyle.cornerDiameter / 2.0, height / 2.0)
+                    strongSelf.backgroundNode.cornerRadius = cornerRadius
+                    transition.updateAlpha(node: strongSelf.backgroundNode, alpha: outerAlpha)
+                    transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)))
                 }
             }
         }

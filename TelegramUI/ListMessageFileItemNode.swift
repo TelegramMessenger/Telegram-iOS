@@ -647,11 +647,8 @@ final class ListMessageFileItemNode: ListMessageNode {
             self.updateProgressFrame(size: contentSize, leftInset: layoutParams.leftInset, rightInset: layoutParams.rightInset, transition: .immediate)
         } else {
             switch fetchStatus {
-                case let .Fetching(isActive, progress):
-                    var adjustedProgress = progress
-                    if isActive {
-                        adjustedProgress = max(adjustedProgress, 0.027)
-                    }
+                case let .Fetching(_, progress):
+                    let adjustedProgress = max(progress, 0.027)
                     statusState = .cloudProgress(color: item.theme.list.itemAccentColor, strokeBackgroundColor: item.theme.list.itemAccentColor.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
                 case .Local:
                     break
@@ -666,11 +663,8 @@ final class ListMessageFileItemNode: ListMessageNode {
             switch status {
                 case let .fetchStatus(fetchStatus):
                     switch fetchStatus {
-                        case let .Fetching(isActive, progress):
-                            var adjustedProgress = progress
-                            if isActive {
-                                adjustedProgress = max(adjustedProgress, 0.027)
-                            }
+                        case let .Fetching(_, progress):
+                            let adjustedProgress = max(progress, 0.027)
                             self.progressNode.state = .Fetching(progress: adjustedProgress)
                         case .Local:
                             if isAudio {

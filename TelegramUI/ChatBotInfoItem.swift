@@ -287,6 +287,8 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                     self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, messageId: nil), nil)
                                 case let .textMention(name):
                                     self.item?.controllerInteraction.openPeerMention(name)
+                                case let .botCommand(command):
+                                    self.item?.controllerInteraction.sendBotCommand(nil, command)
                                 case let .hashtag(peerName, hashtag):
                                     self.item?.controllerInteraction.openHashtag(peerName, hashtag)
                                 default:
@@ -304,6 +306,8 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                         item.controllerInteraction.longTap(.peerMention(peerId, mention))
                                     case let .textMention(name):
                                         item.controllerInteraction.longTap(.mention(name))
+                                    case let .botCommand(command):
+                                        item.controllerInteraction.longTap(.command(command))
                                     case let .hashtag(_, hashtag):
                                         item.controllerInteraction.longTap(.hashtag(hashtag))
                                     default:

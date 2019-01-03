@@ -126,6 +126,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     case unreadCountCategoryInfo(PresentationTheme, String)
     
     case joinedNotifications(PresentationTheme, String, Bool)
+    case joinedNotificationsInfo(PresentationTheme, String)
     
     case reset(PresentationTheme, String)
     case resetNotice(PresentationTheme, String)
@@ -146,7 +147,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return NotificationsAndSoundsSection.displayNamesOnLockscreen.rawValue
             case .badgeHeader, .unreadCountStyle, .includePublicGroups, .includeChannels, .unreadCountCategory, .unreadCountCategoryInfo:
                 return NotificationsAndSoundsSection.badge.rawValue
-            case .joinedNotifications:
+            case .joinedNotifications, .joinedNotificationsInfo:
                 return NotificationsAndSoundsSection.joinedNotifications.rawValue
             case .reset, .resetNotice:
                 return NotificationsAndSoundsSection.reset.rawValue
@@ -221,10 +222,12 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return 31
             case .joinedNotifications:
                 return 32
-            case .reset:
+            case .joinedNotificationsInfo:
                 return 33
-            case .resetNotice:
+            case .reset:
                 return 34
+            case .resetNotice:
+                return 35
         }
     }
     
@@ -428,6 +431,12 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .joinedNotificationsInfo(lhsTheme, lhsText):
+                if case let .joinedNotificationsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .reset(lhsTheme, lhsText):
                 if case let .reset(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -575,6 +584,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateJoinedNotifications(updatedValue)
                 })
+            case let .joinedNotificationsInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .reset(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetNotifications()
@@ -660,6 +671,7 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     entries.append(.unreadCountCategory(presentationData.theme, presentationData.strings.Notifications_Badge_CountUnreadMessages, inAppSettings.totalUnreadCountDisplayCategory == .messages))
     entries.append(.unreadCountCategoryInfo(presentationData.theme, inAppSettings.totalUnreadCountDisplayCategory == .chats ? presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOff : presentationData.strings.Notifications_Badge_CountUnreadMessages_InfoOn))
     entries.append(.joinedNotifications(presentationData.theme, presentationData.strings.NotificationSettings_ContactJoined, globalSettings.contactsJoined))
+    entries.append(.joinedNotificationsInfo(presentationData.theme, presentationData.strings.NotificationSettings_ContactJoinedInfo))
     
     entries.append(.reset(presentationData.theme, presentationData.strings.Notifications_ResetAllNotifications))
     entries.append(.resetNotice(presentationData.theme, presentationData.strings.Notifications_ResetAllNotificationsHelp))

@@ -58,8 +58,9 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.updateLayout(boundingSize: size, leftInset: 0.0, rightInset: 0.0, transition: .immediate)
     }
     
-    func activate() {
+    func activate(select: Bool = false) {
         self.searchBar.activate()
+        self.searchBar.selectAll()
     }
     
     func deactivate() {

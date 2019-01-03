@@ -46,6 +46,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     private let stateDisposable = MetaDisposable()
     
+    private var searchContentNode: NavigationBarSearchContentNode?
+    
     public init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool) {
         self.account = account
         self.controlsHistoryPreload = controlsHistoryPreload
@@ -88,7 +90,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
-            self?.chatListDisplayNode.scrollToTop()
+            if let strongSelf = self {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateExpansionProgress(1.0, animated: true)
+                }
+                strongSelf.chatListDisplayNode.scrollToTop()
+            }
         }
         self.scrollToTopWithTabBar = { [weak self] in
             guard let strongSelf = self else {
@@ -234,6 +241,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
             }
         })
+        
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -254,6 +266,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     private func updateThemeAndStrings() {
         self.tabBarItem.title = self.presentationData.strings.DialogList_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel)
         var editing = false
         self.chatListDisplayNode.chatListNode.updateState { state in
             editing = state.editing
@@ -499,6 +512,27 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
+        self.chatListDisplayNode.chatListNode.contentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, searchContentNode.nominalHeight > 0.0 {
+                var progress: CGFloat = 0.0
+                switch offset {
+                    case let .known(offset):
+                        progress = max(0.0, (searchContentNode.nominalHeight - offset)) / searchContentNode.nominalHeight
+                    default:
+                        break
+                }
+                searchContentNode.updateExpansionProgress(progress)
+            }
+        }
+        
+        self.chatListDisplayNode.chatListNode.contentScrollingEnded = { [weak self] listView in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
+            } else {
+                return false
+            }
+        }
+        
         let account = self.account
         let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.chatListNode.state
         |> map { state -> Set<PeerId>? in
@@ -680,6 +714,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         } else {
             self.navigationItem.rightBarButtonItem = editItem
         }
+        self.searchContentNode?.setIsEnabled(false, animated: true)
         self.chatListDisplayNode.chatListNode.updateState { state in
             var state = state
             state.editing = true
@@ -695,6 +730,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         } else {
             self.navigationItem.rightBarButtonItem = editItem
         }
+        self.searchContentNode?.setIsEnabled(true, animated: true)
         self.chatListDisplayNode.chatListNode.updateState { state in
             var state = state
             state.editing = false
@@ -715,7 +751,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 if let scrollToTop = strongSelf.scrollToTop {
                     scrollToTop()
                 }
-                strongSelf.chatListDisplayNode.activateSearch()
+                if let searchContentNode = strongSelf.searchContentNode {
+                    strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+                }
                 strongSelf.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
             })
         }
@@ -724,7 +762,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
             self.setDisplayNavigationBar(true, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
-            self.chatListDisplayNode.deactivateSearch(animated: animated)
+            if let searchContentNode = self.searchContentNode {
+                self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
+            }
         }
     }
     
@@ -765,13 +805,6 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     sourceRect.size.height -= UIScreenPixel
                     
                     let chatController = ChatController(account: self.account, chatLocation: .peer(peerId), mode: .standard(previewing: true))
-//                    chatController.peekActions = .remove({ [weak self] in
-//                        if let strongSelf = self {
-//                            let _ = removeRecentPeer(account: strongSelf.account, peerId: peerId).start()
-//                            let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
-//                            searchContainer?.removePeerFromTopPeers(peerId)
-//                        }
-//                    })
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return (chatController, sourceRect)

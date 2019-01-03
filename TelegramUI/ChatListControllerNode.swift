@@ -97,7 +97,7 @@ class ChatListControllerNode: ASDisplayNode {
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.input])
-        insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
+        insets.top += navigationBarHeight
         
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
@@ -142,58 +142,44 @@ class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch() {
-        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar else {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return
         }
         
-        var maybePlaceholderNode: SearchBarPlaceholderNode?
-        self.chatListNode.forEachItemNode { node in
-            if let node = node as? ChatListSearchItemNode {
-                maybePlaceholderNode = node.searchBarNode
+        self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, mode: .navigation, contentNode: ChatListSearchContainerNode(account: self.account, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
+            self?.requestOpenPeerFromSearch?(peer, dismissSearch)
+        }, openRecentPeerOptions: { [weak self] peer in
+            self?.requestOpenRecentPeerOptions?(peer)
+        }, openMessage: { [weak self] peer, messageId in
+            if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
+                requestOpenMessageFromSearch(peer, messageId)
             }
-        }
+        }, addContact: { [weak self] phoneNumber in
+            if let requestAddContact = self?.requestAddContact {
+                requestAddContact(phoneNumber)
+            }
+        }), cancel: { [weak self] in
+            if let requestDeactivateSearch = self?.requestDeactivateSearch {
+                requestDeactivateSearch()
+            }
+        })
         
-        if let _ = self.searchDisplayController {
-            return
-        }
-        
-        if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChatListSearchContainerNode(account: self.account, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
-                self?.requestOpenPeerFromSearch?(peer, dismissSearch)
-            }, openRecentPeerOptions: { [weak self] peer in
-                self?.requestOpenRecentPeerOptions?(peer)
-            }, openMessage: { [weak self] peer, messageId in
-                if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
-                    requestOpenMessageFromSearch(peer, messageId)
+        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                if isSearchBar {
+                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                } else {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                 }
-            }, addContact: { [weak self] phoneNumber in
-                if let requestAddContact = self?.requestAddContact {
-                    requestAddContact(phoneNumber)
-                }
-            }), cancel: { [weak self] in
-                if let requestDeactivateSearch = self?.requestDeactivateSearch {
-                    requestDeactivateSearch()
-                }
-            })
-            
-            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            self.searchDisplayController?.activate(insertSubnode: { subnode in
-                self.insertSubnode(subnode, belowSubnode: navigationBar)
-            }, placeholder: placeholderNode)
-        }
+            }
+        }, placeholder: placeholderNode)
     }
     
-    func deactivateSearch(animated: Bool) {
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) {
         if let searchDisplayController = self.searchDisplayController {
-            var maybePlaceholderNode: SearchBarPlaceholderNode?
-            self.chatListNode.forEachItemNode { node in
-                if let node = node as? ChatListSearchItemNode {
-                    maybePlaceholderNode = node.searchBarNode
-                }
-            }
-            
-            searchDisplayController.deactivate(placeholder: maybePlaceholderNode, animated: animated)
+            searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
         }
     }

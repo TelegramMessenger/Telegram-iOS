@@ -258,12 +258,12 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                 }
             }
         }
-        switch mode {
-            case .chatList:
-                result.append(.SearchEntry(theme: state.presentationData.theme, text: view.groupId == nil ? state.presentationData.strings.DialogList_SearchLabel : "Search this feed", isEnabled: !state.editing))
-            case .peers:
-                result.append(.SearchEntry(theme: state.presentationData.theme, text: state.presentationData.strings.Common_Search, isEnabled: !state.editing))
-        }
+//        switch mode {
+//            case .chatList:
+//                result.append(.SearchEntry(theme: state.presentationData.theme, text: view.groupId == nil ? state.presentationData.strings.DialogList_SearchLabel : "Search this feed", isEnabled: !state.editing))
+//            case .peers:
+//                result.append(.SearchEntry(theme: state.presentationData.theme, text: state.presentationData.strings.Common_Search, isEnabled: !state.editing))
+//        }
     }
     if result.count >= 2, case .SearchEntry = result[result.count - 1], case .HoleEntry = result[result.count - 2] {
         return []

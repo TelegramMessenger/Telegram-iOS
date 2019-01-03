@@ -147,7 +147,6 @@ public enum NotificationExceptionMode : Equatable {
     }
     
     func withUpdatedPeerMuteInterval(_ peer: Peer, _ muteInterval: Int32?) -> NotificationExceptionMode {
-        
         let apply:([PeerId : NotificationExceptionWrapper], PeerId, PeerMuteState) -> [PeerId : NotificationExceptionWrapper] = { values, peerId, muteState in
             var values = values
             if let value = values[peerId] {
@@ -219,9 +218,9 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
     var entries: [NotificationExceptionEntry] = []
     
     if !state.isSearchMode {
-        if !state.mode.settings.isEmpty {
-            entries.append(.search(presentationData.theme, presentationData.strings))
-        }
+        //if !state.mode.settings.isEmpty {
+        //    entries.append(.search(presentationData.theme, presentationData.strings))
+        //}
         entries.append(.addException(presentationData.theme, presentationData.strings, state.editing))
     }
     
@@ -388,7 +387,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                 arguments.activateSearch()
             })
         case let .addException(theme, strings, editing):
-            return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addExceptionIcon(theme), title: strings.Notification_Exceptions_AddException, sectionId: self.section, editing: editing, action: {
+            return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addExceptionIcon(theme), title: strings.Notification_Exceptions_AddException, alwaysPlain: true, sectionId: self.section, editing: editing, action: {
                 arguments.selectPeer()
             })
         case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing):
@@ -719,11 +718,6 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             
             self?.enqueueTransition(transition)
         })
-        
-        
-
-        //listdi
-        
     }
     
     deinit {
@@ -750,9 +744,6 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         listInsets.right += layout.safeInsets.right
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
-            if !searchDisplayController.isDeactivating {
-                listInsets.top += layout.statusBarHeight ?? 0.0
-            }
         }
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
@@ -828,44 +819,30 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         statePromise.set(stateValue.modify({$0.withUpdatedEditing(!$0.editing).withUpdatedRevealedPeerId(nil)}))
     }
     
-    func activateSearch() {
-        guard let (containerLayout, navigationBarHeight) = self.containerLayout else {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        guard let (containerLayout, navigationBarHeight) = self.containerLayout, self.searchDisplayController == nil else {
             return
         }
         
-        var maybePlaceholderNode: SearchBarPlaceholderNode?
-        self.listNode.forEachItemNode { node in
-            if let node = node as? NotificationSearchItemNode {
-                maybePlaceholderNode = node.searchBarNode
-            }
-        }
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: NotificationExceptionsSearchContainerNode(account: self.account, mode: self.stateValue.modify {$0}.mode, arguments: self.arguments!), cancel: { [weak self] in
+            self?.requestDeactivateSearch()
+        })
         
-        if let _ = self.searchDisplayController {
-            return
-        }
-        
-        if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: NotificationExceptionsSearchContainerNode(account: self.account, mode: self.stateValue.modify {$0}.mode, arguments: self.arguments!), cancel: { [weak self] in
-                self?.requestDeactivateSearch()
-            })
-            
-            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            self.searchDisplayController?.activate(insertSubnode: { subnode in
-                self.insertSubnode(subnode, belowSubnode: self.navigationBar)
-            }, placeholder: placeholderNode)
-        }
-    }
-    
-    func deactivateSearch() {
-        if let searchDisplayController = self.searchDisplayController {
-            var maybePlaceholderNode: SearchBarPlaceholderNode?
-            self.listNode.forEachItemNode { node in
-                if let node = node as? NotificationSearchItemNode {
-                    maybePlaceholderNode = node.searchBarNode
+        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                if isSearchBar {
+                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                } else {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                 }
             }
-            
-            searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
+        }, placeholder: placeholderNode)
+    }
+    
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        if let searchDisplayController = self.searchDisplayController {
+            searchDisplayController.deactivate(placeholder: placeholderNode)
             self.searchDisplayController = nil
         }
     }

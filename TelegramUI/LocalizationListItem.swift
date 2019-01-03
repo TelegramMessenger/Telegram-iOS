@@ -45,7 +45,7 @@ class LocalizationListItem: ListViewItem, ItemListItem {
         async {
             let node = LocalizationListItemNode()
             var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-            if previousItem is ChatListSearchItem || self.alwaysPlain {
+            if previousItem == nil || previousItem is ChatListSearchItem || self.alwaysPlain {
                 neighbors.top = .sameSection(alwaysPlain: false)
             }
             let (layout, apply) = node.asyncLayout()(self, params, neighbors)
@@ -68,7 +68,7 @@ class LocalizationListItem: ListViewItem, ItemListItem {
                 
                 async {
                     var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-                    if previousItem is ChatListSearchItem || self.alwaysPlain {
+                    if previousItem == nil || previousItem is ChatListSearchItem || self.alwaysPlain {
                         neighbors.top = .sameSection(alwaysPlain: false)
                     }
                     let (layout, apply) = makeLayout(self, params, neighbors)

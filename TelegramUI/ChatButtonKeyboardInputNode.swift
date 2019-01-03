@@ -99,6 +99,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             
             var panelHeight = standardInputHeight
             
+            let previousRowsHeight = self.scrollNode.view.contentSize.height
             let rowsHeight = verticalInset + CGFloat(markup.rows.count) * buttonHeight + CGFloat(max(0, markup.rows.count - 1)) * rowSpacing + verticalInset
             if !markup.flags.contains(.fit) && rowsHeight < panelHeight {
                 buttonHeight = floor((panelHeight - bottomInset - verticalInset * 2.0 - CGFloat(max(0, markup.rows.count - 1)) * rowSpacing) / CGFloat(markup.rows.count))
@@ -144,7 +145,10 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
             
             transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
             self.scrollNode.view.contentSize = CGSize(width: width, height: rowsHeight)
-            self.scrollNode.view.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: bottomInset, right: 0)
+            self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0)
+            if previousRowsHeight != rowsHeight {
+                self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
+            }
             
             return (panelHeight, 0.0)
         } else {

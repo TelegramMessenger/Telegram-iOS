@@ -3,7 +3,7 @@ import CoreImage
 import SwiftSignalKit
 import Display
 
-func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, scale: CGFloat = 0.0) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return Signal<CIImage, NoError> { subscriber in
         if let data = string.data(using: .isoLatin1, allowLossyConversion: false), let filter = CIFilter(name: "CIQRCodeGenerator") {
             filter.setValue(data, forKey: "inputMessage")
@@ -18,7 +18,7 @@ func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil) -> 
     }
     |> map { inputImage in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            let context = DrawingContext(size: arguments.drawingSize, scale: scale, clear: true)
             
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
@@ -56,8 +56,12 @@ func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil) -> 
                     c.fill(fittedRect)
                     c.restoreGState()
                 }
-                c.setBlendMode(.clear)
-                c.setFillColor(UIColor.clear.cgColor)
+                if let backgroundColor = backgroundColor {
+                    c.setFillColor(backgroundColor.cgColor)
+                } else {
+                    c.setBlendMode(.clear)
+                    c.setFillColor(UIColor.clear.cgColor)
+                }
                 
                 let clipOrigin = 93.0 * fittedRect.width / 267.0
                 let clipSide = 81.0 * fittedRect.width / 267.0
@@ -72,8 +76,12 @@ func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil) -> 
                 c.setFillColor(color.cgColor)
                 let _ = try? drawSvgPath(c, path: "M0.0,40 C0,20.3664202 20.1230605,0.0 32.5,0.0 C44.8769395,0.0 65,20.3664202 65,40 C65,47.217934 65,55.5505326 65,64.9977957 L32.5,79 L0.0,64.9977957 C0.0,55.0825772 0.0,46.7499786 0.0,40 Z")
                 
-                c.setBlendMode(.clear)
-                c.setFillColor(UIColor.clear.cgColor)
+                if false, let backgroundColor = backgroundColor {
+                    c.setFillColor(backgroundColor.cgColor)
+                } else {
+                    c.setBlendMode(.clear)
+                    c.setFillColor(UIColor.clear.cgColor)
+                }
                 let _ = try? drawSvgPath(c, path: "M7.03608247,43.556701 L18.9836689,32.8350515 L32.5,39.871134 L45.8888139,32.8350515 L57.9639175,43.556701 L57.9639175,60.0 L32.5,71.0 L7.03608247,60.0 Z")
                 
                 c.setBlendMode(.normal)

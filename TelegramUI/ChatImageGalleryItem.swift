@@ -266,11 +266,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.statusNode.isHidden = false
                         strongSelf.statusNode.alpha = 1.0
                         strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                        var actualProgress = progress
-                        if isActive {
-                            actualProgress = max(actualProgress, 0.027)
-                        }
-                        strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(actualProgress), cancelEnabled: true), completion: {})
+                        let adjustedProgress = max(progress, 0.027)
+                        strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true), completion: {})
                     case .Local:
                         if let previousStatus = previousStatus, case .Fetching = previousStatus {
                             strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
