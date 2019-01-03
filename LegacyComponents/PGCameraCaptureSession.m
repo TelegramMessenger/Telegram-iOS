@@ -649,11 +649,11 @@ const NSInteger PGCameraFrameRate = 30;
             [self addInput:_videoInput];
         }
         
-        if (self.currentMode == PGCameraModeVideo)
+        if (self.currentMode == PGCameraModeVideo) {
             [self switchToBestVideoFormatForDevice:deviceForTargetPosition];
-        
-        [self _removeAudioInputEndAudioSession:false];
-        [self _addAudioInputRequestAudioSession:false];
+            [self _removeAudioInputEndAudioSession:false];
+            [self _addAudioInputRequestAudioSession:false];
+        }
         
         if (self.changingPosition != nil)
             self.changingPosition();
