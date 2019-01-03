@@ -2621,15 +2621,19 @@ Unused sets are archived when you add more.";
 
 "Conversation.RestrictedTextTimed" = "The admins of this group have restricted you from writing here until %@.";
 "Conversation.RestrictedText" = "The admins of this group have restricted you from writing here.";
+"Conversation.DefaultRestrictedText" = "Writing is restricted in this group.";
 
 "Conversation.RestrictedInlineTimed" = "The admins of this group have restricted you from posting inline content here until %@.";
 "Conversation.RestrictedInline" = "The admins of this group have restricted you from posting inline content here.";
+"Conversation.DefaultRestrictedInline" = "Inline content is disabled in this group.";
 
 "Conversation.RestrictedMediaTimed" = "The admins of this group have restricted you from posting media content here until %@.";
 "Conversation.RestrictedMedia" = "The admins of this group have restricted you from posting media content here.";
+"Conversation.DefaultRestrictedMedia" = "Posting media content is disabled in this group.";
 
 "Conversation.RestrictedStickersTimed" = "The admins of this group have restricted you from posting stickers here until %@.";
 "Conversation.RestrictedStickers" = "The admins of this group have restricted you from posting stickers here.";
+"Conversation.DefaultRestrictedStickers" = "Posting stickers is disabled in this group.";
 
 "ChatSettings.ConnectionType.Title" = "CONNECTION TYPE";
 "ChatSettings.ConnectionType.UseProxy" = "Use Proxy";
@@ -3834,3 +3838,8 @@ Unused sets are archived when you add more.";
 "EmptyGroupInfo.Line2" = "Persistent chat history";
 "EmptyGroupInfo.Line3" = "Public links such as t.me/title";
 "EmptyGroupInfo.Line4" = "Admins with different rights";
+
+"BackgroundPreview.Title" = "Background Preview";
+
+"Group.AdvanceUpgradeText" = "To use advanced group management options this group will be upgraded to a supergroup.";
+"Group.AdvanceUpgradeApply" = "Upgrade";
