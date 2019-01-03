@@ -71,6 +71,19 @@ private:
 
 class LOTLayerMaskItem;
 
+class LOTClipperItem
+{
+public:
+    LOTClipperItem(VSize size): mSize(size){}
+    void update(const VMatrix &matrix);
+    VRle rle();
+public:
+    VSize                    mSize;
+    VPath                    mPath;
+    RleShare                 mRleFuture;
+    VRle                     mRle;
+};
+
 typedef vFlag<DirtyFlagBit> DirtyFlag;
 class LOTLayerItem
 {
@@ -127,6 +140,7 @@ protected:
 private:
    std::vector<LOTLayerNode *>                  mLayersCNode;
    std::vector<std::unique_ptr<LOTLayerItem>>   mLayers;
+   std::unique_ptr<LOTClipperItem>              mClipper;
 };
 
 class LOTSolidLayerItem: public LOTLayerItem

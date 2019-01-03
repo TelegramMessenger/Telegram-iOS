@@ -458,6 +458,11 @@ LOTCompLayerItem::LOTCompLayerItem(LOTLayerData *layerModel)
     // 3. keep the layer in back-to-front order.
     // as lottie model keeps the data in front-toback-order.
     std::reverse(mLayers.begin(), mLayers.end());
+
+    // 4. check if its a nested composition
+    if (!layerModel->layerSize().empty()) {
+        mClipper = std::make_unique<LOTClipperItem>(layerModel->layerSize());
+    }
 }
 
 void LOTCompLayerItem::updateStaticProperty()
@@ -518,6 +523,14 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
         mask = inheritMask;
     }
 
+    if (mClipper) {
+        if (mask.empty()) {
+            mask = mClipper->rle();
+        } else {
+            mask = mClipper->rle() & mask;
+        }
+    }
+
     LOTLayerItem *matteLayer = nullptr;
     for (const auto &layer : mLayers) {
         if (!matteLayer && layer->hasMatte()) {
@@ -536,8 +549,35 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
     }
 }
 
+void LOTClipperItem::update(const VMatrix &matrix)
+{
+    mPath.reset();
+    mPath.addRect(VRectF(0,0, mSize.width(), mSize.height()));
+    mPath.transform(matrix);
+
+    VPath tmp = mPath;
+
+    if (!mRleFuture) mRleFuture = std::make_shared<VSharedState<VRle>>();
+
+    mRleFuture->reuse();
+    VRaster::generateFillInfo(mRleFuture, std::move(tmp), std::move(mRle));
+    mRle = VRle();
+}
+
+VRle LOTClipperItem::rle()
+{
+    if (mRleFuture && mRleFuture->valid()) {
+        mRle = mRleFuture->get();
+    }
+    return mRle;
+}
+
 void LOTCompLayerItem::updateContent()
 {
+    if (mClipper && flag().testFlag(DirtyFlagBit::Matrix)) {
+        mClipper->update(combinedMatrix());
+    }
+
     for (const auto &layer : mLayers) {
         layer->update( mLayerData->timeRemap(frameNo()) - mLayerData->startFrame(),
                        combinedMatrix(), combinedAlpha());
