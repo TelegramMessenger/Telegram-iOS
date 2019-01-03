@@ -422,6 +422,12 @@ public extension TelegramChannel {
     }
     
     public func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> (Int32, Bool)? {
+        if self.flags.contains(.isCreator) {
+            return nil
+        }
+        if let adminRights = self.adminRights, !adminRights.flags.isEmpty {
+            return nil
+        }
         if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(rights) {
             return (Int32.max, false)
         }

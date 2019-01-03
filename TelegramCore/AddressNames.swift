@@ -30,8 +30,8 @@ public enum AddressNameDomain {
 
 public func checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -> AddressNameFormatError? {
     var index = 0
-    let length = value.characters.count
-    for char in value.characters {
+    let length = value.count
+    for char in value {
         if char == "_" {
             if index == 0 {
                 return .startsWithUnderscore
@@ -73,17 +73,30 @@ public func addressNameAvailability(account: Account, domain: AddressNameDomain,
             case let .peer(peerId):
                 if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
                     return account.network.request(Api.functions.channels.checkUsername(channel: inputChannel, username: name))
-                        |> map { result -> AddressNameAvailability in
-                            switch result {
-                                case .boolTrue:
-                                    return .available
-                                case .boolFalse:
-                                    return .taken
-                            }
+                    |> map { result -> AddressNameAvailability in
+                        switch result {
+                            case .boolTrue:
+                                return .available
+                            case .boolFalse:
+                                return .taken
                         }
-                        |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
-                            return .single(.invalid)
+                    }
+                    |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+                        return .single(.invalid)
+                    }
+                } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                    return account.network.request(Api.functions.channels.checkUsername(channel: .inputChannelEmpty, username: name))
+                    |> map { result -> AddressNameAvailability in
+                        switch result {
+                            case .boolTrue:
+                                return .available
+                            case .boolFalse:
+                                return .taken
                         }
+                    }
+                    |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+                        return .single(.invalid)
+                    }
                 } else {
                     return .single(.invalid)
                 }
