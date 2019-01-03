@@ -759,6 +759,7 @@ namespace tgvoip{
 		double rateMaxAcceptableRTT;
 		double rateMaxAcceptableSendLoss;
 		double packetLossToEnableExtraEC;
+		uint32_t maxUnsentStreamPackets;
 
 	public:
 #ifdef __APPLE__

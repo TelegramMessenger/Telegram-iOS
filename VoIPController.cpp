@@ -231,6 +231,7 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	rateMaxAcceptableRTT=ServerConfig::GetSharedInstance()->GetDouble("rate_min_rtt", 0.6);
 	rateMaxAcceptableSendLoss=ServerConfig::GetSharedInstance()->GetDouble("rate_min_send_loss", 0.2);
 	packetLossToEnableExtraEC=ServerConfig::GetSharedInstance()->GetDouble("packet_loss_for_extra_ec", 0.02);
+	maxUnsentStreamPackets=static_cast<uint32_t>(ServerConfig::GetSharedInstance()->GetInt("max_unsent_stream_packets", 2));
 
 #ifdef __APPLE__
 	machTimestart=0;
@@ -1017,14 +1018,14 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
 	if(stopping)
 		return;
 	unsentStreamPacketsHistory.Add(static_cast<unsigned int>(unsentStreamPackets));
-	if(unsentStreamPacketsHistory.Average()>=2){
+	if(unsentStreamPacketsHistory.Average()>=maxUnsentStreamPackets){
 		LOGW("Resetting stalled send queue");
 		sendQueue.clear();
 		unsentStreamPacketsHistory.Reset();
 		unsentStreamPackets=0;
 	}
-	if(waitingForAcks || dontSendPackets>0 || (unsigned int)unsentStreamPackets>=2){
-		LOGV("waiting for queue, dropping outgoing audio packet");
+	if(waitingForAcks || dontSendPackets>0 || ((unsigned int)unsentStreamPackets>=maxUnsentStreamPackets /*&& endpoints[currentEndpoint].type==Endpoint::Type::TCP_RELAY*/)){
+		LOGV("waiting for queue, dropping outgoing audio packet, %d %d %d [%d]", (unsigned int)unsentStreamPackets, waitingForAcks, dontSendPackets, maxUnsentStreamPackets);
 		return;
 	}
 	//LOGV("Audio packet size %u", (unsigned int)len);
