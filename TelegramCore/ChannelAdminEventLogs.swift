@@ -52,6 +52,9 @@ public enum AdminLogEventAction {
     case participantToggleAdmin(prev: RenderedChannelParticipant, new: RenderedChannelParticipant)
     case changeStickerPack(prev: StickerPackReference?, new: StickerPackReference?)
     case togglePreHistoryHidden(Bool)
+    case updateDefaultBannedRights(prev: TelegramChatBannedRights, new: TelegramChatBannedRights
+    )
+    case pollStopped(Message)
 }
 
 public enum ChannelAdminLogEventError {
@@ -102,12 +105,12 @@ private func boolFromApiValue(_ value: Api.Bool) -> Bool {
 
 public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, maxId: AdminLogEventId, minId: AdminLogEventId, limit: Int32 = 100, query: String? = nil, filter: AdminLogEventsFlags? = nil, admins: [PeerId]? = nil) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> {
     return postbox.transaction { transaction -> (Peer?, [Peer]?) in
-        return (transaction.getPeer(peerId), admins?.flatMap { transaction.getPeer($0) })
+        return (transaction.getPeer(peerId), admins?.compactMap { transaction.getPeer($0) })
     }
     |> introduceError(ChannelAdminLogEventError.self)
     |> mapToSignal { (peer, admins) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> in
         if let peer = peer, let inputChannel = apiInputChannel(peer) {
-            let inputAdmins = admins?.flatMap {apiInputUser($0)}
+            let inputAdmins = admins?.compactMap { apiInputUser($0) }
             
             var flags: Int32 = 0
             var eventsFilter: Api.ChannelAdminLogEventsFilter? = nil
@@ -122,7 +125,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                 
                 switch result {
                 case let .adminLogResults(apiEvents, apiChats, apiUsers):
-                    let peers = (apiChats.flatMap {parseTelegramGroupOrChannel(chat: $0)} + apiUsers.flatMap { TelegramUser(user: $0) } + Array(arrayLiteral: peer)).reduce([:], { current, peer -> [PeerId : Peer] in
+                    let peers = (apiChats.flatMap { parseTelegramGroupOrChannel(chat: $0) } + apiUsers.flatMap { TelegramUser(user: $0) } + Array(arrayLiteral: peer)).reduce([:], { current, peer -> [PeerId : Peer] in
                         var current = current
                         current[peer.id] = peer
                         return current
@@ -193,6 +196,12 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                         action = .changeStickerPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
                                     case let .channelAdminLogEventActionTogglePreHistoryHidden(value):
                                         action = .togglePreHistoryHidden(value == .boolTrue)
+                                    case let .channelAdminLogEventActionDefaultBannedRights(prevBannedRights, newBannedRights):
+                                        action = .updateDefaultBannedRights(prev: TelegramChatBannedRights(apiBannedRights: prevBannedRights), new: TelegramChatBannedRights(apiBannedRights: newBannedRights))
+                                    case let .channelAdminLogEventActionStopPoll(message):
+                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                            action = .pollStopped(rendered)
+                                        }
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 if let action = action {

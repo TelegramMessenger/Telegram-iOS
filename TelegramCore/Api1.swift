@@ -8468,6 +8468,8 @@ extension Api {
         case channelAdminLogEventActionParticipantToggleAdmin(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant)
         case channelAdminLogEventActionChangeStickerSet(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet)
         case channelAdminLogEventActionTogglePreHistoryHidden(newValue: Api.Bool)
+        case channelAdminLogEventActionDefaultBannedRights(prevBannedRights: Api.ChatBannedRights, newBannedRights: Api.ChatBannedRights)
+        case channelAdminLogEventActionStopPoll(message: Api.Message)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -8575,6 +8577,19 @@ extension Api {
                     }
                     newValue.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionDefaultBannedRights(let prevBannedRights, let newBannedRights):
+                    if boxed {
+                        buffer.appendInt32(771095562)
+                    }
+                    prevBannedRights.serialize(buffer, true)
+                    newBannedRights.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionStopPoll(let message):
+                    if boxed {
+                        buffer.appendInt32(-1895328189)
+                    }
+                    message.serialize(buffer, true)
+                    break
     }
     }
     
@@ -8612,6 +8627,10 @@ extension Api {
                 return ("channelAdminLogEventActionChangeStickerSet", [("prevStickerset", prevStickerset), ("newStickerset", newStickerset)])
                 case .channelAdminLogEventActionTogglePreHistoryHidden(let newValue):
                 return ("channelAdminLogEventActionTogglePreHistoryHidden", [("newValue", newValue)])
+                case .channelAdminLogEventActionDefaultBannedRights(let prevBannedRights, let newBannedRights):
+                return ("channelAdminLogEventActionDefaultBannedRights", [("prevBannedRights", prevBannedRights), ("newBannedRights", newBannedRights)])
+                case .channelAdminLogEventActionStopPoll(let message):
+                return ("channelAdminLogEventActionStopPoll", [("message", message)])
     }
     }
     
@@ -8826,6 +8845,37 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionTogglePreHistoryHidden(newValue: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_channelAdminLogEventActionDefaultBannedRights(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ChatBannedRights?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
+            }
+            var _2: Api.ChatBannedRights?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDefaultBannedRights(prevBannedRights: _1!, newBannedRights: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_channelAdminLogEventActionStopPoll(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionStopPoll(message: _1!)
             }
             else {
                 return nil
