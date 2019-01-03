@@ -25,6 +25,16 @@
 
 using namespace lottie;
 
+struct RenderTask {
+    RenderTask() { receiver = sender.get_future(); }
+    std::promise<Surface> sender;
+    std::future<Surface>  receiver;
+    AnimationImpl     *playerImpl{nullptr};
+    size_t              frameNo{0};
+    Surface            surface;
+};
+using SharedRenderTask = std::shared_ptr<RenderTask>;
+
 class AnimationImpl {
 
 public:
@@ -36,13 +46,14 @@ public:
     size_t  totalFrame() const {return mModel->frameDuration();}
     size_t  frameAtPos(double pos) const {return mModel->frameAtPos(pos);}
     Surface render(size_t frameNo, const Surface &surface);
-
+    std::future<Surface> renderAsync(size_t frameNo, Surface &&surface);
     const LOTLayerNode *
                  renderTree(size_t frameNo, const VSize &size);
 private:
     std::string                  mFilePath;
     std::shared_ptr<LOTModel>    mModel;
     std::unique_ptr<LOTCompItem> mCompItem;
+    SharedRenderTask             mTask;
     std::atomic<bool>            mRenderInProgress;
 };
 
@@ -103,27 +114,19 @@ void AnimationImpl::init(const std::shared_ptr<LOTModel> &model)
  * one it steals the task from it and executes. if it couldn't find one then it
  * just waits for new task on its own queue.
  */
-struct RenderTask {
-    RenderTask() { receiver = sender.get_future(); }
-    std::promise<Surface> sender;
-    std::future<Surface>  receiver;
-    AnimationImpl     *playerImpl{nullptr};
-    size_t              frameNo{0};
-    Surface            surface;
-};
 
 #include <vtaskqueue.h>
 class RenderTaskScheduler {
     const unsigned           _count{std::thread::hardware_concurrency()};
     std::vector<std::thread> _threads;
-    std::vector<TaskQueue<RenderTask>> _q{_count};
+    std::vector<TaskQueue<SharedRenderTask>> _q{_count};
     std::atomic<unsigned>              _index{0};
 
     void run(unsigned i)
     {
-        RenderTask task;
         while (true) {
             bool success = false;
+            SharedRenderTask task;
             for (unsigned n = 0; n != _count * 32; ++n) {
                 if (_q[(i + n) % _count].try_pop(task)) {
                     success = true;
@@ -132,8 +135,8 @@ class RenderTaskScheduler {
             }
             if (!success && !_q[i].pop(task)) break;
 
-            auto result = task.playerImpl->render(task.frameNo, task.surface);
-            task.sender.set_value(result);
+            auto result = task->playerImpl->render(task->frameNo, task->surface);
+            task->sender.set_value(result);
         }
     }
 
@@ -158,9 +161,9 @@ public:
         for (auto &e : _threads) e.join();
     }
 
-    std::future<Surface> async(RenderTask &&task)
+    std::future<Surface> async(SharedRenderTask task)
     {
-        auto receiver = std::move(task.receiver);
+        auto receiver = std::move(task->receiver);
         auto i = _index++;
 
         for (unsigned n = 0; n != _count; ++n) {
@@ -171,17 +174,23 @@ public:
 
         return receiver;
     }
-
-    std::future<Surface> render(AnimationImpl *impl, size_t frameNo,
-                             Surface &&surface)
-    {
-        RenderTask task;
-        task.playerImpl = impl;
-        task.frameNo = frameNo;
-        task.surface = std::move(surface);
-        return async(std::move(task));
-    }
 };
+
+
+std::future<Surface> AnimationImpl::renderAsync(size_t frameNo, Surface &&surface)
+{
+    if (!mTask) {
+        mTask = std::make_shared<RenderTask>();
+    } else {
+        mTask->sender = std::promise<Surface>();
+        mTask->receiver = mTask->sender.get_future();
+    }
+    mTask->playerImpl = this;
+    mTask->frameNo = frameNo;
+    mTask->surface = std::move(surface);
+
+    return RenderTaskScheduler::instance().async(mTask);
+}
 
 /**
  * \breif Brief abput the Api.
@@ -258,7 +267,7 @@ Animation::renderTree(size_t frameNo, size_t width, size_t height) const
 
 std::future<Surface> Animation::render(size_t frameNo, Surface surface)
 {
-    return RenderTaskScheduler::instance().render(d.get(), frameNo, std::move(surface));
+    return d->renderAsync(frameNo, std::move(surface));
 }
 
 void Animation::renderSync(size_t frameNo, Surface surface)
