@@ -48,7 +48,7 @@ enum WebSearchMode {
 
 enum WebSearchControllerMode {
     case media(completion: (ChatContextResultCollection, TGMediaSelectionContext, TGMediaEditingContext) -> Void)
-    case avatar(completion: (UIImage) -> Void)
+    case avatar(initialQuery: String?, completion: (UIImage) -> Void)
     
     var mode: WebSearchMode {
         switch self {
@@ -132,6 +132,12 @@ final class WebSearchController: ViewController {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.interfaceState = WebSearchInterfaceState(presentationData: presentationData)
         
+        var searchQuery: String?
+        if case let .avatar(initialQuery, _) = mode, let query = initialQuery {
+            searchQuery = query
+            self.interfaceState = self.interfaceState.withUpdatedQuery(query)
+        }
+        
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBar.style.style
         
@@ -170,12 +176,14 @@ final class WebSearchController: ViewController {
         let navigationContentNode = WebSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings)
         self.navigationContentNode = navigationContentNode
         navigationContentNode.setQueryUpdated { [weak self] query in
-            guard let strongSelf = self, strongSelf.isNodeLoaded else {
-                return
+            if let strongSelf = self, strongSelf.isNodeLoaded {
+                strongSelf.updateSearchQuery(query)
             }
-            strongSelf.updateSearchQuery(query)
         }
         self.navigationBar?.setContentNode(navigationContentNode, animated: false)
+        if let query = searchQuery {
+            navigationContentNode.setQuery(query)
+        }
         
         let selectionState: TGMediaSelectionContext?
         switch self.mode {
@@ -219,7 +227,7 @@ final class WebSearchController: ViewController {
                 }
             }
         }, avatarCompleted: { result in
-            if case let .avatar(avatarCompleted) = mode {
+            if case let .avatar(_, avatarCompleted) = mode {
                 avatarCompleted(result)
             }
         }, selectionState: selectionState, editingState: editingState)
@@ -258,7 +266,11 @@ final class WebSearchController: ViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        self.navigationContentNode?.activate()
+        var select = false
+        if case let .avatar(initialQuery, _) = mode, let _ = initialQuery {
+            select = true
+        }
+        self.navigationContentNode?.activate(select: select)
     }
     
     override public func loadDisplayNode() {

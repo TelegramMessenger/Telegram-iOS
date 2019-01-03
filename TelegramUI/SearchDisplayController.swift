@@ -3,8 +3,14 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Display
 
+enum SearchDisplayControllerMode {
+    case standalone
+    case navigation
+}
+
 final class SearchDisplayController {
     private let searchBar: SearchBarNode
+    private let mode: SearchDisplayControllerMode
     let contentNode: SearchDisplayControllerContentNode
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -13,8 +19,19 @@ final class SearchDisplayController {
     
     private var isSearchingDisposable: Disposable?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings)
+    init(theme: PresentationTheme, strings: PresentationStrings, mode: SearchDisplayControllerMode = .standalone, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
+        let active: Bool
+        let searchBarStyle: SearchBarStyle
+        switch mode {
+            case .standalone:
+                active = true
+                searchBarStyle = .legacy
+            case .navigation:
+                active = false
+                searchBarStyle = .modern
+        }
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, active: active), strings: strings, fieldStyle: searchBarStyle)
+        self.mode = mode
         self.contentNode = contentNode
         
         self.searchBar.textUpdated = { [weak contentNode] text in
@@ -39,7 +56,14 @@ final class SearchDisplayController {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme), strings: strings)
+        let active: Bool
+        switch mode {
+            case .standalone:
+                active = true
+            case .navigation:
+                active = false
+        }
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme, active: active), strings: strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -56,8 +80,15 @@ final class SearchDisplayController {
             navigationBarFrame.size.height = 64.0
         }
         
-        transition.updateFrame(node: self.searchBar, frame: navigationBarFrame)
-        self.searchBar.updateLayout(boundingSize: navigationBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        let searchBarFrame: CGRect
+        if case .navigation = self.mode {
+            searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 36.0)
+            navigationBarFrame.size.height += 10.0
+        } else {
+            searchBarFrame = navigationBarFrame
+        }
+        transition.updateFrame(node: self.searchBar, frame: searchBarFrame)
+        self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
         
         self.containerLayout = (layout, navigationBarFrame.maxY)
         
@@ -65,17 +96,17 @@ final class SearchDisplayController {
         self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), navigationBarHeight: navigationBarFrame.maxY, transition: transition)
     }
     
-    func activate(insertSubnode: (ASDisplayNode) -> Void, placeholder: SearchBarPlaceholderNode) {
+    func activate(insertSubnode: (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode) {
         guard let (layout, navigationBarHeight) = self.containerLayout else {
             return
         }
         
-        insertSubnode(self.contentNode)
+        insertSubnode(self.contentNode, false)
         
         self.contentNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: nil, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
-        let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: self.contentNode.supernode)
+        let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: nil)//self.contentNode.supernode)
         
         let contentNodePosition = self.contentNode.layer.position
         self.contentNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - navigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
@@ -83,21 +114,28 @@ final class SearchDisplayController {
         
         self.searchBar.placeholderString = placeholder.placeholderString
         
-        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
-        let navigationBarOffset: CGFloat
-        if statusBarHeight.isZero {
-            navigationBarOffset = -20.0
-        } else {
-            navigationBarOffset = 0.0
-        }
-        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: searchBarHeight))
-        if layout.statusBarHeight == nil {
-            navigationBarFrame.size.height = 64.0
+        let navigationBarFrame: CGRect
+        switch self.mode {
+            case .standalone:
+                let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+                let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
+                let navigationBarOffset: CGFloat
+                if statusBarHeight.isZero {
+                    navigationBarOffset = -20.0
+                } else {
+                    navigationBarOffset = 0.0
+                }
+                var frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: searchBarHeight))
+                if layout.statusBarHeight == nil {
+                    frame.size.height = 64.0
+                }
+                navigationBarFrame = frame
+            case .navigation:
+                navigationBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 36.0)
         }
         
         self.searchBar.frame = navigationBarFrame
-        insertSubnode(searchBar)
+        insertSubnode(self.searchBar, true)
         self.searchBar.layout()
         
         self.searchBar.activate()
@@ -119,7 +157,7 @@ final class SearchDisplayController {
         if animated {
             if let placeholder = placeholder, let (_, navigationBarHeight) = self.containerLayout {
                 let contentNodePosition = self.contentNode.layer.position
-                let targetTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: self.contentNode.supernode)
+                let targetTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: nil) //self.contentNode.supernode)
                 
                 self.contentNode.layer.animatePosition(from: contentNodePosition, to: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (targetTextBackgroundFrame.maxY + 8.0 - navigationBarHeight)), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
             }

@@ -188,14 +188,15 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
     
     override func animateIn(from: RadialStatusNodeState) {
         if case .progress = from {
-            self.arrowBody.animateStrokeStart(from: 0.0, to: 0.62, duration: 0.5, removeOnCompletion: false, completion: nil)
-            self.arrowBody.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.5, removeOnCompletion: false, completion: nil)
+            self.arrowBody.animateStrokeStart(from: 0.62, to: 0.62, duration: 0.25, removeOnCompletion: false, completion: nil)
+            self.arrowBody.animateStrokeEnd(from: 0.62, to: 1.0, duration: 0.25, removeOnCompletion: false, completion: nil)
             
-            self.leftLine.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.2, delay: 0.3, removeOnCompletion: false)
-            self.rightLine.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.2, delay: 0.3, removeOnCompletion: false)
+            self.leftLine.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
+            self.rightLine.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
             
-            self.leftLine.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1, removeOnCompletion: false)
-            self.rightLine.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1, removeOnCompletion: false)
+            self.arrowBody.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
+            self.leftLine.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
+            self.rightLine.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
         } else {
             self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
             self.layer.animateScale(from: 0.7, to: 1.0, duration: duration)

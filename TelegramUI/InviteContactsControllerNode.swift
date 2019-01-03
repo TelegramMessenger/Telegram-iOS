@@ -222,9 +222,7 @@ struct InviteContactsGroupSelectionState: Equatable {
 
 private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)], selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
     var entries: [InviteContactsEntry] = []
-    
-    entries.append(.search(theme, strings))
-    
+        
     entries.append(.option(0, ContactListAdditionalOption(title: strings.Contacts_ShareTelegram, icon: .generic(UIImage(bundleImageName: "Contact List/InviteActionIcon")!), action: {
         interaction.shareTelegram()
     }), theme, strings))
@@ -505,9 +503,6 @@ final class InviteContactsControllerNode: ASDisplayNode {
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
-            if !searchDisplayController.isDeactivating {
-                insets.top += layout.statusBarHeight ?? 0.0
-            }
         }
         
         insets.left += layout.safeInsets.left
@@ -555,48 +550,34 @@ final class InviteContactsControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch() {
-        guard let (containerLayout, navigationBarHeight) = self.validLayout, let navigationBar = self.navigationBar else {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        guard let (containerLayout, navigationBarHeight) = self.validLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return
         }
         
-        var maybePlaceholderNode: SearchBarPlaceholderNode?
-        self.listNode.forEachItemNode { node in
-            if let node = node as? ChatListSearchItemNode {
-                maybePlaceholderNode = node.searchBarNode
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.deviceContacts], openPeer: { [weak self] peerId in
+        }), cancel: { [weak self] in
+            if let requestDeactivateSearch = self?.requestDeactivateSearch {
+                requestDeactivateSearch()
             }
-        }
+        })
         
-        if let _ = self.searchDisplayController {
-            return
-        }
-        
-        if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.deviceContacts], openPeer: { [weak self] peerId in
-            }), cancel: { [weak self] in
-                if let requestDeactivateSearch = self?.requestDeactivateSearch {
-                    requestDeactivateSearch()
+        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                if isSearchBar {
+                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                } else {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                 }
-            })
-            
-            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            self.searchDisplayController?.activate(insertSubnode: { subnode in
-                self.insertSubnode(subnode, belowSubnode: navigationBar)
-            }, placeholder: placeholderNode)
-        }
+            }
+        }, placeholder: placeholderNode)
     }
     
-    func deactivateSearch() {
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
         if let searchDisplayController = self.searchDisplayController {
             self.searchDisplayController = nil
-            var maybePlaceholderNode: SearchBarPlaceholderNode?
-            self.listNode.forEachItemNode { node in
-                if let node = node as? ChatListSearchItemNode {
-                    maybePlaceholderNode = node.searchBarNode
-                }
-            }
-            
-            searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
+            searchDisplayController.deactivate(placeholder: placeholderNode)
         }
     }
     

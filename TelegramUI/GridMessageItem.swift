@@ -18,8 +18,8 @@ private final class GridMessageVideoAccessoryNode : ASDisplayNode {
         self.textNode.isUserInteractionEnabled = false
         self.textNode.textAlignment = .left
         self.textNode.lineSpacing = 0.1
-        addSubnode(self.textNode)
-        backgroundColor = UIColor(white: 0.0, alpha: 0.6)
+        self.addSubnode(self.textNode)
+        self.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
     }
     
     var contentSize: CGSize {
@@ -28,17 +28,15 @@ private final class GridMessageVideoAccessoryNode : ASDisplayNode {
     private var textSize: CGSize = CGSize()
     
     func setup(_ duration: String) {
-        textNode.attributedText = NSAttributedString(string: duration, font: videoAccessoryFont, textColor: .white, paragraphAlignment: nil)
-        textSize = self.textNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
+        self.textNode.attributedText = NSAttributedString(string: duration, font: videoAccessoryFont, textColor: .white, paragraphAlignment: nil)
+        self.textSize = self.textNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
     }
     
     override func layout() {
         if let _ = self.textNode.attributedText {
-            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((frame.width - textSize.width) / 2.0), y: floorToScreenPixels((frame.height - textSize.height) / 2.0) + 0.5), size: textSize)
+            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.frame.width - self.textSize.width) / 2.0), y: floorToScreenPixels((self.frame.height - self.textSize.height) / 2.0) + 0.5), size: self.textSize)
         }
     }
-
-    
 }
 
 private func mediaForMessage(_ message: Message) -> Media? {
@@ -195,6 +193,8 @@ final class GridMessageItemNode: GridItemNode {
     override init() {
         self.imageNode = TransformImageNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
+        let progressDiameter: CGFloat = 40.0
+        self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
         
         super.init()
@@ -249,11 +249,8 @@ final class GridMessageItemNode: GridItemNode {
                         strongSelf.resourceStatus = status
                         let statusState: RadialStatusNodeState
                         switch status {
-                            case let .Fetching(isActive, progress):
-                                var adjustedProgress = progress
-                                if isActive {
-                                    adjustedProgress = max(adjustedProgress, 0.027)
-                                }
+                            case let .Fetching(_, progress):
+                                let adjustedProgress = max(progress, 0.027)
                                 statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                             case .Local:
                                 statusState = .play(.white)

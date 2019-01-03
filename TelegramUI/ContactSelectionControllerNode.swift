@@ -90,9 +90,6 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
-            if !searchDisplayController.isDeactivating {
-                insets.top += layout.statusBarHeight ?? 0.0
-            }
         }
         
         self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), transition: transition)
@@ -104,58 +101,44 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch() {
-        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar else {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return
         }
         
-        var maybePlaceholderNode: SearchBarPlaceholderNode?
-        self.contactListNode.listNode.forEachItemNode { node in
-            if let node = node as? ChatListSearchItemNode {
-                maybePlaceholderNode = node.searchBarNode
-            }
+        var categories: ContactsSearchCategories = [.cloudContacts]
+        if self.displayDeviceContacts {
+            categories.insert(.deviceContacts)
+        } else {
+            categories.insert(.global)
         }
-        
-        if let _ = self.searchDisplayController {
-            return
-        }
-        
-        if let placeholderNode = maybePlaceholderNode {
-            var categories: ContactsSearchCategories = [.cloudContacts]
-            if self.displayDeviceContacts {
-                categories.insert(.deviceContacts)
-            } else {
-                categories.insert(.global)
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: categories, openPeer: { [weak self] peer in
+            self?.requestOpenPeerFromSearch?(peer)
+        }), cancel: { [weak self] in
+            if let requestDeactivateSearch = self?.requestDeactivateSearch {
+                requestDeactivateSearch()
             }
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: categories, openPeer: { [weak self] peer in
-                self?.requestOpenPeerFromSearch?(peer)
-            }), cancel: { [weak self] in
-                if let requestDeactivateSearch = self?.requestDeactivateSearch {
-                    requestDeactivateSearch()
+        })
+        
+        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                if isSearchBar {
+                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                } else {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                 }
-            })
-            
-            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            self.searchDisplayController?.activate(insertSubnode: { subnode in
-                self.insertSubnode(subnode, belowSubnode: self.dimNode)
-            }, placeholder: placeholderNode)
-        }
+            }
+        }, placeholder: placeholderNode)
     }
     
     func prepareDeactivateSearch() {
         self.searchDisplayController?.isDeactivating = true
     }
     
-    func deactivateSearch() {
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
         if let searchDisplayController = self.searchDisplayController {
-            var maybePlaceholderNode: SearchBarPlaceholderNode?
-            self.contactListNode.listNode.forEachItemNode { node in
-                if let node = node as? ChatListSearchItemNode {
-                    maybePlaceholderNode = node.searchBarNode
-                }
-            }
-            
-            searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
+            searchDisplayController.deactivate(placeholder: placeholderNode)
             self.searchDisplayController = nil
         }
     }

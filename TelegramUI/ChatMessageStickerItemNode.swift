@@ -199,12 +199,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let displayLeftInset = params.leftInset + layoutConstants.bubble.edgeInset + avatarInset
             
-            let imageInset: CGFloat = 10.0
-            let innerImageSize = imageSize
-            imageSize = CGSize(width: imageSize.width + imageInset * 2.0, height: imageSize.height + imageInset * 2.0)
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            let innerImageInset: CGFloat = 10.0
+            let imageInset: CGFloat = 2.0
+            let innerImageSize = CGSize(width: imageSize.width + innerImageInset * 2.0, height: imageSize.height + innerImageInset * 2.0)
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - innerImageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: -imageInset), size: innerImageSize)
             
-            let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: innerImageSize, boundingSize: innerImageSize, intrinsicInsets: UIEdgeInsets(top: imageInset, left: imageInset, bottom: imageInset, right: imageInset))
+            let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(top: innerImageInset, left: innerImageInset, bottom: innerImageInset, right: innerImageInset))
+            imageSize.height += imageInset * 2.0
             
             let imageApply = imageLayout(arguments)
             
@@ -229,14 +230,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     // edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
-                }// else if let _ = attribute as? InlineBotMessageAttribute {
-                //    sentViaBot = true
-                //  }
+                }
             }
             
             let dateText = stringForMessageTimestampStatus(message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular)
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData.theme, item.presentationData.strings, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -361,7 +360,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                     
                     dateAndStatusApply(false)
-                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0), size: dateAndStatusSize)
+                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 16.0), size: dateAndStatusSize)
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {

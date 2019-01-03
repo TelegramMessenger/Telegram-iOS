@@ -380,7 +380,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             var existingIds = Set<String>()
             if let localizationListState = (view.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState] as? LocalizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
-                entries.append(.search(entries.count))
+                //entries.append(.search(entries.count))
                 let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
                 if availableSavedLocalizations.isEmpty {
                     updateCanStartEditing(nil)
@@ -435,9 +435,6 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         listInsets.right += layout.safeInsets.right
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
-            if !searchDisplayController.isDeactivating {
-                listInsets.top += layout.statusBarHeight ?? 0.0
-            }
         }
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
@@ -553,44 +550,30 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.isEditingValue = !self.isEditingValue
     }
     
-    func activateSearch() {
-        guard let (containerLayout, navigationBarHeight) = self.containerLayout else {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        guard let (containerLayout, navigationBarHeight) = self.containerLayout, self.searchDisplayController == nil else {
             return
         }
         
-        var maybePlaceholderNode: SearchBarPlaceholderNode?
-        self.listNode.forEachItemNode { node in
-            if let node = node as? ChatListSearchItemNode {
-                maybePlaceholderNode = node.searchBarNode
-            }
-        }
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: LocalizationListSearchContainerNode(account: self.account, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
+            self?.requestDeactivateSearch()
+        })
         
-        if let _ = self.searchDisplayController {
-            return
-        }
-        
-        if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: LocalizationListSearchContainerNode(account: self.account, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
-                self?.requestDeactivateSearch()
-            })
-            
-            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            self.searchDisplayController?.activate(insertSubnode: { subnode in
-                self.insertSubnode(subnode, belowSubnode: self.navigationBar)
-            }, placeholder: placeholderNode)
-        }
-    }
-    
-    func deactivateSearch() {
-        if let searchDisplayController = self.searchDisplayController {
-            var maybePlaceholderNode: SearchBarPlaceholderNode?
-            self.listNode.forEachItemNode { node in
-                if let node = node as? ChatListSearchItemNode {
-                    maybePlaceholderNode = node.searchBarNode
+        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                if isSearchBar {
+                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                } else {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                 }
             }
-            
-            searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
+        }, placeholder: placeholderNode)
+    }
+    
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        if let searchDisplayController = self.searchDisplayController {
+            searchDisplayController.deactivate(placeholder: placeholderNode)
             self.searchDisplayController = nil
         }
     }

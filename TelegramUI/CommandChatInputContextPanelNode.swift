@@ -96,8 +96,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             entries.append(entry)
             index += 1
         }
-        prepareTransition(from: self.currentEntries ?? [], to: entries)
-        
+        self.prepareTransition(from: self.currentEntries ?? [], to: entries)
     }
     
     private func prepareTransition(from: [CommandChatInputContextPanelEntry]? , to: [CommandChatInputContextPanelEntry]) {
@@ -120,7 +119,6 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                             let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
                             
                             let replacementText = command.command.text + " "
-                            
                             inputText.replaceCharacters(in: range, with: replacementText)
                             
                             let selectionPosition = range.lowerBound + (replacementText as NSString).length
@@ -185,8 +183,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func topInsetForLayout(size: CGSize) -> CGFloat {
-        var minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
-        
+        let minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
         return max(size.height - minimumItemHeights, 0.0)
     }
     
@@ -204,16 +201,16 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
-        case .immediate:
-            break
-        case let .animated(animationDuration, animationCurve):
-            duration = animationDuration
-            switch animationCurve {
-            case .easeInOut:
+            case .immediate:
                 break
-            case .spring:
-                curve = 7
-            }
+            case let .animated(animationDuration, animationCurve):
+                duration = animationDuration
+                switch animationCurve {
+                    case .easeInOut:
+                        break
+                    case .spring:
+                        curve = 7
+                }
         }
         
         let listViewCurve: ListViewAnimationCurve

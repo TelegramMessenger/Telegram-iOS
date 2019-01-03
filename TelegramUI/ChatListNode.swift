@@ -324,6 +324,9 @@ final class ChatListNode: ListView {
         }
     }
     
+    var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
+    var contentScrollingEnded: ((ListView) -> Bool)?
+    
     private let visibleUnreadCounts = ValuePromise<ChatListVisibleUnreadCounts>(ChatListVisibleUnreadCounts())
     private var visibleUnreadCountsValue = ChatListVisibleUnreadCounts() {
         didSet {
@@ -842,10 +845,9 @@ final class ChatListNode: ListView {
             return .single(false)
         }
         self.didEndScrolling = { [weak self] in
-            guard let strongSelf = self else {
-                return
+            if let strongSelf = self {
+                let _ = strongSelf.contentScrollingEnded?(strongSelf)
             }
-            fixSearchableListNodeScrolling(strongSelf)
         }
         
         self.scrollToTopOptionPromise.set(combineLatest(
@@ -884,6 +886,7 @@ final class ChatListNode: ListView {
                         atTop = value <= 0.0
                 }
                 strongSelf.scrolledAtTopValue = atTop
+                strongSelf.contentOffsetChanged?(offset)
             }
         }
     }
@@ -955,11 +958,9 @@ final class ChatListNode: ListView {
                     var pinnedOverscroll = false
                     if case .chatList = strongSelf.mode {
                         let entryCount = transition.chatListView.filteredEntries.count
-                        if entryCount >= 2 {
-                            if case .SearchEntry = transition.chatListView.filteredEntries[entryCount - 1] {
-                                if transition.chatListView.filteredEntries[entryCount - 2].index.pinningIndex != nil {
-                                    pinnedOverscroll = true
-                                }
+                        if entryCount >= 1 {
+                            if transition.chatListView.filteredEntries[entryCount - 1].index.pinningIndex != nil {
+                                pinnedOverscroll = true
                             }
                         }
                     }

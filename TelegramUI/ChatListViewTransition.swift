@@ -194,10 +194,8 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
             fromEmptyView = true
         }
         
-        if !searchMode && fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 2 {
-            if case .SearchEntry = toView.filteredEntries[toView.filteredEntries.count - 1] {
-                scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
-            }
+        if !searchMode && fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 1 {
+            scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
         }
         
         subscriber.putNext(ChatListNodeViewTransition(chatListView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange))

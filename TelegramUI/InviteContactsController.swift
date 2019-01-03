@@ -23,6 +23,8 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     
     private var composer: MFMessageComposeViewController?
     
+    private var searchContentNode: NavigationBarSearchContentNode?
+    
     public init(account: Account) {
         self.account = account
         
@@ -56,6 +58,11 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
                 }
             }
         })
+        
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -69,6 +76,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Contacts_InviteFriends
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
@@ -150,7 +158,9 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
             if let scrollToTop = self.scrollToTop {
                 scrollToTop()
             }
-            self.contactsNode.activateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
             self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
         }
     }
@@ -158,7 +168,9 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     private func deactivateSearch() {
         if !self.displayNavigationBar {
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
-            self.contactsNode.deactivateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
         }
     }
     

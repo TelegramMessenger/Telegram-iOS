@@ -75,6 +75,50 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
+        
+        ///TESTBED
+        
+        guard let controller = self.viewControllers.last as? ViewController else {
+            return
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5) {
+            let wrapperNode = ASDisplayNode()
+            let bounds = controller.displayNode.bounds
+            wrapperNode.frame = bounds
+            wrapperNode.backgroundColor = .gray
+            //controller.displayNode.addSubnode(wrapperNode)
+            
+            let radialStatusSize: CGFloat = 50.0
+            let statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.6))
+            statusNode.frame = CGRect(origin: CGPoint(x: floor(bounds.midX - radialStatusSize / 2.0), y: floor(bounds.midY - radialStatusSize / 2.0)), size: CGSize(width: radialStatusSize, height: radialStatusSize))
+            wrapperNode.addSubnode(statusNode)
+            
+            let color = UIColor.white
+            var smth = false
+            let button = HighlightTrackingButtonNode()
+            button.frame = CGRect(origin: CGPoint(x: floor(bounds.midX - radialStatusSize / 2.0), y: floor(bounds.midY - radialStatusSize / 2.0)), size: CGSize(width: radialStatusSize, height: radialStatusSize))
+            wrapperNode.addSubnode(button)
+            button.highligthedChanged = { value in
+                if value {
+                    if smth {
+                        smth = false
+                        //statusNode.transitionToState(.play(color), animated: true, completion: {})
+                        statusNode.transitionToState(.download(.white), animated: true, completion: {})
+                        //statusNode.transitionToState(.none, animated: true, completion: {})
+                    } else {
+                        smth = true
+                        statusNode.transitionToState(.progress(color: color, lineWidth: nil, value: 0.3, cancelEnabled: true), animated: true, completion: {})
+                    }
+                }
+            }
+            button.addTarget(self, action: #selector(self.mock), forControlEvents: .touchUpInside)
+            statusNode.transitionToState(.download(.white), animated: false, completion: {})
+        }
+    }
+    
+    @objc func mock() {
+        
     }
     
     public func updateRootControllers(showCallsTab: Bool) {

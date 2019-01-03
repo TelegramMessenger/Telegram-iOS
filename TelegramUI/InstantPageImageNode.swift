@@ -140,10 +140,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         if let fetchStatus = self.fetchStatus {
             switch fetchStatus {
                 case let .Fetching(isActive, progress):
-                    var adjustedProgress = progress
-                    if isActive {
-                        adjustedProgress = max(adjustedProgress, 0.027)
-                    }
+                    let adjustedProgress = max(progress, 0.027)
                     state = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
                 default:
                     break

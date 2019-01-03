@@ -302,7 +302,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             })
             
             self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            self.searchDisplayController?.activate(insertSubnode: { subnode in
+            self.searchDisplayController?.activate(insertSubnode: { subnode, isSearchBar in
                 self.insertSubnode(subnode, belowSubnode: navigationBar)
             }, placeholder: placeholderNode)
         }

@@ -23,6 +23,8 @@ public class LocalizationListController: ViewController {
     private var editItem: UIBarButtonItem!
     private var doneItem: UIBarButtonItem!
     
+    private var searchContentNode: NavigationBarSearchContentNode?
+    
     public init(account: Account) {
         self.account = account
         
@@ -56,6 +58,11 @@ public class LocalizationListController: ViewController {
                 }
             }
         })
+        
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -69,6 +76,7 @@ public class LocalizationListController: ViewController {
     private func updateThemeAndStrings() {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Settings_AppLanguage
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.controllerNode.updatePresentationData(self.presentationData)
@@ -126,7 +134,9 @@ public class LocalizationListController: ViewController {
             if let scrollToTop = self.scrollToTop {
                 scrollToTop()
             }
-            self.controllerNode.activateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.controllerNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
             self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
         }
     }
@@ -134,7 +144,9 @@ public class LocalizationListController: ViewController {
     private func deactivateSearch() {
         if !self.displayNavigationBar {
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
-            self.controllerNode.deactivateSearch()
+            if let searchContentNode = self.searchContentNode {
+                self.controllerNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
+            }
         }
     }
 }

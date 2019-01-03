@@ -379,11 +379,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
-                                        var progress = pendingStatus.progress
-                                        if pendingStatus.isRunning {
-                                            progress = max(progress, 0.027)
-                                        }
-                                        return .Fetching(isActive: pendingStatus.isRunning, progress: progress)
+                                        let adjustedProgress = max(pendingStatus.progress, 0.027)
+                                        return .Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress)
                                     } else {
                                         return resourceStatus
                                     }
@@ -395,11 +392,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             updatedStatusSignal = combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
-                                        var progress = pendingStatus.progress
-                                        if pendingStatus.isRunning {
-                                            progress = max(progress, 0.027)
-                                        }
-                                        return .Fetching(isActive: pendingStatus.isRunning, progress: progress)
+                                        let adjustedProgress = max(pendingStatus.progress, 0.027)
+                                        return .Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress)
                                     } else {
                                         return resourceStatus
                                     }
@@ -631,11 +625,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
         if let fetchStatus = self.fetchStatus {
             switch fetchStatus {
-                case let .Fetching(isActive, progress):
-                    var adjustedProgress = progress
-                    if isActive {
-                        adjustedProgress = max(adjustedProgress, 0.027)
-                    }
+                case let .Fetching(_, progress):
+                    let adjustedProgress = max(progress, 0.027)
                     var wasCheck = false
                     if let statusNode = self.statusNode, case .check = statusNode.state {
                         wasCheck = true

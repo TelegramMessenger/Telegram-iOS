@@ -8,6 +8,11 @@ public enum ContactListActionItemInlineIconPosition {
     case right
 }
 
+public enum ContactListActionItemHighlight {
+    case cell
+    case alpha
+}
+
 public enum ContactListActionItemIcon : Equatable {
     case none
     case generic(UIImage)
@@ -52,13 +57,15 @@ class ContactListActionItem: ListViewItem {
     let theme: PresentationTheme
     let title: String
     let icon: ContactListActionItemIcon
+    let highlight: ContactListActionItemHighlight
     let action: () -> Void
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, title: String, icon: ContactListActionItemIcon, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.icon = icon
+        self.highlight = highlight
         self.header = header
         self.action = action
     }
@@ -225,8 +232,27 @@ class ContactListActionItemNode: ListViewItemNode {
                     
                     let _ = titleApply()
 
+                    var titleOffset = leftInset
+                    var hideBottomStripe: Bool = false
                     if let image = item.icon.image {
-                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        var iconFrame: CGRect
+                        switch item.icon {
+                            case let .inline(_, position):
+                                hideBottomStripe = true
+                                let iconSpacing: CGFloat = 4.0
+                                let totalWidth: CGFloat = titleLayout.size.width + image.size.width + iconSpacing
+                                switch position {
+                                    case .left:
+                                        iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((contentSize.width - params.leftInset - params.rightInset - totalWidth) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                                        titleOffset = iconFrame.minX + iconSpacing
+                                    case .right:
+                                        iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((contentSize.width - params.leftInset - params.rightInset - totalWidth) / 2.0) + totalWidth - image.size.width, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                                        titleOffset = iconFrame.maxX - totalWidth
+                                }
+                            default:
+                                iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                        }
+                        strongSelf.iconNode.frame = iconFrame
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {
@@ -240,10 +266,11 @@ class ContactListActionItemNode: ListViewItemNode {
                     }
                     
                     strongSelf.topStripeNode.isHidden = true
+                    strongSelf.bottomStripeNode.isHidden = hideBottomStripe
                     
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: titleOffset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))
                 }
@@ -254,36 +281,50 @@ class ContactListActionItemNode: ListViewItemNode {
     override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if highlighted {
-            self.highlightedBackgroundNode.alpha = 1.0
-            if self.highlightedBackgroundNode.supernode == nil {
-                var anchorNode: ASDisplayNode?
-                if self.bottomStripeNode.supernode != nil {
-                    anchorNode = self.bottomStripeNode
-                } else if self.topStripeNode.supernode != nil {
-                    anchorNode = self.topStripeNode
-                } else if self.backgroundNode.supernode != nil {
-                    anchorNode = self.backgroundNode
+        if let item = self.item, case .alpha = item.highlight {
+            if highlighted {
+                self.titleNode.alpha = 0.4
+                self.iconNode.alpha = 0.4
+            } else {
+                if animated {
+                    self.titleNode.layer.animateAlpha(from: self.titleNode.alpha, to: 1.0, duration: 0.2)
+                    self.iconNode.layer.animateAlpha(from: self.iconNode.alpha, to: 1.0, duration: 0.2)
                 }
-                if let anchorNode = anchorNode {
-                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
-                } else {
-                    self.addSubnode(self.highlightedBackgroundNode)
-                }
+                self.titleNode.alpha = 1.0
+                self.iconNode.alpha = 1.0
             }
         } else {
-            if self.highlightedBackgroundNode.supernode != nil {
-                if animated {
-                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
-                        if let strongSelf = self {
-                            if completed {
-                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
+            if highlighted {
+                self.highlightedBackgroundNode.alpha = 1.0
+                if self.highlightedBackgroundNode.supernode == nil {
+                    var anchorNode: ASDisplayNode?
+                    if self.bottomStripeNode.supernode != nil {
+                        anchorNode = self.bottomStripeNode
+                    } else if self.topStripeNode.supernode != nil {
+                        anchorNode = self.topStripeNode
+                    } else if self.backgroundNode.supernode != nil {
+                        anchorNode = self.backgroundNode
+                    }
+                    if let anchorNode = anchorNode {
+                        self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
+                    } else {
+                        self.addSubnode(self.highlightedBackgroundNode)
+                    }
+                }
+            } else {
+                if self.highlightedBackgroundNode.supernode != nil {
+                    if animated {
+                        self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
+                            if let strongSelf = self {
+                                if completed {
+                                    strongSelf.highlightedBackgroundNode.removeFromSupernode()
+                                }
                             }
-                        }
-                    })
-                    self.highlightedBackgroundNode.alpha = 0.0
-                } else {
-                    self.highlightedBackgroundNode.removeFromSupernode()
+                        })
+                        self.highlightedBackgroundNode.alpha = 0.0
+                    } else {
+                        self.highlightedBackgroundNode.removeFromSupernode()
+                    }
                 }
             }
         }

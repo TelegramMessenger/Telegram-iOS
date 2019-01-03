@@ -12,8 +12,7 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
-private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
-    let diameter: CGFloat = 14.0
+private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor, diameter: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.setFillColor(backgroundColor.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
@@ -103,11 +102,16 @@ private class SearchBarTextField: UITextField {
             return
         }
         
-        let constrainedSize = self.textRect(forBounds: self.bounds).size
-        let labelSize = self.placeholderLabel.measure(constrainedSize)
-        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: self.textRect(forBounds: bounds).minX, y: self.textRect(forBounds: bounds).minY + 1.0), size: labelSize)
+        var textOffset: CGFloat = 1.0
+        if bounds.height >= 36.0 {
+            textOffset += 2.0
+        }
         
-        let prefixSize = self.prefixLabel.measure(constrainedSize)
+        let textRect = self.textRect(forBounds: bounds)
+        let labelSize = self.placeholderLabel.measure(textRect.size)
+        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX, y: textRect.minY + textOffset), size: labelSize)
+        
+        let prefixSize = self.prefixLabel.measure(textRect.size)
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
         self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: prefixBounds.minY + 1.0), size: prefixSize)
     }
@@ -184,6 +188,47 @@ final class SearchBarNodeTheme: Equatable {
             return false
         }
         return true
+    }
+}
+
+enum SearchBarStyle {
+    case modern
+    case legacy
+    
+    var font: UIFont {
+        switch self {
+            case .modern:
+                return Font.regular(17.0)
+            case .legacy:
+                return Font.regular(14.0)
+        }
+    }
+    
+    var cornerDiameter: CGFloat {
+        switch self {
+            case .modern:
+                return 21.0
+            case .legacy:
+                return 14.0
+        }
+    }
+    
+    var height: CGFloat {
+        switch self {
+            case .modern:
+                return 36.0
+            case .legacy:
+                return 28.0
+        }
+    }
+    
+    var padding: CGFloat {
+        switch self {
+            case .modern:
+                return 10.0
+            case .legacy:
+                return 8.0
+        }
     }
 }
 
@@ -272,10 +317,13 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
+    private let fieldStyle: SearchBarStyle
     private var theme: SearchBarNodeTheme?
     private var strings: PresentationStrings?
     
-    init(theme: SearchBarNodeTheme, strings: PresentationStrings) {
+    init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy) {
+        self.fieldStyle = fieldStyle
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         
@@ -295,7 +343,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField = SearchBarTextField()
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .search
-        self.textField.font = Font.regular(14.0)
+        self.textField.font = self.fieldStyle.font
         
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
@@ -338,7 +386,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         if self.theme != theme {
             self.backgroundNode.backgroundColor = theme.background
             self.separatorNode.backgroundColor = theme.separator
-            self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill)
+            self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill, diameter: self.fieldStyle.cornerDiameter)
             self.textField.textColor = theme.primaryText
             self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
             self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
@@ -366,13 +414,15 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         let contentFrame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: boundingSize.width - leftInset - rightInset, height: boundingSize.height))
         
+        let textBackgroundHeight = self.fieldStyle.height
         let cancelButtonSize = self.cancelButton.measure(CGSize(width: 100.0, height: CGFloat.infinity))
-        transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 8.0 - cancelButtonSize.width, y: verticalOffset + 31.0), size: cancelButtonSize))
+        transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 8.0 - cancelButtonSize.width, y: verticalOffset + textBackgroundHeight + floorToScreenPixels((textBackgroundHeight - cancelButtonSize.height) / 2.0)), size: cancelButtonSize))
         
-        let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + 8.0, y: verticalOffset + 28.0), size: CGSize(width: contentFrame.width - 16.0 - (self.hasCancelButton ? cancelButtonSize.width + 11.0 : 0.0), height: 28.0))
+        let padding = self.fieldStyle.padding
+        let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + padding, y: verticalOffset + textBackgroundHeight), size: CGSize(width: contentFrame.width - padding * 2.0 - (self.hasCancelButton ? cancelButtonSize.width + 11.0 : 0.0), height: textBackgroundHeight))
         transition.updateFrame(node: self.textBackgroundNode, frame: textBackgroundFrame)
         
-        let textFrame = CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 23.0, y: textBackgroundFrame.minY), size: CGSize(width: max(1.0, textBackgroundFrame.size.width - 23.0 - 20.0), height: textBackgroundFrame.size.height))
+        let textFrame = CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 24.0, y: textBackgroundFrame.minY), size: CGSize(width: max(1.0, textBackgroundFrame.size.width - 24.0 - 20.0), height: textBackgroundFrame.size.height))
         
         if let iconImage = self.iconNode.image {
             let iconSize = iconImage.size
@@ -428,7 +478,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.layer.animateFrame(from: initialIconFrame, to: self.iconNode.frame, duration: duration, timingFunction: timingFunction)
         
         let cancelButtonFrame = self.cancelButton.frame
-        self.cancelButton.layer.animatePosition(from: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: initialTextBackgroundFrame.minY + 2.0 + cancelButtonFrame.size.height / 2.0), to: self.cancelButton.layer.position, duration: duration, timingFunction: timingFunction)
+        self.cancelButton.layer.animatePosition(from: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: initialTextBackgroundFrame.midY), to: self.cancelButton.layer.position, duration: duration, timingFunction: timingFunction)
         node.isHidden = true
     }
     
@@ -483,11 +533,11 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             intermediateCompletion()
         })
         
-        let transitionBackgroundNode = ASImageNode()
+        let transitionBackgroundNode = ASDisplayNode()
         transitionBackgroundNode.isLayerBacked = true
         transitionBackgroundNode.displaysAsynchronously = false
-        transitionBackgroundNode.displayWithoutProcessing = true
-        transitionBackgroundNode.image = node.backgroundNode.image
+        transitionBackgroundNode.backgroundColor = node.backgroundNode.backgroundColor
+        transitionBackgroundNode.cornerRadius = node.backgroundNode.cornerRadius
         self.insertSubnode(transitionBackgroundNode, aboveSubnode: self.textBackgroundNode)
         transitionBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration / 2.0, removeOnCompletion: false)
         transitionBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
@@ -509,7 +559,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.layer.animateFrame(from: self.iconNode.frame, to: targetIconFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         
         let cancelButtonFrame = self.cancelButton.frame
-        self.cancelButton.layer.animatePosition(from: self.cancelButton.layer.position, to: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: targetTextBackgroundFrame.minY + 2.0 + cancelButtonFrame.size.height / 2.0), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
+        self.cancelButton.layer.animatePosition(from: self.cancelButton.layer.position, to: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: targetTextBackgroundFrame.midY), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
@@ -534,8 +584,13 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    func selectAll() {
+        self.textField.becomeFirstResponder()
+        self.textField.selectAll(nil)
+    }
+    
     private func updateIsEmpty() {
-        let isEmpty = !(textField.text?.isEmpty ?? true)
+        let isEmpty = !(self.textField.text?.isEmpty ?? true)
         if isEmpty != self.textField.placeholderLabel.isHidden {
             self.textField.placeholderLabel.isHidden = isEmpty
         }

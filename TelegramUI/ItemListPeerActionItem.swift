@@ -7,14 +7,16 @@ class ItemListPeerActionItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let icon: UIImage?
     let title: String
+    let alwaysPlain: Bool
     let editing: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     
-    init(theme: PresentationTheme, icon: UIImage?, title: String, sectionId: ItemListSectionId, editing: Bool, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, icon: UIImage?, title: String, alwaysPlain: Bool = false, sectionId: ItemListSectionId, editing: Bool, action: @escaping () -> Void) {
         self.theme = theme
         self.icon = icon
         self.title = title
+        self.alwaysPlain = alwaysPlain
         self.editing = editing
         self.sectionId = sectionId
         self.action = action
@@ -23,7 +25,11 @@ class ItemListPeerActionItem: ListViewItem, ItemListItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListPeerActionItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
+            if self.alwaysPlain {
+                neighbors.top = .sameSection(alwaysPlain: false)
+            }
+            let (layout, apply) = node.asyncLayout()(self, params, neighbors)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -47,7 +53,11 @@ class ItemListPeerActionItem: ListViewItem, ItemListItem {
                 }
                 
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                    var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
+                    if self.alwaysPlain {
+                        neighbors.top = .sameSection(alwaysPlain: false)
+                    }
+                    let (layout, apply) = makeLayout(self, params, neighbors)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply(animated)

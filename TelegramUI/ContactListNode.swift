@@ -5,8 +5,23 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private let dropDownIcon = { () -> UIImage in
+    UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)
+    let context = UIGraphicsGetCurrentContext()!
+    context.setBlendMode(.copy)
+    context.setFillColor(UIColor.black.cgColor)
+    context.move(to: CGPoint(x: 0.0, y: 3.0))
+    context.addLine(to: CGPoint(x: 12.0, y: 3.0))
+    context.addLine(to: CGPoint(x: 6.0, y: 9.0))
+    context.fillPath()
+    let image = UIGraphicsGetImageFromCurrentImageContext()!
+    UIGraphicsEndImageContext()
+    return image
+}()
+
 private enum ContactListNodeEntryId: Hashable {
     case search
+    case sort
     case permission(action: Bool)
     case option(index: Int)
     case peerId(Int64)
@@ -16,6 +31,8 @@ private enum ContactListNodeEntryId: Hashable {
         switch self {
             case .search:
                 return 0
+            case .sort:
+                return 1
             case let .permission(action):
                 return (action ? 3 : 2).hashValue
             case let .option(index):
@@ -36,6 +53,13 @@ private enum ContactListNodeEntryId: Hashable {
             case .search:
                 switch rhs {
                     case .search:
+                        return true
+                    default:
+                        return false
+                }
+            case .sort:
+                switch rhs {
+                    case .sort:
                         return true
                     default:
                         return false
@@ -71,12 +95,14 @@ private enum ContactListNodeEntryId: Hashable {
 
 private final class ContactListNodeInteraction {
     let activateSearch: () -> Void
+    let openSortMenu: () -> Void
     let authorize: () -> Void
     let suppressWarning: () -> Void
     let openPeer: (ContactListPeer) -> Void
     
-    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer) -> Void) {
+    init(activateSearch: @escaping () -> Void, openSortMenu: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer) -> Void) {
         self.activateSearch = activateSearch
+        self.openSortMenu = openSortMenu
         self.authorize = authorize
         self.suppressWarning = suppressWarning
         self.openPeer = openPeer
@@ -136,6 +162,7 @@ enum ContactListPeer: Equatable {
 
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
+    case sort(PresentationTheme, PresentationStrings, ContactsSortOrder)
     case permissionInfo(PresentationTheme, PresentationStrings, Bool)
     case permissionEnable(PresentationTheme, String)
     case option(Int, ContactListAdditionalOption, ListViewItemHeader?, PresentationTheme, PresentationStrings)
@@ -145,6 +172,8 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
         switch self {
             case .search:
                 return .search
+            case .sort:
+                return .sort
             case .permissionInfo:
                 return .permission(action: false)
             case .permissionEnable:
@@ -167,6 +196,14 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ChatListSearchItem(theme: theme, placeholder: strings.Contacts_SearchLabel, activate: {
                     interaction.activateSearch()
                 })
+            case let .sort(theme, strings, sortOrder):
+                var text = strings.Contacts_SortedByName
+                if case .presence = sortOrder {
+                    text = strings.Contacts_SortedByPresence
+                }
+                return ContactListActionItem(theme: theme, title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, header: nil, action: {
+                    interaction.openSortMenu()
+            })
             case let .permissionInfo(theme, strings, suppressed):
                 return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied, style: .plain, suppressed: suppressed, close: {
                     interaction.suppressWarning()
@@ -203,6 +240,12 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
         switch lhs {
             case let .search(lhsTheme, lhsStrings):
                 if case let .search(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                    return true
+                } else {
+                    return false
+                }
+            case let .sort(lhsTheme, lhsStrings, lhsSortOrder):
+                if case let .sort(rhsTheme, rhsStrings, rhsSortOrder) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSortOrder == rhsSortOrder {
                     return true
                 } else {
                     return false
@@ -276,23 +319,30 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
         switch lhs {
             case .search:
                 return true
-            case .permissionInfo:
+            case .sort:
                 switch rhs {
                     case .search:
                         return false
                     default:
                         return true
                 }
+            case .permissionInfo:
+                switch rhs {
+                    case .search, .sort:
+                        return false
+                    default:
+                        return true
+                }
             case .permissionEnable:
                 switch rhs {
-                    case .search, .permissionInfo:
+                    case .search, .sort, .permissionInfo:
                         return false
                     default:
                         return true
                 }
             case let .option(lhsIndex, _, _, _, _):
                 switch rhs {
-                    case .search, .permissionInfo, .permissionEnable:
+                    case .search, .sort, .permissionInfo, .permissionEnable:
                             return false
                         case let .option(rhsIndex, _, _, _, _):
                             return lhsIndex < rhsIndex
@@ -301,7 +351,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 }
             case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _):
                 switch rhs {
-                    case .search, .permissionInfo, .permissionEnable, .option:
+                    case .search, .sort, .permissionInfo, .permissionEnable, .option:
                         return false
                     case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -376,7 +426,7 @@ private extension PeerIndexNameRepresentation {
     }
 }
 
-private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>, authorizationStatus: AccessType, warningSuppressed: (Bool, Bool)) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer], presences: [PeerId: PeerPresence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds:Set<PeerId>, authorizationStatus: AccessType, warningSuppressed: (Bool, Bool), displaySortOptions: Bool) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var commonHeader: ListViewItemHeader?
@@ -385,8 +435,9 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     
     switch presentation {
         case let .orderedByPresence(options):
-            entries.append(.search(theme, strings))
-            
+            if displaySortOptions, let sortOrder = presentation.sortOrder {
+                entries.append(.sort(theme, strings, sortOrder))
+            }
             var addHeader = false
             if #available(iOSApplicationExtension 10.0, *) {
                 let (suppressed, syncDisabled) = warningSuppressed
@@ -436,6 +487,10 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                 entries.append(.option(i, options[i], commonHeader, theme, strings))
             }
         case let .natural(displaySearch, options):
+            if displaySortOptions, let sortOrder = presentation.sortOrder {
+                entries.append(.sort(theme, strings, sortOrder))
+            }
+            
             orderedPeers = peers.sorted(by: { lhs, rhs in
                 let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: sortOrder)
                 if result == .orderedSame {
@@ -489,9 +544,6 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                     headerCache[indexHeader] = header
                 }
                 headers[peer.id] = header
-            }
-            if displaySearch {
-                entries.append(.search(theme, strings))
             }
             for i in 0 ..< options.count {
                 entries.append(.option(i, options[i], commonHeader, theme, strings))
@@ -607,6 +659,17 @@ enum ContactListPresentation {
     case orderedByPresence(options: [ContactListAdditionalOption])
     case natural(displaySearch: Bool, options: [ContactListAdditionalOption])
     case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool)
+    
+    var sortOrder: ContactsSortOrder? {
+        switch self {
+            case .orderedByPresence:
+                return .presence
+            case .natural:
+                return .natural
+            default:
+                return nil
+        }
+    }
 }
 
 struct ContactListNodeGroupSelectionState: Equatable {
@@ -687,6 +750,7 @@ final class ContactListNode: ASDisplayNode {
     }
     
     var activateSearch: (() -> Void)?
+    var openSortMenu: (() -> Void)?
     var openPeer: ((ContactListPeer) -> Void)?
     var openPrivacyPolicy: (() -> Void)?
     var suppressPermissionWarning: (() -> Void)?
@@ -701,7 +765,7 @@ final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
-    init(account: Account, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true) {
+    init(account: Account, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false) {
         self.account = account
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
@@ -763,6 +827,8 @@ final class ContactListNode: ASDisplayNode {
         
         let interaction = ContactListNodeInteraction(activateSearch: { [weak self] in
             self?.activateSearch?()
+        }, openSortMenu: { [weak self] in
+            self?.openSortMenu?()
         }, authorize: {
             authorizeImpl?()
         }, suppressWarning: { [weak self] in
@@ -919,7 +985,7 @@ final class ContactListNode: ASDisplayNode {
                                 peers.append(.deviceContact(stableId, contact))
                             }
                             
-                            let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true))
+                            let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true), displaySortOptions: false)
                             let previous = previousEntries.swap(entries)
                             return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none))
                         }
@@ -962,7 +1028,7 @@ final class ContactListNode: ASDisplayNode {
                         if (authorizationStatus == .notDetermined || authorizationStatus == .denied) && peers.isEmpty {
                             isEmpty = true
                         }
-                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed)
+                        let entries = contactListNodeEntries(accountPeer: view.accountPeer, peers: peers, presences: view.peerPresences, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions)
                         let previous = previousEntries.swap(entries)
                         
                         var hadPermissionInfo = false
@@ -1060,6 +1126,18 @@ final class ContactListNode: ASDisplayNode {
                 return
             }
             fixSearchableListNodeScrolling(strongSelf.listNode)
+        }
+        
+        self.listNode.visibleContentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self {
+                let atTop: Bool
+                switch offset {
+                    case .none, .unknown:
+                        atTop = false
+                    case let .known(value):
+                        atTop = value <= 0.0
+                }
+            }
         }
         
         authorizeImpl = {

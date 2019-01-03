@@ -73,6 +73,8 @@
 		099529B021D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */; };
 		099529B221D24F5800805E13 /* RadialDownloadContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */; };
 		099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B321D3E5D800805E13 /* CheckDiskSpace.swift */; };
+		099529F321D8FE8300805E13 /* RadialPlayPauseContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529F221D8FE8300805E13 /* RadialPlayPauseContentNode.swift */; };
+		099529FA21DD8A3100805E13 /* NavigationBarSearchContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529F921DD8A3100805E13 /* NavigationBarSearchContentNode.swift */; };
 		09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */; };
 		09B4EE4721A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4621A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift */; };
 		09B4EE4D21A7B73800847FA6 /* PermissionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4C21A7B73800847FA6 /* PermissionController.swift */; };
@@ -1178,6 +1180,8 @@
 		099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageUnsupportedBubbleContentNode.swift; sourceTree = "<group>"; };
 		099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialDownloadContentNode.swift; sourceTree = "<group>"; };
 		099529B321D3E5D800805E13 /* CheckDiskSpace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckDiskSpace.swift; sourceTree = "<group>"; };
+		099529F221D8FE8300805E13 /* RadialPlayPauseContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialPlayPauseContentNode.swift; sourceTree = "<group>"; };
+		099529F921DD8A3100805E13 /* NavigationBarSearchContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBarSearchContentNode.swift; sourceTree = "<group>"; };
 		09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySecureIdScanController.swift; sourceTree = "<group>"; };
 		09B4EE4621A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSessionsEmptyStateItem.swift; sourceTree = "<group>"; };
 		09B4EE4C21A7B73800847FA6 /* PermissionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionController.swift; sourceTree = "<group>"; };
@@ -2543,6 +2547,7 @@
 				D01776B91F1D704F0044446D /* RadialStatusIconContentNode.swift */,
 				D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */,
 				099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */,
+				099529F221D8FE8300805E13 /* RadialPlayPauseContentNode.swift */,
 			);
 			name = "Radial Status";
 			sourceTree = "<group>";
@@ -4259,6 +4264,7 @@
 				D0F69DCC1D6B8A0D0046BCD6 /* SearchBarPlaceholderNode.swift */,
 				D0F69DCD1D6B8A0D0046BCD6 /* SearchDisplayController.swift */,
 				D0F69DCE1D6B8A0D0046BCD6 /* SearchDisplayControllerContentNode.swift */,
+				099529F921DD8A3100805E13 /* NavigationBarSearchContentNode.swift */,
 			);
 			name = Search;
 			sourceTree = "<group>";
@@ -5356,6 +5362,7 @@
 				0962E67921B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift in Sources */,
 				D0EC6D4E1EB9F58800EBF1C3 /* ChatListItem.swift in Sources */,
 				D0B2F76A2052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift in Sources */,
+				099529FA21DD8A3100805E13 /* NavigationBarSearchContentNode.swift in Sources */,
 				D0AEAE272080D6970013176E /* StickerPaneSearchBarNode.swift in Sources */,
 				D0EC6D4F1EB9F58800EBF1C3 /* ChatListSearchItem.swift in Sources */,
 				D0EC6D501EB9F58800EBF1C3 /* ChatListNodeEntries.swift in Sources */,
@@ -5721,6 +5728,7 @@
 				D0EC6E031EB9F58900EBF1C3 /* GalleryFooterContentNode.swift in Sources */,
 				D0E9BA0A1F0457DD00F079A4 /* BotCheckoutWebInteractionController.swift in Sources */,
 				D0EC6E041EB9F58900EBF1C3 /* SecretMediaPreviewController.swift in Sources */,
+				099529F321D8FE8300805E13 /* RadialPlayPauseContentNode.swift in Sources */,
 				D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */,
 				D0FA08BE20481EA300DD23FC /* Locale.swift in Sources */,
 				D0E412CE206A707400BEE4A2 /* FormControllerTextItem.swift in Sources */,

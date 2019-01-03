@@ -681,11 +681,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             let streamingStatusForegroundColor: UIColor = incoming ? bubbleTheme.incomingAccentControlColor : bubbleTheme.outgoingAccentControlColor
             let streamingStatusBackgroundColor: UIColor = incoming ? bubbleTheme.incomingMediaInactiveControlColor : bubbleTheme.outgoingMediaInactiveControlColor
             switch resourceStatus.fetchStatus {
-                case let .Fetching(isActive, progress):
-                    var adjustedProgress = progress
-                    if isActive {
-                        adjustedProgress = max(adjustedProgress, 0.027)
-                    }
+                case let .Fetching(_, progress):
+                    let adjustedProgress = max(progress, 0.027)
                     streamingState = .cloudProgress(color: streamingStatusForegroundColor, strokeBackgroundColor: streamingStatusBackgroundColor, lineWidth: 2.0, value: CGFloat(adjustedProgress))
                 case .Local:
                     if let cloudFetchedIconImage = self.cloudFetchedIconImage {
@@ -717,10 +714,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.waveformScrubbingNode?.enableScrubbing = false
                 switch fetchStatus {
                     case let .Fetching(isActive, progress):
-                        var adjustedProgress = progress
-                        if isActive {
-                            adjustedProgress = max(adjustedProgress, 0.027)
-                        }
+                        let adjustedProgress = max(progress, 0.027)
                         state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                     case .Local:
                         if isAudio {

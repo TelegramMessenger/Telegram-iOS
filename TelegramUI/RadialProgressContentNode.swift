@@ -291,14 +291,16 @@ final class RadialProgressContentNode: RadialStatusContentNode {
         self.cancelNode.frame = bounds
     }
     
-    private let duration: Double = 0.2
-    
-    override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { _ in
+    override func prepareAnimateOut(completion: @escaping () -> Void) {
+        self.cancelNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.15, removeOnCompletion: false, completion: { _ in
             completion()
         })
-        self.cancelNode.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
-        self.cancelNode.layer.animateRotation(from: 0.0, to: CGFloat.pi / 3.0, duration: duration)
+    }
+    
+    override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            completion()
+        })
     }
     
     override func prepareAnimateIn(from: RadialStatusNodeState?) {
@@ -309,9 +311,8 @@ final class RadialProgressContentNode: RadialStatusContentNode {
     override func animateIn(from: RadialStatusNodeState) {
         if case .download = from {
         } else {
-            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
-        self.cancelNode.layer.animateScale(from: 0.2, to: 1.0, duration: duration)
-        self.cancelNode.layer.animateRotation(from: -CGFloat.pi / 3.0, to: 0.0, duration: duration)
+        self.cancelNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
     }
 }

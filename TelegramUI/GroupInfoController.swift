@@ -1187,7 +1187,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     var aboutLinkActionImpl: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
     let arguments = GroupInfoArguments(account: account, peerId: peerId, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
-        let _ = (account.postbox.loadedPeerWithId(peerId) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+        let _ = (account.postbox.loadedPeerWithId(peerId)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peer in
             if peer.profileImageRepresentations.isEmpty {
                 return
             }
@@ -1252,7 +1254,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
-                    let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(completion: { result in
+                    let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle, completion: { result in
                         assetsController?.dismiss()
                         completedImpl(result)
                     }))
@@ -1301,7 +1303,6 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         actionsDisposable.add((account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications]) |> take(1) |> deliverOnMainQueue).start(next: { view in
-            
             let viewSettings: GlobalNotificationSettingsSet
             if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
                 viewSettings = settings.effective
