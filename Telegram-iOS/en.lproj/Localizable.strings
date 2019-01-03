@@ -94,6 +94,108 @@
 "PHONE_CALL_REQUEST" = "%1$@ is calling you";
 "PHONE_CALL_MISSED" = "You missed a call from %1$@";
 
+"MESSAGE_TEXT_SEPARATED" = "%1$@|%2$@";
+"MESSAGE_NOTEXT_SEPARATED" = "%1$@|sent you a message";
+"MESSAGE_PHOTO_SEPARATED" = "%1$@|sent you a photo";
+"MESSAGE_PHOTO_SECRET_SEPARATED" = "%1$@|sent you a self-destructing photo";
+"MESSAGE_VIDEO_SEPARATED" = "%1$@|sent you a video";
+"MESSAGE_VIDEO_SECRET_SEPARATED" = "%1$@|sent you a self-destructing video";
+"MESSAGE_SCREENSHOT_SEPARATED" = "%1$@|took a screenshot";
+"MESSAGE_ROUND_SEPARATED" = "%1$@|sent you a video message";
+"MESSAGE_DOC_SEPARATED" = "%1$@|sent you a file";
+"MESSAGE_STICKER_SEPARATED" = "%1$@|sent you a %2$@sticker";
+"MESSAGE_AUDIO_SEPARATED" = "%1$@|sent you a voice message";
+"MESSAGE_CONTACT_SEPARATED" = "%1$@|shared a contact with you";
+"MESSAGE_GEO_SEPARATED" = "%1$@|sent you a map";
+"MESSAGE_GEOLIVE_SEPARATED" = "%1$@|started sharing their live location";
+"MESSAGE_POLL_SEPARATED" = "%1$@|sent you a poll";
+"MESSAGE_GIF_SEPARATED" = "%1$@|sent you a GIF";
+"MESSAGE_GAME_SEPARATED" = "%1$@|invited you to play %2$@";
+"MESSAGE_INVOICE_SEPARATED" = "%1$@|sent you an invoice for %2$@";
+"MESSAGE_FWDS_SEPARATED_1" = "%1$@|forwarded you a message";
+"MESSAGE_FWDS_SEPARATED_any" = "%1$@|forwarded you %2$d messages";
+"MESSAGE_PHOTOS_SEPARATED_1" = "%1$@|sent you a photo";
+"MESSAGE_PHOTOS_SEPARATED_any" = "%1$@|sent you %2$d photos";
+"MESSAGES_SEPARATED_1" = "%1$@|sent you a message";
+"MESSAGES_SEPARATED_any" = "%1$@|sent you %2$d messages";
+
+"CHANNEL_MESSAGE_TEXT_SEPARATED" = "%1$@|%2$@";
+"CHANNEL_MESSAGE_NOTEXT_SEPARATED" = "%1$@|posted a message";
+"CHANNEL_MESSAGE_PHOTO_SEPARATED" = "%1$@|posted a photo";
+"CHANNEL_MESSAGE_VIDEO_SEPARATED" = "%1$@|posted a video";
+"CHANNEL_MESSAGE_ROUND_SEPARATED" = "%1$@|posted a video message";
+"CHANNEL_MESSAGE_DOC_SEPARATED" = "%1$@|posted a file";
+"CHANNEL_MESSAGE_STICKER_SEPARATED" = "%1$@|posted a %2$@sticker";
+"CHANNEL_MESSAGE_AUDIO_SEPARATED" = "%1$@|posted a voice message";
+"CHANNEL_MESSAGE_CONTACT_SEPARATED" = "%1$@|posted a contact";
+"CHANNEL_MESSAGE_GEO_SEPARATED" = "%1$@|posted a map";
+"CHANNEL_MESSAGE_GEOLIVE_SEPARATED" = "%1$@|posted a live location";
+"CHANNEL_MESSAGE_POLL_SEPARATED" = "%1$@|posted a poll";
+"CHANNEL_MESSAGE_GIF_SEPARATED" = "%1$@|posted a GIF";
+"CHANNEL_MESSAGE_GAME_SEPARATED" = "%1$@|invited you to play %2$@";
+"CHANNEL_MESSAGE_FWDS_SEPARATED_1" = "%1$@|posted a forwarded message";
+"CHANNEL_MESSAGE_FWDS_SEPARATED_any" = "%1$@|posted %2$d forwarded messages";
+"CHANNEL_MESSAGE_PHOTOS_SEPARATED_1" = "%1$@|posted a photo";
+"CHANNEL_MESSAGE_PHOTOS_SEPARATED_any" = "%1$@|posted %2$d photos";
+"CHANNEL_MESSAGES_SEPARATED_1" = "%1$@|posted a message";
+"CHANNEL_MESSAGES_SEPARATED_any" = "%1$@|posted %2$d messages";
+
+"CHAT_MESSAGE_TEXT_SEPARATED" = "%2$@|%1$@:%3$@";
+"CHAT_MESSAGE_NOTEXT_SEPARATED" = "%2$@|%1$@ sent a message to the group";
+"CHAT_MESSAGE_PHOTO_SEPARATED" = "%2$@|%1$@ sent a photo";
+"CHAT_MESSAGE_VIDEO_SEPARATED" = "%2$@|%1$@ sent a video ";
+"CHAT_MESSAGE_ROUND_SEPARATED" = "%2$@|%1$@ sent a video message";
+"CHAT_MESSAGE_DOC_SEPARATED" = "%2$@|%1$@ sent a file";
+"CHAT_MESSAGE_STICKER_SEPARATED" = "%2$@|%1$@ sent a %3$@sticker";
+"CHAT_MESSAGE_AUDIO_SEPARATED" = "%2$@|%1$@ sent a voice message";
+"CHAT_MESSAGE_CONTACT_SEPARATED" = "%2$@|%1$@ shared a contact";
+"CHAT_MESSAGE_GEO_SEPARATED" = "%2$@|%1$@ sent a map";
+"CHAT_MESSAGE_GEOLIVE_SEPARATED" = "%2$@|%1$@ started sharing their live location";
+"CHAT_MESSAGE_POLL_SEPARATED" = "%2$@|%1$@ sent a poll";
+"CHAT_MESSAGE_GIF_SEPARATED" = "%2$@|%1$@ sent a GIF";
+"CHAT_MESSAGE_GAME_SEPARATED" = "%2$@|%1$@ invited the group to play %3$@";
+"CHAT_MESSAGE_INVOICE_SEPARATED" = "%2$@|%1$@ sent an invoice for %3$@";
+"CHAT_CREATED_SEPARATED" = "%2$@|%1$@ invited you to the group";
+"CHAT_TITLE_EDITED_SEPARATED" = "%2$@|%1$@ edited the group\'s name";
+"CHAT_PHOTO_EDITED_SEPARATED" = "%2$@|%1$@ edited the group\'s photo";
+"CHAT_ADD_MEMBER_SEPARATED" = "%2$@|%1$@ invited %3$@ to the group";
+"CHAT_ADD_YOU_SEPARATED" = "%2$@|%1$@ invited you to the group";
+"CHAT_DELETE_MEMBER_SEPARATED" = "%2$@|%1$@ kicked %3$@ from the group";
+"CHAT_DELETE_YOU_SEPARATED" = "%2$@|%1$@ kicked you from the group ";
+"CHAT_LEFT_SEPARATED" = "%2$@|%1$@ has left the group";
+"CHAT_RETURNED_SEPARATED" = "%2$@|%1$@ has returned to the group";
+"CHAT_JOINED_SEPARATED" = "%2$@|%1$@ has joined the group";
+"CHAT_MESSAGE_FWDS_SEPARATED_1" = "%2$@|%1$@ forwarded a message";
+"CHAT_MESSAGE_FWDS_SEPARATED_any" = "%2$@|%1$@ forwarded %3$d messages";
+"CHAT_MESSAGE_PHOTOS_SEPARATED_1" = "%2$@|%1$@ sent a photo";
+"CHAT_MESSAGE_PHOTOS_SEPARATED_any" = "%2$@|%1$@ sent %3$d photos";
+"CHAT_MESSAGES_SEPARATED_1" = "%2$@|%1$@ sent a message";
+"CHAT_MESSAGES_SEPARATED_any" = "%2$@|%1$@ sent %3$d messages";
+
+"PINNED_TEXT_SEPARATED" = "%1$@|pinned \"%2$@\"";
+"PINNED_NOTEXT_SEPARATED" = "%1$@|pinned a message";
+"PINNED_PHOTO_SEPARATED" = "%1$@|pinned a photo";
+"PINNED_VIDEO_SEPARATED" = "%1$@|pinned a video";
+"PINNED_ROUND_SEPARATED" = "%1$@|pinned a video message";
+"PINNED_DOC_SEPARATED" = "%1$@|pinned a file";
+"PINNED_STICKER_SEPARATED" = "%1$@|pinned a %2$@sticker";
+"PINNED_AUDIO_SEPARATED" = "%1$@|pinned a voice message";
+"PINNED_CONTACT_SEPARATED" = "%1$@|pinned a contact";
+"PINNED_GEO_SEPARATED" = "%1$@|pinned a map";
+"PINNED_GEOLIVE_SEPARATED" = "%1$@|pinned a live location";
+"PINNED_POLL_SEPARATED" = "|%1$@|pinned a poll";
+"PINNED_GAME_SEPARATED" = "%1$@|pinned a game";
+"PINNED_INVOICE_SEPARATED" = "%1$@|pinned an invoice";
+"PINNED_GIF_SEPARATED" = "%1$@|pinned a GIF";
+
+"CONTACT_JOINED_SEPARATED" = "%1$@|joined Telegram!";
+
+"AUTH_UNKNOWN_SEPARATED" = "New login|from unrecognized device %1$@";
+"AUTH_REGION_SEPARATED" = "New login|from unrecognized device %1$@, location: %2$@";
+
+"PHONE_CALL_REQUEST_SEPARATED" = "%1$@|is calling you!";
+"PHONE_CALL_MISSED_SEPARATED" = "%1$@|You missed a call";
+
 // Common
 "Common.OK" = "OK";
 "Common.Cancel" = "Cancel";
@@ -494,6 +596,7 @@
 "GroupInfo.SetGroupPhotoDelete" = "Delete Photo";
 "GroupInfo.Notifications" = "Notifications";
 "GroupInfo.Sound" = "Sound";
+"GroupInfo.SetSound" = "Set Sound";
 "GroupInfo.SharedMedia" = "Shared Media";
 "GroupInfo.SharedMediaNone" = "None";
 "GroupInfo.DeleteAndExit" = "Delete and Exit";
@@ -1388,7 +1491,7 @@
 
 "Channel.About.Title" = "Description";
 
-"Channel.About.Placeholder" = "Description";
+"Channel.About.Placeholder" = "Description (Optional)";
 "Channel.About.Help" = "You can provide an optional description for your channel.";
 "Group.About.Help" = "You can provide an optional description for your group.";
 
@@ -2403,6 +2506,9 @@ Unused sets are archived when you add more.";
 "Channel.BanUser.PermissionSendMedia" = "Can Send Media";
 "Channel.BanUser.PermissionSendStickersAndGifs" = "Can Send Stickers & GIFs";
 "Channel.BanUser.PermissionEmbedLinks" = "Can Embed Links";
+"Channel.BanUser.PermissionSendPolls" = "Send Polls";
+"Channel.BanUser.PermissionChangeGroupInfo" = "Change Group Info";
+"Channel.BanUser.PermissionAddMembers" = "Add Members";
 "Channel.BanUser.Unban" = "Unban";
 
 "Channel.BanUser.BlockFor" = "Block For";
@@ -2680,12 +2786,12 @@ Unused sets are archived when you add more.";
 
 "Conversation.ViewMessage" = "VIEW MESSAGE";
 
-"GroupInfo.GroupHistory" = "Chat History For New Members";
+"GroupInfo.GroupHistory" = "History For New Members";
 "GroupInfo.GroupHistoryVisible" = "Visible";
 "GroupInfo.GroupHistoryHidden" = "Hidden";
 
 "Group.Setup.HistoryTitle" = "Chat History Settings";
-"Group.Setup.HistoryHeader" = "CHAT HISTORY FOR NEW MEMBERS";
+"Group.Setup.HistoryHeader" = "HISTORY FOR NEW MEMBERS";
 "Group.Setup.HistoryVisible" = "Visible";
 "Group.Setup.HistoryHidden" = "Hidden";
 
@@ -3682,3 +3788,51 @@ Unused sets are archived when you add more.";
 "Contacts.SortedByPresence" = "Sorted by Last Seen Time";
 
 "NotificationSettings.ContactJoinedInfo" = "Receive push notifications when one of your contacts becomes available on Telegram.";
+
+"GroupInfo.Permissions" = "Permissions";
+"GroupInfo.Permissions.Title" = "Permissions";
+"GroupInfo.Permissions.SectionTitle" = "WHAT CAN MEMBERS OF THIS GROUP DO?";
+"GroupInfo.Permissions.Removed" = "Removed Users";
+"GroupInfo.Permissions.Exceptions" = "EXCEPTIONS";
+"GroupInfo.Permissions.AddException" = "Add Exception";
+"GroupInfo.Permissions.SearchPlaceholder" = "Search Exceptions";
+
+"GroupInfo.Administrators" = "Administrators";
+"GroupInfo.Administrators.Title" = "Administrators";
+
+"GroupPermission.NoSendMessages" = "no messages";
+"GroupPermission.NoSendMedia" = "no media";
+"GroupPermission.NoSendGifs" = "no GIFs";
+"GroupPermission.NoSendPolls" = "no polls";
+"GroupPermission.NoSendLinks" = "no links";
+"GroupPermission.NoChangeInfo" = "no info";
+"GroupPermission.NoAddMembers" = "no add";
+"GroupPermission.NoPinMessages" = "no pin";
+
+"GroupPermission.Title" = "Exception";
+"GroupPermission.NewTitle" = "New Exception";
+"GroupPermission.SectionTitle" = "WHAT CAN THIS MEMBER DO?";
+"GroupPermission.Duration" = "Duration";
+"GroupPermission.AddedInfo" = "Exception added by %1$@ %2$@";
+"GroupPermission.Delete" = "Delete Exception";
+"GroupPermission.ApplyAlertText" = "You have changed this user's rights in %@.\nApply Changes?";
+"GroupPermission.ApplyAlertAction" = "Apply";
+"GroupPermission.AddSuccess" = "Exception Added";
+
+"Channel.Management.RemovedBy" = "Removed by %@";
+
+"GroupRemoved.Title" = "Removed Users";
+"GroupRemoved.Remove" = "Remove User";
+"GroupRemoved.RemoveInfo" = "Users removed from the group by admins cannot rejoin it via invite links.";
+"ChannelRemoved.RemoveInfo" = "Users removed from the channel by admins cannot rejoin it via invite links.";
+"GroupRemoved.UsersSectionTitle" = "REMOVED USERS";
+"GroupRemoved.ViewUserInfo" = "View User Info";
+"GroupRemoved.AddToGroup" = "Add To Group";
+"GroupRemoved.DeleteUser" = "Delete";
+
+"EmptyGroupInfo.Title" = "You have created a group";
+"EmptyGroupInfo.Subtitle" = "Groups can have:";
+"EmptyGroupInfo.Line1" = "Up to %@ members";
+"EmptyGroupInfo.Line2" = "Persistent chat history";
+"EmptyGroupInfo.Line3" = "Public links such as t.me/title";
+"EmptyGroupInfo.Line4" = "Admins with different rights";
