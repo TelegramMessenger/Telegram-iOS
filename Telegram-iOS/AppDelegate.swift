@@ -375,6 +375,25 @@ private enum QueuedWakeup: Int32 {
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         Logger.setSharedLogger(Logger(basePath: logsPath))
         
+        if let contents = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath + "/accounts-metadata"), includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants]) {
+            for url in contents {
+                Logger.shared.log("App \(self.episodeId)", "metadata: \(url.path)")
+            }
+        }
+        
+        if let contents = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants]) {
+            for url in contents {
+                Logger.shared.log("App \(self.episodeId)", "root: \(url.path)")
+                if url.lastPathComponent.hasPrefix("account-") {
+                    if let subcontents = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants]) {
+                        for suburl in subcontents {
+                            Logger.shared.log("App \(self.episodeId)", "account \(url.lastPathComponent): \(suburl.path)")
+                        }
+                    }
+                }
+            }
+        }
+        
         ASDisableLogging()
         
         initializeLegacyComponents(application: application, currentSizeClassGetter: {
@@ -399,6 +418,8 @@ private enum QueuedWakeup: Int32 {
         LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: true, redactSensitiveData: true)
         #else
         if BuildConfig.shared().isInternalBuild {
+            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
+        } else {
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
         }
         #endif
