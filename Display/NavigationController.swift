@@ -806,13 +806,13 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
             if let strongSelf = self {
                 ready?.set(true)
-                completion()
                 var controllers = strongSelf.viewControllers
                 while controllers.count > 1 {
                     controllers.removeLast()
                 }
                 controllers.append(controller)
                 strongSelf.setViewControllers(controllers, animated: animated)
+                completion()
             }
         }))
     }
