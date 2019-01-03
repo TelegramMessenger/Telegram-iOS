@@ -55,7 +55,7 @@ private enum SnapshotPeer {
             case let .secretChat(id, userId, _, _, _):
                 return TelegramSecretChat(id: PeerId(namespace: Namespaces.Peer.SecretChat, id: id), creationDate: 123, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), accessHash: 123, role: .creator, embeddedState: .active, messageAutoremoveTimeout: nil)
             case let .channel(id, avatar, title):
-                return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: 123, title: title, username: nil, photo: avatarImages(postbox, avatar), creationDate: 123, version: 0, participationStatus: .member, info: .broadcast(TelegramChannelBroadcastInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, peerGroupId: nil)
+                return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: 123, title: title, username: nil, photo: avatarImages(postbox, avatar), creationDate: 123, version: 0, participationStatus: .member, info: .broadcast(TelegramChannelBroadcastInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, peerGroupId: nil)
         }
     }
 }
