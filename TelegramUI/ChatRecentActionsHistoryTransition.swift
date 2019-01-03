@@ -31,7 +31,7 @@ struct ChatRecentActionsEntryId: Hashable, Comparable {
 
 private func eventNeedsHeader(_ event: AdminLogEvent) -> Bool {
     switch event.action {
-        case .changeAbout, .changeUsername, .editMessage, .deleteMessage:
+        case .changeAbout, .changeUsername, .editMessage, .deleteMessage, .pollStopped:
             return true
         case let .updatePinned(message):
             if message != nil {
@@ -753,6 +753,111 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                 return ChatMessageItem(presentationData: self.presentationData, account: account, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, isAdmin: false))
+            case let .updateDefaultBannedRights(prev, new):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var attributes: [MessageAttribute] = []
+                
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+                peers[peer.id] = filterMessageChannelPeer(peer)
+                
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let newFlags = new.flags
+                
+                var addedRights = new.flags
+                var removedRights: TelegramChatBannedRightsFlags = []
+                    addedRights = addedRights.subtracting(prev.flags)
+                removedRights = prev.flags.subtracting(new.flags)
+        
+                text += self.presentationData.strings.Channel_AdminLog_DefaultRestrictionsUpdated
+                text += "\n"
+        
+                let prevFlags = prev.flags
+        
+                let order: [(TelegramChatBannedRightsFlags, String)] = [
+                    (.banReadMessages, self.presentationData.strings.Channel_AdminLog_BanReadMessages),
+                    (.banSendMessages, self.presentationData.strings.Channel_AdminLog_BanSendMessages),
+                    (.banSendMedia, self.presentationData.strings.Channel_AdminLog_BanSendMedia),
+                    (.banSendStickers, self.presentationData.strings.Channel_AdminLog_BanSendStickers),
+                    (.banSendGifs, self.presentationData.strings.Channel_AdminLog_BanSendGifs),
+                    (.banEmbedLinks, self.presentationData.strings.Channel_AdminLog_BanEmbedLinks),
+                ]
+        
+                for (flag, string) in order {
+                    if addedRights.contains(flag) {
+                        text += "\n-"
+                        appendAttributedText(text: string, withEntities: [.Italic], to: &text, entities: &entities)
+                    }
+                    if removedRights.contains(flag) {
+                        text += "\n+"
+                        appendAttributedText(text: string, withEntities: [.Italic], to: &text, entities: &entities)
+                    }
+                }
+                
+                if !entities.isEmpty {
+                    attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                }
+                
+                for attribute in attributes {
+                    for peerId in attribute.associatedPeerIds {
+                        if let peer = self.entry.peers[peerId] {
+                            peers[peer.id] = peer
+                        }
+                    }
+                }
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: text, attributes: attributes, media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, account: account, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, isAdmin: false))
+            case let .pollStopped(message):
+                switch self.id.contentIndex {
+                    case .header:
+                        var peers = SimpleDictionary<PeerId, Peer>()
+                        var author: Peer?
+                        if let peer = self.entry.peers[self.entry.event.peerId] {
+                            author = peer
+                            peers[peer.id] = peer
+                        }
+                        
+                        var text: String = ""
+                        var entities: [MessageTextEntity] = []
+                        
+                        let titleText: (String, [(Int, NSRange)])
+                        
+                        titleText = self.presentationData.strings.Channel_AdminLog_PollStopped(author?.displayTitle ?? "")
+                        
+                        appendAttributedText(text: titleText, generateEntities: { index in
+                            if index == 0, let author = author {
+                                return [.TextMention(peerId: author.id)]
+                            }
+                            return []
+                        }, to: &text, entities: &entities)
+                        
+                        let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                        
+                        let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: 1), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                        return ChatMessageItem(presentationData: self.presentationData, account: account, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, isAdmin: false))
+                    case .content:
+                        var peers = SimpleDictionary<PeerId, Peer>()
+                        var attributes: [MessageAttribute] = []
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                attributes.append(attribute)
+                            }
+                        }
+                        for attribute in attributes {
+                            for peerId in attribute.associatedPeerIds {
+                                if let peer = self.entry.peers[peerId] {
+                                    peers[peer.id] = peer
+                                }
+                            }
+                        }
+                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: message.author, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                        return ChatMessageItem(presentationData: self.presentationData, account: account, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: filterOriginalMessageFlags(message), read: true, selection: .none, isAdmin: false), additionalContent: nil)
+                }
         }
     }
 }

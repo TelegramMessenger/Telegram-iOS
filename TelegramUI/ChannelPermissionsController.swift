@@ -40,7 +40,7 @@ private enum ChannelPermissionsEntryStableId: Hashable {
 
 private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case permissionsHeader(PresentationTheme, String)
-    case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags)
+    case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags, Bool)
     case kicked(PresentationTheme, String, String)
     case exceptionsHeader(PresentationTheme, String)
     case add(PresentationTheme, String)
@@ -61,7 +61,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         switch self {
             case .permissionsHeader:
                 return .index(0)
-            case let .permission(_, index, _, _, _):
+            case let .permission(_, index, _, _, _, _):
                 return .index(1 + index)
             case .kicked:
                 return .index(1000)
@@ -82,8 +82,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .permission(theme, index, title, value, rights):
-                if case .permission(theme, index, title, value, rights) = rhs {
+            case let .permission(theme, index, title, value, rights, enabled):
+                if case .permission(theme, index, title, value, rights, enabled) = rhs {
                     return true
                 } else {
                     return false
@@ -172,8 +172,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         switch self {
             case let .permissionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .permission(theme, _, title, value, rights):
-                return ItemListSwitchItem(theme: theme, title: title, value: value, type: .icon, sectionId: self.section, style: .blocks, updated: { value in
+            case let .permission(theme, _, title, value, rights, enabled):
+                return ItemListSwitchItem(theme: theme, title: title, value: value, type: .icon, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updatePermission(rights, value)
                 })
             case let .kicked(theme, text, value):
@@ -282,6 +282,11 @@ let allGroupPermissionList: [TelegramChatBannedRightsFlags] = [
     .banChangeInfo
 ]
 
+let publicGroupRestrictedPermissions: TelegramChatBannedRightsFlags = [
+    .banPinMessages,
+    .banChangeInfo
+]
+
 func groupPermissionDependencies(_ right: TelegramChatBannedRightsFlags) -> TelegramChatBannedRightsFlags {
     if right.contains(.banSendMedia) {
         return [.banSendMessages]
@@ -336,7 +341,11 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
         for rights in allGroupPermissionList {
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights))
+            var enabled = true
+            if channel.addressName != nil {
+                enabled = !publicGroupRestrictedPermissions.contains(rights)
+            }
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, enabled))
             rightIndex += 1
         }
         
@@ -360,7 +369,7 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
         for rights in allGroupPermissionList {
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights))
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, true))
             rightIndex += 1
         }
         
