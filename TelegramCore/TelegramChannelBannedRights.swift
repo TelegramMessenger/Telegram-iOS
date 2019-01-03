@@ -32,25 +32,29 @@ public struct TelegramChatBannedRightsFlags: OptionSet {
 
 public struct TelegramChatBannedRights: PostboxCoding, Equatable {
     public let flags: TelegramChatBannedRightsFlags
+    public let personal: Bool
     public let untilDate: Int32
     
-    public init(flags: TelegramChatBannedRightsFlags, untilDate: Int32) {
+    public init(flags: TelegramChatBannedRightsFlags, personal: Bool, untilDate: Int32) {
         self.flags = flags
+        self.personal = personal
         self.untilDate = untilDate
     }
     
     public init(decoder: PostboxDecoder) {
         self.flags = TelegramChatBannedRightsFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.personal = decoder.decodeInt32ForKey("per", orElse: 0) != 0
         self.untilDate = decoder.decodeInt32ForKey("d", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
+        encoder.encodeInt32(self.personal ? 1 : 0, forKey: "per")
         encoder.encodeInt32(self.untilDate, forKey: "d")
     }
     
     public static func ==(lhs: TelegramChatBannedRights, rhs: TelegramChatBannedRights) -> Bool {
-        return lhs.flags == rhs.flags && lhs.untilDate == rhs.untilDate
+        return lhs.flags == rhs.flags && lhs.personal == rhs.personal && lhs.untilDate == rhs.untilDate
     }
 }
 
@@ -58,7 +62,7 @@ extension TelegramChatBannedRights {
     init(apiBannedRights: Api.ChatBannedRights) {
         switch apiBannedRights {
             case let .chatBannedRights(flags, untilDate):
-                self.init(flags: TelegramChatBannedRightsFlags(rawValue: flags), untilDate: untilDate)
+                self.init(flags: TelegramChatBannedRightsFlags(rawValue: flags), personal: (flags & 1 << 30) != 0, untilDate: untilDate)
         }
     }
     
