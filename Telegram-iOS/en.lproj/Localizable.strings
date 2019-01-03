@@ -3785,11 +3785,13 @@ Unused sets are archived when you add more.";
 
 "Cache.LowDiskSpaceText" = "Your phone has run out of available storage. Please free some space to download or upload media.";
 
-"Contacts.SortBy" = "Sort by";
+"Contacts.SortBy" = "Sort by:";
 "Contacts.SortByName" = "Name";
-"Contacts.SortByPresence" = "Last Seen";
+"Contacts.SortByPresence" = "Last Seen Time";
 "Contacts.SortedByName" = "Sorted by Name";
-"Contacts.SortedByPresence" = "Sorted by Last Seen";
+"Contacts.SortedByPresence" = "Sorted by Last Seen Time";
+
+"NotificationSettings.ContactJoinedInfo" = "Receive push notifications when one of your contacts becomes available on Telegram.";
 
 "GroupInfo.Permissions" = "Permissions";
 "GroupInfo.Permissions.Title" = "Permissions";
