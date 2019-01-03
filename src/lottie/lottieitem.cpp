@@ -188,6 +188,10 @@ void LOTLayerItem::buildLayerNode()
         mLayerCNode->mNodeList.size = 0;
         mLayerCNode->mMatte = MatteNone;
         mLayerCNode->mVisible = 0;
+        mLayerCNode->mClipPath.ptPtr = nullptr;
+        mLayerCNode->mClipPath.elmPtr = nullptr;
+        mLayerCNode->mClipPath.ptCount = 0;
+        mLayerCNode->mClipPath.elmCount = 0;
     }
     mLayerCNode->mVisible = visible();
     // update matte
@@ -477,6 +481,16 @@ void LOTCompLayerItem::updateStaticProperty()
 void LOTCompLayerItem::buildLayerNode()
 {
     LOTLayerItem::buildLayerNode();
+    if (mClipper) {
+        const std::vector<VPath::Element> &elm = mClipper->mPath.elements();
+        const std::vector<VPointF> &       pts = mClipper->mPath.points();
+        const float *ptPtr = reinterpret_cast<const float *>(pts.data());
+        const char * elmPtr = reinterpret_cast<const char *>(elm.data());
+        layerNode()->mClipPath.ptPtr = ptPtr;
+        layerNode()->mClipPath.elmPtr = elmPtr;
+        layerNode()->mClipPath.ptCount = 2 * pts.size();
+        layerNode()->mClipPath.elmCount = elm.size();
+    }
     if (mLayers.size() != mLayersCNode.size()) {
         for (const auto &layer : mLayers) {
             layer->buildLayerNode();

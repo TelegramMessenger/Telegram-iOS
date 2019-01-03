@@ -195,6 +195,13 @@ typedef struct LOTLayerNode {
     } mMaskList;
 
     struct {
+        const float *ptPtr;
+        int          ptCount;
+        const char*  elmPtr;
+        int          elmCount;
+    } mClipPath;
+
+    struct {
         struct LOTLayerNode   **ptr;
         unsigned int          size;
     } mLayerList;
