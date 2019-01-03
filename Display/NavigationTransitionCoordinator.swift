@@ -56,12 +56,12 @@ class NavigationTransitionCoordinator {
         self.dimView.backgroundColor = UIColor.black
         self.shadowView = UIImageView(image: shadowImage)
         
-        if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar, !topNavigationBar.isHidden, !bottomNavigationBar.isHidden, topNavigationBar.contentNode == nil, bottomNavigationBar.contentNode == nil, topNavigationBar.item?.leftBarButtonItem == nil {
+        if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar, !topNavigationBar.isHidden, !bottomNavigationBar.isHidden, topNavigationBar.canTransitionInline, bottomNavigationBar.canTransitionInline, topNavigationBar.item?.leftBarButtonItem == nil {
             var topFrame = topNavigationBar.view.convert(topNavigationBar.bounds, to: container)
             var bottomFrame = bottomNavigationBar.view.convert(bottomNavigationBar.bounds, to: container)
             topFrame.origin.x = 0.0
             bottomFrame.origin.x = 0.0
-            self.inlineNavigationBarTransition = topFrame.equalTo(bottomFrame)
+            self.inlineNavigationBarTransition = true// topFrame.equalTo(bottomFrame)
         } else {
             self.inlineNavigationBarTransition = false
         }

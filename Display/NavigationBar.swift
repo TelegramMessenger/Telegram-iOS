@@ -107,6 +107,7 @@ open class NavigationBar: ASDisplayNode {
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     private var requestedLayout: Bool = false
+    var requestContainerLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     
     public var backPressed: () -> () = { }
     
@@ -519,6 +520,7 @@ open class NavigationBar: ASDisplayNode {
     private let leftButtonNode: NavigationButtonNode
     private let rightButtonNode: NavigationButtonNode
     
+    
     private var _transitionState: NavigationBarTransitionState?
     var transitionState: NavigationBarTransitionState? {
         get {
@@ -722,14 +724,23 @@ open class NavigationBar: ASDisplayNode {
         let backButtonInset: CGFloat = leftInset + 27.0
         
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: size))
+        var expansionHeight: CGFloat = 0.0
         if let contentNode = self.contentNode {
-            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset, height: size.height)))
+            let contentNodeFrame: CGRect
+            switch contentNode.mode {
+                case .replacement:
+                    contentNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset, height: size.height))
+                case .expansion:
+                    expansionHeight = contentNode.height
+                    contentNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: size.height - expansionHeight), size: CGSize(width: size.width - leftInset - rightInset, height: expansionHeight))
+            }
+            transition.updateFrame(node: contentNode, frame: contentNodeFrame)
         }
         
         transition.updateFrame(node: self.stripeNode, frame: CGRect(x: 0.0, y: size.height, width: size.width, height: UIScreenPixel))
         
         let nominalHeight: CGFloat = self.collapsed ? 32.0 : 44.0
-        let contentVerticalOrigin = size.height - nominalHeight
+        let contentVerticalOrigin = size.height - nominalHeight - expansionHeight
         
         var leftTitleInset: CGFloat = leftInset + 1.0
         var rightTitleInset: CGFloat = rightInset + 1.0
@@ -960,6 +971,22 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public var canTransitionInline: Bool {
+        if let contentNode = self.contentNode, case .replacement = contentNode.mode {
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    public var contentHeight: CGFloat {
+        if let contentNode = self.contentNode, case .expansion = contentNode.mode {
+            return 44.0 + contentNode.height
+        } else {
+            return 44.0
+        }
+    }
+    
     public func setContentNode(_ contentNode: NavigationBarContentNode?, animated: Bool) {
         if self.contentNode !== contentNode {
             if let previous = self.contentNode {
@@ -976,6 +1003,9 @@ open class NavigationBar: ASDisplayNode {
                 }
             }
             self.contentNode = contentNode
+            self.contentNode?.requestContainerLayout = { [weak self] transition in
+                self?.requestContainerLayout(transition)
+            }
             if let contentNode = contentNode {
                 contentNode.layer.removeAnimation(forKey: "opacity")
                 self.addSubnode(contentNode)
@@ -983,7 +1013,7 @@ open class NavigationBar: ASDisplayNode {
                     contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
                 
-                if !self.clippingNode.alpha.isZero {
+                if case .replacement = contentNode.mode, !self.clippingNode.alpha.isZero {
                     self.clippingNode.alpha = 0.0
                     if animated {
                         self.clippingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
@@ -1000,6 +1030,20 @@ open class NavigationBar: ASDisplayNode {
                 self.clippingNode.alpha = 1.0
                 if animated {
                     self.clippingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+    }
+    
+    public func setHidden(_ hidden: Bool, animated: Bool) {
+        if let contentNode = self.contentNode, case .replacement = contentNode.mode {
+        } else {
+            let targetAlpha: CGFloat = hidden ? 0.0 : 1.0
+            let previousAlpha = self.clippingNode.alpha
+            if previousAlpha != targetAlpha {
+                self.clippingNode.alpha = targetAlpha
+                if animated {
+                    self.clippingNode.layer.animateAlpha(from: previousAlpha, to: targetAlpha, duration: 0.2)
                 }
             }
         }

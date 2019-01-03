@@ -143,7 +143,11 @@ open class ViewControllerPresentationArguments {
     
     open var navigationHeight: CGFloat {
         if let navigationBar = self.navigationBar {
-            return navigationBar.frame.maxY
+            var height = navigationBar.frame.maxY
+            if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
+                height += contentNode.nominalHeight - contentNode.height
+            }
+            return height
         } else {
             return 0.0
         }
@@ -205,6 +209,9 @@ open class ViewControllerPresentationArguments {
                 strongSelf.navigationController?.popViewController(animated: true)
             }
         }
+        self.navigationBar?.requestContainerLayout = { [weak self] transition in
+            self?.requestLayout(transition: transition)
+        }
         self.navigationBar?.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false
         
@@ -233,7 +240,7 @@ open class ViewControllerPresentationArguments {
         }
         
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        let navigationBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
+        let navigationBarHeight: CGFloat = max(20.0, statusBarHeight) + (self.navigationBar?.contentHeight ?? 44.0)
         let navigationBarOffset: CGFloat
         if statusBarHeight.isZero {
             navigationBarOffset = -20.0
@@ -242,19 +249,23 @@ open class ViewControllerPresentationArguments {
         }
         var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarOffset), size: CGSize(width: layout.size.width, height: navigationBarHeight))
         if layout.statusBarHeight == nil {
-            navigationBarFrame.size.height = 64.0
+            navigationBarFrame.size.height = (self.navigationBar?.contentHeight ?? 44.0) + 20.0
         }
         
         if !self.displayNavigationBar {
             navigationBarFrame.origin.y = -navigationBarFrame.size.height
         }
         
-        navigationBarOrigin = navigationBarFrame.origin.y
+        self.navigationBarOrigin = navigationBarFrame.origin.y
         navigationBarFrame.origin.y += self.navigationOffset
         
         if let navigationBar = self.navigationBar {
+            if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
+                navigationBarFrame.origin.y += contentNode.height + statusBarHeight
+            }
             transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
             navigationBar.updateLayout(size: navigationBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+            navigationBar.setHidden(!self.displayNavigationBar, animated: transition.isAnimated)
         }
         
         self.presentationContext.containerLayoutUpdated(layout, transition: transition)

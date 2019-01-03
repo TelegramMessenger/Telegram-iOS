@@ -158,9 +158,6 @@ open class TabBarController: ViewController {
         var displayNavigationBar = false
         if let currentController = self.currentController {
             currentController.willMove(toParentViewController: self)
-            if let validLayout = self.validLayout {
-                currentController.containerLayoutUpdated(validLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
-            }
             self.tabBarControllerNode.currentControllerView = currentController.view
             currentController.navigationBar?.isHidden = true
             self.addChildViewController(currentController)
@@ -169,6 +166,7 @@ open class TabBarController: ViewController {
             currentController.navigationBar?.layoutSuspended = true
             currentController.navigationItem.setTarget(self.navigationItem)
             displayNavigationBar = currentController.displayNavigationBar
+            self.navigationBar?.setContentNode(currentController.navigationBar?.contentNode, animated: false)
             currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
             self.statusBar.statusBarStyle = currentController.statusBar.statusBarStyle
         } else {
@@ -177,6 +175,7 @@ open class TabBarController: ViewController {
             self.navigationItem.rightBarButtonItem = nil
             self.navigationItem.titleView = nil
             self.navigationItem.backBarButtonItem = nil
+            self.navigationBar?.setContentNode(nil, animated: false)
             displayNavigationBar = false
         }
         if self.displayNavigationBar != displayNavigationBar {
@@ -184,7 +183,7 @@ open class TabBarController: ViewController {
         }
         
         if let validLayout = self.validLayout {
-            self.tabBarControllerNode.containerLayoutUpdated(validLayout, toolbar: self.currentController?.toolbar, transition: .immediate)
+            self.containerLayoutUpdated(validLayout, transition: .immediate)
         }
     }
     
