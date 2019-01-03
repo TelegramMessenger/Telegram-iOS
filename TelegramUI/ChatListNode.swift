@@ -172,7 +172,17 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                         }
                         if filter.contains(.onlyManageable) {
                             if let peer = peer.peers[peer.peerId] {
-                                if let peer = peer as? TelegramGroup, peer.role == .creator || peer.role == .admin {
+                                var canManage = false
+                                if let peer = peer as? TelegramGroup {
+                                    switch peer.role {
+                                        case .creator, .admin:
+                                            canManage = true
+                                        default:
+                                            break
+                                    }
+                                }
+                                
+                                if canManage {
                                 } else if let peer = peer as? TelegramChannel, case .group = peer.info, peer.hasPermission(.inviteMembers) {
                                 } else {
                                     enabled = false

@@ -310,7 +310,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 let progress = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
-                removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], personal: false, untilDate: Int32.max))
+                removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
                     |> deliverOnMainQueue).start(error: { [weak progress] _ in
                         progress?.dismiss()
                         dismissController?()

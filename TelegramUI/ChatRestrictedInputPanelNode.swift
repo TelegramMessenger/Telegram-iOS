@@ -25,10 +25,23 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             self.presentationInterfaceState = interfaceState
         }
         
-        if let renderedPeer = interfaceState.renderedPeer, let channel = renderedPeer.peer as? TelegramChannel, let bannedRights = channel.bannedRights {
-            if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
-                self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedTextTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).0, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
-            } else if bannedRights.personal {
+        let bannedPermission: (Int32, Bool)?
+        if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel {
+            bannedPermission = channel.hasBannedPermission(.banSendMessages)
+        } else if let group = interfaceState.renderedPeer?.peer as? TelegramGroup {
+            if group.hasBannedPermission(.banSendMessages) {
+                bannedPermission = (Int32.max, false)
+            } else {
+                bannedPermission = nil
+            }
+        } else {
+            bannedPermission = nil
+        }
+        
+        if let (untilDate, personal) = bannedPermission {
+            if personal && untilDate != 0 && untilDate != Int32.max {
+                self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedTextTimed(stringForFullDate(timestamp: untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).0, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+            } else if personal {
                 self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             } else {
                 self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_DefaultRestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)

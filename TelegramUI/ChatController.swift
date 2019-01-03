@@ -2550,19 +2550,43 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }, sendRecordedMedia: { [weak self] in
             self?.sendMediaRecording()
         }, displayRestrictedInfo: { [weak self] subject in
-            if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let bannedRights = (peer as? TelegramChannel)?.bannedRights {
+            guard let strongSelf = self else {
+                return
+            }
+            let subjectFlags: TelegramChatBannedRightsFlags
+            switch subject {
+                case .stickers:
+                    subjectFlags = .banSendStickers
+                case .mediaRecording:
+                    subjectFlags = .banSendMedia
+            }
+            
+            let bannedPermission: (Int32, Bool)?
+            if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                bannedPermission = channel.hasBannedPermission(subjectFlags)
+            } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                if group.hasBannedPermission(subjectFlags) {
+                    bannedPermission = (Int32.max, false)
+                } else {
+                    bannedPermission = nil
+                }
+            } else {
+                bannedPermission = nil
+            }
+            
+            if let (untilDate, personal) = bannedPermission {
                 let banDescription: String
                 switch subject {
                     case .stickers:
-                        if bannedRights.personal {
+                        if personal {
                             banDescription = strongSelf.presentationInterfaceState.strings.Group_ErrorSendRestrictedStickers
                         } else {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedStickers
                         }
                     case .mediaRecording:
-                        if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
-                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
-                        } else if bannedRights.personal {
+                        if untilDate != 0 && untilDate != Int32.max {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
+                        } else if personal {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
                         } else {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedMedia
@@ -2672,15 +2696,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     if let channel = peer as? TelegramChannel {
                         canManagePin = channel.hasPermission(.pinMessages)
                     } else if let group = peer as? TelegramGroup {
-                        if group.flags.contains(.adminsEnabled) {
-                            switch group.role {
-                                case .creator, .admin:
+                        switch group.role {
+                            case .creator, .admin:
+                                canManagePin = true
+                            default:
+                                if let defaultBannedRights = group.defaultBannedRights {
+                                    canManagePin = !defaultBannedRights.flags.contains(.banPinMessages)
+                                } else {
                                     canManagePin = true
-                                default:
-                                    canManagePin = false
-                            }
-                        } else {
-                            canManagePin = true
+                                }
                         }
                     } else if let _ = peer as? TelegramUser, strongSelf.presentationInterfaceState.explicitelyCanPinMessages {
                         canManagePin = true
@@ -2732,15 +2756,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     if let channel = peer as? TelegramChannel {
                         canManagePin = channel.hasPermission(.pinMessages)
                     } else if let group = peer as? TelegramGroup {
-                        if group.flags.contains(.adminsEnabled) {
-                            switch group.role {
-                                case .creator, .admin:
+                        switch group.role {
+                            case .creator, .admin:
+                                canManagePin = true
+                            default:
+                                if let defaultBannedRights = group.defaultBannedRights {
+                                    canManagePin = !defaultBannedRights.flags.contains(.banPinMessages)
+                                } else {
                                     canManagePin = true
-                                default:
-                                    canManagePin = false
-                            }
-                        } else {
-                            canManagePin = true
+                                }
                         }
                     } else if let _ = peer as? TelegramUser, strongSelf.presentationInterfaceState.explicitelyCanPinMessages {
                         canManagePin = true
@@ -3436,7 +3460,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                 })
             } else {
-                if let bannedRights = (self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel)?.bannedRights, bannedRights.flags.contains(.banEmbedLinks) {
+                var bannedEmbedLinks = false
+                if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banEmbedLinks) != nil {
+                    bannedEmbedLinks = true
+                } else if let group = self.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup, group.hasBannedPermission(.banEmbedLinks) {
+                    bannedEmbedLinks = true
+                }
+                if bannedEmbedLinks {
                     linkPreviews = .single(false)
                 } else {
                     linkPreviews = .single(true)
@@ -3707,12 +3737,19 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 return
             }
             strongSelf.chatDisplayNode.dismissInput()
+            
+            var bannedSendMedia: (Int32, Bool)?
+            if let channel = peer as? TelegramChannel, let value = channel.hasBannedPermission(.banSendMedia) {
+                bannedSendMedia = value
+            } else if let group = peer as? TelegramGroup, group.hasBannedPermission(.banSendMedia) {
+                bannedSendMedia = (Int32.max, false)
+            }
         
-            if editMediaOptions == nil, let bannedRights = (peer as? TelegramChannel)?.bannedRights, bannedRights.flags.contains(.banSendMedia) {
+            if editMediaOptions == nil, let (untilDate, personal) = bannedSendMedia {
                 let banDescription: String
-                if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
-                    banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
-                } else if bannedRights.personal {
+                if untilDate != 0 && untilDate != Int32.max {
+                    banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
+                } else if personal {
                     banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
                 } else {
                     banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedMedia

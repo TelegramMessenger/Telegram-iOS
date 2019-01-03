@@ -684,7 +684,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         strongSelf.banDisposables.set((fetchChannelParticipant(account: strongSelf.account, peerId: strongSelf.peer.id, participantId: author.id)
                         |> deliverOnMainQueue).start(next: { participant in
                             if let strongSelf = self {
-                                strongSelf.presentController(channelBannedMemberController(account: strongSelf.account, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                strongSelf.presentController(channelBannedMemberController(account: strongSelf.account, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             }
                         }), forKey: author.id)
                     }

@@ -678,52 +678,37 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
                     }
                     
                     if let updateFlags = updateFlags, updateFlags != defaultFlags {
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-                        let dismissAction: () -> Void = { [weak controller] in
-                            controller?.dismissAnimated()
+                        let signal = convertGroupToSupergroup(account: account, peerId: peerId)
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<PeerId?, NoError> in
+                            return .single(nil)
                         }
-                        controller.setItemGroups([
-                            ActionSheetItemGroup(items: [
-                                ActionSheetTextItem(title: presentationData.strings.Group_AdvanceUpgradeText),
-                                ActionSheetButtonItem(title: presentationData.strings.Group_AdvanceUpgradeApply, color: .destructive, action: {
-                                    dismissAction()
-                                    let signal = convertGroupToSupergroup(account: account, peerId: peerId)
-                                    |> map(Optional.init)
-                                    |> `catch` { _ -> Signal<PeerId?, NoError> in
-                                        return .single(nil)
-                                    }
-                                    |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
-                                        guard let upgradedPeerId = upgradedPeerId else {
-                                            return .single(nil)
-                                        }
-                                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags))
-                                        |> mapToSignal { _ -> Signal<PeerId?, NoError> in
-                                            return .complete()
-                                        }
-                                        |> then(.single(upgradedPeerId))
-                                    }
-                                    |> deliverOnMainQueue
-                                    
-                                    updateState { current in
-                                        return current.withUpdatedUpdating(true)
-                                    }
-                                    updateRightsDisposable.set(signal.start(next: { upgradedPeerId in
-                                        if let upgradedPeerId = upgradedPeerId {
-                                            upgradedToSupergroup(upgradedPeerId, {
-                                                dismissImpl?()
-                                            })
-                                        }
-                                    }, error: { _ in
-                                        updateState { current in
-                                            return current.withUpdatedUpdating(false)
-                                        }
-                                    }))
+                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                            guard let upgradedPeerId = upgradedPeerId else {
+                                return .single(nil)
+                            }
+                            return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags))
+                            |> mapToSignal { _ -> Signal<PeerId?, NoError> in
+                                return .complete()
+                            }
+                            |> then(.single(upgradedPeerId))
+                        }
+                        |> deliverOnMainQueue
+                        
+                        updateState { current in
+                            return current.withUpdatedUpdating(true)
+                        }
+                        updateRightsDisposable.set(signal.start(next: { upgradedPeerId in
+                            if let upgradedPeerId = upgradedPeerId {
+                                upgradedToSupergroup(upgradedPeerId, {
+                                    dismissImpl?()
                                 })
-                            ]),
-                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                        ])
-                        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            }
+                        }, error: { _ in
+                            updateState { current in
+                                return current.withUpdatedUpdating(false)
+                            }
+                        }))
                     } else {
                         dismissImpl?()
                     }

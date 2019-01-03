@@ -1022,7 +1022,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         let mediaInputDisabled: Bool
-        if let bannedRights = (interfaceState.renderedPeer?.peer as? TelegramChannel)?.bannedRights, bannedRights.flags.contains(.banSendMedia) {
+        if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banSendMedia) != nil {
+            mediaInputDisabled = true
+        } else if let group = interfaceState.renderedPeer?.peer as? TelegramGroup, group.hasBannedPermission(.banSendMedia) {
             mediaInputDisabled = true
         } else {
             mediaInputDisabled = false

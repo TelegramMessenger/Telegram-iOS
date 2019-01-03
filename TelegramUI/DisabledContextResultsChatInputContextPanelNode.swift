@@ -35,13 +35,13 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
         self.containerNode.backgroundColor = interfaceState.theme.list.plainBackgroundColor
         self.separatorNode.backgroundColor = interfaceState.theme.list.itemPlainSeparatorColor
         
-        guard let bannedRights = (interfaceState.renderedPeer?.peer as? TelegramChannel)?.bannedRights else {
+        guard let (untilDate, personal) = (interfaceState.renderedPeer?.peer as? TelegramChannel)?.hasBannedPermission(.banSendInline) else {
             return
         }
         let banDescription: String
-        if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
-            banDescription = interfaceState.strings.Conversation_RestrictedInlineTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).0
-        } else if bannedRights.personal {
+        if untilDate != 0 && untilDate != Int32.max {
+            banDescription = interfaceState.strings.Conversation_RestrictedInlineTimed(stringForFullDate(timestamp: untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).0
+        } else if personal {
             banDescription = interfaceState.strings.Conversation_RestrictedInline
         } else {
             banDescription = interfaceState.strings.Conversation_DefaultRestrictedInline

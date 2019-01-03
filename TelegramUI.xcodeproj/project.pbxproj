@@ -1013,7 +1013,6 @@
 		D0EC6E521EB9F58900EBF1C3 /* ChannelInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FC71E5F8AB100202CDB /* ChannelInfoController.swift */; };
 		D0EC6E531EB9F58900EBF1C3 /* ChannelMembersController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FCC1E60482300202CDB /* ChannelMembersController.swift */; };
 		D0EC6E541EB9F58900EBF1C3 /* ConvertToSupergroupController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */; };
-		D0EC6E551EB9F58900EBF1C3 /* GroupAdminsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEAA1E61BFC100644997 /* GroupAdminsController.swift */; };
 		D0EC6E561EB9F58900EBF1C3 /* UserInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0528E621E65BECA00E2FEF5 /* UserInfoController.swift */; };
 		D0EC6E571EB9F58900EBF1C3 /* GroupsInCommonController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099261E1E69791E00D95539 /* GroupsInCommonController.swift */; };
 		D0EC6E581EB9F58900EBF1C3 /* PeerSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07CFF731DCA207200761F81 /* PeerSelectionController.swift */; };
@@ -1401,7 +1400,6 @@
 		D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageInteractiveMediaBadge.swift; sourceTree = "<group>"; };
 		D02F4AEF1FD4C46D004DFBAE /* SystemVideoContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVideoContent.swift; sourceTree = "<group>"; };
 		D03120F51DA534C1006A2A60 /* ItemListActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListActionItem.swift; sourceTree = "<group>"; };
-		D033FEAA1E61BFC100644997 /* GroupAdminsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupAdminsController.swift; sourceTree = "<group>"; };
 		D0380DA8204E9C81000414AB /* SecretMediaPreviewFooterContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretMediaPreviewFooterContentNode.swift; sourceTree = "<group>"; };
 		D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialStatusSecretTimeoutContentNode.swift; sourceTree = "<group>"; };
 		D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyLiveUploadInterface.swift; sourceTree = "<group>"; };
@@ -4104,7 +4102,6 @@
 				D0613FCC1E60482300202CDB /* ChannelMembersController.swift */,
 				D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */,
 				D08984ED2114964700918162 /* GroupPreHistorySetupController.swift */,
-				D033FEAA1E61BFC100644997 /* GroupAdminsController.swift */,
 				D0528E621E65BECA00E2FEF5 /* UserInfoController.swift */,
 				D099261E1E69791E00D95539 /* GroupsInCommonController.swift */,
 				D0F67FEF1EE6B8A8000E5906 /* ChannelMembersSearchController.swift */,
@@ -5891,7 +5888,6 @@
 				D093D7E72063E57F00BC3599 /* BotPaymentActionItemNode.swift in Sources */,
 				D01C06BA1FBBB076001561AB /* ItemListSelectableControlNode.swift in Sources */,
 				D0EC6E541EB9F58900EBF1C3 /* ConvertToSupergroupController.swift in Sources */,
-				D0EC6E551EB9F58900EBF1C3 /* GroupAdminsController.swift in Sources */,
 				D0EC6E561EB9F58900EBF1C3 /* UserInfoController.swift in Sources */,
 				D0EC6E571EB9F58900EBF1C3 /* GroupsInCommonController.swift in Sources */,
 				D0AB262F21C3D3DE008F6685 /* CreatePollController.swift in Sources */,

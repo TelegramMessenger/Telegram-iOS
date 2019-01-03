@@ -387,7 +387,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
         }
     } else if let peer = view.peers[view.peerId] as? TelegramGroup {
         let isGroup = true
-        entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
+        //entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
         
         if let participants = participants {
             entries.append(.adminsHeader(presentationData.theme, presentationData.strings.ChannelMembers_GroupAdminsTitle))
@@ -486,37 +486,6 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
     
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
     
-    let presentUpgradeOption: () -> Void = {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: presentationData.strings.Group_AdvanceUpgradeText),
-                ActionSheetButtonItem(title: presentationData.strings.Group_AdvanceUpgradeApply, color: .destructive, action: {
-                    dismissAction()
-                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                    let progress = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
-                    presentControllerImpl?(progress, nil)
-                    
-                    upgradeDisposable.set((convertGroupToSupergroup(account: account, peerId: peerId)
-                    |> afterDisposed { [weak progress] in
-                        Queue.mainQueue().async {
-                            progress?.dismiss()
-                        }
-                    }
-                    |> deliverOnMainQueue).start(next: { upgradedPeerId in
-                        upgradedToSupergroupImpl?(upgradedPeerId, {})
-                    }))
-                })
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-    }
-    
     let upgradedToSupergroup: (PeerId, @escaping () -> Void) -> Void = { upgradedPeerId, f in
         upgradedToSupergroupImpl?(upgradedPeerId, f)
     }
@@ -525,7 +494,6 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
         let _ = (account.postbox.loadedPeerWithId(peerId)
         |> deliverOnMainQueue).start(next: { peer in
             if peer is TelegramGroup {
-                presentUpgradeOption()
             } else {
                 pushControllerImpl?(ChatRecentActionsController(account: account, peer: peer))
             }

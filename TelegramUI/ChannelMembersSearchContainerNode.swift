@@ -242,7 +242,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
             }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, restrictPeer: { participant in
             present(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
-            }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, removePeer: { memberId in
             let signal = account.postbox.loadedPeerWithId(memberId)
             |> deliverOnMainQueue
@@ -260,7 +260,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     }
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], personal: false, untilDate: Int32.max))
+                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
                         |> afterDisposed {
                             Queue.mainQueue().async {
                                 updateState { state in

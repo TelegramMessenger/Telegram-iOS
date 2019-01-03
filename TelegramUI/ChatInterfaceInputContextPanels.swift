@@ -52,7 +52,14 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
         return nil
     }
     
-    if let bannedRights = (chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel)?.bannedRights, bannedRights.flags.contains(.banSendInline) {
+    var hasBannedInlineContent = false
+    if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banSendInline) != nil {
+        hasBannedInlineContent = true
+    } else if let group = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramGroup, group.hasBannedPermission(.banSendInline) {
+        hasBannedInlineContent = true
+    }
+    
+    if hasBannedInlineContent {
         switch inputQueryResult {
             case .stickers, .contextRequestResult:
                 if let currentPanel = currentPanel as? DisabledContextResultsChatInputContextPanelNode {

@@ -174,7 +174,7 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
     
-    let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], migrationReference: nil, creationDate: 0, version: 0)
+    let peer = TelegramGroup(id: PeerId(namespace: -1, id: 0), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator, membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     
     entries.append(.channelInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
     entries.append(.setProfilePhoto(presentationData.theme, presentationData.strings.Channel_UpdatePhotoItem))
@@ -250,7 +250,7 @@ public func createChannelController(account: Account) -> ViewController {
                         let _ = updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedAvatar.get()).start()
                     }
                     
-                    let controller = channelVisibilityController(account: account, peerId: peerId, mode: .initialSetup)
+                    let controller = channelVisibilityController(account: account, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
                     replaceControllerImpl?(controller)
                 }
             }, error: { _ in

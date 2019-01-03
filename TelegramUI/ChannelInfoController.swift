@@ -686,7 +686,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             return state
         }
     }, openChannelTypeSetup: {
-        presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .generic), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+        presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .generic, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in

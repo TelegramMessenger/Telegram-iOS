@@ -37,7 +37,7 @@ func validateAddressNameInteractive(account: Account, domain: AddressNameDomain,
         return .single(.invalidFormat(error))
     } else {
         return .single(.checking) |> then(addressNameAvailability(account: account, domain: domain, name: name)
-            |> delay(0.3, queue: Queue.concurrentDefaultQueue())
-            |> map { result -> AddressNameValidationStatus in .availability(result) })
+        |> delay(0.3, queue: Queue.concurrentDefaultQueue())
+        |> map { result -> AddressNameValidationStatus in .availability(result) })
     }
 }

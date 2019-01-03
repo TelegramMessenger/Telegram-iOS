@@ -207,15 +207,15 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     }
                 } else if let group = messages[0].peers[messages[0].id.peerId] as? TelegramGroup {
                     if !isAction {
-                        if group.flags.contains(.adminsEnabled) {
-                            switch group.role {
-                                case .creator, .admin:
+                        switch group.role {
+                            case .creator, .admin:
+                                canPin = true
+                            default:
+                                if let defaultBannedRights = group.defaultBannedRights {
+                                    canPin = !defaultBannedRights.flags.contains(.banPinMessages)
+                                } else {
                                     canPin = true
-                                default:
-                                    canPin = false
-                            }
-                        } else {
-                            canPin = true
+                                }
                         }
                     }
                 } else if let _ = messages[0].peers[messages[0].id.peerId] as? TelegramUser, chatPresentationInterfaceState.explicitelyCanPinMessages {
