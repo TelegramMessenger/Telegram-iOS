@@ -3842,3 +3842,6 @@ Unused sets are archived when you add more.";
 "EmptyGroupInfo.Line4" = "Admins with different rights";
 
 "BackgroundPreview.Title" = "Background Preview";
+
+"Channel.AdminLog.DefaultRestrictionsUpdated" = "changed default permissions";
+"Channel.AdminLog.PollStopped" = "%@ stopped poll";
