@@ -250,6 +250,12 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                     } else {
                         return TGBuiltinWallpaperInfo()
                     }
+                case let .file(file):
+                    if let path = account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                        return TGCustomImageWallpaperInfo(image: image)
+                    } else {
+                        return TGBuiltinWallpaperInfo()
+                    }
             }
         } else {
             return TGBuiltinWallpaperInfo()
@@ -273,6 +279,12 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                     })
                 case let .image(representations):
                     if let resource = largestImageRepresentation(representations)?.resource, let path = account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
+                        return image
+                    } else {
+                        return nil
+                    }
+                case let .file(file):
+                    if let path = account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
                         return image
                     } else {
                         return nil

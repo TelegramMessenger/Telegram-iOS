@@ -515,7 +515,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         let newFlags = newBanInfo?.rights.flags ?? []
                         
                         var addedRights = newBanInfo?.rights.flags ?? []
-                        var removedRights:TelegramChannelBannedRightsFlags = []
+                        var removedRights:TelegramChatBannedRightsFlags = []
                         if let prevBanInfo = prevBanInfo {
                             addedRights = addedRights.subtracting(prevBanInfo.rights.flags)
                             removedRights = prevBanInfo.rights.flags.subtracting(newBanInfo?.rights.flags ?? [])
@@ -577,7 +577,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             
                             let prevFlags = prevBanInfo?.rights.flags ?? []
                             
-                            let order: [(TelegramChannelBannedRightsFlags, String)] = [
+                            let order: [(TelegramChatBannedRightsFlags, String)] = [
                                 (.banReadMessages, self.presentationData.strings.Channel_AdminLog_BanReadMessages),
                                 (.banSendMessages, self.presentationData.strings.Channel_AdminLog_BanSendMessages),
                                 (.banSendMedia, self.presentationData.strings.Channel_AdminLog_BanSendMedia),
@@ -643,7 +643,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         let prevFlags = prevAdminRights?.rights.flags ?? []
                         let newFlags = newAdminRights?.rights.flags ?? []
                         
-                        let order: [(TelegramChannelAdminRightsFlags, String)]
+                        let order: [(TelegramChatAdminRightsFlags, String)]
                         
                         if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                             order = [

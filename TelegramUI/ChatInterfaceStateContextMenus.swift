@@ -29,12 +29,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         case .peer:
             if let channel = peer as? TelegramChannel {
                 if case .member = channel.participationStatus {
-                    switch channel.info {
-                        case .broadcast:
-                            canReply = channel.hasAdminRights([.canPostMessages])
-                        case .group:
-                            canReply = !channel.hasBannedRights(.banSendMessages)
-                    }
+                    canReply = channel.hasPermission(.sendMessages)
                 }
             } else if let group = peer as? TelegramGroup {
                 if case .Member = group.membership {
@@ -187,11 +182,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     if let channel = message.peers[message.id.peerId] as? TelegramChannel {
         if case .broadcast = channel.info {
             if !message.flags.contains(.Incoming) {
-                canDeleteMessage = channel.hasAdminRights(.canPostMessages)
+                canDeleteMessage = channel.hasPermission(.sendMessages)
             }
-            canDeleteMessage = channel.hasAdminRights(.canDeleteMessages)
+            if channel.hasPermission(.deleteAllMessages) {
+                canDeleteMessage = true
+            }
+        } else {
+            if channel.hasPermission(.deleteAllMessages) || !message.flags.contains(.Incoming) {
+                canDeleteMessage = true
+            }
         }
-        canDeleteMessage = channel.hasAdminRights(.canDeleteMessages) || !message.flags.contains(.Incoming)
     } else if message.peers[message.id.peerId] is TelegramSecretChat {
         canDeleteMessage = true
     } else {
@@ -202,15 +202,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         switch chatPresentationInterfaceState.chatLocation {
             case .peer:
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
-                    switch channel.info {
-                        case .broadcast:
-                            if !isAction {
-                                canPin = channel.hasAdminRights([.canEditMessages])
-                            }
-                        case .group:
-                            if !isAction {
-                                canPin = channel.hasAdminRights([.canPinMessages])
-                            }
+                    if !isAction {
+                        canPin = channel.hasPermission(.pinMessages)
                     }
                 } else if let group = messages[0].peers[messages[0].id.peerId] as? TelegramGroup {
                     if !isAction {
@@ -257,8 +250,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     var loadResourceStatusSignal: Signal<MediaResourceStatus?, NoError> = .single(nil)
     if let loadCopyMediaResource = loadCopyMediaResource {
         loadResourceStatusSignal = account.postbox.mediaBox.resourceStatus(loadCopyMediaResource)
-            |> take(1)
-            |> map(Optional.init)
+        |> take(1)
+        |> map(Optional.init)
     }
     
     let loadLimits = account.postbox.transaction { transaction -> LimitsConfiguration in
@@ -278,7 +271,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 hasEditRights = true
             } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
                 if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                    if peer.hasAdminRights(.canEditMessages) {
+                    if peer.hasPermission(.editAllMessages) {
                         hasEditRights = true
                     }
                 }
@@ -287,8 +280,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             var hasUneditableAttributes = false
 
             if let peer = message.peers[message.id.peerId] as? TelegramChannel {
-                if peer.hasBannedRights(.banSendMessages) {
-                    hasUneditableAttributes = true
+                if !peer.hasPermission(.sendMessages) {
+                    //hasUneditableAttributes = true
                 }
             }
             
@@ -444,7 +437,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         hasEditRights = true
                     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
                         if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                            if peer.hasAdminRights(.canEditMessages) {
+                            if peer.hasPermission(.editAllMessages) {
                                 hasEditRights = true
                             }
                         }
@@ -593,7 +586,7 @@ private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId
     }
     
     if let peer = message.peers[message.id.peerId] as? TelegramChannel {
-        if peer.hasAdminRights(.canPinMessages) {
+        if peer.hasPermission(.pinMessages) {
             return true
         }
     }
@@ -640,7 +633,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         if message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.report)
                         }
-                        if channel.hasAdminRights(.canBanUsers), case .group = channel.info {
+                        if channel.hasPermission(.banMembers), case .group = channel.info {
                             if message.flags.contains(.Incoming) {
                                 if !hadBanPeerId {
                                     hadBanPeerId = true
@@ -664,7 +657,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         if !message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.deleteGlobally)
                         } else {
-                            if channel.hasAdminRights([.canDeleteMessages]) {
+                            if channel.hasPermission(.deleteAllMessages) {
                                 optionsMap[id]!.insert(.deleteGlobally)
                             }
                         }

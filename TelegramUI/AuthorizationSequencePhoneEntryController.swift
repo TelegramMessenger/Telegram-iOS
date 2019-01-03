@@ -33,7 +33,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void) {
+    init(network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.network = network
         self.strings = strings
         self.theme = theme
@@ -46,6 +46,12 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.hasActiveInput = true
         
         self.statusBar.statusBarStyle = theme.statusBarStyle
+        self.attemptNavigation = { _ in
+            return false
+        }
+        self.navigationBar?.backPressed = {
+            back()
+        }
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }

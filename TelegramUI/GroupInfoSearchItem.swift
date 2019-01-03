@@ -58,7 +58,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
             return current
         } else {
             let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
-            return GroupInfoSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, cancel: self.cancel, updateActivity: { [weak self] value in
+            return GroupInfoSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, mode: self.searchMode, cancel: self.cancel, updateActivity: { [weak self] value in
                 self?.updateActivity = value
             })
         }

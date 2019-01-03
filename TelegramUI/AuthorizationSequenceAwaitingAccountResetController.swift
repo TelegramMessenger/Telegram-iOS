@@ -27,7 +27,7 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(strings: PresentationStrings, theme: AuthorizationTheme, back: @escaping () -> Void) {
         self.strings = strings
         self.theme = theme
         
@@ -36,6 +36,13 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.statusBar.statusBarStyle = theme.statusBarStyle
+        
+        self.attemptNavigation = { _ in
+            return false
+        }
+        self.navigationBar?.backPressed = {
+            back()
+        }
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: " ", style: .plain, target: self, action: nil)
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Settings_Logout, style: .plain, target: self, action: #selector(self.logoutPressed))

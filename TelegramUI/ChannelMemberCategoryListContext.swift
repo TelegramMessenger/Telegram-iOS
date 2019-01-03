@@ -9,11 +9,11 @@ private let headUpdateTimeout: Double = 30.0
 private let requestBatchSize: Int32 = 64
 
 enum ChannelMemberListLoadingState: Equatable {
-    case loading
+    case loading(initial: Bool)
     case ready(hasMore: Bool)
 }
 
-private extension ChannelParticipant {
+extension ChannelParticipant {
     var adminInfo: ChannelParticipantAdminInfo? {
         switch self {
             case .creator:
@@ -59,13 +59,15 @@ private protocol ChannelMemberCategoryListContext {
     var listState: Signal<ChannelMemberListState, NoError> { get }
     func loadMore()
     func reset(_ force: Bool)
-    func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?)])
+    func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?, Bool?)])
     func forceUpdateHead()
 }
 
-private func isParticipantMember(_ participant: ChannelParticipant) -> Bool {
+private func isParticipantMember(_ participant: ChannelParticipant, infoIsMember: Bool?) -> Bool {
     if let banInfo = participant.banInfo {
         return !banInfo.rights.flags.contains(.banReadMessages) && banInfo.isMember
+    } else if let infoIsMember = infoIsMember {
+        return infoIsMember
     } else {
         return true
     }
@@ -109,7 +111,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
         
         self.listStateValue = ChannelMemberListState(list: [], loadingState: .ready(hasMore: true))
         self.listStatePromise = Promise(self.listStateValue)
-        self.loadMore()
+        self.loadMoreInternal(initial: true)
     }
     
     deinit {
@@ -119,6 +121,10 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
     }
     
     func loadMore() {
+        self.loadMoreInternal(initial: false)
+    }
+    
+    private func loadMoreInternal(initial: Bool) {
         guard case .ready(true) = self.listStateValue.loadingState else {
             return
         }
@@ -130,7 +136,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             loadCount = requestBatchSize
         }
         
-        self.listStateValue = self.listStateValue.withUpdatedLoadingState(.loading)
+        self.listStateValue = self.listStateValue.withUpdatedLoadingState(.loading(initial: initial))
         
         self.loadingDisposable.set((self.loadMoreSignal(count: loadCount)
         |> deliverOnMainQueue).start(next: { [weak self] members in
@@ -268,10 +274,10 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
         }
     }
     
-    fileprivate func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?)]) {
+    fileprivate func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?, Bool?)]) {
         var list = self.listStateValue.list
         var updatedList = false
-        for (maybePrevious, updated) in updates {
+        for (maybePrevious, updated, infoIsMember) in updates {
             var previous: ChannelParticipant? = maybePrevious
             if let participantId = maybePrevious?.peerId ?? updated?.peer.id {
                 inner: for participant in list {
@@ -307,7 +313,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                         }
                     }
                 case .restricted:
-                    if let updated = updated, let banInfo = updated.participant.banInfo, !banInfo.rights.flags.isEmpty && !banInfo.rights.flags.contains(.banReadMessages) {
+                    if let updated = updated, let banInfo = updated.participant.banInfo, !banInfo.rights.flags.contains(.banReadMessages) {
                         var found = false
                         loop: for i in 0 ..< list.count {
                             if list[i].peer.id == updated.peer.id {
@@ -321,7 +327,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                             list.insert(updated, at: 0)
                             updatedList = true
                         }
-                    } else if let previous = previous, let banInfo = previous.banInfo, !banInfo.rights.flags.isEmpty && !banInfo.rights.flags.contains(.banReadMessages) {
+                    } else if let previous = previous, let banInfo = previous.banInfo, !banInfo.rights.flags.contains(.banReadMessages) {
                         loop: for i in 0 ..< list.count {
                             if list[i].peer.id == previous.peerId {
                                 list.remove(at: i)
@@ -355,7 +361,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                         }
                     }
                 case .recent:
-                    if let updated = updated, isParticipantMember(updated.participant) {
+                    if let updated = updated, isParticipantMember(updated.participant, infoIsMember: infoIsMember) {
                         var found = false
                         loop: for i in 0 ..< list.count {
                             if list[i].peer.id == updated.peer.id {
@@ -369,7 +375,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                             list.insert(updated, at: 0)
                             updatedList = true
                         }
-                    } else if let previous = previous, isParticipantMember(previous) {
+                    } else if let previous = previous, isParticipantMember(previous, infoIsMember: nil) {
                         loop: for i in 0 ..< list.count {
                             if list[i].peer.id == previous.peerId {
                                 list.remove(at: i)
@@ -379,7 +385,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                         }
                     }
                 case let .recentSearch(query):
-                    if let updated = updated, isParticipantMember(updated.participant), updated.peer.indexName.matchesByTokens(query) {
+                    if let updated = updated, isParticipantMember(updated.participant, infoIsMember: infoIsMember), updated.peer.indexName.matchesByTokens(query) {
                         var found = false
                         loop: for i in 0 ..< list.count {
                             if list[i].peer.id == updated.peer.id {
@@ -393,7 +399,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                             list.insert(updated, at: 0)
                             updatedList = true
                         }
-                    } else if let previous = previous, isParticipantMember(previous) {
+                    } else if let previous = previous, isParticipantMember(previous, infoIsMember: nil) {
                         loop: for i in 0 ..< list.count {
                             if list[i].peer.id == previous.peerId {
                                 list.remove(at: i)
@@ -420,13 +426,13 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
     private static func reduceListStates(_ listStates: [ChannelMemberListState]) -> ChannelMemberListState {
         var allReady = true
         for listState in listStates {
-            if case .loading = listState.loadingState, listState.list.isEmpty {
+            if case .loading(true) = listState.loadingState, listState.list.isEmpty {
                 allReady = false
                 break
             }
         }
         if !allReady {
-            return ChannelMemberListState(list: [], loadingState: .loading)
+            return ChannelMemberListState(list: [], loadingState: .loading(initial: true))
         }
         
         var list: [RenderedChannelParticipant] = []
@@ -440,8 +446,8 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
                 }
             }
             switch listStates[i].loadingState {
-                case .loading:
-                    loadingState = .loading
+                case let .loading(initial):
+                    loadingState = .loading(initial: initial)
                     break loop
                 case let .ready(hasMore):
                     if hasMore {
@@ -493,7 +499,7 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
         }
     }
     
-    func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?)]) {
+    func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?, Bool?)]) {
         for context in self.contexts {
             context.replayUpdates(updates)
         }
@@ -615,6 +621,10 @@ final class PeerChannelMemberCategoriesContext {
                 context = ChannelMemberSingleCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: mappedCategory)
             case let .restrictedAndBanned(query):
                 context = ChannelMemberMultiCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, categories: [.restricted(query), .banned(query)])
+            case let .restricted(query):
+                context = ChannelMemberSingleCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: .restricted(query))
+            case let .banned(query):
+                context = ChannelMemberSingleCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: .banned(query))
         }
         let contextWithSubscribers = PeerChannelMemberContextWithSubscribers(context: context, becameEmpty: { [weak self] in
             assert(Queue.mainQueue().isCurrent())
@@ -633,7 +643,7 @@ final class PeerChannelMemberCategoriesContext {
         }
     }
     
-    func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?)]) {
+    func replayUpdates(_ updates: [(ChannelParticipant?, RenderedChannelParticipant?, Bool?)]) {
         for (_, context) in self.contexts {
             context.context.replayUpdates(updates)
         }

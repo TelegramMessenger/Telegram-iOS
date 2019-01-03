@@ -934,4 +934,34 @@ struct PresentationResourcesChat {
             })
         })
     }
+    
+    static func groupInfoAdminsIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.groupInfoAdminsIcon.rawValue, { _ in
+            return UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon")?.precomposed()
+        })
+    }
+    
+    static func groupInfoPermissionsIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.groupInfoPermissionsIcon.rawValue, { _ in
+            return UIImage(bundleImageName: "Chat/Info/GroupPermissionsIcon")?.precomposed()
+        })
+    }
+    
+    static func groupInfoMembersIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.groupInfoMembersIcon.rawValue, { _ in
+            return UIImage(bundleImageName: "Chat/Info/GroupMembersIcon")?.precomposed()
+        })
+    }
+    
+    static func groupInfoBannedIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.groupInfoBannedIcon.rawValue, { _ in
+            return UIImage(bundleImageName: "Chat/Info/GroupBannedIcon")?.precomposed()
+        })
+    }
+    
+    static func emptyChatListCheckIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.emptyChatListCheckIcon.rawValue, { _ in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/ListCheckIcon"), color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText)
+        })
+    }
 }

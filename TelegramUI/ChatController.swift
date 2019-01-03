@@ -2554,12 +2554,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 let banDescription: String
                 switch subject {
                     case .stickers:
-                        banDescription = strongSelf.presentationInterfaceState.strings.Group_ErrorSendRestrictedStickers
+                        if bannedRights.personal {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Group_ErrorSendRestrictedStickers
+                        } else {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedStickers
+                        }
                     case .mediaRecording:
                         if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
-                        } else {
+                        } else if bannedRights.personal {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
+                        } else {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedMedia
                         }
                 }
                 if strongSelf.recordingModeFeedback == nil {
@@ -2664,11 +2670,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     var canManagePin = false
                     if let channel = peer as? TelegramChannel {
-                        if case .broadcast = channel.info {
-                            canManagePin = channel.hasAdminRights([.canEditMessages])
-                        } else {
-                            canManagePin = channel.hasAdminRights([.canPinMessages])
-                        }
+                        canManagePin = channel.hasPermission(.pinMessages)
                     } else if let group = peer as? TelegramGroup {
                         if group.flags.contains(.adminsEnabled) {
                             switch group.role {
@@ -2728,11 +2730,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     var canManagePin = false
                     if let channel = peer as? TelegramChannel {
-                        if case .broadcast = channel.info {
-                            canManagePin = channel.hasAdminRights([.canEditMessages])
-                        } else {
-                            canManagePin = channel.hasAdminRights([.canPinMessages])
-                        }
+                        canManagePin = channel.hasPermission(.pinMessages)
                     } else if let group = peer as? TelegramGroup {
                         if group.flags.contains(.adminsEnabled) {
                             switch group.role {
@@ -3294,7 +3292,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
-        
         self.chatTitleView?.layout = layout
         
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in
@@ -3715,8 +3712,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 let banDescription: String
                 if bannedRights.untilDate != 0 && bannedRights.untilDate != Int32.max {
                     banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: bannedRights.untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
-                } else {
+                } else if bannedRights.personal {
                     banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedMedia
+                } else {
+                    banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedMedia
                 }
                 
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
@@ -4557,7 +4556,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             guard let strongSelf = self else {
                                 return
                             }
-                            let complete = results.count >= Int(totalCount)
+                            let complete = results.count == 0
                             var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search {
@@ -4572,7 +4571,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                         }
                                     }
                                     navigateIndex = currentIndex
-                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, totalCount: totalCount, complete: complete)))
+                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, totalCount: max(Int32(messageIndices.count), totalCount), complete: complete)))
                                 } else {
                                     return current
                                 }
@@ -4608,7 +4607,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             guard let strongSelf = self else {
                                 return
                             }
-                            let complete = results.count != 0
+                            let complete = results.count == 0
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
                                     let previousSet = Set(previousResultsState.messageIndices)
@@ -4616,7 +4615,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     var mergedIndices = messageIndices.filter({ !previousSet.contains($0) })
                                     mergedIndices.append(contentsOf: previousResultsState.messageIndices)
                                     
-                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: mergedIndices, currentId: previousResultsState.currentId, totalCount: totalCount, complete: complete)))
+                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: mergedIndices, currentId: previousResultsState.currentId, totalCount: max(totalCount, Int32(mergedIndices.count)), complete: complete)))
                                 } else {
                                     return current
                                 }

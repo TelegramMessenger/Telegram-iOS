@@ -16,7 +16,6 @@ private final class UserInfoControllerArguments {
     let shareMyContact: () -> Void
     let startSecretChat: () -> Void
     let changeNotificationMuteSettings: () -> Void
-    let changeNotificationSoundSettings: () -> Void
     let openSharedMedia: () -> Void
     let openGroupsInCommon: () -> Void
     let updatePeerBlocked: (Bool) -> Void
@@ -35,7 +34,7 @@ private final class UserInfoControllerArguments {
     let botPrivacy: () -> Void
     let report: () -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, shareMyContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, changeNotificationSoundSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, shareBot: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, tapAvatarAction: @escaping () -> Void, openChat: @escaping () -> Void, addContact: @escaping () -> Void, shareContact: @escaping () -> Void, shareMyContact: @escaping () -> Void, startSecretChat: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openGroupsInCommon: @escaping () -> Void, updatePeerBlocked: @escaping (Bool) -> Void, deleteContact: @escaping () -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayCopyContextMenu: @escaping (UserInfoEntryTag, String) -> Void, call: @escaping () -> Void, openCallMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, displayAboutContextMenu: @escaping (String) -> Void, openEncryptionKey: @escaping (SecretChatKeyFingerprint) -> Void, addBotToGroup: @escaping () -> Void, shareBot: @escaping () -> Void, botSettings: @escaping () -> Void, botHelp: @escaping () -> Void, botPrivacy: @escaping () -> Void, report: @escaping () -> Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.updateEditingName = updateEditingName
@@ -47,7 +46,6 @@ private final class UserInfoControllerArguments {
         self.shareMyContact = shareMyContact
         self.startSecretChat = startSecretChat
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
-        self.changeNotificationSoundSettings = changeNotificationSoundSettings
         self.openSharedMedia = openSharedMedia
         self.openGroupsInCommon = openGroupsInCommon
         self.updatePeerBlocked = updatePeerBlocked
@@ -105,7 +103,6 @@ private enum UserInfoEntry: ItemListNodeEntry {
     case startSecretChat(PresentationTheme, String)
     case sharedMedia(PresentationTheme, String)
     case notifications(PresentationTheme, String, String)
-    case notificationSound(PresentationTheme, String, String)
     case groupsInCommon(PresentationTheme, String, Int32)
     case secretEncryptionKey(PresentationTheme, String, SecretChatKeyFingerprint)
     case botAddToGroup(PresentationTheme, String)
@@ -124,7 +121,7 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return UserInfoSection.actions.rawValue
             case .botSettings, .botHelp, .botPrivacy:
                 return UserInfoSection.bot.rawValue
-            case .sharedMedia, .notifications, .notificationSound, .groupsInCommon, .secretEncryptionKey:
+            case .sharedMedia, .notifications, .groupsInCommon, .secretEncryptionKey:
                 return UserInfoSection.sharedMediaAndNotifications.rawValue
             case .botReport, .block:
                 return UserInfoSection.block.rawValue
@@ -254,12 +251,6 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .notificationSound(lhsTheme, lhsText, lhsValue):
-                if case let .notificationSound(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
             case let .groupsInCommon(lhsTheme, lhsText, lhsValue):
                 if case let .groupsInCommon(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -353,8 +344,6 @@ private enum UserInfoEntry: ItemListNodeEntry {
                 return 1011
             case .notifications:
                 return 1012
-            case .notificationSound:
-                return 1013
             case .secretEncryptionKey:
                 return 1014
             case .groupsInCommon:
@@ -431,10 +420,6 @@ private enum UserInfoEntry: ItemListNodeEntry {
             case let .notifications(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.changeNotificationMuteSettings()
-                })
-            case let .notificationSound(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
-                    arguments.changeNotificationSoundSettings()
                 })
             case let .groupsInCommon(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "\(value)", sectionId: self.section, style: .plain, action: {
@@ -673,25 +658,19 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         entries.append(UserInfoEntry.sharedMedia(presentationData.theme, presentationData.strings.GroupInfo_SharedMedia))
     }
     let notificationsLabel: String
-    if let settings = view.notificationSettings as? TelegramPeerNotificationSettings, case let .muted(until) = settings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+    let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings ?? TelegramPeerNotificationSettings.defaultSettings
+    if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
         if until < Int32.max - 1 {
             notificationsLabel = stringForRemainingMuteInterval(strings: presentationData.strings, muteInterval: until)
         } else {
             notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
         }
     } else {
-        notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
+        notificationsLabel = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.channels.sound)
     }
     entries.append(UserInfoEntry.notifications(presentationData.theme, presentationData.strings.GroupInfo_Notifications, notificationsLabel))
     
     if isEditing {
-        var messageSound: PeerMessageSound = .default
-        if let settings = view.notificationSettings as? TelegramPeerNotificationSettings {
-            messageSound = settings.messageSound
-        }
-        
-        entries.append(UserInfoEntry.notificationSound(presentationData.theme, presentationData.strings.GroupInfo_Sound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: messageSound, default: globalNotificationSettings.effective.privateChats.sound)))
-        
         if view.peerIsContact {
             entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .removeContact, peer: user), .removeContact))
         }
@@ -878,32 +857,28 @@ public func userInfoController(account: Account, peerId: PeerId, mode: UserInfoC
         startSecretChatImpl?()
     }, changeNotificationMuteSettings: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        actionsDisposable.add((account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications]) |> take(1) |> deliverOnMainQueue).start(next: { view in
-            
-            let viewSettings: GlobalNotificationSettingsSet
-            if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
-                viewSettings = settings.effective
-            } else {
-                viewSettings = GlobalNotificationSettingsSet.defaultSettings
-            }
-            
-            let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: viewSettings.privateChats, updateSettings: { value in
-                changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
-            })
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        }))
-        
-    }, changeNotificationSoundSettings: {
         let _ = (account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
             let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
-        } |> deliverOnMainQueue).start(next: { settings in
-            let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: settings.0.messageSound, defaultSound: settings.1.effective.privateChats.sound, completion: { sound in
-                let _ = updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound).start()
+            }
+            |> deliverOnMainQueue).start(next: { peerSettings, globalSettings in
+                let soundSettings: NotificationSoundSettings?
+                if case .default = peerSettings.messageSound {
+                    soundSettings = NotificationSoundSettings(value: nil)
+                } else {
+                    soundSettings = NotificationSoundSettings(value: peerSettings.messageSound)
+                }
+                let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: globalSettings.effective.groupChats, soundSettings: soundSettings, openSoundSettings: {
+                    let controller = notificationSoundSelectionController(account: account, isModal: true, currentSound: peerSettings.messageSound, defaultSound: globalSettings.effective.groupChats.sound, completion: { sound in
+                        let _ = updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound).start()
+                    })
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }, updateSettings: { value in
+                    changeMuteSettingsDisposable.set(updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: value).start())
+                })
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             })
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        })
     }, openSharedMedia: {
         if let controller = peerSharedMediaController(account: account, peerId: peerId) {
             pushControllerImpl?(controller)

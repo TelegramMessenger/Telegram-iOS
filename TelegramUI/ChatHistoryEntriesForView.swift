@@ -99,6 +99,38 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
                 entries.insert(.ChatInfoEntry(botInfo.description, presentationData), at: 0)
             }
+            var isEmpty = true
+            if entries.count <= 2 {
+                loop: for entry in view.entries {
+                    switch entry {
+                        case let .MessageEntry(entry):
+                            var isEmptyMedia = false
+                            for media in entry.0.media {
+                                if let action = media as? TelegramMediaAction {
+                                    switch action.action {
+                                        case .groupCreated, .photoUpdated:
+                                            isEmptyMedia = true
+                                        default:
+                                            break
+                                    }
+                                }
+                            }
+                            if isEmptyMedia, let peer = entry.0.peers[entry.0.id.peerId] as? TelegramGroup, case .creator = peer.role {
+                            } else {
+                                isEmpty = false
+                                break loop
+                            }
+                        default:
+                            isEmpty = false
+                            break loop
+                    }
+                }
+            } else {
+                isEmpty = false
+            }
+            if isEmpty {
+                entries.removeAll()
+            }
         }
     } else if includeSearchEntry {
         if view.laterId == nil {

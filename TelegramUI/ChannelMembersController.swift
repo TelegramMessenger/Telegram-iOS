@@ -255,7 +255,7 @@ private func ChannelMembersControllerEntries(account: Account, presentationData:
     if let participants = participants {
         var canAddMember: Bool = false
         if let peer = view.peers[view.peerId] as? TelegramChannel {
-            canAddMember = peer.hasAdminRights(.canInviteUsers)
+            canAddMember = peer.hasPermission(.inviteMembers)
         }
         
         if canAddMember {
@@ -288,7 +288,7 @@ private func ChannelMembersControllerEntries(account: Account, presentationData:
             var editable = true
             var canEditMembers = false
             if let peer = view.peers[view.peerId] as? TelegramChannel {
-                canEditMembers = peer.hasAdminRights(.canBanUsers)
+                canEditMembers = peer.hasPermission(.banMembers)
             }
             
             if participant.peer.id == account.peerId {
@@ -387,7 +387,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             return $0.withUpdatedRemovingPeerId(memberId)
         }
         
-        removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChannelBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+        removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], personal: false, untilDate: Int32.max))
         |> deliverOnMainQueue).start(completed: {
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)

@@ -149,15 +149,23 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
             }
             
             var limitTextString: NSAttributedString?
+            var rightInset: CGFloat = params.rightInset
+            
             if let maxLength = item.maxLength, maxLength.display {
-                limitTextString = NSAttributedString(string: "\(max(0, maxLength.value - item.text.count))", font: titleFont, textColor: item.theme.list.itemSecondaryTextColor)
+                let textLength = item.text.count
+                let displayTextLimit = textLength > maxLength.value * 70 / 100
+                let remainingCount = maxLength.value - textLength
+                if displayTextLimit {
+                    limitTextString = NSAttributedString(string: "\(remainingCount)", font: Font.regular(13.0), textColor: remainingCount < 0 ? item.theme.list.itemDestructiveColor : item.theme.list.itemSecondaryTextColor)
+                }
+                
+                rightInset += 30.0 + 4.0
             }
             
             let (limitTextLayout, limitTextApply) = makeLimitTextLayout(TextNodeLayoutArguments(attributedString: limitTextString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
             
-            var rightInset: CGFloat = params.rightInset
-            if !limitTextLayout.size.width.isZero {
-                rightInset += limitTextLayout.size.width + 4.0
+            if limitTextLayout.size.width > 30.0 {
+                rightInset += 30.0
             }
             
             var measureText = item.text
@@ -241,7 +249,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width - leftInset - 16.0 - rightInset, height: textLayout.size.height + 1.0))
                     
                     let _ = limitTextApply()
-                    strongSelf.limitTextNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 16.0 - limitTextLayout.size.width, y: textTopInset), size: limitTextLayout.size)
+                    strongSelf.limitTextNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 16.0 - limitTextLayout.size.width, y: layout.contentSize.height - 15.0 - limitTextLayout.size.height), size: limitTextLayout.size)
                     if limitTextString != nil {
                         if strongSelf.limitTextNode.supernode == nil {
                             strongSelf.addSubnode(strongSelf.limitTextNode)
@@ -286,10 +294,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let item = self.item {
             if let text = self.textNode.attributedText {
-                var updatedText = text.string
-                if let maxLength = item.maxLength, updatedText.count > maxLength.value {
-                    updatedText = String(updatedText[..<updatedText.index(updatedText.startIndex, offsetBy: maxLength.value)])
-                }
+                let updatedText = text.string
                 let updatedAttributedText = NSAttributedString(string: updatedText, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor)
                 if text.string != updatedAttributedText.string {
                     self.textNode.attributedText = updatedAttributedText
@@ -304,13 +309,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
         if let item = self.item {
             let text: String? = UIPasteboard.general.string
-            if let text = text {
-                if let maxLength = item.maxLength {
-                    let string = self.textNode.attributedText?.string ?? ""
-                    if string.count + text.count > maxLength.value {
-                        UIPasteboard.general.string = String(text[..<text.index(text.startIndex, offsetBy: maxLength.value - string.count)])
-                    }
-                }
+            if let _ = text {
                 return true
             }
         }

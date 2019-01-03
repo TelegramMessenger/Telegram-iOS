@@ -67,7 +67,6 @@ final class ChannelMembersSearchController: ViewController {
             self?.deactivateSearch(animated: true)
         }
         self.controllerNode.requestOpenPeerFromSearch = { [weak self] peer, participant in
-            self?.dismiss()
             self?.openPeer(peer, participant)
         }
         self.controllerNode.present = { [weak self] c, a in

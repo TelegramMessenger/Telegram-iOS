@@ -74,6 +74,11 @@ struct ContactsPeerItemBadge {
     let type: ContactsPeerItemBadgeType
 }
 
+enum ContactsPeerItemActionIcon {
+    case none
+    case add
+}
+
 enum ContactsPeerItemPeer: Equatable {
     case peer(peer: Peer?, chatPeer: Peer?)
     case deviceContact(stableId: DeviceContactStableId, contact: DeviceContactBasicData)
@@ -116,6 +121,7 @@ class ContactsPeerItem: ListViewItem {
     let selection: ContactsPeerItemSelection
     let editing: ContactsPeerItemEditing
     let options: [ItemListPeerItemRevealOption]
+    let actionIcon: ContactsPeerItemActionIcon
     let action: (ContactsPeerItemPeer) -> Void
     let setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)?
     let deletePeer: ((PeerId) -> Void)?
@@ -126,7 +132,7 @@ class ContactsPeerItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.sortOrder = sortOrder
@@ -140,6 +146,7 @@ class ContactsPeerItem: ListViewItem {
         self.selection = selection
         self.editing = editing
         self.options = options
+        self.actionIcon = actionIcon
         self.action = action
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.deletePeer = deletePeer
@@ -290,6 +297,7 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var badgeBackgroundNode: ASImageNode?
     private var badgeTextNode: TextNode?
     private var selectionNode: CheckNode?
+    private var actionIconNode: ASImageNode?
     
     private var avatarState: (Account, Peer?)?
     
@@ -435,6 +443,14 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 verificationIconImage = PresentationResourcesChatList.verifiedIcon(item.theme)
             }
             
+            let actionIconImage: UIImage?
+            switch item.actionIcon {
+                case .none:
+                    actionIconImage = nil
+                case .add:
+                    actionIconImage = PresentationResourcesItemList.plusIconImage(item.theme)
+            }
+            
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             var userPresence: TelegramUserPresence?
@@ -555,6 +571,9 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             if let verificationIconImage = verificationIconImage {
                 additionalTitleInset += 3.0 + verificationIconImage.size.width
             }
+            if let actionIconImage = actionIconImage {
+                additionalTitleInset += 3.0 + actionIconImage.size.width
+            }
             
             additionalTitleInset += badgeSize
             
@@ -673,6 +692,25 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             } else if let verificationIconNode = strongSelf.verificationIconNode {
                                 strongSelf.verificationIconNode = nil
                                 verificationIconNode.removeFromSupernode()
+                            }
+                            
+                            if let actionIconImage = actionIconImage {
+                                if strongSelf.actionIconNode == nil {
+                                    let actionIconNode = ASImageNode()
+                                    actionIconNode.isLayerBacked = true
+                                    actionIconNode.displayWithoutProcessing = true
+                                    actionIconNode.displaysAsynchronously = false
+                                    strongSelf.actionIconNode = actionIconNode
+                                    strongSelf.addSubnode(actionIconNode)
+                                }
+                                if let actionIconNode = strongSelf.actionIconNode {
+                                    actionIconNode.image = actionIconImage
+                                    
+                                    transition.updateFrame(node: actionIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - 12.0 - actionIconImage.size.width, y: floor((nodeLayout.contentSize.height - actionIconImage.size.height) / 2.0)), size: actionIconImage.size))
+                                }
+                            } else if let actionIconNode = strongSelf.actionIconNode {
+                                strongSelf.actionIconNode = nil
+                                actionIconNode.removeFromSupernode()
                             }
                             
                             let badgeBackgroundWidth: CGFloat

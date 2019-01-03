@@ -153,65 +153,162 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         })
         
         let previousEntries = Atomic<[ChannelMembersSearchEntry]?>(value: nil)
-        let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { [weak self] state in
-            guard let strongSelf = self else {
-                return
-            }
-            var entries: [ChannelMembersSearchEntry] = []
-            entries.append(.search)
-            
-            var index = 0
-            for participant in state.list {
-                var label: String?
-                var enabled = true
-                switch mode {
-                    case .ban:
-                        if participant.peer.id == account.peerId {
-                            continue
-                        }
-                        for filter in filters {
-                            switch filter {
-                            case let .exclude(ids):
-                                if ids.contains(participant.peer.id) {
-                                    continue
-                                }
-                            case .disable:
-                                break
-                            }
-                        }
-                    case .promote:
-                        if participant.peer.id == account.peerId {
-                            continue
-                        }
-                        for filter in filters {
-                            switch filter {
-                            case let .exclude(ids):
-                                if ids.contains(participant.peer.id) {
-                                    continue
-                                }
-                            case .disable:
-                                break
-                            }
-                        }
-                        if case .creator = participant.participant {
-                            label = strings.Channel_Management_LabelCreator
-                            enabled = false
-                        }
-                }
-                entries.append(.peer(index, participant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled))
-                index += 1
-            }
-            
-            let previous = previousEntries.swap(entries)
-            
-            strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction))
-        })
-        self.disposable = disposable
-        self.listControl = loadMoreControl
         
-        self.listNode.visibleBottomContentOffsetChanged = { offset in
-            if case let .known(value) = offset, value < 40.0 {
-                account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
+        let disposableAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
+        
+        if peerId.namespace == Namespaces.Peer.CloudGroup {
+            let disposable = (account.postbox.peerView(id: peerId)
+            |> deliverOnMainQueue).start(next: { [weak self] peerView in
+                guard let strongSelf = self else {
+                    return
+                }
+                guard let cachedData = peerView.cachedData as? CachedGroupData, let participants = cachedData.participants else {
+                    return
+                }
+                var creatorPeer: Peer?
+                for participant in participants.participants {
+                    if let peer = peerView.peers[participant.peerId] {
+                        switch participant {
+                            case .creator:
+                                creatorPeer = peer
+                            default:
+                                break
+                        }
+                    }
+                }
+                guard let creator = creatorPeer else {
+                    return
+                }
+                var entries: [ChannelMembersSearchEntry] = []
+                entries.append(.search)
+                
+                var index = 0
+                for participant in participants.participants {
+                    guard let peer = peerView.peers[participant.peerId] else {
+                        continue
+                    }
+                    var label: String?
+                    var enabled = true
+                    switch mode {
+                        case .ban:
+                            if peer.id == account.peerId {
+                                continue
+                            }
+                            for filter in filters {
+                                switch filter {
+                                    case let .exclude(ids):
+                                        if ids.contains(peer.id) {
+                                            continue
+                                        }
+                                    case .disable:
+                                        break
+                                }
+                            }
+                        case .promote:
+                            if peer.id == account.peerId {
+                                continue
+                            }
+                            for filter in filters {
+                                switch filter {
+                                    case let .exclude(ids):
+                                        if ids.contains(peer.id) {
+                                            continue
+                                        }
+                                    case .disable:
+                                        break
+                                }
+                            }
+                            if case .creator = participant {
+                                label = strings.Channel_Management_LabelCreator
+                                enabled = false
+                            }
+                    }
+                    let renderedParticipant: RenderedChannelParticipant
+                    switch participant {
+                        case .creator:
+                            renderedParticipant = RenderedChannelParticipant(participant: .creator(id: peer.id), peer: peer)
+                        case .admin:
+                            var peers: [PeerId: Peer] = [:]
+                            peers[creator.id] = creator
+                            peers[peer.id] = peer
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == account.peerId), banInfo: nil), peer: peer, peers: peers)
+                        case .member:
+                            var peers: [PeerId: Peer] = [:]
+                            peers[peer.id] = peer
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil), peer: peer, peers: peers)
+                    }
+                    
+                    entries.append(.peer(index, renderedParticipant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled))
+                    index += 1
+                }
+                let previous = previousEntries.swap(entries)
+                
+                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction))
+            })
+            disposableAndLoadMoreControl = (disposable, nil)
+        } else {
+            disposableAndLoadMoreControl = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { [weak self] state in
+                guard let strongSelf = self else {
+                    return
+                }
+                var entries: [ChannelMembersSearchEntry] = []
+                entries.append(.search)
+                
+                var index = 0
+                for participant in state.list {
+                    var label: String?
+                    var enabled = true
+                    switch mode {
+                        case .ban:
+                            if participant.peer.id == account.peerId {
+                                continue
+                            }
+                            for filter in filters {
+                                switch filter {
+                                case let .exclude(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        continue
+                                    }
+                                case .disable:
+                                    break
+                                }
+                            }
+                        case .promote:
+                            if participant.peer.id == account.peerId {
+                                continue
+                            }
+                            for filter in filters {
+                                switch filter {
+                                case let .exclude(ids):
+                                    if ids.contains(participant.peer.id) {
+                                        continue
+                                    }
+                                case .disable:
+                                    break
+                                }
+                            }
+                            if case .creator = participant.participant {
+                                label = strings.Channel_Management_LabelCreator
+                                enabled = false
+                            }
+                    }
+                    entries.append(.peer(index, participant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled))
+                    index += 1
+                }
+                
+                let previous = previousEntries.swap(entries)
+                
+                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction))
+            })
+        }
+        self.disposable = disposableAndLoadMoreControl.0
+        self.listControl = disposableAndLoadMoreControl.1
+        
+        if peerId.namespace == Namespaces.Peer.CloudChannel {
+            self.listNode.visibleBottomContentOffsetChanged = { offset in
+                if case let .known(value) = offset, value < 40.0 {
+                    account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: disposableAndLoadMoreControl.1)
+                }
             }
         }
     }

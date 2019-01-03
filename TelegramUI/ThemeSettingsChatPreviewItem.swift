@@ -142,6 +142,10 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                                 updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                             }
                         }
+                    case let .file(file):
+                        if let path = item.account.postbox.mediaBox.completedResourcePath(file.file.resource) {
+                            updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
+                        }
                 }
             }
             

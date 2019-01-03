@@ -8,6 +8,8 @@ enum PeerChannelMemberContextKey: Equatable, Hashable {
     case recentSearch(String)
     case admins(String?)
     case restrictedAndBanned(String?)
+    case restricted(String?)
+    case banned(String?)
     
     var hashValue: Int {
         switch self {
@@ -19,6 +21,10 @@ enum PeerChannelMemberContextKey: Equatable, Hashable {
                 return query?.hashValue ?? 2
             case let .restrictedAndBanned(query):
                 return query?.hashValue ?? 3
+            case let .restricted(query):
+                return query?.hashValue ?? 4
+            case let .banned(query):
+                return query?.hashValue ?? 5
         }
     }
 }
@@ -86,7 +92,7 @@ final class PeerChannelMemberCategoriesContextsManager {
         self.impl.with { impl in
             for (contextPeerId, context) in impl.contexts {
                 if contextPeerId == peerId {
-                    context.replayUpdates([(nil, participant)])
+                    context.replayUpdates([(nil, participant, nil)])
                 }
             }
         }
@@ -156,19 +162,27 @@ final class PeerChannelMemberCategoriesContextsManager {
         return self.getContext(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: .admins(searchQuery), requestUpdate: true, updated: updated)
     }
     
+    func restricted(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
+        return self.getContext(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: .restricted(searchQuery), requestUpdate: true, updated: updated)
+    }
+    
+    func banned(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
+        return self.getContext(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: .banned(searchQuery), requestUpdate: true, updated: updated)
+    }
+    
     func restrictedAndBanned(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
         return self.getContext(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: .restrictedAndBanned(searchQuery), requestUpdate: true, updated: updated)
     }
     
-    func updateMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, bannedRights: TelegramChannelBannedRights?) -> Signal<Void, NoError> {
+    func updateMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, bannedRights: TelegramChatBannedRights?) -> Signal<Void, NoError> {
         return updateChannelMemberBannedRights(account: account, peerId: peerId, memberId: memberId, rights: bannedRights)
         |> deliverOnMainQueue
-        |> beforeNext { [weak self] (previous, updated) in
+        |> beforeNext { [weak self] (previous, updated, isMember) in
             if let strongSelf = self {
                 strongSelf.impl.with { impl in
                     for (contextPeerId, context) in impl.contexts {
                         if peerId == contextPeerId {
-                            context.replayUpdates([(previous, updated)])
+                            context.replayUpdates([(previous, updated, isMember)])
                         }
                     }
                 }
@@ -179,8 +193,8 @@ final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChannelAdminRights) -> Signal<Void, NoError> {
-        return updatePeerAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights)
+    func updateMemberAdminRights(account: Account, peerId: PeerId, memberId: PeerId, adminRights: TelegramChatAdminRights) -> Signal<Void, NoError> {
+        return updateChannelAdminRights(account: account, peerId: peerId, adminId: memberId, rights: adminRights)
         |> map(Optional.init)
         |> `catch` { _ -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, NoError> in
             return .single(nil)
@@ -191,7 +205,7 @@ final class PeerChannelMemberCategoriesContextsManager {
                 strongSelf.impl.with { impl in
                     for (contextPeerId, context) in impl.contexts {
                         if peerId == contextPeerId {
-                            context.replayUpdates([(previous, updated)])
+                            context.replayUpdates([(previous, updated, nil)])
                         }
                     }
                 }
@@ -214,7 +228,7 @@ final class PeerChannelMemberCategoriesContextsManager {
                 strongSelf.impl.with { impl in
                     for (contextPeerId, context) in impl.contexts {
                         if peerId == contextPeerId {
-                            context.replayUpdates([(previous, updated)])
+                            context.replayUpdates([(previous, updated, nil)])
                         }
                     }
                 }
@@ -226,20 +240,50 @@ final class PeerChannelMemberCategoriesContextsManager {
     }
     
     func addMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
-        return addChannelMembers(account: account, peerId: peerId, memberIds: memberIds) |> deliverOnMainQueue
-            |> beforeNext { [weak self] result in
-                if let strongSelf = self {
-                    strongSelf.impl.with { impl in
-                        for (contextPeerId, context) in impl.contexts {
-                            if peerId == contextPeerId {
-                                context.reset(.recent)
+        let signals: [Signal<(ChannelParticipant?, RenderedChannelParticipant)?, NoError>] = memberIds.map({ memberId in
+            return addChannelMember(account: account, peerId: peerId, memberId: memberId)
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, NoError> in
+                return .single(nil)
+            }
+        })
+        return combineLatest(signals)
+        |> deliverOnMainQueue
+        |> beforeNext { [weak self] results in
+            if let strongSelf = self {
+                strongSelf.impl.with { impl in
+                    for result in results {
+                        if let (previous, updated) = result {
+                            for (contextPeerId, context) in impl.contexts {
+                                if peerId == contextPeerId {
+                                    context.replayUpdates([(previous, updated, nil)])
+                                }
                             }
                         }
                     }
                 }
             }
-            |> mapToSignal { _ -> Signal<Void, AddChannelMemberError> in
-                return .single(Void())
         }
+        |> introduceError(AddChannelMemberError.self)
+        |> mapToSignal { _ -> Signal<Void, AddChannelMemberError> in
+            return .complete()
+        }
+        
+        /*return addChannelMembers(account: account, peerId: peerId, memberIds: memberIds)
+        |> deliverOnMainQueue
+        |> beforeNext { [weak self] result in
+            if let strongSelf = self {
+                strongSelf.impl.with { impl in
+                    for (contextPeerId, context) in impl.contexts {
+                        if peerId == contextPeerId {
+                            context.reset(.recent)
+                        }
+                    }
+                }
+            }
+        }
+        |> mapToSignal { _ -> Signal<Void, AddChannelMemberError> in
+            return .single(Void())
+        }*/
     }
 }
