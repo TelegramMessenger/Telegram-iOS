@@ -50,14 +50,14 @@ extension Api {
     
     }
     enum ChatFull: TypeConstructorDescription {
-        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, defaultBannedRights: Api.ChatBannedRights?)
-        case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, defaultBannedRights: Api.ChatBannedRights?)
+        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?)
+        case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let defaultBannedRights):
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId):
                     if boxed {
-                        buffer.appendInt32(-2092810828)
+                        buffer.appendInt32(478652186)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -83,11 +83,10 @@ extension Api {
                     if Int(flags) & Int(1 << 5) != 0 {serializeInt32(pinnedMsgId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {stickerset!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 9) != 0 {serializeInt32(availableMinId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 14) != 0 {defaultBannedRights!.serialize(buffer, true)}
                     break
-                case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let defaultBannedRights):
+                case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId):
                     if boxed {
-                        buffer.appendInt32(1682396002)
+                        buffer.appendInt32(581055962)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -102,17 +101,16 @@ extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(pinnedMsgId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 7) != 0 {defaultBannedRights!.serialize(buffer, true)}
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let defaultBannedRights):
-                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("defaultBannedRights", defaultBannedRights)])
-                case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let defaultBannedRights):
-                return ("chatFull", [("flags", flags), ("id", id), ("about", about), ("participants", participants), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("defaultBannedRights", defaultBannedRights)])
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId):
+                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId)])
+                case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId):
+                return ("chatFull", [("flags", flags), ("id", id), ("about", about), ("participants", participants), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId)])
     }
     }
     
@@ -167,10 +165,6 @@ extension Api {
             } }
             var _20: Int32?
             if Int(_1!) & Int(1 << 9) != 0 {_20 = reader.readInt32() }
-            var _21: Api.ChatBannedRights?
-            if Int(_1!) & Int(1 << 14) != 0 {if let signature = reader.readInt32() {
-                _21 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
-            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -191,9 +185,8 @@ extension Api {
             let _c18 = (Int(_1!) & Int(1 << 5) == 0) || _18 != nil
             let _c19 = (Int(_1!) & Int(1 << 8) == 0) || _19 != nil
             let _c20 = (Int(_1!) & Int(1 << 9) == 0) || _20 != nil
-            let _c21 = (Int(_1!) & Int(1 << 14) == 0) || _21 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 {
-                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14!, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, defaultBannedRights: _21)
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 {
+                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14!, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20)
             }
             else {
                 return nil
@@ -228,10 +221,6 @@ extension Api {
             } }
             var _9: Int32?
             if Int(_1!) & Int(1 << 6) != 0 {_9 = reader.readInt32() }
-            var _10: Api.ChatBannedRights?
-            if Int(_1!) & Int(1 << 7) != 0 {if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
-            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -241,9 +230,8 @@ extension Api {
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 6) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 7) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.ChatFull.chatFull(flags: _1!, id: _2!, about: _3!, participants: _4!, chatPhoto: _5, notifySettings: _6!, exportedInvite: _7!, botInfo: _8, pinnedMsgId: _9, defaultBannedRights: _10)
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.ChatFull.chatFull(flags: _1!, id: _2!, about: _3!, participants: _4!, chatPhoto: _5, notifySettings: _6!, exportedInvite: _7!, botInfo: _8, pinnedMsgId: _9)
             }
             else {
                 return nil
@@ -1395,8 +1383,8 @@ extension Api {
         case chatEmpty(id: Int32)
         case chatForbidden(id: Int32, title: String)
         case channelForbidden(flags: Int32, id: Int32, accessHash: Int64, title: String, untilDate: Int32?)
-        case chat(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?)
-        case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?, participantsCount: Int32?)
+        case chat(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?, adminRights: Api.ChatAdminRights?, defaultBannedRights: Api.ChatBannedRights?)
+        case channel(flags: Int32, id: Int32, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, version: Int32, restrictionReason: String?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?, defaultBannedRights: Api.ChatBannedRights?, participantsCount: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1423,9 +1411,9 @@ extension Api {
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 16) != 0 {serializeInt32(untilDate!, buffer: buffer, boxed: false)}
                     break
-                case .chat(let flags, let id, let title, let photo, let participantsCount, let date, let version, let migratedTo, let adminRights, let bannedRights):
+                case .chat(let flags, let id, let title, let photo, let participantsCount, let date, let version, let migratedTo, let adminRights, let defaultBannedRights):
                     if boxed {
-                        buffer.appendInt32(17100984)
+                        buffer.appendInt32(1004149726)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -1436,11 +1424,11 @@ extension Api {
                     serializeInt32(version, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 6) != 0 {migratedTo!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 14) != 0 {adminRights!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 15) != 0 {bannedRights!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 18) != 0 {defaultBannedRights!.serialize(buffer, true)}
                     break
-                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights, let participantsCount):
+                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights, let defaultBannedRights, let participantsCount):
                     if boxed {
-                        buffer.appendInt32(-1197714950)
+                        buffer.appendInt32(1307772980)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -1453,6 +1441,7 @@ extension Api {
                     if Int(flags) & Int(1 << 9) != 0 {serializeString(restrictionReason!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 14) != 0 {adminRights!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 15) != 0 {bannedRights!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 18) != 0 {defaultBannedRights!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 17) != 0 {serializeInt32(participantsCount!, buffer: buffer, boxed: false)}
                     break
     }
@@ -1466,10 +1455,10 @@ extension Api {
                 return ("chatForbidden", [("id", id), ("title", title)])
                 case .channelForbidden(let flags, let id, let accessHash, let title, let untilDate):
                 return ("channelForbidden", [("flags", flags), ("id", id), ("accessHash", accessHash), ("title", title), ("untilDate", untilDate)])
-                case .chat(let flags, let id, let title, let photo, let participantsCount, let date, let version, let migratedTo, let adminRights, let bannedRights):
-                return ("chat", [("flags", flags), ("id", id), ("title", title), ("photo", photo), ("participantsCount", participantsCount), ("date", date), ("version", version), ("migratedTo", migratedTo), ("adminRights", adminRights), ("bannedRights", bannedRights)])
-                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights, let participantsCount):
-                return ("channel", [("flags", flags), ("id", id), ("accessHash", accessHash), ("title", title), ("username", username), ("photo", photo), ("date", date), ("version", version), ("restrictionReason", restrictionReason), ("adminRights", adminRights), ("bannedRights", bannedRights), ("participantsCount", participantsCount)])
+                case .chat(let flags, let id, let title, let photo, let participantsCount, let date, let version, let migratedTo, let adminRights, let defaultBannedRights):
+                return ("chat", [("flags", flags), ("id", id), ("title", title), ("photo", photo), ("participantsCount", participantsCount), ("date", date), ("version", version), ("migratedTo", migratedTo), ("adminRights", adminRights), ("defaultBannedRights", defaultBannedRights)])
+                case .channel(let flags, let id, let accessHash, let title, let username, let photo, let date, let version, let restrictionReason, let adminRights, let bannedRights, let defaultBannedRights, let participantsCount):
+                return ("channel", [("flags", flags), ("id", id), ("accessHash", accessHash), ("title", title), ("username", username), ("photo", photo), ("date", date), ("version", version), ("restrictionReason", restrictionReason), ("adminRights", adminRights), ("bannedRights", bannedRights), ("defaultBannedRights", defaultBannedRights), ("participantsCount", participantsCount)])
     }
     }
     
@@ -1547,7 +1536,7 @@ extension Api {
                 _9 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
             } }
             var _10: Api.ChatBannedRights?
-            if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 18) != 0 {if let signature = reader.readInt32() {
                 _10 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
             } }
             let _c1 = _1 != nil
@@ -1559,9 +1548,9 @@ extension Api {
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 6) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 14) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 15) == 0) || _10 != nil
+            let _c10 = (Int(_1!) & Int(1 << 18) == 0) || _10 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.Chat.chat(flags: _1!, id: _2!, title: _3!, photo: _4!, participantsCount: _5!, date: _6!, version: _7!, migratedTo: _8, adminRights: _9, bannedRights: _10)
+                return Api.Chat.chat(flags: _1!, id: _2!, title: _3!, photo: _4!, participantsCount: _5!, date: _6!, version: _7!, migratedTo: _8, adminRights: _9, defaultBannedRights: _10)
             }
             else {
                 return nil
@@ -1596,8 +1585,12 @@ extension Api {
             if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
                 _11 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
             } }
-            var _12: Int32?
-            if Int(_1!) & Int(1 << 17) != 0 {_12 = reader.readInt32() }
+            var _12: Api.ChatBannedRights?
+            if Int(_1!) & Int(1 << 18) != 0 {if let signature = reader.readInt32() {
+                _12 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
+            } }
+            var _13: Int32?
+            if Int(_1!) & Int(1 << 17) != 0 {_13 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 13) == 0) || _3 != nil
@@ -1609,9 +1602,10 @@ extension Api {
             let _c9 = (Int(_1!) & Int(1 << 9) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 14) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 15) == 0) || _11 != nil
-            let _c12 = (Int(_1!) & Int(1 << 17) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.Chat.channel(flags: _1!, id: _2!, accessHash: _3, title: _4!, username: _5, photo: _6!, date: _7!, version: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11, participantsCount: _12)
+            let _c12 = (Int(_1!) & Int(1 << 18) == 0) || _12 != nil
+            let _c13 = (Int(_1!) & Int(1 << 17) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.Chat.channel(flags: _1!, id: _2!, accessHash: _3, title: _4!, username: _5, photo: _6!, date: _7!, version: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11, defaultBannedRights: _12, participantsCount: _13)
             }
             else {
                 return nil
@@ -3546,7 +3540,6 @@ extension Api {
         case updateReadChannelInbox(channelId: Int32, maxId: Int32)
         case updateDeleteChannelMessages(channelId: Int32, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateChannelMessageViews(channelId: Int32, id: Int32, views: Int32)
-        case updateChatAdmins(chatId: Int32, enabled: Api.Bool, version: Int32)
         case updateChatParticipantAdmin(chatId: Int32, userId: Int32, isAdmin: Api.Bool, version: Int32)
         case updateNewStickerSet(stickerset: Api.messages.StickerSet)
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
@@ -3583,6 +3576,7 @@ extension Api {
         case updateUserPinnedMessage(userId: Int32, id: Int32)
         case updateChatPinnedMessage(chatId: Int32, id: Int32)
         case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
+        case updateChatDefaultBannedRights(peer: Api.Peer, defaultBannedRights: Api.ChatBannedRights, version: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -3857,14 +3851,6 @@ extension Api {
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(views, buffer: buffer, boxed: false)
-                    break
-                case .updateChatAdmins(let chatId, let enabled, let version):
-                    if boxed {
-                        buffer.appendInt32(1855224129)
-                    }
-                    serializeInt32(chatId, buffer: buffer, boxed: false)
-                    enabled.serialize(buffer, true)
-                    serializeInt32(version, buffer: buffer, boxed: false)
                     break
                 case .updateChatParticipantAdmin(let chatId, let userId, let isAdmin, let version):
                     if boxed {
@@ -4153,6 +4139,14 @@ extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {poll!.serialize(buffer, true)}
                     results.serialize(buffer, true)
                     break
+                case .updateChatDefaultBannedRights(let peer, let defaultBannedRights, let version):
+                    if boxed {
+                        buffer.appendInt32(1421875280)
+                    }
+                    peer.serialize(buffer, true)
+                    defaultBannedRights.serialize(buffer, true)
+                    serializeInt32(version, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -4222,8 +4216,6 @@ extension Api {
                 return ("updateDeleteChannelMessages", [("channelId", channelId), ("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
                 case .updateChannelMessageViews(let channelId, let id, let views):
                 return ("updateChannelMessageViews", [("channelId", channelId), ("id", id), ("views", views)])
-                case .updateChatAdmins(let chatId, let enabled, let version):
-                return ("updateChatAdmins", [("chatId", chatId), ("enabled", enabled), ("version", version)])
                 case .updateChatParticipantAdmin(let chatId, let userId, let isAdmin, let version):
                 return ("updateChatParticipantAdmin", [("chatId", chatId), ("userId", userId), ("isAdmin", isAdmin), ("version", version)])
                 case .updateNewStickerSet(let stickerset):
@@ -4296,6 +4288,8 @@ extension Api {
                 return ("updateChatPinnedMessage", [("chatId", chatId), ("id", id)])
                 case .updateMessagePoll(let flags, let pollId, let poll, let results):
                 return ("updateMessagePoll", [("flags", flags), ("pollId", pollId), ("poll", poll), ("results", results)])
+                case .updateChatDefaultBannedRights(let peer, let defaultBannedRights, let version):
+                return ("updateChatDefaultBannedRights", [("peer", peer), ("defaultBannedRights", defaultBannedRights), ("version", version)])
     }
     }
     
@@ -4871,25 +4865,6 @@ extension Api {
                 return nil
             }
         }
-        static func parse_updateChatAdmins(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Bool?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Bool
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateChatAdmins(chatId: _1!, enabled: _2!, version: _3!)
-            }
-            else {
-                return nil
-            }
-        }
         static func parse_updateChatParticipantAdmin(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -5444,6 +5419,27 @@ extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateMessagePoll(flags: _1!, pollId: _2!, poll: _3, results: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_updateChatDefaultBannedRights(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Api.ChatBannedRights?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateChatDefaultBannedRights(peer: _1!, defaultBannedRights: _2!, version: _3!)
             }
             else {
                 return nil

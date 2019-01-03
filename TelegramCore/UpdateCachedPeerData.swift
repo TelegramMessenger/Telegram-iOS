@@ -184,7 +184,6 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                             let participants = CachedGroupParticipants(apiParticipants: chatFull.participants)
                                             let exportedInvitation = ExportedInvitation(apiExportedInvite: chatFull.exportedInvite)
                                             let pinnedMessageId = chatFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
-                                            let defaultBannedRights = chatFull.defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:))
                                         
                                             var peers: [Peer] = []
                                             var peerPresences: [PeerId: PeerPresence] = [:]
@@ -207,6 +206,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                             
                                             updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                                             
+                                            var flags = CachedGroupFlags()
+                                            if (chatFull.flags & 1 << 7) != 0 {
+                                                flags.insert(.canChangeUsername)
+                                            }
+                                            
                                             transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                                 let previous: CachedGroupData
                                                 if let current = current as? CachedGroupData {
@@ -219,8 +223,8 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     .withUpdatedExportedInvitation(exportedInvitation)
                                                     .withUpdatedBotInfos(botInfos)
                                                     .withUpdatedPinnedMessageId(pinnedMessageId)
-                                                    .withUpdatedDefaultBannedRights(defaultBannedRights)
                                                     .withUpdatedAbout(chatFull.about)
+                                                    .withUpdatedFlags(flags)
                                             })
                                         case .channelFull:
                                             break
@@ -250,7 +254,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, apiDefaultBannedRights):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -292,8 +296,6 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                             if let migratedFromChatId = migratedFromChatId, let migratedFromMaxId = migratedFromMaxId {
                                                 migrationReference = ChannelMigrationReference(maxMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: migratedFromChatId), namespace: Namespaces.Message.Cloud, id: migratedFromMaxId))
                                             }
-                                            
-                                            let defaultBannedRights = apiDefaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:))
                                             
                                             var peers: [Peer] = []
                                             var peerPresences: [PeerId: PeerPresence] = [:]
@@ -352,7 +354,6 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId: PeerId, network
                                                     .withUpdatedStickerPack(stickerPack)
                                                     .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                     .withUpdatedMigrationReference(migrationReference)
-                                                    .withUpdatedDefaultBannedRights(defaultBannedRights)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

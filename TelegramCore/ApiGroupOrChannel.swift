@@ -21,7 +21,7 @@ func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMed
 
 func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
     switch chat {
-        case let .chat(flags, id, title, photo, participantsCount, date, version, migratedTo, adminRights, bannedRights):
+        case let .chat(flags, id, title, photo, participantsCount, date, version, migratedTo, adminRights, defaultBannedRights):
             let left = (flags & ((1 << 1) | (1 << 2))) != 0
             var migrationReference: TelegramGroupToChannelMigrationReference?
             if let migratedTo = migratedTo {
@@ -36,21 +36,18 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             var role: TelegramGroupRole = .member
             if (flags & (1 << 0)) != 0 {
                 role = .creator
-            } else if (flags & (1 << 4)) != 0 {
-                role = .admin
-            }
-            if (flags & (1 << 3)) != 0 {
-                groupFlags.insert(.adminsEnabled)
+            } else if adminRights != nil {
+                //role = .admin
             }
             if (flags & (1 << 5)) != 0 {
                 groupFlags.insert(.deactivated)
             }
-            return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, migrationReference: migrationReference, creationDate: date, version: Int(version))
+            return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:)), migrationReference: migrationReference, creationDate: date, version: Int(version))
         case let .chatEmpty(id):
-            return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: "", photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], migrationReference: nil, creationDate: 0, version: 0)
+            return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: "", photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
         case let .chatForbidden(id, title):
-            return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], migrationReference: nil, creationDate: 0, version: 0)
-        case let .channel(flags, id, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights, _/*feed*//*, feedId*/):
+            return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
+        case let .channel(flags, id, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights, defaultBannedRights, _/*feed*//*, feedId*/):
             let participationStatus: TelegramChannelParticipationStatus
             if (flags & Int32(1 << 1)) != 0 {
                 participationStatus = .kicked
@@ -87,7 +84,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 restrictionInfo = nil
             }
             
-            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: date, version: version, participationStatus: participationStatus, info: info, flags: channelFlags, restrictionInfo: restrictionInfo, adminRights: adminRights.flatMap(TelegramChatAdminRights.init), bannedRights: bannedRights.flatMap(TelegramChatBannedRights.init), peerGroupId: /*feed*/nil/*feedId.flatMap { PeerGroupId(rawValue: $0) }*/)
+            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: date, version: version, participationStatus: participationStatus, info: info, flags: channelFlags, restrictionInfo: restrictionInfo, adminRights: adminRights.flatMap(TelegramChatAdminRights.init), bannedRights: bannedRights.flatMap(TelegramChatBannedRights.init), defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init), peerGroupId: /*feed*/nil/*feedId.flatMap { PeerGroupId(rawValue: $0) }*/)
         case let .channelForbidden(flags, id, accessHash, title, untilDate):
             let info: TelegramChannelInfo
             if (flags & Int32(1 << 8)) != 0 {
@@ -96,7 +93,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
                 info = .broadcast(TelegramChannelBroadcastInfo(flags: []))
             }
             
-            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .kicked, info: info, flags: TelegramChannelFlags(), restrictionInfo: nil, adminRights: nil, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], personal: true, untilDate: untilDate ?? Int32.max), peerGroupId: nil)
+            return TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: id), accessHash: accessHash, title: title, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .kicked, info: info, flags: TelegramChannelFlags(), restrictionInfo: nil, adminRights: nil, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: untilDate ?? Int32.max), defaultBannedRights: nil, peerGroupId: nil)
     }
 }
 
@@ -104,7 +101,7 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
     switch rhs {
         case .chat, .chatEmpty, .chatForbidden, .channelForbidden:
             return parseTelegramGroupOrChannel(chat: rhs)
-        case let .channel(flags, _, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights, _/*feed*//*, feedId*/):
+        case let .channel(flags, _, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights, defaultBannedRights, _/*feed*//*, feedId*/):
             if accessHash != nil && (flags & (1 << 12)) == 0 {
                 return parseTelegramGroupOrChannel(chat: rhs)
             } else if let lhs = lhs as? TelegramChannel {
@@ -122,7 +119,7 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
                         let infoFlags = TelegramChannelGroupFlags()
                         info = .group(TelegramChannelGroupInfo(flags: infoFlags))
                 }
-                return TelegramChannel(id: lhs.id, accessHash: lhs.accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: lhs.creationDate, version: lhs.version, participationStatus: lhs.participationStatus, info: info, flags: channelFlags, restrictionInfo: lhs.restrictionInfo, adminRights: lhs.adminRights, bannedRights: lhs.bannedRights, peerGroupId: lhs.peerGroupId)
+                return TelegramChannel(id: lhs.id, accessHash: lhs.accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: lhs.creationDate, version: lhs.version, participationStatus: lhs.participationStatus, info: info, flags: channelFlags, restrictionInfo: lhs.restrictionInfo, adminRights: lhs.adminRights, bannedRights: lhs.bannedRights, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init), peerGroupId: lhs.peerGroupId)
             } else {
                 return nil
             }

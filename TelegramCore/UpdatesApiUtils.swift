@@ -167,8 +167,8 @@ extension Api.Chat {
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: id)
             case let .chatForbidden(id, _):
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: id)
-            case let .channel(_, id, _, _, _, _, _, _, _, _, _, _/*feed*//*, _*/):
-                return PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)
+            case let .channel(channel):
+                return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channel.id)
             case let .channelForbidden(_, id, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)
         }
@@ -266,8 +266,6 @@ extension Api.Update {
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateChannelTooLong(_, channelId, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
-            case let .updateChatAdmins(chatId, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)]
             case let .updateChatParticipantAdd(chatId, userId, inviterId, _, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId)]
             case let .updateChatParticipantAdmin(chatId, userId, _, _):

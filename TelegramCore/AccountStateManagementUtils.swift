@@ -1034,17 +1034,12 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         return current
                     }
                 })
-            case let .updateChatAdmins(chatId, enabled, version):
-                updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), { peer in
+            case let .updateChatDefaultBannedRights(peer, defaultBannedRights, version):
+                updatedState.updatePeer(peer.peerId, { peer in
                     if let group = peer as? TelegramGroup {//, group.version == version - 1 {
-                        var flags = group.flags
-                        switch enabled {
-                            case .boolTrue:
-                                flags.insert(.adminsEnabled)
-                            case .boolFalse:
-                                let _ = flags.remove(.adminsEnabled)
-                        }
-                        return group.updateFlags(flags: flags, version: max(group.version, Int(version)))
+                        return group.updateDefaultBannedRights(TelegramChatBannedRights(apiBannedRights: defaultBannedRights), version: max(group.version, Int(version)))
+                    } else if let channel = peer as? TelegramChannel {//, group.version == version - 1 {
+                        return channel.withUpdatedDefaultBannedRights(TelegramChatBannedRights(apiBannedRights: defaultBannedRights))
                     } else {
                         return peer
                     }

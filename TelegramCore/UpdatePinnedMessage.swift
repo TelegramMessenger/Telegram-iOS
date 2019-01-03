@@ -78,15 +78,15 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         } else {
             var canPin = false
             if let group = peer as? TelegramGroup {
-                if group.flags.contains(.adminsEnabled) {
-                    switch group.role {
-                        case .creator, .admin:
+                switch group.role {
+                    case .creator, .admin:
+                        canPin = true
+                    default:
+                        if let defaultBannedRights = group.defaultBannedRights {
+                            canPin = !defaultBannedRights.flags.contains(.banPinMessages)
+                        } else {
                             canPin = true
-                        default:
-                            canPin = false
-                    }
-                } else {
-                    canPin = true
+                        }
                 }
             } else if let _ = peer as? TelegramUser, let cachedPeerData = cachedPeerData as? CachedUserData {
                 canPin = cachedPeerData.canPinMessages

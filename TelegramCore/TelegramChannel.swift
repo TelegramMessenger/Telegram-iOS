@@ -158,6 +158,7 @@ public final class TelegramChannel: Peer {
     public let restrictionInfo: PeerAccessRestrictionInfo?
     public let adminRights: TelegramChatAdminRights?
     public let bannedRights: TelegramChatBannedRights?
+    public let defaultBannedRights: TelegramChatBannedRights?
     public let peerGroupId: PeerGroupId?
     
     public var indexName: PeerIndexNameRepresentation {
@@ -167,7 +168,7 @@ public final class TelegramChannel: Peer {
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, accessHash: Int64?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChatAdminRights?, bannedRights: TelegramChatBannedRights?, peerGroupId: PeerGroupId?) {
+    public init(id: PeerId, accessHash: Int64?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChatAdminRights?, bannedRights: TelegramChatBannedRights?, defaultBannedRights: TelegramChatBannedRights?, peerGroupId: PeerGroupId?) {
         self.id = id
         self.accessHash = accessHash
         self.title = title
@@ -181,6 +182,7 @@ public final class TelegramChannel: Peer {
         self.restrictionInfo = restrictionInfo
         self.adminRights = adminRights
         self.bannedRights = bannedRights
+        self.defaultBannedRights = defaultBannedRights
         self.peerGroupId = peerGroupId
     }
     
@@ -198,6 +200,7 @@ public final class TelegramChannel: Peer {
         self.restrictionInfo = decoder.decodeObjectForKey("ri") as? PeerAccessRestrictionInfo
         self.adminRights = decoder.decodeObjectForKey("ar", decoder: { TelegramChatAdminRights(decoder: $0) }) as? TelegramChatAdminRights
         self.bannedRights = decoder.decodeObjectForKey("br", decoder: { TelegramChatBannedRights(decoder: $0) }) as? TelegramChatBannedRights
+        self.defaultBannedRights = decoder.decodeObjectForKey("dbr", decoder: { TelegramChatBannedRights(decoder: $0) }) as? TelegramChatBannedRights
         if let value = decoder.decodeOptionalInt32ForKey("pgi") {
             self.peerGroupId = PeerGroupId(rawValue: value)
         } else {
@@ -239,6 +242,11 @@ public final class TelegramChannel: Peer {
         } else {
             encoder.encodeNil(forKey: "br")
         }
+        if let defaultBannedRights = self.defaultBannedRights {
+            encoder.encodeObject(defaultBannedRights, forKey: "dbr")
+        } else {
+            encoder.encodeNil(forKey: "dbr")
+        }
         if let peerGroupId = self.peerGroupId {
             encoder.encodeInt32(peerGroupId.rawValue, forKey: "pgi")
         } else {
@@ -271,6 +279,10 @@ public final class TelegramChannel: Peer {
             return false
         }
         
+        if self.defaultBannedRights != other.defaultBannedRights {
+            return false
+        }
+        
         if self.peerGroupId != other.peerGroupId {
             return false
         }
@@ -279,7 +291,11 @@ public final class TelegramChannel: Peer {
     }
     
     func withUpdatedAddressName(_ addressName: String?) -> TelegramChannel {
-        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, peerGroupId: self.peerGroupId)
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights, peerGroupId: self.peerGroupId)
+    }
+    
+    func withUpdatedDefaultBannedRights(_ defaultBannedRights: TelegramChatBannedRights?) -> TelegramChannel {
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: defaultBannedRights, peerGroupId: self.peerGroupId)
     }
 }
 
@@ -312,8 +328,11 @@ public extension TelegramChannel {
                     if let adminRights = self.adminRights, adminRights.flags.contains(.canPostMessages) {
                         return true
                     }
-                    if let bannedRights = self.bannedRights, !bannedRights.flags.contains(.banSendMessages) {
-                        return true
+                    if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banSendMessages) {
+                        return false
+                    }
+                    if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banSendMessages) {
+                        return false
                     }
                     return true
                 }
@@ -328,8 +347,11 @@ public extension TelegramChannel {
                     if let adminRights = self.adminRights, adminRights.flags.contains(.canPinMessages) {
                         return true
                     }
-                    if let bannedRights = self.bannedRights, !bannedRights.flags.contains(.banPinMessages) {
-                        return true
+                    if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banPinMessages) {
+                        return false
+                    }
+                    if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banPinMessages) {
+                        return false
                     }
                     return true
                 }
@@ -344,8 +366,11 @@ public extension TelegramChannel {
                     if let adminRights = self.adminRights, adminRights.flags.contains(.canInviteUsers) {
                         return true
                     }
-                    if let bannedRights = self.bannedRights, !bannedRights.flags.contains(.banAddMembers) {
-                        return true
+                    if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banAddMembers) {
+                        return false
+                    }
+                    if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banAddMembers) {
+                        return false
                     }
                     return true
                 }
@@ -375,8 +400,11 @@ public extension TelegramChannel {
                     if let adminRights = self.adminRights, adminRights.flags.contains(.canChangeInfo) {
                         return true
                     }
-                    if let bannedRights = self.bannedRights, !bannedRights.flags.contains(.banChangeInfo) {
-                        return true
+                    if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banChangeInfo) {
+                        return false
+                    }
+                    if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banChangeInfo) {
+                        return false
                     }
                     return true
                 }
@@ -391,5 +419,15 @@ public extension TelegramChannel {
                 }
                 return false
         }
+    }
+    
+    public func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> (Int32, Bool)? {
+        if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(rights) {
+            return (Int32.max, false)
+        }
+        if let bannedRights = self.bannedRights, bannedRights.flags.contains(rights) {
+            return (bannedRights.untilDate, true)
+        }
+        return nil
     }
 }

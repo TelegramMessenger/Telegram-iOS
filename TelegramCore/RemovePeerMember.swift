@@ -11,7 +11,7 @@ import Foundation
 
 public func removePeerMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
     if peerId.namespace == Namespaces.Peer.CloudChannel {
-        return updateChannelMemberBannedRights(account: account, peerId: peerId, memberId: memberId, rights: TelegramChatBannedRights(flags: [.banReadMessages], personal: false, untilDate: 0))
+        return updateChannelMemberBannedRights(account: account, peerId: peerId, memberId: memberId, rights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: 0))
         |> mapToSignal { _ -> Signal<Void, NoError> in
             return .complete()
         }
