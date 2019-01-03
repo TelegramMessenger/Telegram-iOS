@@ -758,7 +758,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
         }
     } else {
-        notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
+        notificationsText = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: peerNotificationSettings.messageSound, default: globalNotificationSettings.effective.channels.sound)
     }
     
     if let editingState = state.editingState {
@@ -768,8 +768,19 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             entries.append(GroupInfoEntry.groupDescriptionSetup(presentationData.theme, presentationData.strings.Channel_About_Placeholder, editingState.editingDescriptionText))
         }
         
-        if let group = view.peers[view.peerId] as? TelegramGroup {
+        if let group = view.peers[view.peerId] as? TelegramGroup, let cachedGroupData = view.cachedData as? CachedGroupData {
             if case .creator = group.role {
+                var activePermissionCount: Int?
+                if let defaultBannedRights = cachedGroupData.defaultBannedRights {
+                    var count = 0
+                    for right in allGroupPermissionList {
+                        if !defaultBannedRights.flags.contains(right) {
+                            count += 1
+                        }
+                    }
+                    activePermissionCount = count
+                }
+                entries.append(GroupInfoEntry.permissions(presentationData.theme, presentationData.strings.GroupInfo_Permissions, activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""))
                 entries.append(.administrators(presentationData.theme, presentationData.strings.GroupInfo_Administrators, ""))
             }
         } else if let cachedChannelData = view.cachedData as? CachedChannelData {
@@ -1310,16 +1321,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
             pushControllerImpl?(controller)
         }
     }, openAdministrators: {
-        if peerId.namespace == Namespaces.Peer.CloudGroup {
-            pushControllerImpl?(groupAdminsController(account: account, peerId: peerId))
-        } else {
-            pushControllerImpl?(channelAdminsController(account: account, peerId: peerId))
-        }
+        pushControllerImpl?(channelAdminsController(account: account, peerId: peerId))
     }, openPermissions: {
-        if peerId.namespace == Namespaces.Peer.CloudGroup {
-        } else {
-            pushControllerImpl?(channelPermissionsController(account: account, peerId: peerId))
-        }
+        pushControllerImpl?(channelPermissionsController(account: account, peerId: peerId))
     }, updateEditingName: { editingName in
         updateState { state in
             if let editingState = state.editingState {
@@ -1576,7 +1580,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
         })
     }, promotePeer: { participant in
         presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
-        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, restrictPeer: { participant in
         presentControllerImpl?(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
         }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

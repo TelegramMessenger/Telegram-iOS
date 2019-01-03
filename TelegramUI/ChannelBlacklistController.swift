@@ -314,7 +314,7 @@ public func channelBlacklistController(account: Account, peerId: PeerId) -> View
                     |> deliverOnMainQueue).start(error: { [weak progress] _ in
                         progress?.dismiss()
                         dismissController?()
-                    }, completed: {[weak progress] in 
+                    }, completed: { [weak progress] in 
                         progress?.dismiss()
                         dismissController?()
                     }))

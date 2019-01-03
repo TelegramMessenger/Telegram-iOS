@@ -145,10 +145,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
-                    let controller = ThemeGalleryController(account: account, wallpapers: wallpapers, at: wallpaper)
+                    let controller = WallpaperListPreviewController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper))
+                    strongSelf.present(controller, nil)
+                    /*let controller = ThemeGalleryController(account: account, wallpapers: wallpapers, at: wallpaper)
                     strongSelf.present(controller, ThemePreviewControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
                         return nil
-                    }))
+                    }))*/
                 }
             }
         })

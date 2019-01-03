@@ -5,62 +5,115 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-enum WallpaperListPreviewSource {
-    case common
-    case wallpaper(TelegramWallpaper)
-}
-
 private final class WallpaperBackgroundNode: ASDisplayNode {
-    var fetchDisposable: Disposable?
+    let wallpaper: TelegramWallpaper
+    private var fetchDisposable: Disposable?
+    private let imageNode: TransformImageNode
     
-    init(network: Network, wallpaper: TelegramWallpaper) {
+    init(account: Account, wallpaper: TelegramWallpaper) {
+        self.wallpaper = wallpaper
+        self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = .subsequentUpdates
+        
         super.init()
         
+        self.backgroundColor = UIColor(rgb: arc4random())
+        self.addSubnode(self.imageNode)
+        
+        let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
+        let fetchSignal: Signal<FetchResourceSourceType, NoError>
+        let displaySize: CGSize
         switch wallpaper {
             case .builtin:
-                break
+                displaySize = CGSize(width: 640.0, height: 1136.0)
+                signal = settingsBuiltinWallpaperImage(account: account)
+                fetchSignal = .complete()
             case let .color(color):
-                break
+                displaySize = CGSize(width: 1.0, height: 1.0)
+                signal = .never()
+                fetchSignal = .complete()
+                self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
             case let .file(file):
-                break
+                let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
+                displaySize = dimensions.dividedByScreenScale().integralFloor
+                self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
+                
+                var convertedRepresentations: [ImageRepresentationWithReference] = []
+                for representation in file.file.previewRepresentations {
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
+                }
+                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
+                signal = chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations)
+                fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
             case let .image(representations):
-                break
+                if let largestSize = largestImageRepresentation(representations) {
+                    displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
+                    self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
+                    
+                    let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
+                    signal = chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations)
+                    
+                    if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
+                        fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[largestIndex].reference)
+                    } else {
+                        fetchSignal = .complete()
+                    }
+                } else {
+                    displaySize = CGSize(width: 100.0, height: 100.0)
+                    signal = .never()
+                    fetchSignal = .complete()
+                }
         }
+        self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
+        self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
+        self.fetchDisposable = fetchSignal.start()
+        self.imageNode.contentMode = .scaleAspectFill
     }
     
     deinit {
         self.fetchDisposable?.dispose()
     }
+    
+    func updateLayout(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+    }
 }
 
 final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private let account: Account
-    private let presentationData: PresentationData
+    private var presentationData: PresentationData
+    private let dismiss: () -> Void
+    
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     private let toolbarBackground: ASDisplayNode
     private let toolbarSeparator: ASDisplayNode
+    private let toolbarVerticalSeparator: ASDisplayNode
     private let toolbarButtonCancel: HighlightableButtonNode
     private let toolbarButtonApply: HighlightableButtonNode
     
     private var wallpapersDisposable: Disposable?
     private var wallpapers: [TelegramWallpaper]?
-    let ready = Promise<Void>()
+    let ready = ValuePromise<Bool>(false)
     
     private var messageNodes: [ListViewItemNode]?
     
     private var visibleBackgroundNodes: [WallpaperBackgroundNode] = []
+    private var centralWallpaper: TelegramWallpaper?
     private var visibleBackgroundNodesOffset: CGFloat = 0.0
     
-    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource) {
+    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
+        self.dismiss = dismiss
         
         self.toolbarBackground = ASDisplayNode()
         self.toolbarBackground.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
         
         self.toolbarSeparator = ASDisplayNode()
         self.toolbarSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        self.toolbarVerticalSeparator = ASDisplayNode()
+        self.toolbarVerticalSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
         self.toolbarButtonCancel = HighlightableButtonNode()
         self.toolbarButtonCancel.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Common_Cancel, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
@@ -74,11 +127,15 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         
         self.addSubnode(self.toolbarBackground)
         self.addSubnode(self.toolbarSeparator)
+        self.addSubnode(self.toolbarVerticalSeparator)
         self.addSubnode(self.toolbarButtonCancel)
         self.addSubnode(self.toolbarButtonApply)
         
+        self.toolbarButtonCancel.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
+        self.toolbarButtonCancel.addTarget(self, action: #selector(self.applyPressed), forControlEvents: .touchUpInside)
+        
         switch source {
-            case .common:
+            /*case .common:
                 self.wallpapersDisposable = (telegramWallpapers(postbox: account.postbox, network: account.network)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
@@ -87,14 +144,22 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                     if let (layout, navigationHeight) = strongSelf.validLayout {
                         strongSelf.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
                     }
-                    strongSelf.ready.set(.single(Void()))
-                })
-            case let .wallpaper(wallpaper):
-                self.wallpapers = [wallpaper]
+                    strongSelf.ready.set(true)
+                })*/
+            case let .list(wallpapers, central):
+                self.wallpapers = wallpapers
+                self.centralWallpaper = central
                 if let (layout, navigationHeight) = self.validLayout {
                     self.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
                 }
-                self.ready.set(.single(Void()))
+                self.ready.set(true)
+            case let .wallpaper(wallpaper):
+                self.wallpapers = [wallpaper]
+                self.centralWallpaper = wallpaper
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                }
+                self.ready.set(true)
         }
     }
     
@@ -106,6 +171,20 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         super.didLoad()
         
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        self.toolbarBackground.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.toolbarSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        self.toolbarVerticalSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        self.toolbarButtonCancel.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Common_Cancel, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
+        self.toolbarButtonApply.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Wallpaper_Set, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
+        
+        self.backgroundColor = .black
+        if let (layout, navigationHeight) = self.validLayout {
+            self.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
+        }
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -181,6 +260,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                     itemNode = node
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
+                itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
                 messageNodes.append(itemNode!)
                 self.addSubnode(itemNode!)
             }
@@ -190,6 +270,10 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         let bottomInset = layout.intrinsicInsets.bottom + 44.0
         transition.updateFrame(node: self.toolbarBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: layout.size.width, height: bottomInset)))
         transition.updateFrame(node: self.toolbarSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.toolbarVerticalSeparator, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0), y: layout.size.height - bottomInset), size: CGSize(width: UIScreenPixel, height: bottomInset)))
+        
+        transition.updateFrame(node: self.toolbarButtonCancel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: floor(layout.size.width / 2.0), height: 44.0)))
+        transition.updateFrame(node: self.toolbarButtonApply, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0), y: layout.size.height - bottomInset), size: CGSize(width: ceil(layout.size.width / 2.0), height: 44.0)))
         
         if let messageNodes = self.messageNodes {
             var bottomOffset: CGFloat = layout.size.height - bottomInset - 3.0
@@ -203,6 +287,80 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     }
     
     private func updateVisibleBackgroundNodes(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        var visibleBackgroundNodes: [WallpaperBackgroundNode] = []
+        if let wallpapers = self.wallpapers, let centralWallpaper = self.centralWallpaper {
+            outer: for i in 0 ..< wallpapers.count {
+                if wallpapers[i] == centralWallpaper {
+                    for j in max(0, i - 1) ... min(i + 1, wallpapers.count - 1) {
+                        let itemPostition = j - i
+                        let itemFrame = CGRect(origin: CGPoint(x: CGFloat(itemPostition) * layout.size.width, y: 0.0), size: layout.size)
+                        var currentItemNode: WallpaperBackgroundNode?
+                        inner: for current in self.visibleBackgroundNodes {
+                            if current.wallpaper == wallpapers[j] {
+                                currentItemNode = current
+                                break inner
+                            }
+                        }
+                        let itemNode = currentItemNode ?? WallpaperBackgroundNode(account: self.account, wallpaper: wallpapers[j])
+                        visibleBackgroundNodes.append(itemNode)
+                        let itemNodeTransition: ContainedViewLayoutTransition
+                        if itemNode.supernode == nil {
+                            self.insertSubnode(itemNode, at: 0)
+                            itemNodeTransition = .immediate
+                        } else {
+                            itemNodeTransition = transition
+                        }
+                        itemNodeTransition.updateFrame(node: itemNode, frame: itemFrame)
+                        itemNode.updateLayout(layout, navigationHeight: navigationBarHeight, transition: itemNodeTransition)
+                        visibleBackgroundNodes.append(itemNode)
+                    }
+                    break outer
+                }
+            }
+        }
+        
+        for itemNode in self.visibleBackgroundNodes {
+            var found = false
+            inner: for updatedItemNode in visibleBackgroundNodes {
+                if itemNode === updatedItemNode {
+                    found = true
+                    break
+                }
+            }
+            if !found {
+                itemNode.removeFromSupernode()
+            }
+        }
+        self.visibleBackgroundNodes = visibleBackgroundNodes
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let (layout, _) = self.validLayout {
+            let additionalButtonHeight = layout.intrinsicInsets.bottom
+            
+            if self.toolbarButtonCancel.isEnabled {
+                var buttonFrame = self.toolbarButtonCancel.frame
+                buttonFrame.size.height += additionalButtonHeight
+                if buttonFrame.contains(point) {
+                    return self.toolbarButtonCancel.view
+                }
+            }
+            if self.toolbarButtonApply.isEnabled {
+                var buttonFrame = self.toolbarButtonApply.frame
+                buttonFrame.size.height += additionalButtonHeight
+                if buttonFrame.contains(point) {
+                    return self.toolbarButtonApply.view
+                }
+            }
+        }
+        return super.hitTest(point, with: event)
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismiss()
+    }
+    
+    @objc private func applyPressed() {
         
     }
 }

@@ -474,7 +474,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                     notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
                 }
             } else {
-                notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
+                notificationsText = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.channels.sound)
             }
             entries.append(ChannelInfoEntry.notifications(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Notifications, value: notificationsText))
         }

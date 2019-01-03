@@ -239,7 +239,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
             }
         }, promotePeer: { participant in
             present(channelAdminController(account: account, peerId: peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
-            }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, restrictPeer: { participant in
             present(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -289,13 +289,13 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         })
         
         let themeAndStringsPromise = self.themeAndStringsPromise
-        let foundItems = combineLatest(searchQuery.get(), account.postbox.multiplePeersView([peerId]) |> take(1))
+        let foundItems = combineLatest(searchQuery.get(), account.postbox.peerView(id: peerId) |> take(1))
         |> mapToSignal { query, peerView -> Signal<[ChannelMembersSearchEntry]?, NoError> in
-            guard let channel = peerView.peers[peerId] as? TelegramChannel else {
+            guard let query = query, !query.isEmpty else {
                 return .single(nil)
             }
-            updateActivity(true)
-            if let query = query, !query.isEmpty {
+            if let channel = peerView.peers[peerId] as? TelegramChannel {
+                updateActivity(true)
                 let foundGroupMembers: Signal<[RenderedChannelParticipant], NoError>
                 let foundMembers: Signal<[RenderedChannelParticipant], NoError>
                 
@@ -573,6 +573,248 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
                             entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: themeAndStrings.4))
+                            index += 1
+                        }
+                    }
+                    
+                    return entries
+                }
+            } else if let group = peerView.peers[peerId] as? TelegramGroup, let cachedData = peerView.cachedData as? CachedGroupData {
+                updateActivity(true)
+                let foundGroupMembers: Signal<[RenderedChannelParticipant], NoError>
+                let foundMembers: Signal<[RenderedChannelParticipant], NoError>
+                
+                switch mode {
+                    case .searchMembers, .banAndPromoteActions:
+                        var matchingMembers: [RenderedChannelParticipant] = []
+                        if let participants = cachedData.participants {
+                            for participant in participants.participants {
+                                guard let peer = peerView.peers[participant.peerId] else {
+                                    continue
+                                }
+                                if !peer.indexName.matchesByTokens(query.lowercased()) {
+                                    continue
+                                }
+                                var creatorPeer: Peer?
+                                for participant in participants.participants {
+                                    if let peer = peerView.peers[participant.peerId] {
+                                        switch participant {
+                                            case .creator:
+                                                creatorPeer = peer
+                                            default:
+                                                break
+                                        }
+                                    }
+                                }
+                                
+                                let renderedParticipant: RenderedChannelParticipant
+                                switch participant {
+                                    case .creator:
+                                        renderedParticipant = RenderedChannelParticipant(participant: .creator(id: peer.id), peer: peer)
+                                    case .admin:
+                                        var peers: [PeerId: Peer] = [:]
+                                        if let creator = creatorPeer {
+                                            peers[creator.id] = creator
+                                        }
+                                        peers[peer.id] = peer
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creatorPeer?.id ?? account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == account.peerId), banInfo: nil), peer: peer, peers: peers)
+                                    case .member:
+                                        var peers: [PeerId: Peer] = [:]
+                                        peers[peer.id] = peer
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil), peer: peer, peers: peers)
+                                }
+                                matchingMembers.append(renderedParticipant)
+                            }
+                        }
+                        foundGroupMembers = .single(matchingMembers)
+                        foundMembers = .single([])
+                    case .inviteActions:
+                        foundGroupMembers = .single([])
+                        foundMembers = .single([])
+                    case .searchAdmins:
+                        foundGroupMembers = .single([])
+                        foundMembers = .single([])
+                    case .searchBanned:
+                        foundGroupMembers = .single([])
+                        foundMembers = .single([])
+                    case .searchKicked:
+                        foundGroupMembers = .single([])
+                        foundMembers = .single([])
+                }
+                
+                return combineLatest(foundGroupMembers, foundMembers, themeAndStringsPromise.get(), statePromise.get())
+                |> map { foundGroupMembers, foundMembers, themeAndStrings, state -> [ChannelMembersSearchEntry]? in
+                    var entries: [ChannelMembersSearchEntry] = []
+                    
+                    var existingPeerIds = Set<PeerId>()
+                    for filter in filters {
+                        switch filter {
+                        case let .exclude(ids):
+                            existingPeerIds = existingPeerIds.union(ids)
+                        case .disable:
+                            break
+                        }
+                    }
+                    switch mode {
+                        case .inviteActions, .banAndPromoteActions:
+                            existingPeerIds.insert(account.peerId)
+                        case .searchMembers, .searchAdmins, .searchBanned, .searchKicked:
+                            break
+                    }
+                    
+                    var index = 0
+                    
+                    for participant in foundGroupMembers {
+                        if !existingPeerIds.contains(participant.peer.id) {
+                            existingPeerIds.insert(participant.peer.id)
+                            let section: ChannelMembersSearchSection
+                            switch mode {
+                            case .inviteActions, .banAndPromoteActions:
+                                section = .members
+                            case .searchBanned:
+                                section = .banned
+                            case .searchMembers, .searchKicked, .searchAdmins:
+                                section = .none
+                            }
+                            
+                            var canPromote: Bool = false
+                            var canRestrict: Bool = false
+                            /*switch participant.participant {
+                            case .creator:
+                                canPromote = false
+                                canRestrict = false
+                            case let .member(_, _, adminRights, bannedRights):
+                                if channel.hasPermission(.addAdmins) {
+                                    canPromote = true
+                                } else {
+                                    canPromote = false
+                                }
+                                if channel.hasPermission(.banMembers) {
+                                    canRestrict = true
+                                } else {
+                                    canRestrict = false
+                                }
+                                if canPromote {
+                                    if let bannedRights = bannedRights {
+                                        if bannedRights.restrictedBy != account.peerId && !channel.flags.contains(.isCreator) {
+                                            canPromote = false
+                                        }
+                                    }
+                                }
+                                if canRestrict {
+                                    if let adminRights = adminRights {
+                                        if adminRights.promotedBy != account.peerId && !channel.flags.contains(.isCreator) {
+                                            canRestrict = false
+                                        }
+                                    }
+                                }
+                            }*/
+                            
+                            var label: String?
+                            var enabled = true
+                            if case .banAndPromoteActions = mode {
+                                if case .creator = participant.participant {
+                                    label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    enabled = false
+                                }
+                            } else if case .searchMembers = mode {
+                                switch participant.participant {
+                                    case .creator:
+                                        label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    case let .member(member):
+                                        if member.adminInfo != nil {
+                                            label = themeAndStrings.1.Channel_Management_LabelEditor
+                                        }
+                                }
+                            }
+                            
+                            if state.removingParticipantIds.contains(participant.peer.id) {
+                                enabled = false
+                            }
+                            
+                            var peerActions: [ParticipantRevealAction] = []
+                            /*if case .searchMembers = mode {
+                                if canPromote {
+                                    peerActions.append(ParticipantRevealAction(type: .neutral, title: themeAndStrings.1.GroupInfo_ActionPromote, action: .promote))
+                                }
+                                if canRestrict {
+                                    peerActions.append(ParticipantRevealAction(type: .warning, title: themeAndStrings.1.GroupInfo_ActionRestrict, action: .restrict))
+                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: themeAndStrings.1.Common_Delete, action: .remove))
+                                }
+                            }*/
+                            
+                            switch mode {
+                                case .searchAdmins:
+                                    switch participant.participant {
+                                    case .creator:
+                                        label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    case let .member(_, _, adminInfo, _):
+                                        if let adminInfo = adminInfo {
+                                            if let peer = participant.peers[adminInfo.promotedBy] {
+                                                label = themeAndStrings.1.Channel_Management_PromotedBy(peer.displayTitle).0
+                                            }
+                                        }
+                                    }
+                                case .searchBanned:
+                                    switch participant.participant {
+                                        case let .member(_, _, _, banInfo):
+                                            if let banInfo = banInfo {
+                                                var exceptionsString = ""
+                                                for rights in allGroupPermissionList {
+                                                    if banInfo.rights.flags.contains(rights) {
+                                                        if !exceptionsString.isEmpty {
+                                                            exceptionsString.append(", ")
+                                                        }
+                                                        exceptionsString.append(compactStringForGroupPermission(strings: themeAndStrings.1, right: rights))
+                                                    }
+                                                }
+                                                label = exceptionsString
+                                            }
+                                        default:
+                                            break
+                                    }
+                                case .searchKicked:
+                                    switch participant.participant {
+                                    case let .member(_, _, _, banInfo):
+                                        if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
+                                            label = themeAndStrings.1.Channel_Management_RemovedBy(peer.displayTitle).0
+                                        }
+                                    default:
+                                        break
+                                    }
+                                default:
+                                    break
+                            }
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: peerActions, revealed: state.revealedPeerId == participant.peer.id, enabled: enabled), section: section, dateTimeFormat: themeAndStrings.4))
+                            index += 1
+                        }
+                    }
+                    
+                    for participant in foundMembers {
+                        if !existingPeerIds.contains(participant.peer.id) {
+                            existingPeerIds.insert(participant.peer.id)
+                            let section: ChannelMembersSearchSection
+                            var addIcon = false
+                            switch mode {
+                                case .inviteActions, .banAndPromoteActions:
+                                    section = .members
+                                case .searchBanned:
+                                    section = .members
+                                    addIcon = true
+                                case .searchMembers, .searchKicked, .searchAdmins:
+                                    section = .none
+                            }
+                            
+                            var label: String?
+                            var enabled = true
+                            if case .banAndPromoteActions = mode {
+                                if case .creator = participant.participant {
+                                    label = themeAndStrings.1.Channel_Management_LabelCreator
+                                    enabled = false
+                                }
+                            }
+                            
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .participant(participant: participant, label: label, revealActions: [], revealed: false, enabled: enabled), section: section, dateTimeFormat: themeAndStrings.4, addIcon: addIcon))
                             index += 1
                         }
                     }

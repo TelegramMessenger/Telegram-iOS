@@ -281,7 +281,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
 
             if let peer = message.peers[message.id.peerId] as? TelegramChannel {
                 if !peer.hasPermission(.sendMessages) {
-                    hasUneditableAttributes = true
+                    //hasUneditableAttributes = true
                 }
             }
             

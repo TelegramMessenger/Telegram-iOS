@@ -349,6 +349,20 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
             entries.append(.peerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index, participant, ItemListPeerItemEditing(editable: true, editing: false, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id, true, effectiveRightsFlags))
             index += 1
         }
+    } else if let _ = view.peers[view.peerId] as? TelegramGroup, let cachedData = view.cachedData as? CachedGroupData, let defaultBannedRights = cachedData.defaultBannedRights {
+        let effectiveRightsFlags: TelegramChatBannedRightsFlags
+        if let modifiedRightsFlags = state.modifiedRightsFlags {
+            effectiveRightsFlags = modifiedRightsFlags
+        } else {
+            effectiveRightsFlags = defaultBannedRights.flags
+        }
+        
+        entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
+        var rightIndex: Int = 0
+        for rights in allGroupPermissionList {
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights))
+            rightIndex += 1
+        }
     }
     
     return entries
@@ -373,10 +387,16 @@ public func channelPermissionsController(account: Account, peerId: PeerId) -> Vi
     actionsDisposable.add(removePeerDisposable)
     
     let peersPromise = Promise<[RenderedChannelParticipant]?>(nil)
-    let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restricted(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { state in
-        peersPromise.set(.single(state.list))
-    })
-    actionsDisposable.add(disposable)
+    let disposableAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
+    if peerId.namespace == Namespaces.Peer.CloudGroup {
+        disposableAndLoadMoreControl = (EmptyDisposable, nil)
+        peersPromise.set(.single(nil))
+    } else {
+        disposableAndLoadMoreControl = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restricted(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { state in
+            peersPromise.set(.single(state.list))
+        })
+    }
+    actionsDisposable.add(disposableAndLoadMoreControl.0)
     
     let updateDefaultRightsDisposable = MetaDisposable()
     actionsDisposable.add(updateDefaultRightsDisposable)
@@ -417,6 +437,36 @@ public func channelPermissionsController(account: Account, peerId: PeerId) -> Vi
                 if let modifiedRightsFlags = state.modifiedRightsFlags {
                     updateDefaultRightsDisposable.set((updateDefaultChannelMemberBannedRights(account: account, peerId: peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), personal: false, untilDate: Int32.max))
                     |> deliverOnMainQueue).start())
+                }
+            } else if let cachedData = view.cachedData as? CachedGroupData {
+                updateState { state in
+                    var state = state
+                    var effectiveRightsFlags: TelegramChatBannedRightsFlags
+                    if let modifiedRightsFlags = state.modifiedRightsFlags {
+                        effectiveRightsFlags = modifiedRightsFlags
+                    } else if let defaultBannedRightsFlags = cachedData.defaultBannedRights?.flags {
+                        effectiveRightsFlags = defaultBannedRightsFlags
+                    } else {
+                        effectiveRightsFlags = TelegramChatBannedRightsFlags()
+                    }
+                    if value {
+                        effectiveRightsFlags.remove(rights)
+                        effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
+                    } else {
+                        effectiveRightsFlags.insert(rights)
+                        for right in allGroupPermissionList {
+                            if groupPermissionDependencies(right).contains(rights) {
+                                effectiveRightsFlags.insert(right)
+                            }
+                        }
+                    }
+                    state.modifiedRightsFlags = effectiveRightsFlags
+                    return state
+                }
+                let state = stateValue.with { $0 }
+                if let modifiedRightsFlags = state.modifiedRightsFlags {
+                    updateDefaultRightsDisposable.set((updateDefaultChannelMemberBannedRights(account: account, peerId: peerId, rights: TelegramChatBannedRights(flags: completeRights(modifiedRightsFlags), personal: false, untilDate: Int32.max))
+                        |> deliverOnMainQueue).start())
                 }
             }
         })
@@ -506,7 +556,7 @@ public func channelPermissionsController(account: Account, peerId: PeerId) -> Vi
         }
         
         var emptyStateItem: ItemListControllerEmptyStateItem?
-        if participants == nil {
+        if peerId.namespace == Namespaces.Peer.CloudChannel && participants == nil {
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
         
@@ -557,9 +607,11 @@ public func channelPermissionsController(account: Account, peerId: PeerId) -> Vi
             (controller.navigationController as? NavigationController)?.pushViewController(c)
         }
     }
-    controller.visibleBottomContentOffsetChanged = { offset in
-        if case let .known(value) = offset, value < 40.0 {
-            account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
+    if peerId.namespace == Namespaces.Peer.CloudChannel {
+        controller.visibleBottomContentOffsetChanged = { offset in
+            if case let .known(value) = offset, value < 40.0 {
+                account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: disposableAndLoadMoreControl.1)
+            }
         }
     }
     return controller

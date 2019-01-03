@@ -140,7 +140,7 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
         
         let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
         let titleSpacing: CGFloat = 5.0
-        let subtitleSpacing: CGFloat = 12.0
+        let subtitleSpacing: CGFloat = 11.0
         let iconInset: CGFloat = 14.0
         
         var contentWidth: CGFloat = 100.0
@@ -255,7 +255,7 @@ private final class ChatEmptyNodeGroupChatContent: ASDisplayNode, ChatEmptyNodeC
         
         let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
         let titleSpacing: CGFloat = 5.0
-        let subtitleSpacing: CGFloat = 12.0
+        let subtitleSpacing: CGFloat = 11.0
         let iconInset: CGFloat = 19.0
         
         var contentWidth: CGFloat = 100.0
