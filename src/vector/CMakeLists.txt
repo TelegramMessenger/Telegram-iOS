@@ -4,6 +4,7 @@ add_subdirectory(pixman)
 
 target_sources(lottie-player
     PRIVATE
+        "${CMAKE_CURRENT_LIST_DIR}/vrect.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vdasher.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vbrush.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vbitmap.cpp"

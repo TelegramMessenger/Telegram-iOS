@@ -38,6 +38,7 @@ public:
     V_CONSTEXPR int height() const {return y2-y1;}
     V_CONSTEXPR int x() const {return x1;}
     V_CONSTEXPR int y() const {return y1;}
+    VSize           size() const {return {width(), height()};}
     void            setLeft(int l) { x1 = l; }
     void            setTop(int t) { y1 = t; }
     void            setRight(int r) { x2 = r; }
@@ -54,12 +55,20 @@ public:
                                               const VRect &) noexcept;
     friend VDebug &                operator<<(VDebug &os, const VRect &o);
 
+    VRect intersected(const VRect &r) const;
+    VRect operator&(const VRect &r) const;
+
 private:
     int x1{0};
     int y1{0};
     int x2{0};
     int y2{0};
 };
+
+inline VRect VRect::intersected(const VRect &r) const
+{
+    return *this & r;
+}
 
 inline bool VRect::intersects(const VRect &r)
 {

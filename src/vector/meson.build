@@ -14,7 +14,7 @@ source_file  += files('vdrawhelper.cpp')
 source_file  += files('vdrawhelper_sse2.cpp')
 source_file  += files('vdrawable.cpp')
 
-
+source_file  += files('vrect.cpp')
 source_file  += files('vrle.cpp')
 source_file  += files('vpath.cpp')
 source_file  += files('vpathmesure.cpp')
