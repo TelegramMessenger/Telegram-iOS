@@ -29,17 +29,27 @@ class VBitmap;
 class VPainterImpl;
 class VPainter {
 public:
-    enum CompositionMode { CompModeSrc, CompModeSrcOver };
+    enum CompositionMode {
+        CompModeSrc,
+        CompModeSrcOver,
+        CompModeDestIn,
+        CompModeDestOut
+    };
     ~VPainter();
     VPainter();
     VPainter(VBitmap *buffer);
     bool  begin(VBitmap *buffer);
     void  end();
     void  setBrush(const VBrush &brush);
+    void  setCompositionMode(CompositionMode mode);
     void  drawRle(const VPoint &pos, const VRle &rle);
     void  drawRle(const VRle &rle, const VRle &clip);
     VRect clipBoundingRect() const;
 
+    void  drawBitmap(const VPoint &point, const VBitmap &bitmap, const VRect &source);
+    void  drawBitmap(const VRect &target, const VBitmap &bitmap, const VRect &source);
+    void  drawBitmap(const VPoint &point, const VBitmap &bitmap);
+    void  drawBitmap(const VRect &rect, const VBitmap &bitmap);
 private:
     VPainterImpl *mImpl;
 };
