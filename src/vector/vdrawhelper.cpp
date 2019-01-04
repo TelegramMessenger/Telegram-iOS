@@ -201,14 +201,13 @@ void VRasterBuffer::clear()
 
 VBitmap::Format VRasterBuffer::prepare(VBitmap *image)
 {
-    mBuffer = (uchar *)image->bits();
+    mBuffer = image->data();
     mWidth = image->width();
     mHeight = image->height();
     mBytesPerPixel = 4;
     mBytesPerLine = image->stride();
 
     mFormat = image->format();
-    // drawHelper = qDrawHelper + format;
     return mFormat;
 }
 

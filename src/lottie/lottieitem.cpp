@@ -118,9 +118,9 @@ const LOTLayerNode * LOTCompItem::renderTree() const
 
 bool LOTCompItem::render(const lottie::Surface &surface)
 {
-    VBitmap bitmap((uchar *)surface.buffer(), surface.width(), surface.height(),
-                   surface.bytesPerLine(), VBitmap::Format::ARGB32_Premultiplied,
-                   nullptr, nullptr);
+    VBitmap bitmap(reinterpret_cast<uchar *>(surface.buffer()),
+                   surface.width(), surface.height(),
+                   surface.bytesPerLine(), VBitmap::Format::ARGB32_Premultiplied);
 
     /* schedule all preprocess task for this frame at once.
      */

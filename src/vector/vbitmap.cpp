@@ -22,228 +22,135 @@
 
 V_BEGIN_NAMESPACE
 
-struct VBitmapData {
-    ~VBitmapData();
-    VBitmapData();
-    static VBitmapData *create(int width, int height, VBitmap::Format format);
-    RefCount            ref;
-    int                 width;
-    int                 height;
-    int                 depth;
-    int                 stride;
-    int                 nBytes;
-    VBitmap::Format     format;
-    uchar *             data;
-    VBitmapCleanupFunction cleanupFunction;
-    void *                 cleanupInfo;
-    uint                   ownData : 1;
-    uint                   roData : 1;
+struct VBitmap::Impl {
+    uchar *             mData{nullptr};
+    uint                mWidth{0};
+    uint                mHeight{0};
+    uint                mStride{0};
+    uint                mBytes{0};
+    VBitmap::Format     mFormat{VBitmap::Format::Invalid};
+    bool                mOwnData;
+    bool                mRoData;
+
+    Impl() = delete ;
+
+    Impl(uint width, uint height, VBitmap::Format format):
+        mOwnData(true),
+        mRoData(false)
+    {
+        uint depth = Impl::depth(format);
+        uint stride = ((width * depth + 31) >> 5) << 2; // bytes per scanline (must be multiple of 4)
+
+        mWidth = width;
+        mHeight = height;
+        mFormat = format;
+        mStride = stride;
+        mBytes = mStride * mHeight;
+        mData = reinterpret_cast<uchar *>(::operator new(mBytes));
+
+        if (!mData) {
+            // handle malloc failure
+            ;
+        }
+    }
+
+    Impl(uchar *data, uint w, uint h, uint bytesPerLine, VBitmap::Format format):
+        mOwnData(false),
+        mRoData(false)
+    {
+        mWidth = w;
+        mHeight = h;
+        mFormat = format;
+        mStride = bytesPerLine;
+        mBytes = mStride * mHeight;
+        mData = data;
+    }
+
+    ~Impl()
+    {
+        if (mOwnData && mData) ::operator delete(mData);
+    }
+
+    uint stride() const {return mStride;}
+    uint width() const {return mWidth;}
+    uint height() const {return mHeight;}
+    VBitmap::Format format() const {return mFormat;}
+    uchar* data() { return mData;}
+
+    static uint depth(VBitmap::Format format)
+    {
+        uint depth = 1;
+        switch (format) {
+        case VBitmap::Format::Alpha8:
+            depth = 8;
+            break;
+        case VBitmap::Format::ARGB32:
+        case VBitmap::Format::ARGB32_Premultiplied:
+            depth = 32;
+            break;
+        default:
+            break;
+        }
+        return depth;
+    }
+    void fill(uint /*pixel*/)
+    {
+        //@TODO
+    }
 };
 
-VBitmapData::~VBitmapData()
+VBitmap::VBitmap(uint width, uint height, VBitmap::Format format)
 {
-    if (cleanupFunction) cleanupFunction(cleanupInfo);
-    if (data && ownData) free(data);
-    data = 0;
+    if (width <=0 || height <=0 || format == Format::Invalid) return;
+
+    mImpl = std::make_shared<Impl>(width, height, format);
+
 }
 
-VBitmapData::VBitmapData()
-    : ref(0),
-      width(0),
-      height(0),
-      depth(0),
-      stride(0),
-      nBytes(0),
-      format(VBitmap::Format::ARGB32),
-      data(nullptr),
-      cleanupFunction(0),
-      cleanupInfo(0),
-      ownData(true),
-      roData(false)
+VBitmap::VBitmap(uchar *data, uint width, uint height, uint bytesPerLine,
+                 VBitmap::Format format)
 {
+    if (!data ||
+        width <=0 || height <=0 ||
+        bytesPerLine <=0 ||
+        format == Format::Invalid) return;
+
+    mImpl = std::make_shared<Impl>(data, width, height, bytesPerLine, format);
 }
 
-VBitmapData *VBitmapData::create(int width, int height, VBitmap::Format format)
+uint VBitmap::stride() const
 {
-    if ((width <= 0) || (height <= 0) || format == VBitmap::Format::Invalid)
-        return nullptr;
-
-    int depth = 1;
-    switch (format) {
-    case VBitmap::Format::Alpha8:
-        depth = 8;
-        VECTOR_FALLTHROUGH
-    case VBitmap::Format::ARGB32:
-    case VBitmap::Format::ARGB32_Premultiplied:
-        depth = 32;
-        break;
-    default:
-        break;
-    }
-
-    const int stride = ((width * depth + 31) >> 5)
-                       << 2;  // bytes per scanline (must be multiple of 4)
-
-    VBitmapData *d = new VBitmapData;
-
-    d->width = width;
-    d->height = height;
-    d->depth = depth;
-    d->format = format;
-    d->stride = stride;
-    d->nBytes = d->stride * height;
-    d->data = (uchar *)malloc(d->nBytes);
-
-    if (!d->data) {
-        delete d;
-        return 0;
-    }
-
-    return d;
+    return mImpl ? mImpl->stride() : 0;
 }
 
-inline void VBitmap::cleanUp(VBitmapData *d)
+uint VBitmap::width() const
 {
-    delete d;
+    return mImpl ? mImpl->width() : 0;
 }
 
-void VBitmap::detach()
+uint VBitmap::height() const
 {
-    if (d) {
-        if (d->ref.isShared() || d->roData) *this = copy();
-    }
+    return mImpl ? mImpl->height() : 0;
 }
 
-VBitmap::~VBitmap()
+uchar *VBitmap::data()
 {
-    if (!d) return;
-
-    if (!d->ref.deref()) cleanUp(d);
+    return mImpl ? mImpl->data() : nullptr;
 }
 
-VBitmap::VBitmap() : d(nullptr) {}
-
-VBitmap::VBitmap(const VBitmap &other)
+bool VBitmap::valid() const
 {
-    d = other.d;
-    if (d) d->ref.ref();
-}
-
-VBitmap::VBitmap(VBitmap &&other) : d(other.d)
-{
-    other.d = nullptr;
-}
-
-VBitmap &VBitmap::operator=(const VBitmap &other)
-{
-    if (!d) {
-        d = other.d;
-        if (d) d->ref.ref();
-    } else {
-        if (!d->ref.deref()) cleanUp(d);
-        other.d->ref.ref();
-        d = other.d;
-    }
-
-    return *this;
-}
-
-inline VBitmap &VBitmap::operator=(VBitmap &&other)
-{
-    if (d && !d->ref.deref()) cleanUp(d);
-    d = other.d;
-    return *this;
-}
-
-VBitmap::VBitmap(int w, int h, VBitmap::Format format) {}
-VBitmap::VBitmap(uchar *data, int w, int h, int bytesPerLine,
-                 VBitmap::Format format, VBitmapCleanupFunction f,
-                 void *cleanupInfo)
-{
-    d = new VBitmapData;
-    d->data = data;
-    d->format = format;
-    d->width = w;
-    d->height = h;
-    d->stride = bytesPerLine;
-    d->cleanupFunction = nullptr;
-    d->cleanupInfo = nullptr;
-    d->ownData = false;
-    d->roData = false;
-    d->ref.setOwned();
-}
-
-VBitmap VBitmap::copy(const VRect &r) const
-{
-    // TODO implement properly.
-    return *this;
-}
-
-int VBitmap::stride() const
-{
-    return d ? d->stride : 0;
-}
-
-int VBitmap::width() const
-{
-    return d ? d->width : 0;
-}
-
-int VBitmap::height() const
-{
-    return d ? d->height : 0;
-}
-
-uchar *VBitmap::bits()
-{
-    if (!d) return 0;
-    detach();
-
-    // In case detach ran out of memory...
-    if (!d) return 0;
-
-    return d->data;
-}
-
-const uchar *VBitmap::bits() const
-{
-    return d ? d->data : 0;
-}
-
-bool VBitmap::isNull() const
-{
-    return !d;
-}
-
-uchar *VBitmap::scanLine(int i)
-{
-    if (!d) return 0;
-
-    detach();
-
-    // In case detach() ran out of memory
-    if (!d) return 0;
-
-    return d->data + i * d->stride;
-}
-
-const uchar *VBitmap::scanLine(int i) const
-{
-    if (!d) return 0;
-
-    // assert(i >= 0 && i < height());
-    return d->data + i * d->stride;
+    return mImpl ? true : false;
 }
 
 VBitmap::Format VBitmap::format() const
 {
-    if (!d) return VBitmap::Format::Invalid;
-    return d->format;
+    return mImpl ? mImpl->format() : VBitmap::Format::Invalid;
 }
 
 void VBitmap::fill(uint pixel)
 {
-    if (!d) return;
+    if (mImpl) mImpl->fill(pixel);
 }
 
 V_END_NAMESPACE
