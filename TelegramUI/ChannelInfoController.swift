@@ -451,7 +451,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
         }
         
         if let cachedChannelData = view.cachedData as? CachedChannelData {
-            if state.editingState != nil && canEditMembers {
+            if canEditMembers {
                 if peer.adminRights != nil || peer.flags.contains(.isCreator) {
                     let adminCount = cachedChannelData.participantsSummary.adminCount ?? 0
                     entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Administrators, value: "\(adminCount == 0 ? "" : "\(adminCount)")"))

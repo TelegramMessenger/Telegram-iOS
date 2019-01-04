@@ -17,7 +17,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     }
     
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, Bool)] = []
-    for entry in view.entries {
+    loop: for entry in view.entries {
         switch entry {
             case let .HoleEntry(hole, _):
                 if !groupBucket.isEmpty {
@@ -28,6 +28,19 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                     entries.append(.HoleEntry(hole, presentationData))
                 }
             case let .MessageEntry(message, read, _, monthLocation):
+                if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                    for media in message.media {
+                        if let action = media as? TelegramMediaAction {
+                            switch action.action {
+                                case .channelMigratedFromGroup, .groupMigratedToChannel:
+                                    continue loop
+                                default:
+                                    break
+                            }
+                        }
+                    }
+                }
+                
                 var isAdmin = false
                 if let author = message.author {
                     isAdmin = adminIds.contains(author.id)

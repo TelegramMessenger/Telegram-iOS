@@ -585,12 +585,6 @@ private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId
         return true
     }
     
-    if let peer = message.peers[message.id.peerId] as? TelegramChannel {
-        if peer.hasPermission(.pinMessages) {
-            return true
-        }
-    }
-    
     return false
 }
 

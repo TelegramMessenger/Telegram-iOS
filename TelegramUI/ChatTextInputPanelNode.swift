@@ -20,11 +20,17 @@ private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height
 
 private let accessoryButtonFont = Font.medium(14.0)
 
-private final class AccessoryItemIconButton: HighlightableButton {
+private final class AccessoryItemIconButton: HighlightTrackingButton {
     private let item: ChatTextInputAccessoryItem
     private var width: CGFloat
+    private let imageNode: ASImageNode
     
     init(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) {
+        self.imageNode = ASImageNode()
+        self.imageNode.isLayerBacked = true
+        self.imageNode.displaysAsynchronously = false
+        self.imageNode.displayWithoutProcessing = true
+        
         self.item = item
         
         let (image, text, alpha, insets) = AccessoryItemIconButton.imageAndInsets(item: item, theme: theme, strings: strings)
@@ -33,15 +39,29 @@ private final class AccessoryItemIconButton: HighlightableButton {
         
         super.init(frame: CGRect())
         
+        self.addSubnode(self.imageNode)
+        
         if let text = text {
             self.titleLabel?.font = accessoryButtonFont
             self.setTitleColor(theme.chat.inputPanel.inputControlColor, for: [])
             self.setTitle(text, for: [])
         }
         
-        self.setImage(image, for: [])
+        self.imageNode.image = image
+        self.imageNode.alpha = alpha
         self.imageEdgeInsets = insets
-        self.imageView?.alpha = alpha
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.alpha = 0.4
+                } else {
+                    strongSelf.alpha = 1.0
+                    strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
@@ -57,9 +77,9 @@ private final class AccessoryItemIconButton: HighlightableButton {
             self.setTitle("", for: [])
         }
         
-        self.setImage(image, for: [])
+        self.imageNode.image = image
         self.imageEdgeInsets = insets
-        self.imageView?.alpha = alpha
+        self.imageNode.alpha = alpha
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -102,6 +122,12 @@ private final class AccessoryItemIconButton: HighlightableButton {
                 }
                 
                 return max(imageWidth, 24.0)
+        }
+    }
+    
+    func updateLayout(size: CGSize) {
+        if let image = self.imageNode.image {
+            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.width - image.size.width) / 2.0) - self.imageEdgeInsets.bottom), size: image.size)
         }
     }
     
@@ -984,6 +1010,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var nextButtonTopRight = CGPoint(x: width - rightInset - textFieldInsets.right - accessoryButtonInset, y: panelHeight - textFieldInsets.bottom - minimalInputHeight + audioRecordingItemsVerticalOffset)
         for (_, button) in self.accessoryItemButtons.reversed() {
             let buttonSize = CGSize(width: button.buttonWidth, height: minimalInputHeight)
+            button.updateLayout(size: buttonSize)
             let buttonFrame = CGRect(origin: CGPoint(x: nextButtonTopRight.x - buttonSize.width, y: nextButtonTopRight.y + floor((minimalInputHeight - buttonSize.height) / 2.0)), size: buttonSize)
             if button.superview == nil {
                 self.view.addSubview(button)

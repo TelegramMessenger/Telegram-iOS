@@ -969,7 +969,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 
                 let signal: Signal<Void, NoError> = strongSelf.account.postbox.transaction { transaction -> Void in
                     for peerId in peerIds {
-                        removePeerChat(transaction: transaction, mediaBox: account.postbox.mediaBox, peerId: peerId, reportChatSpam: false)
+                        removePeerChat(transaction: transaction, mediaBox: account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
                     }
                 }
                 |> afterDisposed {

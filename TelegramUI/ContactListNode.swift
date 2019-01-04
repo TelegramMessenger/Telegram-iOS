@@ -730,6 +730,9 @@ final class ContactListNode: ASDisplayNode {
             self.selectionStatePromise.set(.single(self.selectionStateValue))
         }
     }
+    var selectionState: ContactListNodeGroupSelectionState? {
+        return self.selectionStateValue
+    }
     
     private var enableUpdatesValue = false
     var enableUpdates: Bool {

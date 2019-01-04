@@ -2578,8 +2578,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 let banDescription: String
                 switch subject {
                     case .stickers:
-                        if personal {
-                            banDescription = strongSelf.presentationInterfaceState.strings.Group_ErrorSendRestrictedStickers
+                        if untilDate != 0 && untilDate != Int32.max {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedStickersTimed(stringForFullDate(timestamp: untilDate, strings: strongSelf.presentationInterfaceState.strings, dateTimeFormat: strongSelf.presentationInterfaceState.dateTimeFormat)).0
+                        } else if personal {
+                            banDescription = strongSelf.presentationInterfaceState.strings.Conversation_RestrictedStickers
                         } else {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedStickers
                         }
@@ -3739,10 +3741,21 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             strongSelf.chatDisplayNode.dismissInput()
             
             var bannedSendMedia: (Int32, Bool)?
-            if let channel = peer as? TelegramChannel, let value = channel.hasBannedPermission(.banSendMedia) {
-                bannedSendMedia = value
-            } else if let group = peer as? TelegramGroup, group.hasBannedPermission(.banSendMedia) {
-                bannedSendMedia = (Int32.max, false)
+            var canSendPolls = true
+            if let channel = peer as? TelegramChannel {
+                if let value = channel.hasBannedPermission(.banSendMedia) {
+                    bannedSendMedia = value
+                }
+                if channel.hasBannedPermission(.banSendPolls) != nil {
+                    canSendPolls = false
+                }
+            } else if let group = peer as? TelegramGroup {
+                if group.hasBannedPermission(.banSendMedia) {
+                    bannedSendMedia = (Int32.max, false)
+                }
+                if group.hasBannedPermission(.banSendPolls) {
+                    canSendPolls = false
+                }
             }
         
             if editMediaOptions == nil, let (untilDate, personal) = bannedSendMedia {
@@ -3756,16 +3769,24 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
                 
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                var items: [ActionSheetItem] = []
+                items.append(ActionSheetTextItem(title: banDescription))
+                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_Location, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    self?.presentMapPicker(editingMessage: false)
+                }))
+                if canSendPolls {
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.AttachmentMenu_Poll, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        self?.presentPollCreation()
+                    }))
+                }
+                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_Contact, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    self?.presentContactPicker()
+                }))
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: banDescription),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_Location, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        self?.presentMapPicker(editingMessage: false)
-                    }),
-                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_Contact, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        self?.presentContactPicker()
-                    })
+                    
                 ]), ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()

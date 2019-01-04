@@ -14,8 +14,9 @@ private final class ChannelPermissionsControllerArguments {
     let openPeer: (ChannelParticipant) -> Void
     let openPeerInfo: (Peer) -> Void
     let openKicked: () -> Void
+    let presentRestrictedPublicGroupPermissionsAlert: () -> Void
     
-    init(account: Account, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void) {
+    init(account: Account, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPublicGroupPermissionsAlert: @escaping () -> Void) {
         self.account = account
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -24,6 +25,7 @@ private final class ChannelPermissionsControllerArguments {
         self.openPeer = openPeer
         self.openPeerInfo = openPeerInfo
         self.openKicked = openKicked
+        self.presentRestrictedPublicGroupPermissionsAlert = presentRestrictedPublicGroupPermissionsAlert
     }
 }
 
@@ -40,7 +42,7 @@ private enum ChannelPermissionsEntryStableId: Hashable {
 
 private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case permissionsHeader(PresentationTheme, String)
-    case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags, Bool)
+    case permission(PresentationTheme, Int, String, Bool, TelegramChatBannedRightsFlags, Bool?)
     case kicked(PresentationTheme, String, String)
     case exceptionsHeader(PresentationTheme, String)
     case add(PresentationTheme, String)
@@ -173,8 +175,12 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
             case let .permissionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .permission(theme, _, title, value, rights, enabled):
-                return ItemListSwitchItem(theme: theme, title: title, value: value, type: .icon, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.updatePermission(rights, value)
+                return ItemListSwitchItem(theme: theme, title: title, value: value, type: .icon, enabled: enabled ?? true, sectionId: self.section, style: .blocks, updated: { value in
+                    if let _ = enabled {
+                        arguments.updatePermission(rights, value)
+                    } else {
+                        arguments.presentRestrictedPublicGroupPermissionsAlert()
+                    }
                 })
             case let .kicked(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
@@ -341,9 +347,9 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
         for rights in allGroupPermissionList {
-            var enabled = true
-            if channel.addressName != nil {
-                enabled = !publicGroupRestrictedPermissions.contains(rights)
+            var enabled: Bool? = true
+            if channel.addressName != nil && !publicGroupRestrictedPermissions.contains(rights) {
+                enabled = nil
             }
             entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, enabled))
             rightIndex += 1
@@ -566,6 +572,9 @@ public func channelPermissionsController(account: Account, peerId: PeerId, loadC
         }
     }, openKicked: {
         pushControllerImpl?(channelBlacklistController(account: account, peerId: peerId))
+    }, presentRestrictedPublicGroupPermissionsAlert: {
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupPermission_NotAvailableInPublicGroups, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     })
     
     let previousParticipants = Atomic<[RenderedChannelParticipant]?>(value: nil)

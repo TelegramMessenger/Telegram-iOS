@@ -698,9 +698,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
     var canAddMembers = false
     var isPublic = false
     var isCreator = false
-    var isGroup = false
     if let group = view.peers[view.peerId] as? TelegramGroup {
-        isGroup = true
         if case .creator = group.role {
             isCreator = true
         }
@@ -713,10 +711,13 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             case .member:
                 break
         }
-    } else if let channel = view.peers[view.peerId] as? TelegramChannel {
-        if case .group = channel.info {
-            isGroup = true
+        if !group.hasBannedPermission(.banChangeInfo) {
+            canEditGroupInfo = true
         }
+        if !group.hasBannedPermission(.banAddMembers) {
+            canAddMembers = true
+        }
+    } else if let channel = view.peers[view.peerId] as? TelegramChannel {
         highlightAdmins = true
         isPublic = channel.username != nil
         isCreator = channel.flags.contains(.isCreator)
@@ -1074,8 +1075,18 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             entries.append(.leave(presentationData.theme, presentationData.strings.Group_LeaveGroup))
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel {
-        if case .member = channel.participationStatus, let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount <= 200 {
-            entries.append(.leave(presentationData.theme, presentationData.strings.Group_LeaveGroup))
+        if case .member = channel.participationStatus {
+            if channel.flags.contains(.isCreator) {
+                if let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount <= 200 {
+                    if state.editingState != nil {
+                        entries.append(.leave(presentationData.theme, presentationData.strings.ChannelInfo_DeleteGroup))
+                    } else {
+                        entries.append(.leave(presentationData.theme, presentationData.strings.Group_LeaveGroup))
+                    }
+                }
+            } else {
+                entries.append(.leave(presentationData.theme, presentationData.strings.Group_LeaveGroup))
+            }
         }
     }
     
@@ -1176,6 +1187,9 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     var aboutLinkActionImpl: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
+    
+    let peerView = Promise<PeerView>()
+    peerView.set(account.viewTracker.peerView(peerId))
     
     let arguments = GroupInfoArguments(account: account, peerId: peerId, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
         let _ = (account.postbox.loadedPeerWithId(peerId)
@@ -1427,7 +1441,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                         return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMember(account: account, peerId: peerId, memberId: memberId)
                     }
                     
-                    return account.postbox.peerView(id: memberId)
+                    return peerView.get()
                     |> take(1)
                     |> deliverOnMainQueue
                     |> mapToSignal { view -> Signal<Void, NoError> in
@@ -1648,28 +1662,55 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     }, convertToSupergroup: {
         pushControllerImpl?(convertToSupergroupController(account: account, peerId: peerId))
     }, leave: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        
-        var items: [ActionSheetItem] = []
-        if peerId.namespace == Namespaces.Peer.CloudGroup {
-            items.append(ActionSheetTextItem(title: presentationData.strings.GroupInfo_DeleteAndExitConfirmation))
-        }
-        items.append(ActionSheetButtonItem(title: presentationData.strings.Group_LeaveGroup, color: .destructive, action: {
-            dismissAction()
-            let _ = (removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false)
-                |> deliverOnMainQueue).start(completed: {
-                    popToRootImpl?()
-                })
-        }))
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: items),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peerView in
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            
+            if let channel = peerView.peers[peerId] as? TelegramChannel, channel.flags.contains(.isCreator), stateValue.with({ $0 }).editingState != nil {
+                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                
+                var items: [ActionSheetItem] = []
+                items.append(ActionSheetTextItem(title: presentationData.strings.ChannelInfo_DeleteGroupConfirmation))
+                items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_DeleteGroup, color: .destructive, action: {
+                    dismissAction()
+                    let _ = (removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: true)
+                    |> deliverOnMainQueue).start(completed: {
+                        popToRootImpl?()
+                    })
+                }))
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                    ])
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            } else {
+                let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                
+                var items: [ActionSheetItem] = []
+                if peerId.namespace == Namespaces.Peer.CloudGroup {
+                    items.append(ActionSheetTextItem(title: presentationData.strings.GroupInfo_DeleteAndExitConfirmation))
+                }
+                items.append(ActionSheetButtonItem(title: presentationData.strings.Group_LeaveGroup, color: .destructive, action: {
+                    dismissAction()
+                    let _ = (removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false)
+                        |> deliverOnMainQueue).start(completed: {
+                            popToRootImpl?()
+                        })
+                }))
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }
+        })
     }, displayUsernameShareMenu: { text in
         let shareController = ShareController(account: account, subject: .url(text))
         presentControllerImpl?(shareController, nil)
@@ -1709,7 +1750,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
     let previousChannelMembers = Atomic<[PeerId]?>(value: nil)
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-    let signal = combineLatest(queue: .mainQueue(), (account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId), account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
+    let signal = combineLatest(queue: .mainQueue(), (account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView.get(), account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
     |> map { presentationData, state, view, combinedView, channelMembers -> (ItemListControllerState, (ItemListNodeState<GroupInfoEntry>, GroupInfoEntry.ItemGenerationArguments)) in
         let peer = peerViewMainPeer(view)
         

@@ -677,38 +677,50 @@ public func channelAdminController(account: Account, peerId: PeerId, adminId: Pe
                         updateFlags = defaultFlags
                     }
                     
-                    if let updateFlags = updateFlags, updateFlags != defaultFlags {
-                        let signal = convertGroupToSupergroup(account: account, peerId: peerId)
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<PeerId?, NoError> in
-                            return .single(nil)
-                        }
-                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
-                            guard let upgradedPeerId = upgradedPeerId else {
+                    if let updateFlags = updateFlags {
+                        if initialParticipant?.adminInfo == nil && updateFlags == defaultFlags {
+                            updateState { current in
+                                return current.withUpdatedUpdating(true)
+                            }
+                            updateRightsDisposable.set((addGroupAdmin(account: account, peerId: peerId, adminId: adminId)
+                            |> deliverOnMainQueue).start(completed: {
+                                dismissImpl?()
+                            }))
+                        } else if updateFlags != defaultFlags {
+                            let signal = convertGroupToSupergroup(account: account, peerId: peerId)
+                            |> map(Optional.init)
+                            |> `catch` { _ -> Signal<PeerId?, NoError> in
                                 return .single(nil)
                             }
-                            return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags))
-                            |> mapToSignal { _ -> Signal<PeerId?, NoError> in
-                                return .complete()
+                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                                guard let upgradedPeerId = upgradedPeerId else {
+                                    return .single(nil)
+                                }
+                                return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: upgradedPeerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: updateFlags))
+                                |> mapToSignal { _ -> Signal<PeerId?, NoError> in
+                                    return .complete()
+                                }
+                                |> then(.single(upgradedPeerId))
                             }
-                            |> then(.single(upgradedPeerId))
-                        }
-                        |> deliverOnMainQueue
-                        
-                        updateState { current in
-                            return current.withUpdatedUpdating(true)
-                        }
-                        updateRightsDisposable.set(signal.start(next: { upgradedPeerId in
-                            if let upgradedPeerId = upgradedPeerId {
-                                upgradedToSupergroup(upgradedPeerId, {
-                                    dismissImpl?()
-                                })
-                            }
-                        }, error: { _ in
+                            |> deliverOnMainQueue
+                            
                             updateState { current in
-                                return current.withUpdatedUpdating(false)
+                                return current.withUpdatedUpdating(true)
                             }
-                        }))
+                            updateRightsDisposable.set(signal.start(next: { upgradedPeerId in
+                                if let upgradedPeerId = upgradedPeerId {
+                                    upgradedToSupergroup(upgradedPeerId, {
+                                        dismissImpl?()
+                                    })
+                                }
+                            }, error: { _ in
+                                updateState { current in
+                                    return current.withUpdatedUpdating(false)
+                                }
+                            }))
+                        } else {
+                            dismissImpl?()
+                        }
                     } else {
                         dismissImpl?()
                     }
