@@ -3822,6 +3822,7 @@ Unused sets are archived when you add more.";
 "GroupPermission.ApplyAlertText" = "You have changed this user's rights in %@.\nApply Changes?";
 "GroupPermission.ApplyAlertAction" = "Apply";
 "GroupPermission.AddSuccess" = "Exception Added";
+"GroupPermission.NotAvailableInPublicGroups" = "This permission is not available in public groups.";
 
 "Channel.Management.RemovedBy" = "Removed by %@";
 
