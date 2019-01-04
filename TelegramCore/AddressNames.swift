@@ -134,7 +134,11 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                             return account.postbox.transaction { transaction -> Void in
                                 if case .boolTrue = result {
                                     if let peer = transaction.getPeer(peerId) as? TelegramChannel {
-                                        updatePeers(transaction: transaction, peers: [peer.withUpdatedAddressName(name)], update: { _, updated in
+                                        var updatedPeer = peer.withUpdatedAddressName(name)
+                                        if name != nil, let defaultBannedRights = updatedPeer.defaultBannedRights {
+                                            updatedPeer = updatedPeer.withUpdatedDefaultBannedRights(TelegramChatBannedRights(flags: defaultBannedRights.flags.union([.banPinMessages, .banChangeInfo]), untilDate: Int32.max))
+                                        }
+                                        updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                             return updated
                                         })
                                     }
