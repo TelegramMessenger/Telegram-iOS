@@ -30,8 +30,8 @@ public enum AddressNameDomain {
 
 public func checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -> AddressNameFormatError? {
     var index = 0
-    let length = value.characters.count
-    for char in value.characters {
+    let length = value.count
+    for char in value {
         if char == "_" {
             if index == 0 {
                 return .startsWithUnderscore
@@ -73,17 +73,30 @@ public func addressNameAvailability(account: Account, domain: AddressNameDomain,
             case let .peer(peerId):
                 if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
                     return account.network.request(Api.functions.channels.checkUsername(channel: inputChannel, username: name))
-                        |> map { result -> AddressNameAvailability in
-                            switch result {
-                                case .boolTrue:
-                                    return .available
-                                case .boolFalse:
-                                    return .taken
-                            }
+                    |> map { result -> AddressNameAvailability in
+                        switch result {
+                            case .boolTrue:
+                                return .available
+                            case .boolFalse:
+                                return .taken
                         }
-                        |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
-                            return .single(.invalid)
+                    }
+                    |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+                        return .single(.invalid)
+                    }
+                } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                    return account.network.request(Api.functions.channels.checkUsername(channel: .inputChannelEmpty, username: name))
+                    |> map { result -> AddressNameAvailability in
+                        switch result {
+                            case .boolTrue:
+                                return .available
+                            case .boolFalse:
+                                return .taken
                         }
+                    }
+                    |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+                        return .single(.invalid)
+                    }
                 } else {
                     return .single(.invalid)
                 }
@@ -121,7 +134,11 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                             return account.postbox.transaction { transaction -> Void in
                                 if case .boolTrue = result {
                                     if let peer = transaction.getPeer(peerId) as? TelegramChannel {
-                                        updatePeers(transaction: transaction, peers: [peer.withUpdatedAddressName(name)], update: { _, updated in
+                                        var updatedPeer = peer.withUpdatedAddressName(name)
+                                        if name != nil, let defaultBannedRights = updatedPeer.defaultBannedRights {
+                                            updatedPeer = updatedPeer.withUpdatedDefaultBannedRights(TelegramChatBannedRights(flags: defaultBannedRights.flags.union([.banPinMessages, .banChangeInfo]), untilDate: Int32.max))
+                                        }
+                                        updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                             return updated
                                         })
                                     }

@@ -7,13 +7,13 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func removePeerChat(postbox: Postbox, peerId: PeerId, reportChatSpam: Bool) -> Signal<Void, NoError> {
+public func removePeerChat(postbox: Postbox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool = false) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
-        removePeerChat(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, reportChatSpam: reportChatSpam)
+        removePeerChat(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
     }
 }
 
-public func removePeerChat(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool) {
+public func removePeerChat(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
         if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
             
@@ -31,7 +31,7 @@ public func removePeerChat(transaction: Transaction, mediaBox: MediaBox, peerId:
         transaction.updatePeerChatListInclusion(peerId, inclusion: .never)
         transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
     } else {
-        cloudChatAddRemoveChatOperation(transaction: transaction, peerId: peerId, reportChatSpam: reportChatSpam)
+        cloudChatAddRemoveChatOperation(transaction: transaction, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
         if peerId.namespace == Namespaces.Peer.CloudUser  {
             transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessages)
             clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId)

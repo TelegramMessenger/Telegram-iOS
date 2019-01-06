@@ -264,15 +264,18 @@ public func updateDefaultChannelMemberBannedRights(account: Account, peerId: Pee
         |> mapToSignal { result -> Signal<Never, NoError> in
             account.stateManager.addUpdates(result)
             return account.postbox.transaction { transaction -> Void in
-                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                    if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.withUpdatedDefaultBannedRights(rights)
-                    } else if let cachedData = cachedData as? CachedGroupData {
-                        return cachedData.withUpdatedDefaultBannedRights(rights)
-                    } else {
-                        return cachedData
-                    }
-                })
+                guard let peer = transaction.getPeer(peerId) else {
+                    return
+                }
+                if let peer = peer as? TelegramGroup {
+                    updatePeers(transaction: transaction, peers: [peer.updateDefaultBannedRights(rights, version: peer.version)], update: { _, updated in
+                        return updated
+                    })
+                } else if let peer = peer as? TelegramChannel {
+                    updatePeers(transaction: transaction, peers: [peer.withUpdatedDefaultBannedRights(rights)], update: { _, updated in
+                        return updated
+                    })
+                }
             }
             |> ignoreValues
         }

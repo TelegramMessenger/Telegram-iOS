@@ -5,10 +5,36 @@ import Foundation
     import Postbox
 #endif
 
-public enum TelegramGroupRole: Int32 {
+public enum TelegramGroupRole: Equatable, PostboxCoding {
     case creator
-    case admin
+    case admin(TelegramChatAdminRights)
     case member
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("_v", orElse: 0) {
+            case 0:
+                self = .creator
+            case 1:
+                self = .admin(decoder.decodeObjectForKey("r", decoder: { TelegramChatAdminRights(decoder: $0) }) as! TelegramChatAdminRights)
+            case 2:
+                self = .member
+            default:
+                assertionFailure()
+                self = .member
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case .creator:
+                encoder.encodeInt32(0, forKey: "_v")
+            case let .admin(rights):
+                encoder.encodeInt32(1, forKey: "_v")
+                encoder.encodeObject(rights, forKey: "r")
+            case .member:
+                encoder.encodeInt32(2, forKey: "_v")
+        }
+    }
 }
 
 public enum TelegramGroupMembership: Int32 {
@@ -28,7 +54,6 @@ public struct TelegramGroupFlags: OptionSet {
         self.rawValue = rawValue
     }
     
-    public static let adminsEnabled = TelegramGroupFlags(rawValue: 1 << 0)
     public static let deactivated = TelegramGroupFlags(rawValue: 1 << 1)
 }
 
@@ -49,6 +74,7 @@ public final class TelegramGroup: Peer {
     public let role: TelegramGroupRole
     public let membership: TelegramGroupMembership
     public let flags: TelegramGroupFlags
+    public let defaultBannedRights: TelegramChatBannedRights?
     public let migrationReference: TelegramGroupToChannelMigrationReference?
     public let creationDate: Int32
     public let version: Int
@@ -60,7 +86,7 @@ public final class TelegramGroup: Peer {
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, migrationReference: TelegramGroupToChannelMigrationReference?, creationDate: Int32, version: Int) {
+    public init(id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, defaultBannedRights: TelegramChatBannedRights?, migrationReference: TelegramGroupToChannelMigrationReference?, creationDate: Int32, version: Int) {
         self.id = id
         self.title = title
         self.photo = photo
@@ -68,6 +94,7 @@ public final class TelegramGroup: Peer {
         self.role = role
         self.membership = membership
         self.flags = flags
+        self.defaultBannedRights = defaultBannedRights
         self.migrationReference = migrationReference
         self.creationDate = creationDate
         self.version = version
@@ -78,9 +105,16 @@ public final class TelegramGroup: Peer {
         self.title = decoder.decodeStringForKey("t", orElse: "")
         self.photo = decoder.decodeObjectArrayForKey("ph")
         self.participantCount = Int(decoder.decodeInt32ForKey("pc", orElse: 0))
-        self.role = TelegramGroupRole(rawValue: decoder.decodeInt32ForKey("r", orElse: 0))!
+        if let role = decoder.decodeObjectForKey("rv", decoder: { TelegramGroupRole(decoder: $0) }) as? TelegramGroupRole {
+            self.role = role
+        } else if let roleValue = decoder.decodeOptionalInt32ForKey("r"), roleValue == 0 {
+            self.role = .creator
+        } else {
+            self.role = .member
+        }
         self.membership = TelegramGroupMembership(rawValue: decoder.decodeInt32ForKey("m", orElse: 0))!
         self.flags = TelegramGroupFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
+        self.defaultBannedRights = decoder.decodeObjectForKey("dbr", decoder: { TelegramChatBannedRights(decoder: $0) }) as? TelegramChatBannedRights
         let migrationPeerId: Int64? = decoder.decodeOptionalInt64ForKey("mr.i")
         let migrationAccessHash: Int64? = decoder.decodeOptionalInt64ForKey("mr.a")
         if let migrationPeerId = migrationPeerId, let migrationAccessHash = migrationAccessHash {
@@ -97,8 +131,13 @@ public final class TelegramGroup: Peer {
         encoder.encodeString(self.title, forKey: "t")
         encoder.encodeObjectArray(self.photo, forKey: "ph")
         encoder.encodeInt32(Int32(self.participantCount), forKey: "pc")
-        encoder.encodeInt32(self.role.rawValue, forKey: "r")
+        encoder.encodeObject(self.role, forKey: "rv")
         encoder.encodeInt32(self.membership.rawValue, forKey: "m")
+        if let defaultBannedRights = self.defaultBannedRights {
+            encoder.encodeObject(defaultBannedRights, forKey: "dbr")
+        } else {
+            encoder.encodeNil(forKey: "dbr")
+        }
         if let migrationReference = self.migrationReference {
             encoder.encodeInt64(migrationReference.peerId.toInt64(), forKey: "mr.i")
             encoder.encodeInt64(migrationReference.accessHash, forKey: "mr.a")
@@ -133,6 +172,9 @@ public final class TelegramGroup: Peer {
             if self.role != other.role {
                 return false
             }
+            if self.defaultBannedRights != other.defaultBannedRights {
+                return false
+            }
             if self.migrationReference != other.migrationReference {
                 return false
             }
@@ -149,6 +191,25 @@ public final class TelegramGroup: Peer {
     }
 
     public func updateFlags(flags: TelegramGroupFlags, version: Int) -> TelegramGroup {
-        return TelegramGroup(id: self.id, title: self.title, photo: self.photo, participantCount: self.participantCount, role: self.role, membership: self.membership, flags: flags, migrationReference: self.migrationReference, creationDate: self.creationDate, version: version)
+        return TelegramGroup(id: self.id, title: self.title, photo: self.photo, participantCount: self.participantCount, role: self.role, membership: self.membership, flags: flags, defaultBannedRights: self.defaultBannedRights, migrationReference: self.migrationReference, creationDate: self.creationDate, version: version)
+    }
+    
+    public func updateDefaultBannedRights(_ defaultBannedRights: TelegramChatBannedRights?, version: Int) -> TelegramGroup {
+        return TelegramGroup(id: self.id, title: self.title, photo: self.photo, participantCount: self.participantCount, role: self.role, membership: self.membership, flags: self.flags, defaultBannedRights: defaultBannedRights, migrationReference: self.migrationReference, creationDate: self.creationDate, version: version)
+    }
+}
+
+public extension TelegramGroup {
+    public func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> Bool {
+        switch self.role {
+            case .creator, .admin:
+                return false
+            default:
+                if let bannedRights = self.defaultBannedRights {
+                    return bannedRights.flags.contains(rights)
+                } else {
+                    return false
+                }
+        }
     }
 }

@@ -48,8 +48,8 @@ public func searchPeers(account: Account, query: String) -> Signal<([FoundPeer],
                             peers[groupOrChannel.id] = groupOrChannel
                             switch chat {
                                 /*feed*/
-                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount/*, _*/):
-                                    if let participantsCount = participantsCount {
+                                case let .channel(channel):
+                                    if let participantsCount = channel.participantsCount {
                                         subscribers[groupOrChannel.id] = participantsCount
                                     }
                                 default:

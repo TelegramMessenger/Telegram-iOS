@@ -197,7 +197,15 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
 private func removeChat(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveChatOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudChannel {
         if let inputChannel = apiInputChannel(peer) {
-            let signal = network.request(Api.functions.channels.leaveChannel(channel: inputChannel))
+            let signal: Signal<Api.Updates, MTRpcError>
+            if operation.deleteGloballyIfPossible {
+                signal = network.request(Api.functions.channels.deleteChannel(channel: inputChannel))
+                |> `catch` { _ -> Signal<Api.Updates, MTRpcError> in
+                    return network.request(Api.functions.channels.leaveChannel(channel: inputChannel))
+                }
+            } else {
+                signal = network.request(Api.functions.channels.leaveChannel(channel: inputChannel))
+            }
             
             let reportSignal: Signal<Api.Bool, NoError>
             if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
