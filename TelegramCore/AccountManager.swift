@@ -74,6 +74,7 @@ private var declaredEncodables: Void = {
     declareEncodable(RecentPeerItem.self, f: { RecentPeerItem(decoder: $0) })
     declareEncodable(RecentHashtagItem.self, f: { RecentHashtagItem(decoder: $0) })
     declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
+    declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
@@ -189,17 +190,24 @@ public func temporaryAccount(manager: AccountManager, rootPath: String) -> Signa
     }
 }
 
-public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
-    return manager.currentAccountId(allocateIfNotExists: allocateIfNotExists)
+public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<AccountResult?, NoError> {
+    return manager.currentAccountRecord(allocateIfNotExists: allocateIfNotExists)
     |> distinctUntilChanged(isEqual: { lhs, rhs in
-        return lhs == rhs
+        return lhs?.0 == rhs?.0
     })
-    |> mapToSignal { id -> Signal<AccountResult?, NoError> in
-        if let id = id {
+    |> mapToSignal { record -> Signal<AccountResult?, NoError> in
+        if let record = record {
             let reload = ValuePromise<Bool>(true, ignoreRepeated: false)
             return reload.get()
             |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
-                return accountWithId(networkArguments: networkArguments, id: id, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
+                let beginWithTestingEnvironment = record.1.contains(where: { attribute in
+                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+                return accountWithId(networkArguments: networkArguments, id: record.0, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
                 |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
                     let postbox: Postbox
                     let initialKind: AccountKind
@@ -267,7 +275,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                 return nil
             }
         })
-        if transaction.getCurrentId() == id {
+        if transaction.getCurrent()?.0 == id {
             let updatedId = transaction.createRecord([])
             transaction.setCurrentId(updatedId)
         }
@@ -289,13 +297,13 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
         }).start()
         let disposable = accountManager.accountRecords().start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
-            var beginList: [(AccountRecordId, MetaDisposable)] = []
+            var beginList: [(AccountRecordId, [AccountRecordAttribute], MetaDisposable)] = []
             let _ = loggedOutAccounts.modify { disposables in
-                var validIds = Set<AccountRecordId>()
+                var validIds: [AccountRecordId: [AccountRecordAttribute]] = [:]
                 outer: for record in view.records {
                     for attribute in record.attributes {
                         if attribute is LoggedOutAccountAttribute {
-                            validIds.insert(record.id)
+                            validIds[record.id] = record.attributes
                             continue outer
                         }
                     }
@@ -304,7 +312,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 var disposables = disposables
                 
                 for id in disposables.keys {
-                    if !validIds.contains(id) {
+                    if validIds[id] == nil {
                         disposeList.append((id, disposables[id]!))
                     }
                 }
@@ -313,10 +321,10 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                     disposables.removeValue(forKey: id)
                 }
                 
-                for id in validIds {
+                for (id, attributes) in validIds {
                     if disposables[id] == nil {
                         let disposable = MetaDisposable()
-                        beginList.append((id, disposable))
+                        beginList.append((id, attributes, disposable))
                         disposables[id] = disposable
                     }
                 }
@@ -326,9 +334,9 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
             for (_, disposable) in disposeList {
                 disposable.dispose()
             }
-            for (id, disposable) in beginList {
+            for (id, attributes, disposable) in beginList {
                 Logger.shared.log("managedCleanupAccounts", "cleanup \(id), current is \(String(describing: view.currentRecord?.id))")
-                disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods).start())
+                disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, attributes: attributes, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods).start())
             }
             
             var validPaths = Set<String>()
@@ -356,8 +364,15 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
     }
 }
 
-private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, id: AccountRecordId, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
-    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
+private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, id: AccountRecordId, attributes: [AccountRecordAttribute], rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+    let beginWithTestingEnvironment = attributes.contains(where: { attribute in
+        if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+            return true
+        } else {
+            return false
+        }
+    })
+    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
     |> mapToSignal { account -> Signal<Void, NoError> in
         switch account {
             case .upgrading:

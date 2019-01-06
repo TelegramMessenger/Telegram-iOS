@@ -59,6 +59,7 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
 public enum AddChannelMemberError {
     case generic
     case restricted
+    case limitExceeded
 }
 
 public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
@@ -79,7 +80,12 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                     return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: [inputUser]))
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], AddChannelMemberError> in
-                        return .fail(.generic)
+                        switch error.errorDescription {
+                            case "USERS_TOO_MUCH":
+                                return .fail(.limitExceeded)
+                            default:
+                                return .fail(.generic)
+                        }
                     }
                     |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
                         for updates in result {
@@ -146,7 +152,6 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
     }
 }
 
-
 public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
     let signal = account.postbox.transaction { transaction -> Signal<Void, AddChannelMemberError> in
         var memberPeerIds: [PeerId:Peer] = [:]
@@ -165,10 +170,12 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
             let signal = account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
             |> mapError { error -> AddChannelMemberError in
                 switch error.errorDescription {
-                case "USER_PRIVACY_RESTRICTED":
-                    return .restricted
-                default:
-                    return .generic
+                    case "USER_PRIVACY_RESTRICTED":
+                        return .restricted
+                    case "USERS_TOO_MUCH":
+                        return .limitExceeded
+                    default:
+                        return .generic
                 }
             }
             |> map { result in
