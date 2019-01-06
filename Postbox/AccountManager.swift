@@ -8,7 +8,7 @@ import Foundation
 public struct AccountManagerModifier {
     public let getRecords: () -> [AccountRecord]
     public let updateRecord: (AccountRecordId, (AccountRecord?) -> (AccountRecord?)) -> Void
-    public let getCurrentId: () -> AccountRecordId?
+    public let getCurrent: () -> (AccountRecordId, [AccountRecordAttribute])?
     public let setCurrentId: (AccountRecordId) -> Void
     public let createRecord: ([AccountRecordAttribute]) -> AccountRecordId
     public let getSharedData: (ValueBoxKey) -> AccountSharedData?
@@ -68,8 +68,13 @@ final class AccountManagerImpl {
                     if updated != current {
                         self.recordTable.setRecord(id: id, record: updated, operations: &self.currentRecordOperations)
                     }
-                }, getCurrentId: {
-                    return self.metadataTable.getCurrentAccountId()
+                }, getCurrent: {
+                    if let id = self.metadataTable.getCurrentAccountId() {
+                        let record = self.recordTable.getRecord(id: id)
+                        return (id, record?.attributes ?? [])
+                    } else {
+                        return nil
+                    }
                 }, setCurrentId: { id in
                     self.metadataTable.setCurrentAccountId(id, operations: &self.currentMetadataOperations)
                 }, createRecord: { attributes in
@@ -179,32 +184,54 @@ final class AccountManagerImpl {
         }
     }
     
-    fileprivate func currentAccountId(allocateIfNotExists: Bool) -> Signal<AccountRecordId?, NoError> {
-        return self.transaction { transaction -> Signal<AccountRecordId?, NoError> in
-            let current = transaction.getCurrentId()
-            let id: AccountRecordId
+    fileprivate func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> {
+        return self.transaction { transaction -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> in
+            let current = transaction.getCurrent()
+            let record: (AccountRecordId, [AccountRecordAttribute])?
             if let current = current {
-                id = current
+                record = current
             } else if allocateIfNotExists {
-                id = generateAccountRecordId()
+                let id = generateAccountRecordId()
                 transaction.setCurrentId(id)
                 transaction.updateRecord(id, { _ in
                     return AccountRecord(id: id, attributes: [], temporarySessionId: nil)
                 })
+                record = (id, [])
             } else {
                 return .single(nil)
             }
             
             let signal = self.accountRecordsInternal(transaction: transaction)
-            |> map { view -> AccountRecordId? in
-                return view.currentRecord?.id
+            |> map { view -> (AccountRecordId, [AccountRecordAttribute])? in
+                if let currentRecord = view.currentRecord {
+                    return (currentRecord.id, currentRecord.attributes)
+                } else {
+                    return nil
+                }
             }
             
             return signal
         }
         |> switchToLatest
         |> distinctUntilChanged(isEqual: { lhs, rhs in
-            return lhs == rhs
+            if let lhs = lhs, let rhs = rhs {
+                if lhs.0 != rhs.0 {
+                    return false
+                }
+                if lhs.1.count != rhs.1.count {
+                    return false
+                }
+                for i in 0 ..< lhs.1.count {
+                    if !lhs.1[i].isEqual(to: rhs.1[i]) {
+                        return false
+                    }
+                }
+                return true
+            } else if (lhs != nil) != (rhs != nil) {
+                return false
+            } else {
+                return true
+            }
         })
     }
     
@@ -283,11 +310,11 @@ public final class AccountManager {
         }
     }
     
-    public func currentAccountId(allocateIfNotExists: Bool) -> Signal<AccountRecordId?, NoError> {
+    public func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.currentAccountId(allocateIfNotExists: allocateIfNotExists).start(next: { next in
+                disposable.set(impl.currentAccountRecord(allocateIfNotExists: allocateIfNotExists).start(next: { next in
                     subscriber.putNext(next)
                 }, completed: {
                     subscriber.putCompletion()
