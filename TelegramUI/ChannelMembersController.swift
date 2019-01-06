@@ -336,40 +336,40 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
             let contactsController = ContactMultiselectionController(account: account, mode: .peerSelection(searchChatList: false), options: [], filters: [.excludeSelf, .disable(disabledIds)])
             
-            let addMembers: ([ContactListPeerId]) -> Signal<Void, AddChannelMemberError> = { members -> Signal<Void, AddChannelMemberError> in
-                let peerIds = members.compactMap { contact -> PeerId? in
-                    switch contact {
-                    case let .peer(peerId):
-                        return peerId
-                    default:
-                        return nil
-                    }
-                }
-                return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMembers(account: account, peerId: peerId, memberIds: peerIds)
-            }
-            
             addMembersDisposable.set((contactsController.result
             |> deliverOnMainQueue
-            |> mapToSignal { [weak contactsController] contacts -> Signal<Never, NoError> in
+            |> introduceError(AddChannelMemberError.self)
+            |> mapToSignal { [weak contactsController] contacts -> Signal<Never, AddChannelMemberError> in
                 contactsController?.displayProgress = true
                 
-                let signals = contacts.compactMap({ contact -> Signal<Never, NoError>? in
+                let signal = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMembers(account: account, peerId: peerId, memberIds: contacts.compactMap({ contact -> PeerId? in
                     switch contact {
                         case let .peer(contactId):
-                            return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMember(account: account, peerId: peerId, memberId: contactId)
-                            |> ignoreValues
-                        case .deviceContact:
+                            return contactId
+                        default:
                             return nil
                     }
-                })
+                }))
                 
-                return combineLatest(signals)
+                return signal
                 |> ignoreValues
                 |> deliverOnMainQueue
                 |> afterCompleted {
                     contactsController?.dismiss()
                 }
-            }).start())
+            }).start(error: { error in
+                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let text: String
+                switch error {
+                    case .limitExceeded:
+                        text = presentationData.strings.Channel_ErrorAddTooMuch
+                    case .generic:
+                        text = presentationData.strings.Login_UnknownError
+                    case .restricted:
+                        text = presentationData.strings.Channel_ErrorAddBlocked
+                }
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            }))
             
             presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }))

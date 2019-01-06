@@ -3785,9 +3785,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     actionSheet?.dismissAnimated()
                     self?.presentContactPicker()
                 }))
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    
-                ]), ActionSheetItemGroup(items: [
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                     })
