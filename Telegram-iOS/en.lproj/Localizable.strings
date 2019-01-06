@@ -1535,7 +1535,7 @@
 "Channel.Info.Banned" = "Blacklist";
 "Channel.Info.Members" = "Members";
 
-"Channel.Members.AddMembers" = "Add Members";
+"Channel.Members.AddMembers" = "Add Subscribers";
 "Channel.Members.AddMembersHelp" = "Only channel admins can see this list.";
 "Channel.Members.Title" = "Members";
 "Channel.BlackList.Title" = "Blacklist";
@@ -2529,6 +2529,10 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.BanSendGifs" = "Send GIFs";
 "Channel.AdminLog.MessageRestricted" = "%@ changed restrictions for %@ (%@)";
 "Channel.AdminLog.MessageAdmin" = "%@ changed privileges for %@ (%@)";
+"Channel.AdminLog.ChangeInfo" = "Change Info";
+"Channel.AdminLog.PinMessages" = "Pin Messages";
+"Channel.AdminLog.AddMembers" = "Add Members";
+"Channel.AdminLog.SendPolls" = "Send Polls";
 
 "Channel.AdminLog.CanChangeInfo" = "Change Info";
 "Channel.AdminLog.CanSendMessages" = "Post Messages";

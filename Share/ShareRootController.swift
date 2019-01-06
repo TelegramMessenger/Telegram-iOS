@@ -157,7 +157,7 @@ class ShareRootController: UIViewController {
                     
                     Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                     
-                    return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                    return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
                      |> introduceError(ShareAuthorizationError.self) |> mapToSignal { account -> Signal<(Account, AccountManager), ShareAuthorizationError> in
                         if let account = account {
                             switch account {

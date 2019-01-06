@@ -32,7 +32,7 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
     
     var result: Account?
     while true {
-        let account = currentAccount(allocateIfNotExists: true, networkArguments: NetworkInitializationArguments(apiId: 0, languagesCategory: "ios", appVersion: "unknown", voipMaxLayer: 0), supplementary: false, manager: accountManagerValue!, rootPath: path, beginWithTestingEnvironment: true, auxiliaryMethods: AccountAuxiliaryMethods(updatePeerChatInputState: { _, _ in return nil }, fetchResource: { _, _, _, _ in
+        let account = currentAccount(allocateIfNotExists: true, networkArguments: NetworkInitializationArguments(apiId: 0, languagesCategory: "ios", appVersion: "unknown", voipMaxLayer: 0), supplementary: false, manager: accountManagerValue!, rootPath: path, auxiliaryMethods: AccountAuxiliaryMethods(updatePeerChatInputState: { _, _ in return nil }, fetchResource: { _, _, _, _ in
             return .never()
         }, fetchResourceMediaReferenceHash: { _ in
             return .never()
