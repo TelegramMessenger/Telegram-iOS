@@ -609,7 +609,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         
                         var thumbnailFile: Api.InputFile?
                         if case let .file(file) = thumbnail {
-                            thumbnailFile = file
+                            //thumbnailFile = file
                         }
                         
                         if let _ = thumbnailFile {

@@ -5064,21 +5064,6 @@ extension Api {
                         return result
                     })
                 }
-            
-                static func editWallPaper(wallpaper: Api.InputWallPaper, slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WallPaper>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-4512283)
-                    wallpaper.serialize(buffer, true)
-                    serializeString(slug, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.editWallPaper", parameters: [("wallpaper", wallpaper), ("slug", slug)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.WallPaper?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.WallPaper
-                        }
-                        return result
-                    })
-                }
             }
             struct langpack {
                 static func getLangPack(langPack: String, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {

@@ -32,18 +32,22 @@ private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource,
 private func collectPreCachedResources(for document: Api.Document) -> [(MediaResource, Data)]? {
     switch document {
         case let .document(content):
-            switch content.thumb {
-                case let .photoCachedSize(_, location, _, _, bytes):
-                    switch location {
-                        case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
-                            let data = bytes.makeData()
-                            let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count, fileReference: fileReference.makeData())
-                            return [(resource, data)]
+            if let thumbs = content.thumbs {
+                for thumb in thumbs {
+                    switch thumb {
+                        case let .photoCachedSize(_, location, _, _, bytes):
+                            switch location {
+                                case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
+                                    let data = bytes.makeData()
+                                    let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count, fileReference: fileReference.makeData())
+                                    return [(resource, data)]
+                                default:
+                                    break
+                            }
                         default:
                             break
                     }
-                default:
-                    break
+                }
             }
         default:
             break
