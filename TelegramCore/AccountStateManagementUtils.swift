@@ -2041,9 +2041,23 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
                         
                         if case let .Id(id) = message.id {
                             for media in message.media {
-                                if let action = media as? TelegramMediaAction, case .groupCreated = action.action {
-                                    if let hole = transaction.getHole(messageId: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1)) {
-                                        transaction.fillHole(hole, fillType: HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), tagMask: nil, messages: [])
+                                if let action = media as? TelegramMediaAction {
+                                    if message.id.peerId.namespace == Namespaces.Peer.CloudGroup, case let .groupMigratedToChannel(channelId) = action.action {
+                                        transaction.updatePeerCachedData(peerIds: [channelId], update: { peerId, current in
+                                            var current = current as? CachedChannelData ?? CachedChannelData()
+                                            if current.associatedHistoryMessageId == nil {
+                                                current = current.withUpdatedMigrationReference(ChannelMigrationReference(maxMessageId: id))
+                                            }
+                                            return current
+                                        })
+                                    }
+                                    switch action.action {
+                                        case .groupCreated, .channelMigratedFromGroup:
+                                            if let hole = transaction.getHole(messageId: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1)) {
+                                                transaction.fillHole(hole, fillType: HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), tagMask: nil, messages: [])
+                                            }
+                                        default:
+                                            break
                                     }
                                 }
                             }
