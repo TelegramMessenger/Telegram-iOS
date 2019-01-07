@@ -1610,7 +1610,6 @@
 "Group.UpgradeConfirmation" = "Warning: this action is irreversible. It is not possible to downgrade a supergroup to a regular group.";
 
 "Notification.GroupActivated" = "Group deactivated";
-"Notification.ChannelMigratedFrom" = "This group was upgraded to a supergroup";
 
 "GroupInfo.DeactivatedStatus" = "Group Deactivated";
 
