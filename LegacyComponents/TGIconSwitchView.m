@@ -117,6 +117,14 @@ static const void *positionChangedKey = &positionChangedKey;
     }
 }
 
+- (void)setPositiveContentColor:(UIColor *)color {
+    _onIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOn.png"), color);
+}
+
+- (void)setNegativeContentColor:(UIColor *)color {
+    _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOff.png"), color);
+}
+
 - (void)currentValueChanged {
     [self updateState:self.isOn animated:true force:false];
 }

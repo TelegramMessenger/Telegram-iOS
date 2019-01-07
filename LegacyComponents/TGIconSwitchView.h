@@ -3,4 +3,7 @@
 
 @interface TGIconSwitchView : UISwitch
 
+- (void)setPositiveContentColor:(UIColor *)color;
+- (void)setNegativeContentColor:(UIColor *)color;
+
 @end
