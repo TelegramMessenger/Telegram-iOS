@@ -260,6 +260,19 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     }
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        if case .searchAdmins = mode {
+                            return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: memberId, adminRights: TelegramChatAdminRights(flags: []))
+                            |> afterDisposed {
+                                Queue.mainQueue().async {
+                                    updateState { state in
+                                        var state = state
+                                        state.removingParticipantIds.remove(memberId)
+                                        return state
+                                    }
+                                }
+                            }
+                        }
+                        
                         return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
                         |> afterDisposed {
                             Queue.mainQueue().async {
@@ -268,6 +281,21 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     state.removingParticipantIds.remove(memberId)
                                     return state
                                 }
+                            }
+                        }
+                    }
+                    
+                    if case .searchAdmins = mode {
+                        return removeGroupAdmin(account: account, peerId: peerId, adminId: memberId)
+                        |> `catch` { _ -> Signal<Void, NoError> in
+                            return .complete()
+                        }
+                        |> deliverOnMainQueue
+                        |> afterDisposed {
+                            updateState { state in
+                                var state = state
+                                state.removingParticipantIds.remove(memberId)
+                                return state
                             }
                         }
                     }
@@ -320,11 +348,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                             if case .ready = state.loadingState {
                                 subscriber.putNext(state.list)
-                                subscriber.putCompletion()
                             }
                         })
                         return disposable
-                        } |> runOn(Queue.mainQueue())
+                    } |> runOn(Queue.mainQueue())
                     foundMembers = .single([])
                 case .searchBanned:
                     foundGroupMembers = Signal { subscriber in
@@ -471,6 +498,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                 }
                                 if canRestrict {
                                     peerActions.append(ParticipantRevealAction(type: .warning, title: themeAndStrings.1.GroupInfo_ActionRestrict, action: .restrict))
+                                    peerActions.append(ParticipantRevealAction(type: .destructive, title: themeAndStrings.1.Common_Delete, action: .remove))
+                                }
+                            } else if case .searchAdmins = mode {
+                                if canRestrict {
                                     peerActions.append(ParticipantRevealAction(type: .destructive, title: themeAndStrings.1.Common_Delete, action: .remove))
                                 }
                             }

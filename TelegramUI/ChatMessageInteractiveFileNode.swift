@@ -195,10 +195,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     statusUpdated = true
                 }
                 
-                let hasThumbnail = !file.previewRepresentations.isEmpty && !file.isMusic && !file.isVoice
+                let hasThumbnail = (!file.previewRepresentations.isEmpty || file.immediateThumbnailData != nil) && !file.isMusic && !file.isVoice
                 
                 if mediaUpdated {
-                    if let _ = largestImageRepresentation(file.previewRepresentations) {
+                    if largestImageRepresentation(file.previewRepresentations) != nil || file.immediateThumbnailData != nil {
                         updateImageSignal = chatMessageImageFile(account: account, fileReference: .message(message: MessageReference(message), media: file), thumbnail: true)
                     }
                     

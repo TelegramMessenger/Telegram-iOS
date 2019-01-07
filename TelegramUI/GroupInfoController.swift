@@ -1760,7 +1760,7 @@ public func groupInfoController(account: Account, peerId: PeerId) -> ViewControl
                 canEditGroupInfo = true
             }
         } else if let channel = view.peers[view.peerId] as? TelegramChannel {
-            if channel.hasPermission(.changeInfo) {
+            if channel.hasPermission(.changeInfo) || !(channel.adminRights?.flags ?? []).isEmpty {
                 canEditGroupInfo = true
             }
         }

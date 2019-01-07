@@ -130,6 +130,7 @@ private func chatMessageFileDatas(account: Account, fileReference: FileMediaRefe
     let fullSizeResource = fileReference.media.resource
     
     let maybeFullSize = account.postbox.mediaBox.resourceData(fullSizeResource, pathExtension: pathExtension)
+    let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
     
     let signal = maybeFullSize
     |> take(1)
@@ -138,18 +139,26 @@ private func chatMessageFileDatas(account: Account, fileReference: FileMediaRefe
             return .single((nil, maybeData.path, true))
         } else {
             let fetchedThumbnail: Signal<FetchResourceSourceType, NoError>
-            if let thumbnailResource = thumbnailResource {
+            if !fetched, let _ = decodedThumbnailData {
+                fetchedThumbnail = .single(.local)
+            } else if let thumbnailResource = thumbnailResource {
                 fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource), statsCategory: statsCategoryForFileWithAttributes(fileReference.media.attributes))
             } else {
                 fetchedThumbnail = .complete()
             }
             
             let thumbnail: Signal<Data?, NoError>
-            if let thumbnailResource = thumbnailResource {
+            if !fetched, let decodedThumbnailData = decodedThumbnailData {
+                thumbnail = .single(decodedThumbnailData)
+            } else if let thumbnailResource = thumbnailResource {
                 thumbnail = Signal { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
                     let thumbnailDisposable = account.postbox.mediaBox.resourceData(thumbnailResource, pathExtension: pathExtension).start(next: { next in
-                        subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                        if next.size != 0, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []) {
+                            subscriber.putNext(data)
+                        } else {
+                            subscriber.putNext(nil)
+                        }
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
                     
                     return ActionDisposable {
@@ -186,14 +195,21 @@ private let thumbnailGenerationMimeTypes: Set<String> = Set([
 
 private func chatMessageImageFileThumbnailDatas(account: Account, fileReference: FileMediaReference, pathExtension: String? = nil, progressive: Bool = false) -> Signal<(Data?, String?, Bool), NoError> {
     let thumbnailResource = smallestImageRepresentation(fileReference.media.previewRepresentations)?.resource
+    let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
     
     if !thumbnailGenerationMimeTypes.contains(fileReference.media.mimeType) {
-        if let thumbnailResource = thumbnailResource {
+        if let decodedThumbnailData = decodedThumbnailData {
+            return .single((decodedThumbnailData, nil, false))
+        } else if let thumbnailResource = thumbnailResource {
             let fetchedThumbnail: Signal<FetchResourceSourceType, NoError> = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource))
             return Signal { subscriber in
                 let fetchedDisposable = fetchedThumbnail.start()
                 let thumbnailDisposable = account.postbox.mediaBox.resourceData(thumbnailResource, pathExtension: pathExtension).start(next: { next in
-                    subscriber.putNext(((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])), nil, false))
+                    if next.size != 0, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []) {
+                        subscriber.putNext((data, nil, false))
+                    } else {
+                        subscriber.putNext((nil, nil, false))
+                    }
                 }, error: subscriber.putError, completed: subscriber.putCompletion)
                 
                 return ActionDisposable {
@@ -218,18 +234,26 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
             return .single((nil, maybeData.path, true))
         } else {
             let fetchedThumbnail: Signal<FetchResourceSourceType, NoError>
-            if let thumbnailResource = thumbnailResource {
+            if let _ = fileReference.media.immediateThumbnailData {
+                fetchedThumbnail = .complete()
+            } else if let thumbnailResource = thumbnailResource {
                 fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource))
             } else {
                 fetchedThumbnail = .complete()
             }
             
             let thumbnail: Signal<Data?, NoError>
-            if let thumbnailResource = thumbnailResource {
+            if let decodedThumbnailData = decodedThumbnailData {
+                thumbnail = .single(decodedThumbnailData)
+            } else if let thumbnailResource = thumbnailResource {
                 thumbnail = Signal { subscriber in
                     let fetchedDisposable = fetchedThumbnail.start()
                     let thumbnailDisposable = account.postbox.mediaBox.resourceData(thumbnailResource, pathExtension: pathExtension).start(next: { next in
-                        subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                        if next.size != 0, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []) {
+                            subscriber.putNext(data)
+                        } else {
+                            subscriber.putNext(nil)
+                        }
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
                     
                     return ActionDisposable {
