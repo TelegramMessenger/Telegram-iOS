@@ -46,9 +46,12 @@ if (demo_dep.found())
                link_with : lottie_player_lib,
                dependencies : demo_dep)
 
+if (meson.get_compiler('cpp').has_header('elementary-1/elm_animation_view.h'))
     executable('efl_animview',
                'efl_animview.cpp',
                include_directories : inc,
                link_with : lottie_player_lib,
                dependencies : demo_dep)
+endif
+
 endif
