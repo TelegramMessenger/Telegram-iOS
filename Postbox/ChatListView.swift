@@ -146,6 +146,23 @@ public enum ChatListEntry: Comparable {
     }
 }
 
+private func processedChatListEntry(_ entry: MutableChatListEntry, cachedDataTable: CachedPeerDataTable, readStateTable: MessageHistoryReadStateTable, messageHistoryTable: MessageHistoryTable) -> MutableChatListEntry {
+    switch entry {
+        case let .IntermediateMessageEntry(index, message, readState, embeddedState):
+            var updatedMessage = message
+            if let message = message, let cachedData = cachedDataTable.get(message.id.peerId), let associatedHistoryMessageId = cachedData.associatedHistoryMessageId, message.id.id == 1 {
+                if let indexEntry = messageHistoryTable.messageHistoryIndexTable.earlierEntries(id: associatedHistoryMessageId, count: 1).first, case let .Message(messageIndex) = indexEntry {
+                    if let associatedMessage = messageHistoryTable.getMessage(messageIndex) {
+                        updatedMessage = associatedMessage
+                    }
+                }
+            }
+            return .IntermediateMessageEntry(index, updatedMessage, readState, embeddedState)
+        default:
+            return entry
+    }
+}
+
 enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(ChatListIndex, IntermediateMessage?, CombinedPeerReadState?, PeerChatListEmbeddedInterfaceState?)
     case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, ChatListMessageTagSummaryInfo)
@@ -153,10 +170,10 @@ enum MutableChatListEntry: Equatable {
     case IntermediateGroupReferenceEntry(PeerGroupId, ChatListIndex, ChatListGroupReferenceUnreadCounters?)
     case GroupReferenceEntry(PeerGroupId, ChatListIndex, Message?, ChatListGroupReferenceTopPeers, ChatListGroupReferenceUnreadCounters)
     
-    init(_ intermediateEntry: ChatListIntermediateEntry, readStateTable: MessageHistoryReadStateTable) {
+    init(_ intermediateEntry: ChatListIntermediateEntry, cachedDataTable: CachedPeerDataTable, readStateTable: MessageHistoryReadStateTable, messageHistoryTable: MessageHistoryTable) {
         switch intermediateEntry {
             case let .message(index, message, embeddedState):
-                self = .IntermediateMessageEntry(index, message, readStateTable.getCombinedState(index.messageIndex.id.peerId), embeddedState)
+                self = processedChatListEntry(.IntermediateMessageEntry(index, message, readStateTable.getCombinedState(index.messageIndex.id.peerId), embeddedState), cachedDataTable: cachedDataTable, readStateTable: readStateTable, messageHistoryTable: messageHistoryTable)
             case let .hole(hole):
                 self = .HoleEntry(hole)
             case let .groupReference(groupId, index):
@@ -307,7 +324,7 @@ final class MutableChatListView {
             self.additionalItemIds = Set(itemIds)
             for peerId in itemIds {
                 if let entry = postbox.chatListTable.getStandalone(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable) {
-                    self.additionalItemEntries.append(MutableChatListEntry(entry, readStateTable: postbox.readStateTable))
+                    self.additionalItemEntries.append(MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable))
                 }
             }
         } else {
@@ -356,15 +373,15 @@ final class MutableChatListView {
             for operation in groupOperations {
                 switch operation {
                     case let .InsertEntry(index, message, combinedReadState, embeddedState):
-                        if self.add(.IntermediateMessageEntry(index, message, combinedReadState, embeddedState)) {
+                        if self.add(.IntermediateMessageEntry(index, message, combinedReadState, embeddedState), postbox: postbox) {
                             hasChanges = true
                         }
                     case let .InsertHole(index):
-                        if self.add(.HoleEntry(index)) {
+                        if self.add(.HoleEntry(index), postbox: postbox) {
                             hasChanges = true
                         }
                     case let .InsertGroupReference(groupId, index):
-                        if self.add(.IntermediateGroupReferenceEntry(groupId, index, cachedGroupCounters[groupId] ?? ChatListGroupReferenceUnreadCounters(postbox: postbox, groupId: groupId))) {
+                        if self.add(.IntermediateGroupReferenceEntry(groupId, index, cachedGroupCounters[groupId] ?? ChatListGroupReferenceUnreadCounters(postbox: postbox, groupId: groupId)), postbox: postbox) {
                             hasChanges = true
                         }
                     case let .RemoveEntry(indices):
@@ -494,7 +511,7 @@ final class MutableChatListView {
             self.additionalItemEntries.removeAll()
             for peerId in postbox.additionalChatListItemsTable.get() {
                 if let entry = postbox.chatListTable.getStandalone(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable) {
-                    self.additionalItemEntries.append(MutableChatListEntry(entry, readStateTable: postbox.readStateTable))
+                    self.additionalItemEntries.append(MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable))
                 }
             }
             hasChanges = true
@@ -502,7 +519,8 @@ final class MutableChatListView {
         return hasChanges
     }
     
-    func add(_ entry: MutableChatListEntry) -> Bool {
+    func add(_ initialEntry: MutableChatListEntry, postbox: Postbox) -> Bool {
+        let entry = processedChatListEntry(initialEntry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable)
         if self.entries.count == 0 {
             self.entries.append(entry)
             return true
