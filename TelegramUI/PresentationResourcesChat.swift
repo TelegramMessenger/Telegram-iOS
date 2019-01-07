@@ -953,12 +953,6 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func groupInfoBannedIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.groupInfoBannedIcon.rawValue, { _ in
-            return UIImage(bundleImageName: "Chat/Info/GroupBannedIcon")?.precomposed()
-        })
-    }
-    
     static func emptyChatListCheckIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.emptyChatListCheckIcon.rawValue, { _ in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/ListCheckIcon"), color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText)

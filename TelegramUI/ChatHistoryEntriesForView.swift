@@ -113,7 +113,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 entries.insert(.ChatInfoEntry(botInfo.description, presentationData), at: 0)
             }
             var isEmpty = true
-            if entries.count <= 2 {
+            if entries.count <= 3 {
                 loop: for entry in view.entries {
                     switch entry {
                         case let .MessageEntry(entry):
@@ -121,7 +121,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                             for media in entry.0.media {
                                 if let action = media as? TelegramMediaAction {
                                     switch action.action {
-                                        case .groupCreated, .photoUpdated:
+                                        case .groupCreated, .photoUpdated, .channelMigratedFromGroup, .groupMigratedToChannel:
                                             isEmptyMedia = true
                                         default:
                                             break

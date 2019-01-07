@@ -842,7 +842,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             let _ = addRecentlySearchedPeer(postbox: account.postbox, peerId: peer.id).start()
             self?.listNode.clearHighlightAnimated(true)
         }, togglePeerSelected: { _ in
-        }, messageSelected: { [weak self] message, _ in
+        }, messageSelected: { [weak self] peer, message, _ in
             if let peer = message.peers[message.id.peerId] {
                 openMessage(peer, message.id)
             }

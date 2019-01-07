@@ -301,15 +301,15 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     
                 })
             case let .admins(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoAdminsIcon(theme), title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openAdmins()
                 })
             case let .members(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoMembersIcon(theme), title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openMembers()
                 })
             case let .banned(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoBannedIcon(theme), title: text, label: value, sectionId: self.section, style: .plain, action: {
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
                     arguments.openBanned()
                 })
             case let .signMessages(theme, text, value):
@@ -473,6 +473,8 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                 } else {
                     notificationsText = presentationData.strings.UserInfo_NotificationsDisabled
                 }
+            } else if case .default = notificationSettings.messageSound {
+                notificationsText = presentationData.strings.UserInfo_NotificationsEnabled
             } else {
                 notificationsText = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.channels.sound)
             }
@@ -794,6 +796,11 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                 }
             }
             
+            var canEditChannel = false
+            if let peer = view.peers[view.peerId] as? TelegramChannel {
+                canEditChannel = peer.hasPermission(.changeInfo)
+            }
+            
             var leftNavigationButton: ItemListNavigationButton?
             var rightNavigationButton: ItemListNavigationButton?
             if let editingState = state.editingState {
@@ -856,7 +863,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
                         }))
                     })
                 }
-            } else {
+            } else if canEditChannel {
                 rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         var text = ""

@@ -436,10 +436,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
+                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer)
+                |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(messageId.peerId), messageId: messageId, purposefulAction: {
+                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(actualPeerId), messageId: messageId, purposefulAction: {
                                 self?.deactivateSearch(animated: false)
                             })
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)

@@ -665,6 +665,8 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
         } else {
             notificationsLabel = presentationData.strings.UserInfo_NotificationsDisabled
         }
+    } else if case .default = notificationSettings.messageSound {
+        notificationsLabel = presentationData.strings.UserInfo_NotificationsEnabled
     } else {
         notificationsLabel = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: notificationSettings.messageSound, default: globalNotificationSettings.effective.channels.sound)
     }

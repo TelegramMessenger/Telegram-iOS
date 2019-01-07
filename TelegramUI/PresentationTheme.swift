@@ -210,11 +210,15 @@ public final class PresentationThemeSwitch {
     public let frameColor: UIColor
     public let handleColor: UIColor
     public let contentColor: UIColor
+    public let positiveColor: UIColor
+    public let negativeColor: UIColor
     
-    public init(frameColor: UIColor, handleColor: UIColor, contentColor: UIColor) {
+    public init(frameColor: UIColor, handleColor: UIColor, contentColor: UIColor, positiveColor: UIColor, negativeColor: UIColor) {
         self.frameColor = frameColor
         self.handleColor = handleColor
         self.contentColor = contentColor
+        self.positiveColor = positiveColor
+        self.negativeColor = negativeColor
     }
 }
 

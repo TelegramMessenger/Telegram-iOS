@@ -121,27 +121,48 @@ struct ChatHistoryListViewTransition {
     let animateIn: Bool
 }
 
-private func maxMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> (incoming: MessageIndex?, overall: MessageIndex?) {
+private func maxMessageIndexForEntries(_ view: ChatHistoryView, indexRange: (Int, Int)) -> (incoming: MessageIndex?, overall: MessageIndex?) {
+    var incoming: MessageIndex?
     var overall: MessageIndex?
-    for i in (indexRange.0 ... indexRange.1).reversed() {
-        if case let .MessageEntry(message, _, _, _, _, _) = entries[i] {
-            if overall == nil {
-                overall = MessageIndex(message)
+    var nextLowestIndex: MessageIndex?
+    if indexRange.0 >= 0 && indexRange.0 < view.filteredEntries.count {
+        if indexRange.0 > 0 {
+            nextLowestIndex = view.filteredEntries[indexRange.0 - 1].index
+        }
+    }
+    var nextHighestIndex: MessageIndex?
+    if indexRange.1 >= 0 && indexRange.1 < view.filteredEntries.count {
+        if indexRange.1 < view.filteredEntries.count - 1 {
+            nextHighestIndex = view.filteredEntries[indexRange.1 + 1].index
+        }
+    }
+    for i in (0 ..< view.originalView.entries.count).reversed() {
+        let index = view.originalView.entries[i].index
+        if let nextLowestIndex = nextLowestIndex {
+            if index <= nextLowestIndex {
+                continue
             }
-            if message.flags.contains(.Incoming) {
-                return (MessageIndex(message), overall)
+        }
+        if let nextHighestIndex = nextHighestIndex {
+            if index >= nextHighestIndex {
+                continue
             }
-        } else if case let .MessageGroupEntry(_, messages, _) = entries[i] {
-            let index = MessageIndex(messages[messages.count - 1].0)
-            if overall == nil {
+        }
+        if case let .MessageEntry(messageEntry) = view.originalView.entries[i] {
+            if overall == nil || overall! < index {
                 overall = index
             }
-            if messages[messages.count - 1].0.flags.contains(.Incoming) {
-                return (index, overall)
+            if messageEntry.0.flags.contains(.Incoming) {
+                if incoming == nil || incoming! < index {
+                    incoming = index
+                }
+            }
+            if incoming != nil {
+                return (incoming, overall)
             }
         }
     }
-    return (nil, overall)
+    return (incoming, overall)
 }
 
 private func mappedInsertEntries(account: Account, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, entries: [ChatHistoryViewTransitionInsertEntry]) -> [ListViewInsertItem] {
@@ -654,7 +675,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                         
                         if readIndexRange.0 <= readIndexRange.1 {
-                            let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView.filteredEntries, indexRange: readIndexRange)
+                            let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView, indexRange: readIndexRange)
                             
                             if let maxIncomingIndex = maxIncomingIndex {
                                 strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxIncomingIndex)
@@ -980,7 +1001,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 visibleFirstIndex += 1
                             }*/
                             if visibleFirstIndex <= visible.lastIndex {
-                                let (messageIndex, _) =  maxMessageIndexForEntries(transition.historyView.filteredEntries, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
+                                let (messageIndex, _) =  maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
                                 if let messageIndex = messageIndex {
                                     strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                                 }
