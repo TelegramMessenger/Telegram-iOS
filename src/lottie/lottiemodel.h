@@ -441,7 +441,12 @@ public:
  */
 inline int LOTLayerData::timeRemap(int frameNo) const
 {
-    frameNo = mTimeRemap.isStatic() ? frameNo :
+    /*
+     * only consider startFrame() when there is no timeRemap.
+     * when a layer has timeremap bodymovin updates the startFrame()
+     * of all child layer so we don't have to take care of it.
+     */
+    frameNo = mTimeRemap.isStatic() ? frameNo - startFrame():
               mCompRef->frameAtTime(mTimeRemap.value(frameNo));
     /* Apply time streatch if it has any.
      * Time streatch is just a factor by which the animation will speedup or slow

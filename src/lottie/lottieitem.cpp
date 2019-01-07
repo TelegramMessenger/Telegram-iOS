@@ -591,10 +591,9 @@ void LOTCompLayerItem::updateContent()
     if (mClipper && flag().testFlag(DirtyFlagBit::Matrix)) {
         mClipper->update(combinedMatrix());
     }
-
+    int mappedFrame = mLayerData->timeRemap(frameNo());
     for (const auto &layer : mLayers) {
-        layer->update( mLayerData->timeRemap(frameNo()) - mLayerData->startFrame(),
-                       combinedMatrix(), combinedAlpha());
+        layer->update( mappedFrame, combinedMatrix(), combinedAlpha());
     }
 }
 
