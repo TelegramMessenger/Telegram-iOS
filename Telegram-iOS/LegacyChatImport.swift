@@ -452,7 +452,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                 copyLocalFiles.append((resource, path))
                             }
                         }
-                        parsedMedia.append(TelegramMediaFile(fileId: mediaId, partialReference: nil, resource: resource, previewRepresentations: representations, mimeType: "video/mp4", size: size == 0 ? nil : Int(size), attributes: attributes))
+                        parsedMedia.append(TelegramMediaFile(fileId: mediaId, partialReference: nil, resource: resource, previewRepresentations: representations, immediateThumbnailData: nil, mimeType: "video/mp4", size: size == 0 ? nil : Int(size), attributes: attributes))
                     } else if let item = item as? TGAudioMediaAttachment {
                         let mediaId = MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64())
                         let representations: [TelegramMediaImageRepresentation] = []
@@ -473,7 +473,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                         } else if audioUrl.hasPrefix("file://"), let path = URL(string: audioUrl)?.path {
                             copyLocalFiles.append((resource, path))
                         }
-                        parsedMedia.append(TelegramMediaFile(fileId: mediaId, partialReference: nil, resource: resource, previewRepresentations: representations, mimeType: "audio/ogg", size: size == 0 ? nil : Int(size), attributes: attributes))
+                        parsedMedia.append(TelegramMediaFile(fileId: mediaId, partialReference: nil, resource: resource, previewRepresentations: representations, immediateThumbnailData: nil, mimeType: "audio/ogg", size: size == 0 ? nil : Int(size), attributes: attributes))
                     } else if let item = item as? TGDocumentMediaAttachment {
                         let mediaId = MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64())
                         var representations: [TelegramMediaImageRepresentation] = []
@@ -541,7 +541,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                         } else if item.documentId != 0 {
                             copyLocalFiles.append((resource, pathFromLegacyFile(basePath: basePath, fileId: item.documentId, isLocal: false, fileName: TGDocumentMediaAttachment.safeFileName(forFileName: fileName) ?? "")))
                         }
-                        parsedMedia.append(TelegramMediaFile(fileId: mediaId, partialReference: nil, resource: resource, previewRepresentations: representations, mimeType: item.mimeType ?? "application/octet-stream", size: size == 0 ? nil : Int(size), attributes: attributes))
+                        parsedMedia.append(TelegramMediaFile(fileId: mediaId, partialReference: nil, resource: resource, previewRepresentations: representations, immediateThumbnailData: nil, mimeType: item.mimeType ?? "application/octet-stream", size: size == 0 ? nil : Int(size), attributes: attributes))
                     } else if let item = item as? TGActionMediaAttachment {
                         if item.actionType == TGMessageActionEncryptedChatMessageLifetime, let actionData = item.actionData, let timeout = actionData["messageLifetime"] as? Int32 {
                             
