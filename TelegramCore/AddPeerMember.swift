@@ -11,6 +11,7 @@ import Foundation
 
 public enum AddGroupMemberError {
     case generic
+    case groupFull
 }
 
 public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddGroupMemberError> {
@@ -19,6 +20,12 @@ public func addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -
             if let group = peer as? TelegramGroup {
                 return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id, userId: inputUser, fwdLimit: 100))
                 |> mapError { error -> AddGroupMemberError in
+                    switch error.errorDescription {
+                        case "USERS_TOO_MUCH":
+                            return .groupFull
+                        default:
+                            return .generic
+                    }
                     return .generic
                 }
                 |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in
