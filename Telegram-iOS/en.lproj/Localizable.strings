@@ -3842,6 +3842,14 @@ Unused sets are archived when you add more.";
 "EmptyGroupInfo.Line4" = "Admins with different rights";
 
 "BackgroundPreview.Title" = "Background Preview";
+"BackgroundPreview.SwipeInfo" = "Swipe left or right to preview more backgrounds";
+"BackgroundPreview.Still" = "Still";
+"BackgroundPreview.Perspective" = "Perspective";
+"BackgroundPreview.Blurred" = "Blurred";
+
+"Wallpaper.Search" = "Search Backgrounds";
+"Wallpaper.SetCustomBackground" = "Set Custom Background";
+"Wallpaper.SetCustomBackgroundInfo" = "You can set a custom background image and share it with your friends.";
 
 "Channel.AdminLog.DefaultRestrictionsUpdated" = "changed default permissions";
 "Channel.AdminLog.PollStopped" = "%@ stopped poll";
