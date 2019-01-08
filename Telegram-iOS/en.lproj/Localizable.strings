@@ -112,12 +112,12 @@
 "MESSAGE_GIF_SEPARATED" = "%1$@|sent you a GIF";
 "MESSAGE_GAME_SEPARATED" = "%1$@|invited you to play %2$@";
 "MESSAGE_INVOICE_SEPARATED" = "%1$@|sent you an invoice for %2$@";
-"MESSAGE_FWDS_SEPARATED_1" = "%1$@|forwarded you a message";
-"MESSAGE_FWDS_SEPARATED_any" = "%1$@|forwarded you %2$d messages";
-"MESSAGE_PHOTOS_SEPARATED_1" = "%1$@|sent you a photo";
-"MESSAGE_PHOTOS_SEPARATED_any" = "%1$@|sent you %2$d photos";
-"MESSAGES_SEPARATED_1" = "%1$@|sent you a message";
-"MESSAGES_SEPARATED_any" = "%1$@|sent you %2$d messages";
+"NEW_MESSAGE_FWDS_SEPARATED_1" = "%1$@|forwarded you a message";
+"NEW_MESSAGE_FWDS_SEPARATED_any" = "%1$@|forwarded you %2$d messages";
+"NEW_MESSAGE_PHOTOS_SEPARATED_1" = "%1$@|sent you a photo";
+"NEW_MESSAGE_PHOTOS_SEPARATED_any" = "%1$@|sent you %2$d photos";
+"NEW_MESSAGES_SEPARATED_1" = "%1$@|sent you a message";
+"NEW_MESSAGES_SEPARATED_any" = "%1$@|sent you %2$d messages";
 
 "CHANNEL_MESSAGE_TEXT_SEPARATED" = "%1$@|%2$@";
 "CHANNEL_MESSAGE_NOTEXT_SEPARATED" = "%1$@|posted a message";
@@ -133,12 +133,12 @@
 "CHANNEL_MESSAGE_POLL_SEPARATED" = "%1$@|posted a poll";
 "CHANNEL_MESSAGE_GIF_SEPARATED" = "%1$@|posted a GIF";
 "CHANNEL_MESSAGE_GAME_SEPARATED" = "%1$@|invited you to play %2$@";
-"CHANNEL_MESSAGE_FWDS_SEPARATED_1" = "%1$@|posted a forwarded message";
-"CHANNEL_MESSAGE_FWDS_SEPARATED_any" = "%1$@|posted %2$d forwarded messages";
-"CHANNEL_MESSAGE_PHOTOS_SEPARATED_1" = "%1$@|posted a photo";
-"CHANNEL_MESSAGE_PHOTOS_SEPARATED_any" = "%1$@|posted %2$d photos";
-"CHANNEL_MESSAGES_SEPARATED_1" = "%1$@|posted a message";
-"CHANNEL_MESSAGES_SEPARATED_any" = "%1$@|posted %2$d messages";
+"NEW_CHANNEL_MESSAGE_FWDS_SEPARATED_1" = "%1$@|posted a forwarded message";
+"NEW_CHANNEL_MESSAGE_FWDS_SEPARATED_any" = "%1$@|posted %2$d forwarded messages";
+"NEW_CHANNEL_MESSAGE_PHOTOS_SEPARATED_1" = "%1$@|posted a photo";
+"NEW_CHANNEL_MESSAGE_PHOTOS_SEPARATED_any" = "%1$@|posted %2$d photos";
+"NEW_CHANNEL_MESSAGES_SEPARATED_1" = "%1$@|posted a message";
+"NEW_CHANNEL_MESSAGES_SEPARATED_any" = "%1$@|posted %2$d messages";
 
 "CHAT_MESSAGE_TEXT_SEPARATED" = "%2$@|%1$@:%3$@";
 "CHAT_MESSAGE_NOTEXT_SEPARATED" = "%2$@|%1$@ sent a message to the group";
@@ -165,12 +165,12 @@
 "CHAT_LEFT_SEPARATED" = "%2$@|%1$@ has left the group";
 "CHAT_RETURNED_SEPARATED" = "%2$@|%1$@ has returned to the group";
 "CHAT_JOINED_SEPARATED" = "%2$@|%1$@ has joined the group";
-"CHAT_MESSAGE_FWDS_SEPARATED_1" = "%2$@|%1$@ forwarded a message";
-"CHAT_MESSAGE_FWDS_SEPARATED_any" = "%2$@|%1$@ forwarded %3$d messages";
-"CHAT_MESSAGE_PHOTOS_SEPARATED_1" = "%2$@|%1$@ sent a photo";
-"CHAT_MESSAGE_PHOTOS_SEPARATED_any" = "%2$@|%1$@ sent %3$d photos";
-"CHAT_MESSAGES_SEPARATED_1" = "%2$@|%1$@ sent a message";
-"CHAT_MESSAGES_SEPARATED_any" = "%2$@|%1$@ sent %3$d messages";
+"NEW_CHAT_MESSAGE_FWDS_SEPARATED_1" = "%2$@|%1$@ forwarded a message";
+"NEW_CHAT_MESSAGE_FWDS_SEPARATED_any" = "%2$@|%1$@ forwarded %3$d messages";
+"NEW_CHAT_MESSAGE_PHOTOS_SEPARATED_1" = "%2$@|%1$@ sent a photo";
+"NEW_CHAT_MESSAGE_PHOTOS_SEPARATED_any" = "%2$@|%1$@ sent %3$d photos";
+"NEW_CHAT_MESSAGES_SEPARATED_1" = "%2$@|%1$@ sent a message";
+"NEW_CHAT_MESSAGES_SEPARATED_any" = "%2$@|%1$@ sent %3$d messages";
 
 "PINNED_TEXT_SEPARATED" = "%1$@|pinned \"%2$@\"";
 "PINNED_NOTEXT_SEPARATED" = "%1$@|pinned a message";
@@ -2706,7 +2706,7 @@ Unused sets are archived when you add more.";
 "Contacts.ImportersCount_many" = "%@ contacts on Telegram";
 "Contacts.ImportersCount_0" = "%@ contacts on Telegram";
 
-"Conversation.ContextMenuBan" = "Ban";
+"Conversation.ContextMenuBan" = "Restrict";
 
 "SocksProxySetup.UseForCalls" = "Use for calls";
 "SocksProxySetup.UseForCallsHelp" = "Proxy servers may degrade the quality of your calls.";
@@ -3849,3 +3849,11 @@ Unused sets are archived when you add more.";
 
 "Channel.AdminLog.DefaultRestrictionsUpdated" = "changed default permissions";
 "Channel.AdminLog.PollStopped" = "%@ stopped poll";
+
+"ChatList.DeleteChat" = "Delete Chat";
+"ChatList.DeleteChatConfirmation" = "Are you sure you want to delete chat\nwith %@?";
+"ChatList.LeaveGroupConfirmation" = "Are you sure you want to leave %@?";
+
+"Undo.Undo" = "Undo";
+"Undo.MessagesDeleted" = "Messages deleted";
+"Undo.ChatDeleted" = "Chat deleted";
