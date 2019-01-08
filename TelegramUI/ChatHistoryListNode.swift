@@ -356,6 +356,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var chatPresentationDataPromise: Promise<ChatPresentationData>
     private var presentationDataDisposable: Disposable?
     
+    private let historyAppearsClearedPromise = ValuePromise<Bool>(false)
+    var historyAppearsCleared: Bool = false {
+        didSet {
+            if self.historyAppearsCleared != oldValue {
+                self.historyAppearsClearedPromise.set(self.historyAppearsCleared)
+            }
+        }
+    }
+    
     private(set) var isScrollAtBottomPosition = false
     public var isScrollAtBottomPositionUpdated: (() -> Void)?
     
@@ -451,8 +460,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         |> distinctUntilChanged
         
-        let historyViewTransition = combineLatest(historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType)
-        |> mapToQueue { [weak self] update, chatPresentationData, selectedMessages, networkType -> Signal<ChatHistoryListViewTransition, NoError> in
+        let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
+        
+        let historyViewTransition = combineLatest(historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get())
+        |> mapToQueue { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared -> Signal<ChatHistoryListViewTransition, NoError> in
             let initialData: ChatHistoryCombinedInitialData?
             switch update {
                 case let .Loading(combinedInitialData):
@@ -493,7 +504,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     
                     let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType)
                     
-                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData), associatedData: associatedData)
+                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared), associatedData: associatedData)
                     let previous = previousView.swap(processedView)
                     
                     if scrollPosition == nil, let originalScrollPosition = originalScrollPosition {
@@ -512,7 +523,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     let reason: ChatHistoryViewTransitionReason
                     var prepareOnMainQueue = false
                     
-                    if let previous = previous, previous.originalView.entries == processedView.originalView.entries {
+                    let previousHistoryAppearsClearedValue = previousHistoryAppearsCleared.swap(historyAppearsCleared)
+                    if previousHistoryAppearsClearedValue != nil && previousHistoryAppearsClearedValue != historyAppearsCleared && !historyAppearsCleared {
+                        reason = ChatHistoryViewTransitionReason.Initial(fadeIn: !processedView.filteredEntries.isEmpty)
+                    } else if let previous = previous, previous.originalView.entries == processedView.originalView.entries {
                         reason = ChatHistoryViewTransitionReason.InteractiveChanges
                         updatedScrollPosition = nil
                     } else {

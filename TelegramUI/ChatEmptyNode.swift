@@ -457,6 +457,8 @@ final class ChatEmptyNode: ASDisplayNode {
                 contentType = .secret
             } else if let group = peer as? TelegramGroup, case .creator = group.role {
                 contentType = .group
+            } else if let channel = peer as? TelegramChannel, channel.flags.contains(.isCreator) {
+                contentType = .group
             } else {
                 contentType = .regular
             }

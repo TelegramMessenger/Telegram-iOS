@@ -25,12 +25,14 @@ private final class RadialStatusSecretTimeoutContentNodeParameters: NSObject {
     let color: UIColor
     let icon: UIImage?
     let progress: CGFloat
+    let sparks: Bool
     let particles: [ContentParticle]
     
-    init(color: UIColor, icon: UIImage?, progress: CGFloat, particles: [ContentParticle]) {
+    init(color: UIColor, icon: UIImage?, progress: CGFloat, sparks: Bool, particles: [ContentParticle]) {
         self.color = color
         self.icon = icon
         self.progress = progress
+        self.sparks = sparks
         self.particles = particles
     }
 }
@@ -45,17 +47,19 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     private let beginTime: Double
     private let timeout: Double
     private let icon: UIImage?
+    private let sparks: Bool
     
     private var progress: CGFloat = 0.0
     private var particles: [ContentParticle] = []
     
     private var displayLink: CADisplayLink?
     
-    init(color: UIColor, beginTime: Double, timeout: Double, icon: UIImage?) {
+    init(color: UIColor, beginTime: Double, timeout: Double, icon: UIImage?, sparks: Bool) {
         self.color = color
         self.beginTime = beginTime
         self.timeout = timeout
         self.icon = icon
+        self.sparks = sparks
         
         super.init()
         
@@ -115,59 +119,61 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         let absoluteTimestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
         self.progress = min(1.0, CGFloat((absoluteTimestamp - self.beginTime) / self.timeout))
         
-        let lineWidth: CGFloat = 1.75
-        let center = bounds.center
-        let radius: CGFloat = (bounds.size.width - lineWidth - 2.5 * 2.0) * 0.5
-        
-        let endAngle: CGFloat = -CGFloat.pi / 2.0 + 2.0 * CGFloat.pi * self.progress
-        
-        let v = CGPoint(x: sin(endAngle), y: -cos(endAngle))
-        let c = CGPoint(x: -v.y * radius + center.x, y: v.x * radius + center.y)
-        
-        let timestamp = CACurrentMediaTime()
-        
-        let dt: CGFloat = 1.0 / 60.0
-        var removeIndices: [Int] = []
-        for i in 0 ..< self.particles.count {
-            let currentTime = timestamp - self.particles[i].beginTime
-            if currentTime > self.particles[i].lifetime {
-                removeIndices.append(i)
-            } else {
-                let input: CGFloat = CGFloat(currentTime / self.particles[i].lifetime)
-                let decelerated: CGFloat = (1.0 - (1.0 - input) * (1.0 - input))
-                self.particles[i].alpha = 1.0 - decelerated
-                
-                var p = self.particles[i].position
-                let d = self.particles[i].direction
-                let v = self.particles[i].velocity
-                p = CGPoint(x: p.x + d.x * v * dt, y: p.y + d.y * v * dt)
-                self.particles[i].position = p
+        if self.sparks {
+            let lineWidth: CGFloat = 1.75
+            let center = bounds.center
+            let radius: CGFloat = (bounds.size.width - lineWidth - 2.5 * 2.0) * 0.5
+            
+            let endAngle: CGFloat = -CGFloat.pi / 2.0 + 2.0 * CGFloat.pi * self.progress
+            
+            let v = CGPoint(x: sin(endAngle), y: -cos(endAngle))
+            let c = CGPoint(x: -v.y * radius + center.x, y: v.x * radius + center.y)
+            
+            let timestamp = CACurrentMediaTime()
+            
+            let dt: CGFloat = 1.0 / 60.0
+            var removeIndices: [Int] = []
+            for i in 0 ..< self.particles.count {
+                let currentTime = timestamp - self.particles[i].beginTime
+                if currentTime > self.particles[i].lifetime {
+                    removeIndices.append(i)
+                } else {
+                    let input: CGFloat = CGFloat(currentTime / self.particles[i].lifetime)
+                    let decelerated: CGFloat = (1.0 - (1.0 - input) * (1.0 - input))
+                    self.particles[i].alpha = 1.0 - decelerated
+                    
+                    var p = self.particles[i].position
+                    let d = self.particles[i].direction
+                    let v = self.particles[i].velocity
+                    p = CGPoint(x: p.x + d.x * v * dt, y: p.y + d.y * v * dt)
+                    self.particles[i].position = p
+                }
             }
-        }
-        
-        for i in removeIndices.reversed() {
-            self.particles.remove(at: i)
-        }
-        
-        let newParticleCount = 1
-        for _ in 0 ..< newParticleCount {
-            let degrees: CGFloat = CGFloat(arc4random_uniform(140)) - 70.0
-            let angle: CGFloat = degrees * CGFloat.pi / 180.0
             
-            let direction = CGPoint(x: v.x * cos(angle) - v.y * sin(angle), y: v.x * sin(angle) + v.y * cos(angle))
-            let velocity = (20.0 + (CGFloat(arc4random()) / CGFloat(UINT32_MAX)) * 4.0) * 0.5
+            for i in removeIndices.reversed() {
+                self.particles.remove(at: i)
+            }
             
-            let lifetime = Double(0.4 + CGFloat(arc4random_uniform(100)) * 0.01)
-            
-            let particle = ContentParticle(position: c, direction: direction, velocity: velocity, alpha: 1.0, lifetime: lifetime, beginTime: timestamp)
-            self.particles.append(particle)
+            let newParticleCount = 1
+            for _ in 0 ..< newParticleCount {
+                let degrees: CGFloat = CGFloat(arc4random_uniform(140)) - 70.0
+                let angle: CGFloat = degrees * CGFloat.pi / 180.0
+                
+                let direction = CGPoint(x: v.x * cos(angle) - v.y * sin(angle), y: v.x * sin(angle) + v.y * cos(angle))
+                let velocity = (20.0 + (CGFloat(arc4random()) / CGFloat(UINT32_MAX)) * 4.0) * 0.5
+                
+                let lifetime = Double(0.4 + CGFloat(arc4random_uniform(100)) * 0.01)
+                
+                let particle = ContentParticle(position: c, direction: direction, velocity: velocity, alpha: 1.0, lifetime: lifetime, beginTime: timestamp)
+                self.particles.append(particle)
+            }
         }
         
         self.setNeedsDisplay()
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return RadialStatusSecretTimeoutContentNodeParameters(color: self.color, icon: self.icon, progress: self.progress, particles: self.particles)
+        return RadialStatusSecretTimeoutContentNodeParameters(color: self.color, icon: self.icon, progress: self.progress, sparks: self.sparks, particles: self.particles)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -190,7 +196,12 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
                 context.restoreGState()
             }
             
-            let lineWidth: CGFloat = 1.75
+            let lineWidth: CGFloat
+            if parameters.sparks {
+                lineWidth = 1.75
+            } else {
+                lineWidth = 1.75
+            }
             
             context.setFillColor(parameters.color.cgColor)
             context.setStrokeColor(parameters.color.cgColor)

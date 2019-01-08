@@ -434,10 +434,6 @@ public func channelPermissionsController(account: Account, peerId: PeerId, loadC
     
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
     
-    let upgradedToSupergroup: (PeerId, @escaping () -> Void) -> Void = { upgradedPeerId, f in
-        upgradedToSupergroupImpl?(upgradedPeerId, f)
-    }
-    
     let arguments = ChannelPermissionsControllerArguments(account: account, updatePermission: { rights, value in
         let _ = (peerView.get()
         |> take(1)

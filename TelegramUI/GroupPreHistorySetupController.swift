@@ -106,7 +106,7 @@ private func groupPreHistorySetupEntries(presentationData: PresentationData, def
     return entries
 }
 
-public func groupPreHistorySetupController(account: Account, peerId: PeerId) -> ViewController {
+public func groupPreHistorySetupController(account: Account, peerId: PeerId, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
     let statePromise = ValuePromise(GroupPreHistorySetupState(), ignoreRepeated: true)
     let stateValue = Atomic(value: GroupPreHistorySetupState())
     let updateState: ((GroupPreHistorySetupState) -> GroupPreHistorySetupState) -> Void = { f in
@@ -129,42 +129,69 @@ public func groupPreHistorySetupController(account: Account, peerId: PeerId) -> 
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId))
-        |> deliverOnMainQueue
-        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<GroupPreHistorySetupEntry>, GroupPreHistorySetupEntry.ItemGenerationArguments)) in
-            let defaultValue: Bool = (view.cachedData as? CachedChannelData)?.flags.contains(.preHistoryEnabled) ?? false
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
-            })
-            var rightNavigationButton: ItemListNavigationButton?
-            if state.applyingSetting {
-                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-            } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                    var value: Bool?
-                    updateState { state in
-                        var state = state
-                        state.applyingSetting = true
-                        value = state.changedValue
-                        return state
-                    }
-                    if let value = value, value != defaultValue {
+    |> deliverOnMainQueue
+    |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<GroupPreHistorySetupEntry>, GroupPreHistorySetupEntry.ItemGenerationArguments)) in
+        let defaultValue: Bool = (view.cachedData as? CachedChannelData)?.flags.contains(.preHistoryEnabled) ?? false
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+        })
+        var rightNavigationButton: ItemListNavigationButton?
+        if state.applyingSetting {
+            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+        } else {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                var value: Bool?
+                updateState { state in
+                    var state = state
+                    state.applyingSetting = true
+                    value = state.changedValue
+                    return state
+                }
+                if let value = value, value != defaultValue {
+                    if peerId.namespace == Namespaces.Peer.CloudGroup {
+                        let signal = convertGroupToSupergroup(account: account, peerId: peerId)
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<PeerId?, NoError> in
+                            return .single(nil)
+                        }
+                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                            guard let upgradedPeerId = upgradedPeerId else {
+                                return .single(nil)
+                            }
+                            return updateChannelHistoryAvailabilitySettingsInteractively(postbox: account.postbox, network: account.network, accountStateManager: account.stateManager, peerId: upgradedPeerId, historyAvailableForNewMembers: value)
+                            |> mapToSignal { _ -> Signal<PeerId?, NoError> in
+                                return .complete()
+                            }
+                            |> then(.single(upgradedPeerId))
+                        }
+                        |> deliverOnMainQueue
+                        applyDisposable.set((signal
+                        |> deliverOnMainQueue).start(next: { upgradedPeerId in
+                            if let upgradedPeerId = upgradedPeerId {
+                                upgradedToSupergroup(upgradedPeerId, {
+                                    dismissImpl?()
+                                })
+                            }
+                        }))
+                    } else {
                         applyDisposable.set((updateChannelHistoryAvailabilitySettingsInteractively(postbox: account.postbox, network: account.network, accountStateManager: account.stateManager, peerId: peerId, historyAvailableForNewMembers: value)
                         |> deliverOnMainQueue).start(completed: {
                             dismissImpl?()
                         }))
-                    } else {
-                        dismissImpl?()
                     }
-                })
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Group_Setup_HistoryTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: groupPreHistorySetupEntries(presentationData: presentationData, defaultValue: defaultValue, state: state), style: .blocks)
-            
-            return (controllerState, (listState, arguments))
+                } else {
+                    dismissImpl?()
+                }
+            })
         }
-        |> afterDisposed {
-            actionsDisposable.dispose()
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Group_Setup_HistoryTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: groupPreHistorySetupEntries(presentationData: presentationData, defaultValue: defaultValue, state: state), style: .blocks)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(account: account, state: signal)

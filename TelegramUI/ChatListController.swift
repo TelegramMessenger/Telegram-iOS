@@ -330,10 +330,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         var items: [ActionSheetItem] = []
                         var canClear = true
                         var canStop = false
+                        var delayedDelete = true
                         
                         var deleteTitle = strongSelf.presentationData.strings.Common_Delete
                         if let channel = peer as? TelegramChannel {
                             if case .broadcast = channel.info {
+                                delayedDelete = false
                                 canClear = false
                                 deleteTitle =  strongSelf.presentationData.strings.Channel_LeaveChannel
                             }
@@ -355,12 +357,65 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         
                         items.append(ActionSheetButtonItem(title: deleteTitle, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            
                             if let strongSelf = self {
-                                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                                let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start(completed: {
-                                    self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
-                                })
+                                if delayedDelete {
+                                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                                    var items: [ActionSheetItem] = []
+                                    items.append(DeleteChatPeerActionSheetItem(account: strongSelf.account, peer: peer, strings: strongSelf.presentationData.strings))
+                                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteChat, color: .destructive, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                        if let strongSelf = self {
+                                            strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                                            strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                                var state = state
+                                                state.pendingRemovalPeerIds.insert(peer.id)
+                                                return state
+                                            })
+                                            strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                                            strongSelf.present(UndoOverlayController(account: strongSelf.account, text: strongSelf.presentationData.strings.Undo_ChatDeleted, action: { shouldCommit in
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                if shouldCommit {
+                                                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                                                    let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start(completed: {
+                                                        guard let strongSelf = self else {
+                                                            return
+                                                        }
+                                                        strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                                            var state = state
+                                                            state.pendingRemovalPeerIds.remove(peer.id)
+                                                            return state
+                                                        })
+                                                        self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                                                    })
+                                                } else {
+                                                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                                                    strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                                        var state = state
+                                                        state.pendingRemovalPeerIds.remove(peer.id)
+                                                        return state
+                                                    })
+                                                    self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                                                }
+                                            }), in: .window(.root))
+                                        }
+                                    }))
+                                    actionSheet.setItemGroups([
+                                        ActionSheetItemGroup(items: items),
+                                        ActionSheetItemGroup(items: [
+                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                                actionSheet?.dismissAnimated()
+                                            })
+                                        ])
+                                    ])
+                                    strongSelf.present(actionSheet, in: .window(.root))
+                                } else {
+                                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                                    let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start(completed: {
+                                        self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                                    })
+                                }
                             }
                         }))
                         

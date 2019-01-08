@@ -65,7 +65,7 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
                             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
                         })
                     }
-                    timeoutNode.transitionToState(.secretTimeout(color: .white, icon: iconImage, beginTime: beginTime, timeout: timeout), completion: {})
+                    timeoutNode.transitionToState(.secretTimeout(color: .white, icon: iconImage, beginTime: beginTime, timeout: timeout, sparks: true), completion: {})
                     self.addSubnode(timeoutNode)
                     
                     if let (layout, navigationHeight) = self.validLayout {

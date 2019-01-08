@@ -240,11 +240,11 @@ final class PeerChannelMemberCategoriesContextsManager {
     }
     
     func addMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
-        let signals: [Signal<(ChannelParticipant?, RenderedChannelParticipant)?, NoError>] = memberIds.map({ memberId in
+        let signals: [Signal<(ChannelParticipant?, RenderedChannelParticipant)?, AddChannelMemberError>] = memberIds.map({ memberId in
             return addChannelMember(account: account, peerId: peerId, memberId: memberId)
             |> map(Optional.init)
-            |> `catch` { _ -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, NoError> in
-                return .single(nil)
+            |> `catch` { error -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, AddChannelMemberError> in
+                return .fail(error)
             }
         })
         return combineLatest(signals)
@@ -264,7 +264,6 @@ final class PeerChannelMemberCategoriesContextsManager {
                 }
             }
         }
-        |> introduceError(AddChannelMemberError.self)
         |> mapToSignal { _ -> Signal<Void, AddChannelMemberError> in
             return .complete()
         }
