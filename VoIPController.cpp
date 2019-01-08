@@ -342,7 +342,7 @@ void VoIPController::Stop(){
 }
 
 bool VoIPController::NeedRate(){
-	return needRate;
+	return needRate && ServerConfig::GetSharedInstance()->GetBoolean("bad_call_rating", false);
 }
 
 void VoIPController::SetRemoteEndpoints(vector<Endpoint> endpoints, bool allowP2p, int32_t connectionMaxLayer){
@@ -426,19 +426,19 @@ void VoIPController::SetNetworkType(int type){
 	UpdateAudioBitrateLimit();
 	myIPv6=IPv6Address();
 	string itfName=udpSocket->GetLocalInterfaceInfo(NULL, &myIPv6);
-	LOGI("set network type: %s, active interface %s", NetworkTypeToString(type).c_str(), activeNetItfName.c_str());
+	LOGI("set network type: %s, active interface %s", NetworkTypeToString(type).c_str(), itfName.c_str());
 	LOGI("Local IPv6 address: %s", myIPv6.ToString().c_str());
+	if(IS_MOBILE_NETWORK(networkType)){
+		CellularCarrierInfo carrier=GetCarrierInfo();
+		if(!carrier.name.empty()){
+			LOGI("Carrier: %s [%s; mcc=%s, mnc=%s]", carrier.name.c_str(), carrier.countryCode.c_str(), carrier.mcc.c_str(), carrier.mnc.c_str());
+		}
+	}
 	if(itfName!=activeNetItfName){
 		udpSocket->OnActiveInterfaceChanged();
 		LOGI("Active network interface changed: %s -> %s", activeNetItfName.c_str(), itfName.c_str());
 		bool isFirstChange=activeNetItfName.length()==0 && state!=STATE_ESTABLISHED && state!=STATE_RECONNECTING;
 		activeNetItfName=itfName;
-		if(IS_MOBILE_NETWORK(networkType)){
-			CellularCarrierInfo carrier=GetCarrierInfo();
-			if(!carrier.name.empty()){
-				LOGI("Carrier: %s [%s; mcc=%s, mnc=%s]", carrier.name.c_str(), carrier.countryCode.c_str(), carrier.mcc.c_str(), carrier.mnc.c_str());
-			}
-		}
 		if(isFirstChange)
 			return;
 		if(currentEndpoint){
