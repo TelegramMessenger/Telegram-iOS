@@ -26,6 +26,9 @@ final class WallpaperListPreviewController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var wallpaper: TelegramWallpaper?
+    private var wallpaperDisposable: Disposable?
+    
     private var didPlayPresentationAnimation = false
     
     init(account: Account, source: WallpaperListPreviewSource) {
@@ -62,12 +65,12 @@ final class WallpaperListPreviewController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.wallpaperDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
         self.title = self.presentationData.strings.BackgroundPreview_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.sharePressed))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
@@ -96,13 +99,13 @@ final class WallpaperListPreviewController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = WallpaperListPreviewControllerNode(account: self.account, presentationData: self.presentationData, source: self.source, dismiss: { [weak self] in
             self?.dismiss()
-        }, apply: { [weak self] wallpaper in
+        }, apply: { [weak self] wallpaper, mode in
             guard let strongSelf = self else {
                 return
             }
             
             let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
-                return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
             })
             |> deliverOnMainQueue).start(completed: {
                 self?.dismiss()
@@ -110,6 +113,20 @@ final class WallpaperListPreviewController: ViewController {
         })
         self._ready.set(self.controllerNode.ready.get())
         self.displayNodeDidLoad()
+        
+        self.wallpaperDisposable = (self.controllerNode.currentWallpaper
+        |> deliverOnMainQueue).start(next: { [weak self] wallpaper in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if case let .file(_, _, _, _, slug, _, _) = wallpaper, let wallpaperSlug = slug, !wallpaperSlug.isEmpty {
+                strongSelf.wallpaper = wallpaper
+                strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: strongSelf.presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(strongSelf.sharePressed))
+            } else {
+                strongSelf.navigationItem.rightBarButtonItem = nil
+            }
+        })
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -119,7 +136,9 @@ final class WallpaperListPreviewController: ViewController {
     }
     
     @objc func sharePressed() {
-        let shareController = ShareController(account: account, subject: .url("link"))
-        self.present(shareController, in: .window(.root), blockInteraction: true)
+        if let wallpaper = self.wallpaper, case let .file(_, _, _, _, slug, _, _) = wallpaper, let wallpaperSlug = slug, !wallpaperSlug.isEmpty {
+            let shareController = ShareController(account: account, subject: .url("https://t.me/bg/\(wallpaperSlug)"))
+            self.present(shareController, in: .window(.root), blockInteraction: true)
+        }
     }
 }

@@ -268,26 +268,25 @@ public func themeSettingsController(account: Account) -> ViewController {
                 wallpaper = .color(0x18222D)
                 theme = .builtin(.nightAccent)
             }
-            return PresentationThemeSettings(chatWallpaper: wallpaper, theme: theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: .still, theme: theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }).start()
     }, selectFontSize: { size in
         let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperMode: current.chatWallpaperMode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }).start()
     }, openWallpaperSettings: {
         pushControllerImpl?(ThemeGridController(account: account, mode: .wallpapers))
     }, openAccentColor: { color in
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         presentControllerImpl?(ThemeAccentColorActionSheet(account: account, currentValue: color, applyValue: { color in
             let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-                return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: color, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperMode: current.chatWallpaperMode, theme: current.theme, themeAccentColor: color, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
             }).start()
         }))
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(account: account))
     }, disableAnimations: { disabled in
         let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperMode: current.chatWallpaperMode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
         }).start()
     })
     

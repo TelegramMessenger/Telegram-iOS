@@ -46,6 +46,7 @@ public final class PresentationData: Equatable {
     public let strings: PresentationStrings
     public let theme: PresentationTheme
     public let chatWallpaper: TelegramWallpaper
+    public let chatWallpaperMode: PresentationWallpaperMode
     public let volumeControlStatusBarIcons: PresentationVolumeControlStatusBarIcons
     public let fontSize: PresentationFontSize
     public let dateTimeFormat: PresentationDateTimeFormat
@@ -53,10 +54,11 @@ public final class PresentationData: Equatable {
     public let nameSortOrder: PresentationPersonNameOrder
     public let disableAnimations: Bool
     
-    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, volumeControlStatusBarIcons: PresentationVolumeControlStatusBarIcons, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    public init(strings: PresentationStrings, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, chatWallpaperMode: PresentationWallpaperMode, volumeControlStatusBarIcons: PresentationVolumeControlStatusBarIcons, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, nameSortOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.strings = strings
         self.theme = theme
         self.chatWallpaper = chatWallpaper
+        self.chatWallpaperMode = chatWallpaperMode
         self.volumeControlStatusBarIcons = volumeControlStatusBarIcons
         self.fontSize = fontSize
         self.dateTimeFormat = dateTimeFormat
@@ -66,7 +68,7 @@ public final class PresentationData: Equatable {
     }
     
     public static func ==(lhs: PresentationData, rhs: PresentationData) -> Bool {
-        return lhs.strings === rhs.strings && lhs.theme === rhs.theme && lhs.chatWallpaper == rhs.chatWallpaper && lhs.volumeControlStatusBarIcons == rhs.volumeControlStatusBarIcons && lhs.fontSize == rhs.fontSize && lhs.dateTimeFormat == rhs.dateTimeFormat && lhs.disableAnimations == rhs.disableAnimations
+        return lhs.strings === rhs.strings && lhs.theme === rhs.theme && lhs.chatWallpaper == rhs.chatWallpaper && lhs.chatWallpaperMode == rhs.chatWallpaperMode && lhs.volumeControlStatusBarIcons == rhs.volumeControlStatusBarIcons && lhs.fontSize == rhs.fontSize && lhs.dateTimeFormat == rhs.dateTimeFormat && lhs.disableAnimations == rhs.disableAnimations
     }
 }
 
@@ -234,6 +236,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         
         let effectiveTheme: PresentationThemeReference
         var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
+        var effectiveChatWallpaperMode: PresentationWallpaperMode = themeSettings.chatWallpaperMode
         
         if automaticThemeShouldSwitchNow(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme) {
             effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
@@ -242,8 +245,10 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
                     switch themeSettings.automaticThemeSwitchSetting.theme {
                         case .nightAccent:
                             effectiveChatWallpaper = .color(0x18222d)
+                            effectiveChatWallpaperMode = .still
                         case .nightGrayscale:
                             effectiveChatWallpaper = .color(0x000000)
+                            effectiveChatWallpaperMode = .still
                         default:
                             break
                     }
@@ -276,7 +281,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         let dateTimeFormat = currentDateTimeFormat()
         let nameDisplayOrder = contactSettings.nameDisplayOrder
         let nameSortOrder = currentPersonNameSortOrder()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, chatWallpaperMode: effectiveChatWallpaperMode, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -370,6 +375,8 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
                         let themeValue: PresentationTheme
                         let effectiveTheme: PresentationThemeReference
                         var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
+                        var effectiveChatWallpaperMode: PresentationWallpaperMode = themeSettings.chatWallpaperMode
+                        
                         if shouldSwitch {
                             effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
                             switch effectiveChatWallpaper {
@@ -377,8 +384,10 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
                                     switch themeSettings.automaticThemeSwitchSetting.theme {
                                         case .nightAccent:
                                             effectiveChatWallpaper = .color(0x18222d)
+                                            effectiveChatWallpaperMode = .still
                                         case .nightGrayscale:
                                             effectiveChatWallpaper = .color(0x000000)
+                                            effectiveChatWallpaperMode = .still
                                         default:
                                             break
                                     }
@@ -420,7 +429,7 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
                         let nameDisplayOrder = contactSettings.nameDisplayOrder
                         let nameSortOrder = currentPersonNameSortOrder()
 
-                        return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
+                        return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, chatWallpaperMode: effectiveChatWallpaperMode, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
                     }
                 } else {
                     return .complete()
@@ -436,5 +445,5 @@ public func defaultPresentationData() -> PresentationData {
     let nameSortOrder = currentPersonNameSortOrder()
     
     let themeSettings = PresentationThemeSettings.defaultSettings
-    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, chatWallpaper: .builtin, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
+    return PresentationData(strings: defaultPresentationStrings, theme: defaultPresentationTheme, chatWallpaper: .builtin, chatWallpaperMode: .still, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
 }

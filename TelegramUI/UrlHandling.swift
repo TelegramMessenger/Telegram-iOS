@@ -20,6 +20,7 @@ enum ParsedInternalUrl {
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
     case share(url: String?, text: String?, to: String?)
+    case wallpaper(String)
 }
 
 private enum ParsedUrl {
@@ -41,6 +42,7 @@ enum ResolvedUrl {
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
     case share(url: String?, text: String?, to: String?)
+    case wallpaper(String)
 }
 
 func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -167,6 +169,8 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         }
                     }
                     return nil
+                } else if pathComponents[0] == "bg" {
+                    return .wallpaper(pathComponents[1])
                 } else if let value = Int(pathComponents[1]) {
                     return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
@@ -233,6 +237,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             return .single(.cancelAccountReset(phone: phone, hash: hash))
         case let .share(url, text, to):
             return .single(.share(url: url, text: text, to: to))
+        case let .wallpaper(slug):
+            return .single(.wallpaper(slug))
     }
 }
 

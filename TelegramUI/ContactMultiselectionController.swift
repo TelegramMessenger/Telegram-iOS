@@ -131,11 +131,12 @@ class ContactMultiselectionController: ViewController {
         switch self.mode {
             case .groupCreation:
                 let maxCount: Int32 = self.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
-                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Compose_NewGroupTitle, counter: "0/\(maxCount)")
+                let count = self.contactsNode.contactListNode.selectionState?.selectedPeerIndices.count ?? 0
+                self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
-                rightNavigationButton.isEnabled = false
+                rightNavigationButton.isEnabled = count != 0
             case .channelCreation:
                 self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))

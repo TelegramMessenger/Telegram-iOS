@@ -544,6 +544,22 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                         convertedUrl = "https://t.me/confirmphone?phone=\(phone)&hash=\(hash)"
                     }
                 }
+            } else if parsedUrl.host == "bg" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var slug: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "slug" {
+                                    slug = value
+                                }
+                            }
+                        }
+                    }
+                    if let slug = slug {
+                        convertedUrl = "https://t.me/bg/\(slug)"
+                    }
+                }
             }
             
             if parsedUrl.host == "resolve" {

@@ -10,6 +10,12 @@ public enum PresentationBuiltinThemeReference: Int32 {
     case nightAccent = 3
 }
 
+public enum PresentationWallpaperMode: Int32 {
+    case still
+    case perspective
+    case blurred
+}
+
 public enum PresentationThemeReference: PostboxCoding, Equatable {
     case builtin(PresentationBuiltinThemeReference)
     
@@ -141,6 +147,7 @@ public struct AutomaticThemeSwitchSetting: PostboxCoding, Equatable {
 
 public struct PresentationThemeSettings: PreferencesEntry {
     public var chatWallpaper: TelegramWallpaper
+    public var chatWallpaperMode: PresentationWallpaperMode
     public var theme: PresentationThemeReference
     public var themeAccentColor: Int32?
     public var fontSize: PresentationFontSize
@@ -157,11 +164,12 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(chatWallpaper: .builtin, theme: .builtin(.dayClassic), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: true)
+        return PresentationThemeSettings(chatWallpaper: .builtin, chatWallpaperMode: .still, theme: .builtin(.dayClassic), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: true)
     }
     
-    public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, themeAccentColor: Int32?, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, disableAnimations: Bool) {
+    public init(chatWallpaper: TelegramWallpaper, chatWallpaperMode: PresentationWallpaperMode, theme: PresentationThemeReference, themeAccentColor: Int32?, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, disableAnimations: Bool) {
         self.chatWallpaper = chatWallpaper
+        self.chatWallpaperMode = chatWallpaperMode
         self.theme = theme
         self.themeAccentColor = themeAccentColor
         self.fontSize = fontSize
@@ -171,6 +179,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     
     public init(decoder: PostboxDecoder) {
         self.chatWallpaper = (decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper) ?? .builtin
+        self.chatWallpaperMode = PresentationWallpaperMode(rawValue: decoder.decodeInt32ForKey("m", orElse: 0)) ?? .still
         self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as! PresentationThemeReference
         self.themeAccentColor = decoder.decodeOptionalInt32ForKey("themeAccentColor")
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
@@ -180,6 +189,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.chatWallpaper, forKey: "w")
+        encoder.encodeInt32(self.chatWallpaperMode.rawValue, forKey: "m")
         encoder.encodeObject(self.theme, forKey: "t")
         if let themeAccentColor = self.themeAccentColor {
             encoder.encodeInt32(themeAccentColor, forKey: "themeAccentColor")
@@ -200,7 +210,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
-        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.theme == rhs.theme && lhs.themeAccentColor == rhs.themeAccentColor && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.disableAnimations == rhs.disableAnimations
+        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.chatWallpaperMode == rhs.chatWallpaperMode && lhs.theme == rhs.theme && lhs.themeAccentColor == rhs.themeAccentColor && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.disableAnimations == rhs.disableAnimations
     }
 }
 

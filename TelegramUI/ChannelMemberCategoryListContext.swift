@@ -4,7 +4,7 @@ import Postbox
 import SwiftSignalKit
 
 private let initialBatchSize: Int32 = 64
-private let emptyTimeout: Double = 2.0 * 60.0
+private let defaultEmptyTimeout: Double = 2.0 * 60.0
 private let headUpdateTimeout: Double = 30.0
 private let requestBatchSize: Int32 = 64
 
@@ -83,7 +83,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
     var listStateValue: ChannelMemberListState {
         didSet {
             self.listStatePromise.set(.single(self.listStateValue))
-            if case .admins = self.category, case .ready = self.listStateValue.loadingState {
+            if case .admins(nil) = self.category, case .ready = self.listStateValue.loadingState {
                 let ids: Set<PeerId> = Set(self.listStateValue.list.map { $0.peer.id })
                 let previousIds: Set<PeerId> = Set(oldValue.list.map { $0.peer.id })
                 if ids != previousIds {
@@ -288,8 +288,8 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                 }
             }
             switch self.category {
-                case .admins:
-                    if let updated = updated, let _ = updated.participant.adminInfo {
+                case let .admins(query):
+                    if let updated = updated, let _ = updated.participant.adminInfo, (query == nil || updated.peer.indexName.matchesByTokens(query!)) {
                         var found = false
                         loop: for i in 0 ..< list.count {
                             if list[i].peer.id == updated.peer.id {
@@ -512,14 +512,16 @@ struct PeerChannelMemberCategoryControl {
 
 private final class PeerChannelMemberContextWithSubscribers {
     let context: ChannelMemberCategoryListContext
+    private let emptyTimeout: Double
     private let subscribers = Bag<(ChannelMemberListState) -> Void>()
     private let disposable = MetaDisposable()
     private let becameEmpty: () -> Void
     
     private var emptyTimer: SwiftSignalKit.Timer?
     
-    init(context: ChannelMemberCategoryListContext, becameEmpty: @escaping () -> Void) {
+    init(context: ChannelMemberCategoryListContext, emptyTimeout: Double, becameEmpty: @escaping () -> Void) {
         self.context = context
+        self.emptyTimeout = emptyTimeout
         self.becameEmpty = becameEmpty
         self.disposable.set((context.listState
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -539,7 +541,7 @@ private final class PeerChannelMemberContextWithSubscribers {
     private func resetAndBeginEmptyTimer() {
         self.context.reset(false)
         self.emptyTimer?.invalidate()
-        let emptyTimer = SwiftSignalKit.Timer(timeout: emptyTimeout, repeat: false, completion: { [weak self] in
+        let emptyTimer = SwiftSignalKit.Timer(timeout: self.emptyTimeout, repeat: false, completion: { [weak self] in
             if let strongSelf = self {
                 if strongSelf.subscribers.isEmpty {
                     strongSelf.becameEmpty()
@@ -605,6 +607,13 @@ final class PeerChannelMemberCategoriesContext {
             return (current.subscribe(requestUpdate: requestUpdate, updated: updated), PeerChannelMemberCategoryControl(key: key))
         }
         let context: ChannelMemberCategoryListContext
+        let emptyTimeout: Double
+        switch key {
+            case .admins(nil), .banned(nil), .recentSearch(nil), .restricted(nil), .restrictedAndBanned(nil):
+                emptyTimeout = defaultEmptyTimeout
+            default:
+                emptyTimeout = 0.0
+        }
         switch key {
             case .recent, .recentSearch, .admins:
                 let mappedCategory: ChannelMemberListCategory
@@ -626,7 +635,7 @@ final class PeerChannelMemberCategoriesContext {
             case let .banned(query):
                 context = ChannelMemberSingleCategoryListContext(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: .banned(query))
         }
-        let contextWithSubscribers = PeerChannelMemberContextWithSubscribers(context: context, becameEmpty: { [weak self] in
+        let contextWithSubscribers = PeerChannelMemberContextWithSubscribers(context: context, emptyTimeout: emptyTimeout, becameEmpty: { [weak self] in
             assert(Queue.mainQueue().isCurrent())
             if let strongSelf = self {
                 strongSelf.contexts.removeValue(forKey: key)

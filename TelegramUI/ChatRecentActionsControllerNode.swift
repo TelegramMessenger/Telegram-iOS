@@ -770,6 +770,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }, dismissInput: {
                             self?.view.endEditing(true)
                         })
+                    case let .wallpaper(slug):
+                        break
                 }
             }
         }))

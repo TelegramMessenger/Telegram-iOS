@@ -57,7 +57,9 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
     let switchColors = PresentationThemeSwitch(
         frameColor: UIColor(rgb: 0xe0e0e0),
         handleColor: UIColor(rgb: 0xffffff),
-        contentColor: UIColor(rgb: 0x42d451)
+        contentColor: UIColor(rgb: 0x42d451),
+        positiveColor: UIColor(rgb: 0x00B12C),
+        negativeColor: destructiveColor
     )
     
     let list = PresentationThemeList(

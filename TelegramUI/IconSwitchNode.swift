@@ -38,6 +38,20 @@ class IconSwitchNode: ASDisplayNode {
             }
         }
     }
+    public var positiveContentColor = UIColor(rgb: 0x00ff00) {
+        didSet {
+            if self.isNodeLoaded {
+                (self.view as! IconSwitchNodeView).setPositiveContentColor(self.positiveContentColor)
+            }
+        }
+    }
+    public var negativeContentColor = UIColor(rgb: 0xff0000) {
+        didSet {
+            if self.isNodeLoaded {
+                (self.view as! IconSwitchNodeView).setNegativeContentColor(self.negativeContentColor)
+            }
+        }
+    }
     
     private var _isOn: Bool = false
     public var isOn: Bool {
@@ -68,6 +82,8 @@ class IconSwitchNode: ASDisplayNode {
         (self.view as! UISwitch).tintColor = self.frameColor
         //(self.view as! UISwitch).thumbTintColor = self.handleColor
         (self.view as! UISwitch).onTintColor = self.contentColor
+        (self.view as! IconSwitchNodeView).setNegativeContentColor(self.negativeContentColor)
+        (self.view as! IconSwitchNodeView).setPositiveContentColor(self.positiveContentColor)
         
         (self.view as! UISwitch).setOn(self._isOn, animated: false)
         

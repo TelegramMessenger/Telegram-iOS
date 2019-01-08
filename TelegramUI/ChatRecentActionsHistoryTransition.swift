@@ -767,8 +767,6 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let newFlags = new.flags
-                
                 var addedRights = new.flags
                 var removedRights: TelegramChatBannedRightsFlags = []
                     addedRights = addedRights.subtracting(prev.flags)
@@ -777,8 +775,6 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 text += self.presentationData.strings.Channel_AdminLog_DefaultRestrictionsUpdated
                 text += "\n"
         
-                let prevFlags = prev.flags
-        
                 let order: [(TelegramChatBannedRightsFlags, String)] = [
                     (.banReadMessages, self.presentationData.strings.Channel_AdminLog_BanReadMessages),
                     (.banSendMessages, self.presentationData.strings.Channel_AdminLog_BanSendMessages),
@@ -786,6 +782,10 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     (.banSendStickers, self.presentationData.strings.Channel_AdminLog_BanSendStickers),
                     (.banSendGifs, self.presentationData.strings.Channel_AdminLog_BanSendGifs),
                     (.banEmbedLinks, self.presentationData.strings.Channel_AdminLog_BanEmbedLinks),
+                    (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls),
+                    (.banAddMembers, self.presentationData.strings.Channel_AdminLog_AddMembers),
+                    (.banPinMessages, self.presentationData.strings.Channel_AdminLog_PinMessages),
+                    (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls)
                 ]
         
                 for (flag, string) in order {

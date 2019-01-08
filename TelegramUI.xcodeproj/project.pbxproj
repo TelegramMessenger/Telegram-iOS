@@ -72,7 +72,6 @@
 		099529B021D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */; };
 		099529B221D24F5800805E13 /* RadialDownloadContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */; };
 		099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B321D3E5D800805E13 /* CheckDiskSpace.swift */; };
-		099529F321D8FE8300805E13 /* RadialPlayPauseContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529F221D8FE8300805E13 /* RadialPlayPauseContentNode.swift */; };
 		099529FA21DD8A3100805E13 /* NavigationBarSearchContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529F921DD8A3100805E13 /* NavigationBarSearchContentNode.swift */; };
 		09AE3823214C110900850BFD /* LegacySecureIdScanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */; };
 		09B4EE4721A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4621A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift */; };
@@ -111,6 +110,7 @@
 		D005808B21CAB8F000CB7CD3 /* VoipDerivedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */; };
 		D00580A021DCF0A200CB7CD3 /* WallpaperListPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */; };
 		D00580A221DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */; };
+		D00580B121E3DEF200CB7CD3 /* MergedItemListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B021E3DEF200CB7CD3 /* MergedItemListItem.swift */; };
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
 		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
@@ -1180,7 +1180,6 @@
 		099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageUnsupportedBubbleContentNode.swift; sourceTree = "<group>"; };
 		099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialDownloadContentNode.swift; sourceTree = "<group>"; };
 		099529B321D3E5D800805E13 /* CheckDiskSpace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckDiskSpace.swift; sourceTree = "<group>"; };
-		099529F221D8FE8300805E13 /* RadialPlayPauseContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialPlayPauseContentNode.swift; sourceTree = "<group>"; };
 		099529F921DD8A3100805E13 /* NavigationBarSearchContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBarSearchContentNode.swift; sourceTree = "<group>"; };
 		09AE3822214C110800850BFD /* LegacySecureIdScanController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacySecureIdScanController.swift; sourceTree = "<group>"; };
 		09B4EE4621A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSessionsEmptyStateItem.swift; sourceTree = "<group>"; };
@@ -1230,6 +1229,7 @@
 		D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoipDerivedState.swift; sourceTree = "<group>"; };
 		D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperListPreviewController.swift; sourceTree = "<group>"; };
 		D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperListPreviewControllerNode.swift; sourceTree = "<group>"; };
+		D00580B021E3DEF200CB7CD3 /* MergedItemListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergedItemListItem.swift; sourceTree = "<group>"; };
 		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
 		D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegqacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
@@ -2549,7 +2549,6 @@
 				D01776B91F1D704F0044446D /* RadialStatusIconContentNode.swift */,
 				D0380DAA204EA72F000414AB /* RadialStatusSecretTimeoutContentNode.swift */,
 				099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */,
-				099529F221D8FE8300805E13 /* RadialPlayPauseContentNode.swift */,
 			);
 			name = "Radial Status";
 			sourceTree = "<group>";
@@ -3921,6 +3920,7 @@
 				D0E305AE1E5BA8E000D7A3A2 /* ItemListLoadingIndicatorEmptyStateItem.swift */,
 				D09AEFD31E5BAF67005C1A8B /* ItemListTextEmptyStateItem.swift */,
 				D0BFAE5A20AB35D200793CF2 /* IconSwitchNode.swift */,
+				D00580B021E3DEF200CB7CD3 /* MergedItemListItem.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -5480,6 +5480,7 @@
 				9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */,
 				D0EC6D891EB9F58800EBF1C3 /* ChatSecretAutoremoveTimerActionSheet.swift in Sources */,
 				D05D8B782195E0050064586F /* SetupTwoStepVerificationContentNode.swift in Sources */,
+				D00580B121E3DEF200CB7CD3 /* MergedItemListItem.swift in Sources */,
 				D0EC6D8A1EB9F58800EBF1C3 /* ChatInfo.swift in Sources */,
 				D0EC6D8B1EB9F58800EBF1C3 /* ChatHistoryNavigationStack.swift in Sources */,
 				D0EC6D8C1EB9F58800EBF1C3 /* NavigateToChatController.swift in Sources */,
@@ -5733,7 +5734,6 @@
 				D0EC6E031EB9F58900EBF1C3 /* GalleryFooterContentNode.swift in Sources */,
 				D0E9BA0A1F0457DD00F079A4 /* BotCheckoutWebInteractionController.swift in Sources */,
 				D0EC6E041EB9F58900EBF1C3 /* SecretMediaPreviewController.swift in Sources */,
-				099529F321D8FE8300805E13 /* RadialPlayPauseContentNode.swift in Sources */,
 				D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */,
 				D0FA08BE20481EA300DD23FC /* Locale.swift in Sources */,
 				D0E412CE206A707400BEE4A2 /* FormControllerTextItem.swift in Sources */,

@@ -57,7 +57,9 @@ private let rootController = PresentationThemeRootController(
 private let switchColors = PresentationThemeSwitch(
     frameColor: UIColor(rgb: 0xDBF5FF, alpha: 0.5),
     handleColor: UIColor(rgb: 0x121212),
-    contentColor: accentColor
+    contentColor: accentColor,
+    positiveColor: accentColor,
+    negativeColor: destructiveColor
 )
 
 private let list = PresentationThemeList(

@@ -183,8 +183,13 @@ public final class RadialStatusNode: ASControlNode {
                                     contentNode.animateIn(from: fromState)
                                 }
                             }
-                            strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
+                            if backgroundColor != nil {
+                                strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
+                            }
                         })
+                        if backgroundColor == nil {
+                            strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
+                        }
                     } else {
                         previousContentNode.removeFromSupernode()
                         strongSelf.contentNode = strongSelf.nextContentNode

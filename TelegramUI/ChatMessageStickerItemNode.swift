@@ -354,7 +354,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let shareButtonNode = strongSelf.shareButtonNode {
-                        shareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
+                        shareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 30.0 - 10.0), size: CGSize(width: 29.0, height: 29.0))
                     }
                     
                     dateAndStatusApply(false)
@@ -419,7 +419,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         }
                         let actionButtonsNode = actionButtonsSizeAndApply.1(animated)
                         let previousFrame = actionButtonsNode.frame
-                        let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: actionButtonsSizeAndApply.0)
+                        let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - 10.0), size: actionButtonsSizeAndApply.0)
                         actionButtonsNode.frame = actionButtonsFrame
                         if actionButtonsNode !== strongSelf.actionButtonsNode {
                             strongSelf.actionButtonsNode = actionButtonsNode

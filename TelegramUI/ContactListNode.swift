@@ -629,7 +629,12 @@ private func preparedContactListNodeTransition(account: Account, from fromEntrie
         }
     }
     
-    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, animation: animation)
+    var scrollToItem: ListViewScrollToItem?
+    if firstTime && toEntries.count >= 1 {
+        scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight - 50.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
+    }
+    
+    return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, scrollToItem: scrollToItem, animation: animation)
 }
 
 private struct ContactsListNodeTransition {
@@ -639,6 +644,7 @@ private struct ContactsListNodeTransition {
     let indexSections: [String]
     let firstTime: Bool
     let isEmpty: Bool
+    let scrollToItem: ListViewScrollToItem?
     let animation: ContactListAnimation
 }
 
@@ -726,6 +732,9 @@ final class ContactListNode: ASDisplayNode {
         didSet {
             self.selectionStatePromise.set(.single(self.selectionStateValue))
         }
+    }
+    var selectionState: ContactListNodeGroupSelectionState? {
+        return self.selectionStateValue
     }
     
     private var enableUpdatesValue = false
@@ -1271,7 +1280,7 @@ final class ContactListNode: ASDisplayNode {
 
                     self.indexNode.update(size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom), color: self.presentationData.theme.list.itemAccentColor, sections: transition.indexSections, transition: .animated(duration: 0.2, curve: .easeInOut))
                 }
-                self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
+                self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: transition.scrollToItem, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {
                         if !strongSelf.didSetReady {
                             strongSelf.didSetReady = true

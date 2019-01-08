@@ -60,7 +60,7 @@ final class ChatListNodeInteraction {
     let activateSearch: () -> Void
     let peerSelected: (Peer) -> Void
     let togglePeerSelected: (PeerId) -> Void
-    let messageSelected: (Message, Bool) -> Void
+    let messageSelected: (Peer, Message, Bool) -> Void
     let groupSelected: (PeerGroupId) -> Void
     let addContact: (String) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
@@ -72,7 +72,7 @@ final class ChatListNodeInteraction {
     
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (PeerId) -> Void, messageSelected: @escaping (Message, Bool) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void) {
+    init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (PeerId) -> Void, messageSelected: @escaping (Peer, Message, Bool) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.togglePeerSelected = togglePeerSelected
@@ -386,9 +386,9 @@ final class ChatListNode: ListView {
                 }
                 return state
             }
-        }, messageSelected: { [weak self] message, isAd in
+        }, messageSelected: { [weak self] peer, message, isAd in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                peerSelected(message.id.peerId, true, isAd)
+                peerSelected(peer.id, true, isAd)
             }
         }, groupSelected: { [weak self] groupId in
             if let strongSelf = self, let groupSelected = strongSelf.groupSelected {

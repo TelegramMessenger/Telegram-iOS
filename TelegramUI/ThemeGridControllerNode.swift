@@ -168,8 +168,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let transition = combineLatest(telegramWallpapers(postbox: account.postbox, network: account.network), account.telegramApplicationContext.presentationData)
         |> map { wallpapers, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
-            var index = 0
+            var index = 1
             
+            var hasCurrent = false
             switch presentationData.theme.name {
                 case let .builtin(name):
                     switch name {
@@ -177,15 +178,21 @@ final class ThemeGridControllerNode: ASDisplayNode {
                             break
                         case .day:
                             let wallpaper = TelegramWallpaper.color(0xffffff)
-                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: presentationData.chatWallpaper == wallpaper))
+                            let selected = presentationData.chatWallpaper == wallpaper
+                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
+                            hasCurrent = hasCurrent || selected
                             index += 1
                         case .nightGrayscale:
                             let wallpaper = TelegramWallpaper.color(0xffffff)
-                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: presentationData.chatWallpaper == wallpaper))
+                            let selected = presentationData.chatWallpaper == wallpaper
+                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
+                            hasCurrent = hasCurrent || selected
                             index += 1
                         case .nightAccent:
                             let wallpaper = TelegramWallpaper.color(0xffffff)
-                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: presentationData.chatWallpaper == wallpaper))
+                            let selected = presentationData.chatWallpaper == wallpaper
+                            entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
+                            hasCurrent = hasCurrent || selected
                             index += 1
                     }
                 default:
@@ -193,9 +200,16 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in wallpapers {
-                entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: presentationData.chatWallpaper == wallpaper))
+                let selected = presentationData.chatWallpaper == wallpaper
+                entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
+                hasCurrent = hasCurrent || selected
                 index += 1
             }
+            
+            if !hasCurrent {
+                entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, selected: true), at: 0)
+            }
+            
             let previous = previousEntries.swap(entries)
             return (preparedThemeGridEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
         }

@@ -96,7 +96,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             entries.append(entry)
             index += 1
         }
-        prepareTransition(from: self.currentEntries ?? [], to: entries)
+        self.prepareTransition(from: self.currentEntries ?? [], to: entries)
     }
     
     private func prepareTransition(from: [HashtagChatInputContextPanelEntry]? , to: [HashtagChatInputContextPanelEntry]) {
@@ -132,7 +132,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func enqueueTransition(_ transition: HashtagChatInputContextPanelTransition, firstTime: Bool) {
-        enqueuedTransitions.append((transition, firstTime))
+        self.enqueuedTransitions.append((transition, firstTime))
         
         if self.validLayout != nil {
             while !self.enqueuedTransitions.isEmpty {
@@ -233,7 +233,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             self.listView.keepBottomItemOverscrollBackground = self.theme.list.plainBackgroundColor
             
             let new = self.currentEntries?.map({$0.withUpdatedTheme(interfaceState.theme)}) ?? []
-            prepareTransition(from: self.currentEntries, to: new)
+            self.prepareTransition(from: self.currentEntries, to: new)
         }
     }
     

@@ -75,10 +75,25 @@ private protocol ItemListSwitchNodeImpl {
     var frameColor: UIColor { get set }
     var contentColor: UIColor { get set }
     var handleColor: UIColor { get set }
+    var positiveContentColor: UIColor { get set }
+    var negativeContentColor: UIColor { get set }
 }
 
 extension SwitchNode: ItemListSwitchNodeImpl {
-    
+    var positiveContentColor: UIColor {
+        get {
+            return .white
+        } set(value) {
+            
+        }
+    }
+    var negativeContentColor: UIColor {
+        get {
+            return .white
+        } set(value) {
+            
+        }
+    }
 }
 
 extension IconSwitchNode: ItemListSwitchNodeImpl {
@@ -214,6 +229,8 @@ class ItemListSwitchItemNode: ListViewItemNode {
                         strongSelf.switchNode.frameColor = item.theme.list.itemSwitchColors.frameColor
                         strongSelf.switchNode.contentColor = item.theme.list.itemSwitchColors.contentColor
                         strongSelf.switchNode.handleColor = item.theme.list.itemSwitchColors.handleColor
+                        strongSelf.switchNode.positiveContentColor = item.theme.list.itemSwitchColors.positiveColor
+                        strongSelf.switchNode.negativeContentColor = item.theme.list.itemSwitchColors.negativeColor
                     }
                     
                     let _ = titleApply()

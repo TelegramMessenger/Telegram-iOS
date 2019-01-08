@@ -5,12 +5,28 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private enum WallpaperSegmentedControlStyle {
+    case dark
+    case light
+    
+    var color: UIColor {
+        switch self {
+            case .dark:
+                return UIColor(rgb: 0x484848)
+            case .light:
+                return .white
+        }
+    }
+}
+
 private final class WallpaperBackgroundNode: ASDisplayNode {
     let wallpaper: TelegramWallpaper
     private var fetchDisposable: Disposable?
     private var statusDisposable: Disposable?
-    private let imageNode: TransformImageNode
+    let imageNode: TransformImageNode
     private let statusNode: RadialStatusNode
+    
+    let segmentedControlColor = Promise<UIColor>(.white)
     
     init(account: Account, wallpaper: TelegramWallpaper) {
         self.wallpaper = wallpaper
@@ -55,7 +71,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                     convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
                 }
                 convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
-                signal = chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations)
+                signal = chatMessageImageFile(account: account, fileReference: .standalone(media: file.file), thumbnail: false)
                 fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
                 statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
             case let .image(representations):
@@ -101,6 +117,8 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
             }
         })
         self.imageNode.contentMode = .scaleAspectFill
+        
+        self.segmentedControlColor.set(.single(.white) |> then(chatBackgroundContrastColor(wallpaper: wallpaper, postbox: account.postbox)))
     }
     
     deinit {
@@ -120,7 +138,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private let account: Account
     private var presentationData: PresentationData
     private let dismiss: () -> Void
-    private let apply: (TelegramWallpaper) -> Void
+    private let apply: (TelegramWallpaper, PresentationWallpaperMode) -> Void
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
@@ -133,6 +151,8 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private let toolbarButtonApplyBackground: ASDisplayNode
     
     private let segmentedControl: UISegmentedControl
+    private var segmentedControlColor = Promise<UIColor>(.white)
+    private var segmentedControlColorDisposable: Disposable?
     
     private var wallpapersDisposable: Disposable?
     private var wallpapers: [TelegramWallpaper]?
@@ -142,9 +162,14 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     
     private var visibleBackgroundNodes: [WallpaperBackgroundNode] = []
     private var centralWallpaper: TelegramWallpaper?
+    
+    private let currentWallpaperPromise = Promise<TelegramWallpaper>()
+    var currentWallpaper: Signal<TelegramWallpaper, NoError> {
+        return self.currentWallpaperPromise.get()
+    }
     private var visibleBackgroundNodesOffset: CGFloat = 0.0
     
-    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void, apply: @escaping (TelegramWallpaper) -> Void) {
+    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void, apply: @escaping (TelegramWallpaper, PresentationWallpaperMode) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.dismiss = dismiss
@@ -223,6 +248,14 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
             }
         }
         
+        self.segmentedControl.addTarget(self, action: #selector(self.indexChanged), for: .valueChanged)
+        self.segmentedControlColorDisposable = (self.segmentedControlColor.get()
+        |> deliverOnMainQueue).start(next: { [weak self] color in
+            if let strongSelf = self {
+                strongSelf.segmentedControl.tintColor = color
+            }
+        })
+        
         switch source {
             case let .list(wallpapers, central):
                 self.wallpapers = wallpapers
@@ -238,6 +271,9 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                     self.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
                 }
                 self.ready.set(true)
+        }
+        if let wallpaper = self.centralWallpaper {
+            self.currentWallpaperPromise.set(.single(wallpaper))
         }
     }
     
@@ -405,6 +441,11 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                         } else {
                             itemNodeTransition = transition
                         }
+                        
+                        if j == i {
+                            self.segmentedControlColor.set(itemNode.segmentedControlColor.get())
+                        }
+                        
                         itemNodeTransition.updateFrame(node: itemNode, frame: itemFrame)
                         itemNode.updateLayout(layout, navigationHeight: navigationBarHeight, transition: itemNodeTransition)
                         visibleBackgroundNodes.append(itemNode)
@@ -451,13 +492,64 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         return super.hitTest(point, with: event)
     }
     
+    private func addParallaxToView(_ view: UIView) {
+        let amount = 16.0
+        
+        let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
+        horizontal.minimumRelativeValue = -amount
+        horizontal.maximumRelativeValue = amount
+        
+        let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
+        vertical.minimumRelativeValue = -amount
+        vertical.maximumRelativeValue = amount
+        
+        let group = UIMotionEffectGroup()
+        group.motionEffects = [horizontal, vertical]
+        view.addMotionEffect(group)
+    }
+    
+    private func removeParallaxFromView(_ view: UIView) {
+        for effect in view.motionEffects {
+            view.removeMotionEffect(effect)
+        }
+    }
+    
+    @objc private func indexChanged() {
+        guard let mode = PresentationWallpaperMode(rawValue: Int32(self.segmentedControl.selectedSegmentIndex)) else {
+            return
+        }
+        
+        if mode == .perspective {
+            for node in self.visibleBackgroundNodes {
+                if node.wallpaper == self.centralWallpaper {
+                    self.addParallaxToView(node.imageNode.view)
+                }
+            }
+        } else {
+            for node in self.visibleBackgroundNodes {
+                if node.wallpaper == self.centralWallpaper {
+                    self.removeParallaxFromView(node.imageNode.view)
+                }
+            }
+        }
+    }
+    
     @objc private func cancelPressed() {
         self.dismiss()
     }
     
     @objc private func applyPressed() {
         if let wallpaper = self.centralWallpaper {
-            self.apply(wallpaper)
+            let mode: PresentationWallpaperMode
+            switch self.segmentedControl.selectedSegmentIndex {
+                case 1:
+                    mode = .perspective
+                case 2:
+                    mode = .blurred
+                default:
+                    mode = .still
+            }
+            self.apply(wallpaper, mode)
         }
     }
 }

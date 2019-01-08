@@ -44,15 +44,13 @@ final class HashtagSearchController: TelegramController {
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { peer in
         }, togglePeerSelected: { _ in
-        }, messageSelected: { [weak self] message, _ in
+        }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
-                if let peer = message.peers[message.id.peerId] {
-                    strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(completed: {
-                        if let strongSelf = self {
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(message.id.peerId), messageId: message.id))
-                        }
-                    }))
-                }
+                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(next: { actualPeerId in
+                    if let strongSelf = self {
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(actualPeerId), messageId: message.id.peerId == actualPeerId ? message.id : nil))
+                    }
+                }))
                 strongSelf.controllerNode.listNode.clearHighlightAnimated(true)
             }
         }, groupSelected: { _ in

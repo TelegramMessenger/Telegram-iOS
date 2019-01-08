@@ -105,10 +105,31 @@ public func debugAccountsController(account: Account, accountManager: AccountMan
             transaction.setCurrentId(id)
         }).start()
     }, loginNewAccount: {
-        let _ = accountManager.transaction({ transaction -> Void in
-            let id = transaction.createRecord([])
-            transaction.setCurrentId(id)
-        }).start()
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: "Production", color: .accent, action: {
+                    dismissAction()
+                    let _ = accountManager.transaction({ transaction -> Void in
+                        let id = transaction.createRecord([AccountEnvironmentAttribute(environment: .production)])
+                        transaction.setCurrentId(id)
+                    }).start()
+                }),
+                ActionSheetButtonItem(title: "Test", color: .accent, action: {
+                    dismissAction()
+                    let _ = accountManager.transaction({ transaction -> Void in
+                        let id = transaction.createRecord([AccountEnvironmentAttribute(environment: .test)])
+                        transaction.setCurrentId(id)
+                    }).start()
+                })
+            ]),
+        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, accountManager.accountRecords())

@@ -58,7 +58,7 @@ final class ThemeGridController: ViewController {
         })
         
         self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
-            self?.activateSearch()
+            //self?.activateSearch()
         })
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
@@ -147,12 +147,17 @@ final class ThemeGridController: ViewController {
         
         let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)])
         let _ = (updatePresentationThemeSettingsInteractively(postbox: self.account.postbox, { current in
-            return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
-        }) |> deliverOnMainQueue).start(completed: { [weak self] in
-            let _ = (self?.navigationController as? NavigationController)?.popViewController(animated: true)
-        })
+            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: .still, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+        }) |> deliverOnMainQueue).start()
         
-        let _ = uploadWallpaper(account: self.account, resource: resource)
+        let account = self.account
+        let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
+            if case let .complete(wallpaper) = status {
+                let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+                    return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: .still, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                })).start()
+            }
+        })
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

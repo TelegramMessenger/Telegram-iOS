@@ -510,7 +510,7 @@ public func channelBannedMemberController(account: Account, peerId: PeerId, memb
         if state.updating {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
-            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.GroupPermission_ApplyAlertAction), style: .bold, enabled: true, action: {
                 let _ = (peerView.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { view in

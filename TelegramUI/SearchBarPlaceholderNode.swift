@@ -65,9 +65,9 @@ class SearchBarPlaceholderNode: ASDisplayNode {
         self.iconNode.displayWithoutProcessing = true
         
         self.labelNode = TextNode()
-        self.labelNode.isOpaque = true
+        self.labelNode.isOpaque = false
         self.labelNode.isLayerBacked = true
-        self.labelNode.backgroundColor = self.foregroundColor
+        //self.labelNode.backgroundColor = self.foregroundColor
         
         super.init()
         
@@ -90,7 +90,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
         let currentIconColor = self.iconColor
         
         return { placeholderString, constrainedSize, expansionProgress, iconColor, foregroundColor, backgroundColor, transition in
-            let (labelLayoutResult, labelApply) = labelLayout(TextNodeLayoutArguments(attributedString: placeholderString, backgroundColor: foregroundColor, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayoutResult, labelApply) = labelLayout(TextNodeLayoutArguments(attributedString: placeholderString, backgroundColor: .clear, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var updatedColor: UIColor?
             var updatedIconImage: UIImage?
@@ -111,7 +111,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     strongSelf.backgroundNode.isUserInteractionEnabled = expansionProgress > 1.0 - CGFloat.ulpOfOne
                     
                     if let updatedColor = updatedColor {
-                        strongSelf.labelNode.backgroundColor = updatedColor
+                        //strongSelf.labelNode.backgroundColor = updatedColor
                         strongSelf.backgroundNode.backgroundColor = updatedColor
                     }
                     if let updatedIconImage = updatedIconImage {

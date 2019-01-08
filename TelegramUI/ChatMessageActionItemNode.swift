@@ -232,7 +232,7 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                 case .joinedByLink:
                     attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 case .channelMigratedFromGroup, .groupMigratedToChannel:
-                    attributedString = NSAttributedString(string: strings.Notification_ChannelMigratedFrom, font: titleFont, textColor: primaryTextColor)
+                    attributedString = NSAttributedString(string: "", font: titleFont, textColor: primaryTextColor)
                 case let .messageAutoremoveTimeoutUpdated(timeout):
                     if timeout > 0 {
                         let timeValue = timeIntervalString(strings: strings, value: timeout)
