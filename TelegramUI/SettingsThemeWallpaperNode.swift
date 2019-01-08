@@ -11,24 +11,38 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     let buttonNode = HighlightTrackingButtonNode()
     let backgroundNode = ASDisplayNode()
     let imageNode = TransformImageNode()
+    private let statusNode: RadialStatusNode
     
     var pressed: (() -> Void)?
     
     override init() {
         self.imageNode.contentAnimations = [.subsequentUpdates]
+        
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
+        let progressDiameter: CGFloat = 50.0
+        self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
+        self.statusNode.isUserInteractionEnabled = false
+        
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.imageNode)
         self.addSubnode(self.buttonNode)
+        self.addSubnode(self.statusNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
-    func setWallpaper(account: Account, wallpaper: TelegramWallpaper, size: CGSize) {
+    func setWallpaper(account: Account, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize) {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+        
+        let state: RadialStatusNodeState = selected ? .check(.white) : .none
+        self.statusNode.transitionToState(state, animated: false, completion: {})
+        
+        let progressDiameter: CGFloat = 50.0
+        self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - progressDiameter) / 2.0), y: floorToScreenPixels((size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
         
         if self.wallpaper != wallpaper {
             self.wallpaper = wallpaper

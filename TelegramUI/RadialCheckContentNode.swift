@@ -131,7 +131,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
             
             var s = CGPoint(x: center.x - 10.0, y: center.y + 1.0)
             var p1 = CGPoint(x: 7.0, y: 7.0)
-            var p2 = CGPoint(x: 15.0, y: -16.0)
+            var p2 = CGPoint(x: 13.0, y: -15.0)
             
             if diameter < 36.0 {
                 s = CGPoint(x: center.x - 7.0, y: center.y + 1.0)

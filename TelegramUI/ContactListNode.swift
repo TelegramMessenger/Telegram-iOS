@@ -433,34 +433,35 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     var orderedPeers: [ContactListPeer]
     var headers: [ContactListPeerId: ContactListNameIndexHeader] = [:]
     
+    if displaySortOptions, let sortOrder = presentation.sortOrder {
+        entries.append(.sort(theme, strings, sortOrder))
+    }
+    
+    var addHeader = false
+    if #available(iOSApplicationExtension 10.0, *) {
+        let (suppressed, syncDisabled) = warningSuppressed
+        if !peers.isEmpty && !syncDisabled {
+            switch authorizationStatus {
+            case .denied:
+                entries.append(.permissionInfo(theme, strings, suppressed))
+                entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
+                addHeader = true
+            case .notDetermined:
+                entries.append(.permissionInfo(theme, strings, false))
+                entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow_v0))
+                addHeader = true
+            default:
+                break
+            }
+        }
+    }
+    
+    if addHeader {
+        commonHeader = ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
+    }
+    
     switch presentation {
         case let .orderedByPresence(options):
-            if displaySortOptions, let sortOrder = presentation.sortOrder {
-                entries.append(.sort(theme, strings, sortOrder))
-            }
-            var addHeader = false
-            if #available(iOSApplicationExtension 10.0, *) {
-                let (suppressed, syncDisabled) = warningSuppressed
-                if !peers.isEmpty && !syncDisabled {
-                    switch authorizationStatus {
-                        case .denied:
-                            entries.append(.permissionInfo(theme, strings, suppressed))
-                            entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
-                            addHeader = true
-                        case .notDetermined:
-                            entries.append(.permissionInfo(theme, strings, false))
-                            entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow_v0))
-                            addHeader = true
-                        default:
-                            break
-                    }
-                }
-            }
-            
-            if addHeader {
-                commonHeader = ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
-            }
-            
             orderedPeers = peers.sorted(by: { lhs, rhs in
                 if case let .peer(lhsPeer, _) = lhs, case let .peer(rhsPeer, _) = rhs {
                     let lhsPresence = presences[lhsPeer.id]
@@ -486,11 +487,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             for i in 0 ..< options.count {
                 entries.append(.option(i, options[i], commonHeader, theme, strings))
             }
-        case let .natural(displaySearch, options):
-            if displaySortOptions, let sortOrder = presentation.sortOrder {
-                entries.append(.sort(theme, strings, sortOrder))
-            }
-            
+        case let .natural(options):
             orderedPeers = peers.sorted(by: { lhs, rhs in
                 let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: sortOrder)
                 if result == .orderedSame {
@@ -546,7 +543,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                 headers[peer.id] = header
             }
             for i in 0 ..< options.count {
-                entries.append(.option(i, options[i], commonHeader, theme, strings))
+                entries.append(.option(i, options[i], nil, theme, strings))
             }
         case .search:
             orderedPeers = peers
@@ -657,7 +654,7 @@ public struct ContactListAdditionalOption: Equatable {
 
 enum ContactListPresentation {
     case orderedByPresence(options: [ContactListAdditionalOption])
-    case natural(displaySearch: Bool, options: [ContactListAdditionalOption])
+    case natural(options: [ContactListAdditionalOption])
     case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool)
     
     var sortOrder: ContactsSortOrder? {
@@ -748,6 +745,9 @@ final class ContactListNode: ASDisplayNode {
             }
         }
     }
+    
+    var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
+    var contentScrollingEnded: ((ListView) -> Bool)?
     
     var activateSearch: (() -> Void)?
     var openSortMenu: (() -> Void)?
@@ -1006,12 +1006,12 @@ final class ContactListNode: ASDisplayNode {
                         var disabledPeerIds = Set<PeerId>()
                         for filter in filters {
                             switch filter {
-                            case .excludeSelf:
-                                existingPeerIds.insert(account.peerId)
-                            case let .exclude(peerIds):
-                                existingPeerIds = existingPeerIds.union(peerIds)
-                            case let .disable(peerIds):
-                                disabledPeerIds = disabledPeerIds.union(peerIds)
+                                case .excludeSelf:
+                                    existingPeerIds.insert(account.peerId)
+                                case let .exclude(peerIds):
+                                    existingPeerIds = existingPeerIds.union(peerIds)
+                                case let .disable(peerIds):
+                                    disabledPeerIds = disabledPeerIds.union(peerIds)
                             }
                         }
                         
@@ -1122,10 +1122,9 @@ final class ContactListNode: ASDisplayNode {
         })
         
         self.listNode.didEndScrolling = { [weak self] in
-            guard let strongSelf = self else {
-                return
+            if let strongSelf = self {
+                let _ = strongSelf.contentScrollingEnded?(strongSelf.listNode)
             }
-            fixSearchableListNodeScrolling(strongSelf.listNode)
         }
         
         self.listNode.visibleContentOffsetChanged = { [weak self] offset in
@@ -1137,6 +1136,7 @@ final class ContactListNode: ASDisplayNode {
                     case let .known(value):
                         atTop = value <= 0.0
                 }
+                strongSelf.contentOffsetChanged?(offset)
             }
         }
         

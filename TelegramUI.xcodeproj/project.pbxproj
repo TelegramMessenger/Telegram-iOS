@@ -69,7 +69,6 @@
 		09874E592107BD4100E190B8 /* GenericEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09874E4021075C1700E190B8 /* GenericEmbedImplementation.swift */; };
 		099529AA21CDB27900805E13 /* ShareProxyServerActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529A921CDB27900805E13 /* ShareProxyServerActionSheetController.swift */; };
 		099529AC21CDBBB200805E13 /* QRCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AB21CDBBB200805E13 /* QRCode.swift */; };
-		099529AE21D045C400805E13 /* ThemeGridActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AD21D045C400805E13 /* ThemeGridActionNode.swift */; };
 		099529B021D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */; };
 		099529B221D24F5800805E13 /* RadialDownloadContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */; };
 		099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B321D3E5D800805E13 /* CheckDiskSpace.swift */; };
@@ -1178,7 +1177,6 @@
 		09874E4421075C3F00E190B8 /* StreamableEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamableEmbedImplementation.swift; sourceTree = "<group>"; };
 		099529A921CDB27900805E13 /* ShareProxyServerActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareProxyServerActionSheetController.swift; sourceTree = "<group>"; };
 		099529AB21CDBBB200805E13 /* QRCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCode.swift; sourceTree = "<group>"; };
-		099529AD21D045C400805E13 /* ThemeGridActionNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeGridActionNode.swift; sourceTree = "<group>"; };
 		099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageUnsupportedBubbleContentNode.swift; sourceTree = "<group>"; };
 		099529B121D24F5800805E13 /* RadialDownloadContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialDownloadContentNode.swift; sourceTree = "<group>"; };
 		099529B321D3E5D800805E13 /* CheckDiskSpace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckDiskSpace.swift; sourceTree = "<group>"; };
@@ -3081,16 +3079,15 @@
 				D05174AA1EAA5B4700A1BF36 /* ThemeGalleryToolbarNode.swift */,
 				D0EC6B351EB88D0A00EBF1C3 /* ThemeGridController.swift */,
 				D0EC6B371EB88D1600EBF1C3 /* ThemeGridControllerNode.swift */,
-				D091C7A51F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift */,
 				D0C0B5B61EE1DEF1000F4D2C /* ThemeGridControllerItem.swift */,
 				D0B37C5B1F8D22AE004252DF /* ThemeSettingsController.swift */,
 				D0B37C5D1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift */,
+				D091C7A51F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift */,
 				D0B37C5F1F8D286E004252DF /* ThemeSettingsFontSizeItem.swift */,
 				D06E4C322134A59700088087 /* ThemeAccentColorActionSheet.swift */,
 				D06E4C342134AE3C00088087 /* ThemeAutoNightSettingsController.swift */,
 				D06F31E3213597FF001A0F12 /* ThemeAutoNightTimeSelectionActionSheet.swift */,
 				D06F31E52135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift */,
-				099529AD21D045C400805E13 /* ThemeGridActionNode.swift */,
 				D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */,
 				D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */,
 			);
@@ -5464,7 +5461,6 @@
 				D0AD02E81FFFDE5F00C1DCFF /* ChatMessageLiveLocationTimerNode.swift in Sources */,
 				D0EC6D7D1EB9F58800EBF1C3 /* ChatListSearchRecentPeersNode.swift in Sources */,
 				D0EC6D7E1EB9F58800EBF1C3 /* ChatListSearchItemHeader.swift in Sources */,
-				099529AE21D045C400805E13 /* ThemeGridActionNode.swift in Sources */,
 				D0EC6D7F1EB9F58800EBF1C3 /* HashtagSearchController.swift in Sources */,
 				D0EC6D801EB9F58800EBF1C3 /* HashtagSearchControllerNode.swift in Sources */,
 				D0EC6D811EB9F58800EBF1C3 /* ChatController.swift in Sources */,

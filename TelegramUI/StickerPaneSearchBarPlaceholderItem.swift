@@ -78,7 +78,7 @@ final class StickerPaneSearchBarPlaceholderNode: GridItemNode {
     
     func setup(theme: PresentationTheme, strings: PresentationStrings) {
         if self.currentState?.0 !== theme || self.currentState?.1 !== strings {
-            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.chat.inputMediaPanel.stickersSearchBackgroundColor)
+            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: theme.chat.inputMediaPanel.stickersSearchBackgroundColor)
             self.iconNode.image = generateLoupeIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor)
             self.labelNode.attributedText = NSAttributedString(string: strings.Stickers_Search, font: Font.regular(14.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
         }
@@ -89,7 +89,7 @@ final class StickerPaneSearchBarPlaceholderNode: GridItemNode {
         
         let bounds = self.bounds
         
-        let backgroundFrame = CGRect(origin: CGPoint(x: 8.0, y: 12.0), size: CGSize(width: bounds.width - 8.0 * 2.0, height: 33.0))
+        let backgroundFrame = CGRect(origin: CGPoint(x: 8.0, y: 12.0), size: CGSize(width: bounds.width - 8.0 * 2.0, height: 36.0))
         self.backgroundNode.frame = backgroundFrame
         
         let textSize = self.labelNode.updateLayout(bounds.size)

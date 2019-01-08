@@ -8,30 +8,42 @@ import TelegramCore
 private final class WallpaperBackgroundNode: ASDisplayNode {
     let wallpaper: TelegramWallpaper
     private var fetchDisposable: Disposable?
+    private var statusDisposable: Disposable?
     private let imageNode: TransformImageNode
+    private let statusNode: RadialStatusNode
     
     init(account: Account, wallpaper: TelegramWallpaper) {
         self.wallpaper = wallpaper
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
         
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
+        let progressDiameter: CGFloat = 50.0
+        self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
+        self.statusNode.isUserInteractionEnabled = false
+        
         super.init()
         
-        self.backgroundColor = UIColor(rgb: arc4random())
+        self.clipsToBounds = true
+        self.backgroundColor = .black
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.statusNode)
         
         let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
         let fetchSignal: Signal<FetchResourceSourceType, NoError>
+        let statusSignal: Signal<MediaResourceStatus, NoError>
         let displaySize: CGSize
         switch wallpaper {
             case .builtin:
                 displaySize = CGSize(width: 640.0, height: 1136.0)
                 signal = settingsBuiltinWallpaperImage(account: account)
                 fetchSignal = .complete()
+                statusSignal = .single(.Local)
             case let .color(color):
                 displaySize = CGSize(width: 1.0, height: 1.0)
                 signal = .never()
                 fetchSignal = .complete()
+                statusSignal = .single(.Local)
                 self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
             case let .file(file):
                 let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
@@ -45,6 +57,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                 convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
                 signal = chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations)
                 fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
+                statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
             case let .image(representations):
                 if let largestSize = largestImageRepresentation(representations) {
                     displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
@@ -58,24 +71,48 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                     } else {
                         fetchSignal = .complete()
                     }
+                    statusSignal = account.postbox.mediaBox.resourceStatus(largestSize.resource)
                 } else {
                     displaySize = CGSize(width: 100.0, height: 100.0)
                     signal = .never()
                     fetchSignal = .complete()
+                    statusSignal = .single(.Local)
                 }
         }
         self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
         self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
         self.fetchDisposable = fetchSignal.start()
+        
+        let statusForegroundColor = UIColor.white
+        self.statusDisposable = (statusSignal
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                let state: RadialStatusNodeState
+                switch status {
+                    case let .Fetching(_, progress):
+                        let adjustedProgress = max(progress, 0.027)
+                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
+                    case .Local:
+                        state = .none
+                    case .Remote:
+                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false)
+                }
+                strongSelf.statusNode.transitionToState(state, completion: {})
+            }
+        })
         self.imageNode.contentMode = .scaleAspectFill
     }
     
     deinit {
         self.fetchDisposable?.dispose()
+        self.statusDisposable?.dispose()
     }
     
     func updateLayout(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.imageNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        
+        let progressDiameter: CGFloat = 50.0
+        self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
     }
 }
 
@@ -83,14 +120,19 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private let account: Account
     private var presentationData: PresentationData
     private let dismiss: () -> Void
+    private let apply: (TelegramWallpaper) -> Void
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     private let toolbarBackground: ASDisplayNode
     private let toolbarSeparator: ASDisplayNode
     private let toolbarVerticalSeparator: ASDisplayNode
-    private let toolbarButtonCancel: HighlightableButtonNode
-    private let toolbarButtonApply: HighlightableButtonNode
+    private let toolbarButtonCancel: HighlightTrackingButtonNode
+    private let toolbarButtonCancelBackground: ASDisplayNode
+    private let toolbarButtonApply: HighlightTrackingButtonNode
+    private let toolbarButtonApplyBackground: ASDisplayNode
+    
+    private let segmentedControl: UISegmentedControl
     
     private var wallpapersDisposable: Disposable?
     private var wallpapers: [TelegramWallpaper]?
@@ -102,10 +144,11 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private var centralWallpaper: TelegramWallpaper?
     private var visibleBackgroundNodesOffset: CGFloat = 0.0
     
-    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void, apply: @escaping (TelegramWallpaper) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.dismiss = dismiss
+        self.apply = apply
         
         self.toolbarBackground = ASDisplayNode()
         self.toolbarBackground.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
@@ -115,11 +158,25 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         self.toolbarVerticalSeparator = ASDisplayNode()
         self.toolbarVerticalSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
-        self.toolbarButtonCancel = HighlightableButtonNode()
+        self.toolbarButtonCancelBackground = ASDisplayNode()
+        self.toolbarButtonCancelBackground.alpha = 0.0
+        self.toolbarButtonCancelBackground.backgroundColor = self.presentationData.theme.list.itemHighlightedBackgroundColor
+        self.toolbarButtonCancelBackground.isUserInteractionEnabled = false
+        
+        self.toolbarButtonCancel = HighlightTrackingButtonNode()
         self.toolbarButtonCancel.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Common_Cancel, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
         
-        self.toolbarButtonApply = HighlightableButtonNode()
+        self.toolbarButtonApplyBackground = ASDisplayNode()
+        self.toolbarButtonApplyBackground.alpha = 0.0
+        self.toolbarButtonApplyBackground.backgroundColor = self.presentationData.theme.list.itemHighlightedBackgroundColor
+        self.toolbarButtonApplyBackground.isUserInteractionEnabled = false
+        
+        self.toolbarButtonApply = HighlightTrackingButtonNode()
         self.toolbarButtonApply.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Wallpaper_Set, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
+        
+        self.segmentedControl = UISegmentedControl(items: [self.presentationData.strings.BackgroundPreview_Still, self.presentationData.strings.BackgroundPreview_Perspective, self.presentationData.strings.BackgroundPreview_Blurred])
+        self.segmentedControl.selectedSegmentIndex = 0
+        self.segmentedControl.tintColor = .white
         
         super.init()
         
@@ -131,21 +188,42 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.toolbarButtonCancel)
         self.addSubnode(self.toolbarButtonApply)
         
+        self.view.addSubview(self.segmentedControl)
+        
         self.toolbarButtonCancel.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
-        self.toolbarButtonCancel.addTarget(self, action: #selector(self.applyPressed), forControlEvents: .touchUpInside)
+        self.toolbarButtonApply.addTarget(self, action: #selector(self.applyPressed), forControlEvents: .touchUpInside)
+        
+        self.toolbarButtonCancel.highligthedChanged = { [weak self] value in
+            if let strongSelf = self {
+                if value {
+                    if strongSelf.toolbarButtonCancelBackground.supernode == nil {
+                        strongSelf.insertSubnode(strongSelf.toolbarButtonCancelBackground, aboveSubnode: strongSelf.toolbarVerticalSeparator)
+                    }
+                    strongSelf.toolbarButtonCancelBackground.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.toolbarButtonCancelBackground.alpha = 1.0
+                } else if !strongSelf.toolbarButtonCancelBackground.alpha.isZero {
+                    strongSelf.toolbarButtonCancelBackground.alpha = 0.0
+                    strongSelf.toolbarButtonCancelBackground.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+                }
+            }
+        }
+        
+        self.toolbarButtonApply.highligthedChanged = { [weak self] value in
+            if let strongSelf = self {
+                if value {
+                    if strongSelf.toolbarButtonApplyBackground.supernode == nil {
+                        strongSelf.insertSubnode(strongSelf.toolbarButtonApplyBackground, aboveSubnode: strongSelf.toolbarVerticalSeparator)
+                    }
+                    strongSelf.toolbarButtonApplyBackground.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.toolbarButtonApplyBackground.alpha = 1.0
+                } else if !strongSelf.toolbarButtonApplyBackground.alpha.isZero {
+                    strongSelf.toolbarButtonApplyBackground.alpha = 0.0
+                    strongSelf.toolbarButtonApplyBackground.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+                }
+            }
+        }
         
         switch source {
-            /*case .common:
-                self.wallpapersDisposable = (telegramWallpapers(postbox: account.postbox, network: account.network)
-                |> deliverOnMainQueue).start(next: { [weak self] result in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
-                    }
-                    strongSelf.ready.set(true)
-                })*/
             case let .list(wallpapers, central):
                 self.wallpapers = wallpapers
                 self.centralWallpaper = central
@@ -180,6 +258,8 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         self.toolbarVerticalSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         self.toolbarButtonCancel.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Common_Cancel, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
         self.toolbarButtonApply.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Wallpaper_Set, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
+        self.toolbarButtonCancelBackground.backgroundColor = self.presentationData.theme.list.itemHighlightedBackgroundColor
+        self.toolbarButtonApplyBackground.backgroundColor = self.presentationData.theme.list.itemHighlightedBackgroundColor
         
         self.backgroundColor = .black
         if let (layout, navigationHeight) = self.validLayout {
@@ -211,9 +291,11 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         var items: [ChatMessageItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
+        let otherPeerId = self.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()
         peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         let controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
             return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
@@ -234,7 +316,9 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         
         let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: false)
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: self.presentationData.strings.Appearance_PreviewIncomingText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: "Lorem ipsum dolor sit amet", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: presentationData.strings.BackgroundPreview_SwipeInfo, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {
@@ -267,16 +351,27 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
             self.messageNodes = messageNodes
         }
         
-        let bottomInset = layout.intrinsicInsets.bottom + 44.0
+        let bottomInset = layout.intrinsicInsets.bottom + 49.0
         transition.updateFrame(node: self.toolbarBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: layout.size.width, height: bottomInset)))
         transition.updateFrame(node: self.toolbarSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.toolbarVerticalSeparator, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0), y: layout.size.height - bottomInset), size: CGSize(width: UIScreenPixel, height: bottomInset)))
         
-        transition.updateFrame(node: self.toolbarButtonCancel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: floor(layout.size.width / 2.0), height: 44.0)))
-        transition.updateFrame(node: self.toolbarButtonApply, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0), y: layout.size.height - bottomInset), size: CGSize(width: ceil(layout.size.width / 2.0), height: 44.0)))
+        let cancelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: floor(layout.size.width / 2.0), height: 49.0))
+        transition.updateFrame(node: self.toolbarButtonCancel, frame: cancelFrame)
+        transition.updateFrame(node: self.toolbarButtonCancelBackground, frame: cancelFrame)
+        
+        let applyFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0), y: layout.size.height - bottomInset), size: CGSize(width: ceil(layout.size.width / 2.0), height: 49.0))
+        transition.updateFrame(node: self.toolbarButtonApply, frame: applyFrame)
+        transition.updateFrame(node: self.toolbarButtonApplyBackground, frame: applyFrame)
+        
+        var segmentedControlSize = self.segmentedControl.sizeThatFits(layout.size)
+        segmentedControlSize.width = max(270.0, segmentedControlSize.width)
+        
+        transition.updateFrame(view: self.segmentedControl, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - segmentedControlSize.width) / 2.0), y: layout.size.height - bottomInset - segmentedControlSize.height - 24.0), size: segmentedControlSize))
+        
         
         if let messageNodes = self.messageNodes {
-            var bottomOffset: CGFloat = layout.size.height - bottomInset - 3.0
+            var bottomOffset: CGFloat = layout.size.height - bottomInset - segmentedControlSize.height - 24.0 - 22.0
             for itemNode in messageNodes {
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset - itemNode.frame.height), size: itemNode.frame.size))
                 bottomOffset -= itemNode.frame.height
@@ -361,6 +456,8 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     }
     
     @objc private func applyPressed() {
-        
+        if let wallpaper = self.centralWallpaper {
+            self.apply(wallpaper)
+        }
     }
 }

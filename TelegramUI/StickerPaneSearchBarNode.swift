@@ -215,7 +215,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField = StickerPaneSearchBarTextField()
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .done
-        self.textField.font = Font.regular(14.0)
+        self.textField.font = Font.regular(17.0)
         
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
@@ -256,7 +256,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
             activityIndicator.type = .custom(theme.chat.inputMediaPanel.stickersSearchControlColor, 13.0, 1.0, false)
         }
         self.separatorNode.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
-        self.textBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.chat.inputMediaPanel.stickersSearchBackgroundColor)
+        self.textBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: theme.chat.inputMediaPanel.stickersSearchBackgroundColor)
         self.textField.textColor = theme.chat.inputMediaPanel.stickersSearchPrimaryColor
         self.iconNode.image = generateLoupeIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor)
         self.clearButton.setImage(generateClearIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor), for: [])
@@ -287,7 +287,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         let cancelButtonSize = self.cancelButton.measure(CGSize(width: 100.0, height: CGFloat.infinity))
         transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 8.0 - cancelButtonSize.width, y: verticalOffset + 34.0), size: cancelButtonSize))
         
-        let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + 8.0, y: verticalOffset + 28.0), size: CGSize(width: contentFrame.width - 16.0 - cancelButtonSize.width - 11.0, height: 33.0))
+        let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + 8.0, y: verticalOffset + 28.0), size: CGSize(width: contentFrame.width - 16.0 - cancelButtonSize.width - 11.0, height: 36.0))
         transition.updateFrame(node: self.textBackgroundNode, frame: textBackgroundFrame)
         
         let textFrame = CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 27.0, y: textBackgroundFrame.minY), size: CGSize(width: max(1.0, textBackgroundFrame.size.width - 27.0 - 20.0), height: textBackgroundFrame.size.height))

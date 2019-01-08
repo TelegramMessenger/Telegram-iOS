@@ -5,7 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 
-private let searchBarFont = Font.regular(14.0)
+private let searchBarFont = Font.regular(17.0)
 
 class ChatListSearchItem: ListViewItem {
     let selectable: Bool = false
@@ -82,7 +82,7 @@ class ChatListSearchItemNode: ListViewItemNode {
     }
     
     required init() {
-        self.searchBarNode = SearchBarPlaceholderNode()
+        self.searchBarNode = SearchBarPlaceholderNode(fieldStyle: .modern)
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -109,10 +109,11 @@ class ChatListSearchItemNode: ListViewItemNode {
             let baseWidth = params.width - params.leftInset - params.rightInset
             
             let backgroundColor = nextIsPinned ? item.theme.chatList.pinnedItemBackgroundColor : item.theme.chatList.itemBackgroundColor
+            let placeholderColor = item.theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor
             
-            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth - 16.0, height: 28.0), 1.0, UIColor(rgb: 0x8e8e93), nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, backgroundColor, .immediate)
+            let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: placeholderColor), CGSize(width: baseWidth - 20.0, height: 36.0), 1.0, placeholderColor, nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, backgroundColor, .immediate)
             
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 44.0), insets: UIEdgeInsets())
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 54.0), insets: UIEdgeInsets())
             
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
@@ -123,11 +124,11 @@ class ChatListSearchItemNode: ListViewItemNode {
                         transition = .immediate
                     }
                     
-                    let searchBarFrame = CGRect(origin: CGPoint(x: params.leftInset + 8.0, y: 8.0), size: CGSize(width: baseWidth - 16.0, height: 28.0))
+                    let searchBarFrame = CGRect(origin: CGPoint(x: params.leftInset + 10.0, y: 8.0), size: CGSize(width: baseWidth - 20.0, height: 36.0))
                     strongSelf.searchBarNode.frame = searchBarFrame
                     searchBarApply()
                     
-                    strongSelf.searchBarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: baseWidth - 16.0, height: 28.0))
+                    strongSelf.searchBarNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: baseWidth - 20.0, height: 36.0))
                     
                     if !item.isEnabled {
                         if strongSelf.disabledOverlay == nil {

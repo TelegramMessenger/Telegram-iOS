@@ -200,12 +200,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             let displayLeftInset = params.leftInset + layoutConstants.bubble.edgeInset + avatarInset
             
             let innerImageInset: CGFloat = 10.0
-            let imageInset: CGFloat = 2.0
             let innerImageSize = CGSize(width: imageSize.width + innerImageInset * 2.0, height: imageSize.height + innerImageInset * 2.0)
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - innerImageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: -imageInset), size: innerImageSize)
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - innerImageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: -innerImageInset), size: innerImageSize)
             
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(top: innerImageInset, left: innerImageInset, bottom: innerImageInset, right: innerImageInset))
-            imageSize.height += imageInset * 2.0
             
             let imageApply = imageLayout(arguments)
             

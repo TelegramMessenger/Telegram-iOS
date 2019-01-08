@@ -26,6 +26,8 @@ final class ThemeGridController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var searchContentNode: NavigationBarSearchContentNode?
+    
     init(account: Account, mode: ThemeGridControllerMode) {
         self.account = account
         self.mode = mode
@@ -54,6 +56,11 @@ final class ThemeGridController: ViewController {
                 }
             }
         })
+        
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -69,6 +76,7 @@ final class ThemeGridController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search)
         
         if self.isNodeLoaded {
             self.controllerNode.updatePresentationData(self.presentationData)
@@ -106,7 +114,25 @@ final class ThemeGridController: ViewController {
                 strongSelf.present(legacyPicker, in: .window(.root), blockInteraction: true)
             }
         })
+        self.controllerNode.navigationBar = self.navigationBar
+        self.controllerNode.requestDeactivateSearch = { [weak self] in
+            self?.deactivateSearch(animated: true)
+        }
         self._ready.set(self.controllerNode.ready.get())
+//        
+//        self.controllerNode.gridNode.scroll = { [weak self] offset in
+//            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+//                searchContentNode.updateListVisibleContentOffset(offset)
+//            }
+//        }
+//
+//        self.controllerNode.gridNode.scrollingCompleted = { [weak self] in
+//            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+//                return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
+//            } else {
+//                return false
+//            }
+//        }
         
         self.displayNodeDidLoad()
     }
@@ -121,19 +147,45 @@ final class ThemeGridController: ViewController {
         
         let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)])
         let _ = (updatePresentationThemeSettingsInteractively(postbox: self.account.postbox, { current in
-            if case .color(0x000000) = wallpaper {
-                return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
-            }
-            
             return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }) |> deliverOnMainQueue).start(completed: { [weak self] in
             let _ = (self?.navigationController as? NavigationController)?.popViewController(animated: true)
         })
+        
+        let _ = uploadWallpaper(account: self.account, resource: resource)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
+    }
+    
+    func activateSearch() {
+        if self.displayNavigationBar {
+            let _ = (self.controllerNode.ready.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let scrollToTop = strongSelf.scrollToTop {
+                    scrollToTop()
+                }
+                if let searchContentNode = strongSelf.searchContentNode {
+                    strongSelf.controllerNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+                }
+                strongSelf.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
+            })
+        }
+    }
+    
+    func deactivateSearch(animated: Bool) {
+        if !self.displayNavigationBar {
+            self.setDisplayNavigationBar(true, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
+            if let searchContentNode = self.searchContentNode {
+                self.controllerNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
+            }
+        }
     }
 }

@@ -34,7 +34,7 @@ final class ComposeControllerNode: ASDisplayNode {
         var openCreateNewSecretChatImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
-        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(displaySearch: true, options: [
+        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(options: [
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: .generic(UIImage(bundleImageName: "Contact List/CreateGroupActionIcon")!), action: {
                 openCreateNewGroupImpl?()
             }),
@@ -109,7 +109,7 @@ final class ComposeControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch, case let .peer(peer, _) = peer {
                 requestOpenPeerFromSearch(peer.id)
             }

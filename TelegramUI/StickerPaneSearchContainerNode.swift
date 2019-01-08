@@ -376,7 +376,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.notFoundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/StickersNotFoundIcon"), color: theme.list.freeMonoIcon)
         self.notFoundLabel.attributedText = NSAttributedString(string: strings.Stickers_NoStickersFound, font: Font.medium(14.0), textColor: theme.list.freeTextColor)
         self.searchBar.updateThemeAndStrings(theme: theme, strings: strings)
-        self.searchBar.placeholderString = NSAttributedString(string: strings.Stickers_Search, font: Font.regular(14.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
+        self.searchBar.placeholderString = NSAttributedString(string: strings.Stickers_Search, font: Font.regular(17.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -384,7 +384,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         self.validLayout = size
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         
-        let searchBarHeight: CGFloat = 48.0
+        let searchBarHeight: CGFloat = 52.0
         transition.updateFrame(node: self.searchBar, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: searchBarHeight)))
         self.searchBar.updateLayout(boundingSize: CGSize(width: size.width, height: searchBarHeight), leftInset: leftInset, rightInset: rightInset, transition: transition)
         

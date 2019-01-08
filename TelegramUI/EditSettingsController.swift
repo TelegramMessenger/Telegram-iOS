@@ -240,7 +240,7 @@ private struct EditSettingsState: Equatable {
     }
 }
 
-private func editSettingsEntries(presentationData: PresentationData, state: EditSettingsState, view: PeerView, wallpapers: [TelegramWallpaper]) -> [SettingsEntry] {
+private func editSettingsEntries(presentationData: PresentationData, state: EditSettingsState, view: PeerView) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -294,10 +294,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
     var updateHiddenAvatarImpl: (() -> Void)?
     var changeProfilePhotoImpl: (() -> Void)?
-    
-    let wallpapersPromise = Promise<[TelegramWallpaper]>()
-    wallpapersPromise.set(telegramWallpapers(postbox: account.postbox, network: account.network))
-    
+        
     let arguments = EditSettingsItemArguments(account: account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
@@ -366,8 +363,8 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     
     let peerView = account.viewTracker.peerView(account.peerId)
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, wallpapersPromise.get())
-        |> map { presentationData, state, view, wallpapers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView)
+        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let rightNavigationButton: ItemListNavigationButton
             if state.updatingName != nil || state.updatingBioText {
                 rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
@@ -378,7 +375,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.EditProfile_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, wallpapers: wallpapers), style: .blocks)
+            let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view), style: .blocks)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

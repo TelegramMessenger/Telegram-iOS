@@ -22,14 +22,17 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let toolbarSeparatorNode: ASDisplayNode?
     private let segmentedControl: UISegmentedControl?
     
-    private var contactListNode: ContactListNode?
-    private let chatListNode: ChatListNode
+    var contactListNode: ContactListNode?
+    let chatListNode: ChatListNode
     
     private var contactListActive = false
     
     private var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
+    
+    var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
+    var contentScrollingEnded: ((ListView) -> Bool)?
     
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
@@ -86,6 +89,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.chatListNode.peerSelected = { [weak self] peerId, _, _ in
             self?.requestOpenPeer?(peerId)
+        }
+        
+        self.chatListNode.contentOffsetChanged = { [weak self] offset in
+            self?.contentOffsetChanged?(offset)
+        }
+        
+        self.chatListNode.contentScrollingEnded = { [weak self] listView in
+            return self?.contentScrollingEnded?(listView) ?? false
         }
         
         self.addSubnode(self.chatListNode)
@@ -199,7 +210,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if self.chatListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peer)
                 }
@@ -226,7 +237,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }, placeholder: placeholderNode)
             
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
                 if let strongSelf = self {
                     switch peer {
                         case let .peer(peer, _):
@@ -309,7 +320,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     self.recursivelyEnsureDisplaySynchronously(true)
                     contactListNode.enableUpdates = true
                 } else {
-                    let contactListNode = ContactListNode(account: account, presentation: .single(.natural(displaySearch: true, options: [])))
+                    let contactListNode = ContactListNode(account: account, presentation: .single(.natural(options: [])))
                     self.contactListNode = contactListNode
                     contactListNode.enableUpdates = true
                     contactListNode.activateSearch = { [weak self] in
@@ -320,7 +331,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                             self?.requestOpenPeer?(peer.id)
                         }
                     }
+                    contactListNode.contentOffsetChanged = { [weak self] offset in
+                        self?.contentOffsetChanged?(offset)
+                    }
                     
+                    contactListNode.contentScrollingEnded = { [weak self] listView in
+                        return self?.contentScrollingEnded?(listView) ?? false
+                    }
                     self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
                     
                     let _ = (contactListNode.ready |> deliverOnMainQueue).start(next: { [weak self] _ in

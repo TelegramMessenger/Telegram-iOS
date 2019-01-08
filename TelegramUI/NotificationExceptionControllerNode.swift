@@ -824,7 +824,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: NotificationExceptionsSearchContainerNode(account: self.account, mode: self.stateValue.modify {$0}.mode, arguments: self.arguments!), cancel: { [weak self] in
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: NotificationExceptionsSearchContainerNode(account: self.account, mode: self.stateValue.modify {$0}.mode, arguments: self.arguments!), cancel: { [weak self] in
             self?.requestDeactivateSearch()
         })
         

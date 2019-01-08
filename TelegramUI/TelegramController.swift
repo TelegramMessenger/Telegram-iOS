@@ -74,7 +74,16 @@ public class TelegramController: ViewController {
     private var playlistPreloadDisposable: Disposable?
     
     override public var navigationHeight: CGFloat {
-        var height = super.navigationHeight
+        return super.navigationHeight + self.additionalHeight
+
+    }
+    
+    override public var navigationInsetHeight: CGFloat {
+        return super.navigationInsetHeight + self.additionalHeight
+    }
+    
+    private var additionalHeight: CGFloat {
+        var height: CGFloat = 0.0
         if let _ = self.mediaAccessoryPanel {
             height += MediaNavigationAccessoryHeaderNode.minimizedHeight
         }

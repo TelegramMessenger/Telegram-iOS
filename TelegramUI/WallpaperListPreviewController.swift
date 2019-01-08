@@ -53,6 +53,7 @@ final class WallpaperListPreviewController: ViewController {
         })
         
         self.title = self.presentationData.strings.BackgroundPreview_Title
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.sharePressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -66,6 +67,7 @@ final class WallpaperListPreviewController: ViewController {
     private func updateThemeAndStrings() {
         self.title = self.presentationData.strings.BackgroundPreview_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.sharePressed))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
@@ -94,6 +96,17 @@ final class WallpaperListPreviewController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = WallpaperListPreviewControllerNode(account: self.account, presentationData: self.presentationData, source: self.source, dismiss: { [weak self] in
             self?.dismiss()
+        }, apply: { [weak self] wallpaper in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
+                return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            })
+            |> deliverOnMainQueue).start(completed: {
+                self?.dismiss()
+            })
         })
         self._ready.set(self.controllerNode.ready.get())
         self.displayNodeDidLoad()
@@ -103,5 +116,10 @@ final class WallpaperListPreviewController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+    }
+    
+    @objc func sharePressed() {
+        let shareController = ShareController(account: account, subject: .url("link"))
+        self.present(shareController, in: .window(.root), blockInteraction: true)
     }
 }

@@ -160,6 +160,20 @@ public class ComposeController: ViewController {
             }
         }
         
+        self.contactsNode.contactListNode.contentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                searchContentNode.updateListVisibleContentOffset(offset)
+            }
+        }
+        
+        self.contactsNode.contactListNode.contentScrollingEnded = { [weak self] listView in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
+            } else {
+                return false
+            }
+        }
+        
         self.displayNodeDidLoad()
     }
     
@@ -178,7 +192,7 @@ public class ComposeController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
     
     private func activateSearch() {

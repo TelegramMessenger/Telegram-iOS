@@ -713,7 +713,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             case let .fetchStatus(fetchStatus):
                 self.waveformScrubbingNode?.enableScrubbing = false
                 switch fetchStatus {
-                    case let .Fetching(isActive, progress):
+                    case let .Fetching(_, progress):
                         let adjustedProgress = max(progress, 0.027)
                         state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                     case .Local:

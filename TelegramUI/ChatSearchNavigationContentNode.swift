@@ -4,7 +4,7 @@ import Display
 import Postbox
 import TelegramCore
 
-private let searchBarFont = Font.regular(14.0)
+private let searchBarFont = Font.regular(17.0)
 
 final class ChatSearchNavigationContentNode: NavigationBarContentNode {
     private let theme: PresentationTheme
@@ -20,7 +20,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         self.chatLocation = chatLocation
         self.interaction = interaction
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern)
         let placeholderText: String
         switch chatLocation {
             case .peer:
@@ -48,14 +48,14 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         }
     }
     
-    override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
-        
-        let searchBarFrame = CGRect(origin: CGPoint(), size: size)
+    override var nominalHeight: CGFloat {
+        return 54.0
+    }
+    
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - self.nominalHeight), size: CGSize(width: size.width, height: 54.0))
         self.searchBar.frame = searchBarFrame
-        self.searchBar.updateLayout(boundingSize: size, leftInset: 0.0, rightInset: 0.0, transition: .immediate)
+        self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
     }
     
     func activate() {
@@ -68,7 +68,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
     
     func update(presentationInterfaceState: ChatPresentationInterfaceState) {
         if let search = presentationInterfaceState.search {
-            self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationInterfaceState.theme), strings: presentationInterfaceState.strings)
+            self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationInterfaceState.theme, hasSeparator: false), strings: presentationInterfaceState.strings)
             
             switch search.domain {
                 case .everything:

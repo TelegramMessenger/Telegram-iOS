@@ -60,7 +60,6 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         
         super.init()
         
-        self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.addSubnode(self.imageNode)
     }
     

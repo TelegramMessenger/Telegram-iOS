@@ -95,9 +95,9 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
         
         self.cancel = cancel
         
-        self.searchBar = SearchBarNode(theme: theme.searchBar, strings: strings)
+        self.searchBar = SearchBarNode(theme: theme.searchBar, strings: strings, fieldStyle: .modern)
         let placeholderText = strings.Common_Search
-        let searchBarFont = Font.regular(14.0)
+        let searchBarFont = Font.regular(17.0)
         
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.searchBar.placeholder)
         
@@ -119,14 +119,14 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
         self.queryUpdated = f
     }
     
-    override func layout() {
-        super.layout()
-        
-        let size = self.bounds.size
-        
-        let searchBarFrame = CGRect(origin: CGPoint(), size: size)
+    override var nominalHeight: CGFloat {
+        return 54.0
+    }
+    
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        let searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - self.nominalHeight), size: CGSize(width: size.width, height: 54.0))
         self.searchBar.frame = searchBarFrame
-        self.searchBar.updateLayout(boundingSize: size, leftInset: 0.0, rightInset: 0.0, transition: .immediate)
+        self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
     }
     
     func activate() {

@@ -170,7 +170,16 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             }
             
             if let to = to {
-                
+                let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
+                let _ = (account.postbox.searchContacts(query: query)
+                |> deliverOnMainQueue).start(next: { (peers, _) in
+                    for case let peer as TelegramUser in peers {
+                        if peer.phone == query {
+                            continueWithPeer(peer.id)
+                            break
+                        }
+                    }
+                })
             } else {
                 let controller = PeerSelectionController(account: account)
                 controller.peerSelected = { [weak controller] peerId in

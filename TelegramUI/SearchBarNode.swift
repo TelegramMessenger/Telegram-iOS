@@ -147,9 +147,9 @@ final class SearchBarNodeTheme: Equatable {
         self.keyboard = keyboard
     }
     
-    init(theme: PresentationTheme, active: Bool = true) {
-        self.background = active ? theme.rootController.activeNavigationSearchBar.backgroundColor : theme.rootController.navigationBar.backgroundColor
-        self.separator = active ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.backgroundColor
+    init(theme: PresentationTheme, hasSeparator: Bool = true) {
+        self.background = theme.rootController.navigationBar.backgroundColor
+        self.separator = hasSeparator ? theme.rootController.navigationBar.separatorColor : theme.rootController.navigationBar.backgroundColor
         self.inputFill = theme.rootController.activeNavigationSearchBar.inputFillColor
         self.placeholder = theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor
         self.primaryText = theme.rootController.activeNavigationSearchBar.inputTextColor
@@ -385,7 +385,9 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
         if self.theme != theme {
             self.backgroundNode.backgroundColor = theme.background
-            self.separatorNode.backgroundColor = theme.separator
+            if fieldStyle != .modern {
+                self.separatorNode.backgroundColor = theme.separator
+            }
             self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill, diameter: self.fieldStyle.cornerDiameter)
             self.textField.textColor = theme.primaryText
             self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
@@ -410,7 +412,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.backgroundNode.frame = self.bounds
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.bounds.size.height), size: CGSize(width: self.bounds.size.width, height: UIScreenPixel)))
         
-        let verticalOffset: CGFloat = boundingSize.height - 64.0
+        let verticalOffset: CGFloat = boundingSize.height - 82.0
         
         let contentFrame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: boundingSize.width - leftInset - rightInset, height: boundingSize.height))
         

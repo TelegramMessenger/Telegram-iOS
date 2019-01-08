@@ -104,6 +104,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             if strongSelf.chatListDisplayNode.searchDisplayController != nil {
                 strongSelf.deactivateSearch(animated: true)
             } else {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateExpansionProgress(1.0, animated: true)
+                }
                 strongSelf.chatListDisplayNode.chatListNode.scrollToPosition(.top)
             }
             //.auto for unread navigation
@@ -115,6 +118,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             if strongSelf.chatListDisplayNode.searchDisplayController != nil {
                 strongSelf.deactivateSearch(animated: true)
             } else {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateExpansionProgress(1.0, animated: true)
+                }
                 strongSelf.chatListDisplayNode.chatListNode.scrollToPosition(.auto)
             }
         }
@@ -513,15 +519,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         self.chatListDisplayNode.chatListNode.contentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, searchContentNode.nominalHeight > 0.0 {
-                var progress: CGFloat = 0.0
-                switch offset {
-                    case let .known(offset):
-                        progress = max(0.0, (searchContentNode.nominalHeight - offset)) / searchContentNode.nominalHeight
-                    default:
-                        break
-                }
-                searchContentNode.updateExpansionProgress(progress)
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                searchContentNode.updateListVisibleContentOffset(offset)
             }
         }
         
@@ -696,7 +695,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.validLayout = layout
         
-        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
     
     override public func navigationStackConfigurationUpdated(next: [ViewController]) {

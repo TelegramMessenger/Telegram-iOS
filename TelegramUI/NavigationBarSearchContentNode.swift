@@ -14,6 +14,8 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
     
     private(set) var expansionProgress: CGFloat = 1.0
     
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    
     init(theme: PresentationTheme, placeholder: String, activate: @escaping () -> Void) {
         self.theme = theme
         self.placeholder = placeholder
@@ -31,7 +33,20 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         if let disabledOverlay = self.disabledOverlay {
             disabledOverlay.backgroundColor = theme.rootController.navigationBar.backgroundColor.withAlphaComponent(0.5)
         }
-        self.setNeedsLayout()
+        if let validLayout = self.validLayout {
+            self.updatePlaceholder(self.expansionProgress, size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: .immediate)
+        }
+    }
+    
+    func updateListVisibleContentOffset(_ offset: ListViewVisibleContentOffset) {
+        var progress: CGFloat = 0.0
+        switch offset {
+            case let .known(offset):
+                progress = max(0.0, (self.nominalHeight - offset)) / self.nominalHeight
+            default:
+                break
+        }
+        self.updateExpansionProgress(progress)
     }
     
     func updateExpansionProgress(_ progress: CGFloat, animated: Bool = false) {
@@ -40,8 +55,8 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
             self.expansionProgress = newProgress
         
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate
-            if animated {
-                self.updatePlaceholder(self.expansionProgress, transition: transition)
+            if let validLayout = self.validLayout, animated {
+                self.updatePlaceholder(self.expansionProgress, size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: transition)
             }
             self.requestContainerLayout(transition)
         }
@@ -73,9 +88,9 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         }
     }
     
-    private func updatePlaceholder(_ progress: CGFloat, transition: ContainedViewLayoutTransition) {
+    private func updatePlaceholder(_ progress: CGFloat, size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let padding: CGFloat = 10.0
-        let baseWidth = self.bounds.width - padding * 2.0
+        let baseWidth = self.bounds.width - padding * 2.0 - leftInset - rightInset
         
         let fieldHeight: CGFloat = 36.0
         let fraction = fieldHeight / self.nominalHeight
@@ -85,14 +100,14 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         let applyLayout = makeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.activeNavigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.backgroundColor ?? .clear, transition)
         applyLayout()
         
-        let searchBarFrame = CGRect(origin: CGPoint(x: padding, y: 8.0), size: CGSize(width: baseWidth, height: fieldHeight))
+        let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0), size: CGSize(width: baseWidth, height: fieldHeight))
         transition.updateFrame(node: self.placeholderNode, frame: searchBarFrame)
     }
     
-    override func layout() {
-        super.layout()
-
-        self.updatePlaceholder(self.expansionProgress, transition: .immediate)
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, leftInset, rightInset)
+        
+        self.updatePlaceholder(self.expansionProgress, size: size, leftInset: leftInset, rightInset: rightInset, transition: transition)
     }
     
     override var height: CGFloat {

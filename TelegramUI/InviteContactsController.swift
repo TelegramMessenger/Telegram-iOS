@@ -136,6 +136,18 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
             }
         }
         
+        self.contactsNode.listNode.visibleContentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                searchContentNode.updateListVisibleContentOffset(offset)
+            }
+        }
+        
+        self.contactsNode.listNode.didEndScrolling = { [weak self] in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                let _ = fixNavigationSearchableListNodeScrolling(strongSelf.contactsNode.listNode, searchNode: searchContentNode)
+            }
+        }
+        
         self.displayNodeDidLoad()
     }
     
@@ -150,7 +162,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
     
     private func activateSearch() {

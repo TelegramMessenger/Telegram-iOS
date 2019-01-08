@@ -38,7 +38,7 @@ final class ContactsControllerNode: ASDisplayNode {
                 case .presence:
                     return .orderedByPresence(options: options)
                 case .natural:
-                    return .natural(displaySearch: true, options: options)
+                    return .natural(options: options)
             }
         }
         
@@ -121,7 +121,7 @@ final class ContactsControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], openPeer: { [weak self] peer in
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                 requestOpenPeerFromSearch(peer)
             }

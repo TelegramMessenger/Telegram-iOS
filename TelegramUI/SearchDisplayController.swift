@@ -4,7 +4,7 @@ import SwiftSignalKit
 import Display
 
 enum SearchDisplayControllerMode {
-    case standalone
+    case list
     case navigation
 }
 
@@ -19,18 +19,8 @@ final class SearchDisplayController {
     
     private var isSearchingDisposable: Disposable?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, mode: SearchDisplayControllerMode = .standalone, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
-        let active: Bool
-        let searchBarStyle: SearchBarStyle
-        switch mode {
-            case .standalone:
-                active = true
-                searchBarStyle = .legacy
-            case .navigation:
-                active = false
-                searchBarStyle = .modern
-        }
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, active: active), strings: strings, fieldStyle: searchBarStyle)
+    init(theme: PresentationTheme, strings: PresentationStrings, mode: SearchDisplayControllerMode = .navigation, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern)
         self.mode = mode
         self.contentNode = contentNode
         
@@ -56,14 +46,7 @@ final class SearchDisplayController {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        let active: Bool
-        switch mode {
-            case .standalone:
-                active = true
-            case .navigation:
-                active = false
-        }
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme, active: active), strings: strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -79,13 +62,13 @@ final class SearchDisplayController {
         if layout.statusBarHeight == nil {
             navigationBarFrame.size.height = 64.0
         }
+        navigationBarFrame.size.height += 10.0
         
         let searchBarFrame: CGRect
         if case .navigation = self.mode {
-            searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 36.0)
-            navigationBarFrame.size.height += 10.0
+            searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 54.0)
         } else {
-            searchBarFrame = navigationBarFrame
+            searchBarFrame = CGRect(x: 0.0, y: navigationBarFrame.height - 54.0, width: layout.size.width, height: 54.0)
         }
         transition.updateFrame(node: self.searchBar, frame: searchBarFrame)
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
@@ -116,7 +99,7 @@ final class SearchDisplayController {
         
         let navigationBarFrame: CGRect
         switch self.mode {
-            case .standalone:
+            case .list:
                 let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
                 let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
                 let navigationBarOffset: CGFloat
@@ -131,7 +114,7 @@ final class SearchDisplayController {
                 }
                 navigationBarFrame = frame
             case .navigation:
-                navigationBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 36.0)
+                navigationBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 54.0)
         }
         
         self.searchBar.frame = navigationBarFrame

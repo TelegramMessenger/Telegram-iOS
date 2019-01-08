@@ -214,6 +214,27 @@ public class ContactsController: ViewController {
             self?.presentSortMenu()
         }
         
+        self.contactsNode.contactListNode.contentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                var progress: CGFloat = 0.0
+                switch offset {
+                    case let .known(offset):
+                        progress = max(0.0, (searchContentNode.nominalHeight - max(0.0, offset - 50.0))) / searchContentNode.nominalHeight
+                    default:
+                        break
+                }
+                searchContentNode.updateExpansionProgress(progress)
+            }
+        }
+        
+        self.contactsNode.contactListNode.contentScrollingEnded = { [weak self] listView in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
+            } else {
+                return false
+            }
+        }
+        
         self.displayNodeDidLoad()
     }
     
@@ -232,7 +253,7 @@ public class ContactsController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
     
     private func activateSearch() {

@@ -291,7 +291,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
     let _ready = ValuePromise<Bool>()
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
-    private let listNode: ListView
+    let listNode: ListView
     private var queuedTransitions: [LanguageListNodeTransition] = []
     
     private var searchDisplayController: SearchDisplayController?
@@ -555,7 +555,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: LocalizationListSearchContainerNode(account: self.account, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: LocalizationListSearchContainerNode(account: self.account, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
             self?.requestDeactivateSearch()
         })
         

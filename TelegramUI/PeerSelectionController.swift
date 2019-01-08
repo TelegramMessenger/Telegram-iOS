@@ -138,6 +138,20 @@ public final class PeerSelectionController: ViewController {
             }
         }
         
+        self.peerSelectionNode.contentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                searchContentNode.updateListVisibleContentOffset(offset)
+            }
+        }
+        
+        self.peerSelectionNode.contentScrollingEnded = { [weak self] listView in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
+            } else {
+                return false
+            }
+        }
+        
         self.displayNodeDidLoad()
         
         self._ready.set(self.peerSelectionNode.ready)
@@ -160,7 +174,7 @@ public final class PeerSelectionController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.peerSelectionNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.peerSelectionNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
     
     @objc func cancelPressed() {

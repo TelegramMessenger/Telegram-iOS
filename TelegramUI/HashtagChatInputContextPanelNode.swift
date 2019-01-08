@@ -180,7 +180,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     private func topInsetForLayout(size: CGSize) -> CGFloat {
-        var minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
+        let minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
         
         return max(size.height - minimumItemHeights, 0.0)
     }

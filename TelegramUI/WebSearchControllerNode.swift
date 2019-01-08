@@ -347,16 +347,16 @@ class WebSearchControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
-        let segmentedHeight: CGFloat = self.segmentedControl.superview != nil ? 40.0 : 5.0
+        let segmentedHeight: CGFloat = self.segmentedControl.superview != nil ? 44.0 : 5.0
         let panelY: CGFloat = insets.top - UIScreenPixel - 4.0
         
         transition.updateFrame(node: self.segmentedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: segmentedHeight)))
         transition.updateFrame(node: self.segmentedSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY + segmentedHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         var controlSize = self.segmentedControl.sizeThatFits(layout.size)
-        controlSize.width = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 8.0 * 2.0
+        controlSize.width = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 10.0 * 2.0
         
-        transition.updateFrame(view: self.segmentedControl, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - controlSize.width) / 2.0), y: panelY + floor((segmentedHeight - controlSize.height) / 2.0)), size: controlSize))
+        transition.updateFrame(view: self.segmentedControl, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - controlSize.width) / 2.0), y: panelY + 5.0), size: controlSize))
         
         insets.top -= 4.0
         

@@ -560,11 +560,11 @@ final class ListMessageFileItemNode: ListMessageNode {
                         iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 12.0, y: 5.0), size: iconSize)
                     } else {
                         let iconSize = CGSize(width: 42.0, height: 42.0)
-                        iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 12.0, y: 5.0), size: iconSize)
+                        iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 12.0, y: 8.0), size: iconSize)
                     }
-                    transition.updateFrame(node: strongSelf.extensionIconNode, frame:  iconFrame)
+                    transition.updateFrame(node: strongSelf.extensionIconNode, frame: iconFrame)
                     strongSelf.extensionIconNode.image = extensionIconImage
-                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: leftOffset + 12.0 + floor((42.0 - extensionTextLayout.size.width) / 2.0), y: 5.0 + floor((42.0 - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
+                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: leftOffset + 12.0 + floor((42.0 - extensionTextLayout.size.width) / 2.0), y: 8.0 + floor((42.0 - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
                     
                     let _ = extensionTextApply()
                     
@@ -619,7 +619,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }))
                     }
                     
-                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 31.0), size: CGSize(width: 11.0, height: 11.0)))
+                    transition.updateFrame(node: strongSelf.downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 34.0), size: CGSize(width: 11.0, height: 11.0)))
                     
                     if let updatedFetchControls = updatedFetchControls {
                         let _ = strongSelf.fetchControls.swap(updatedFetchControls)

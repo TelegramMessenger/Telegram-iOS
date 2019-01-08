@@ -39,7 +39,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.displayDeviceContacts = displayDeviceContacts
         
-        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(displaySearch: true, options: options)))
+        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(options: options)))
         
         self.dimNode = ASDisplayNode()
         
@@ -112,7 +112,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         } else {
             categories.insert(.global)
         }
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, mode: .navigation, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: categories, openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: categories, openPeer: { [weak self] peer in
             self?.requestOpenPeerFromSearch?(peer)
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {

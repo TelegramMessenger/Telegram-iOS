@@ -155,6 +155,20 @@ class ContactSelectionController: ViewController {
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
         
+        self.contactsNode.contactListNode.contentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                searchContentNode.updateListVisibleContentOffset(offset)
+            }
+        }
+        
+        self.contactsNode.contactListNode.contentScrollingEnded = { [weak self] listView in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
+            } else {
+                return false
+            }
+        }
+        
         self.displayNodeDidLoad()
     }
     
@@ -195,7 +209,7 @@ class ContactSelectionController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
     
     private func activateSearch() {

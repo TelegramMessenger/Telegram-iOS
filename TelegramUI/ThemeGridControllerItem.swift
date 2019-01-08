@@ -8,19 +8,21 @@ import Postbox
 final class ThemeGridControllerItem: GridItem {
     let account: Account
     let wallpaper: TelegramWallpaper
+    let selected: Bool
     let interaction: ThemeGridControllerInteraction
     
     let section: GridSection? = nil
     
-    init(account: Account, wallpaper: TelegramWallpaper, interaction: ThemeGridControllerInteraction) {
+    init(account: Account, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeGridControllerInteraction) {
         self.account = account
         self.wallpaper = wallpaper
+        self.selected = selected
         self.interaction = interaction
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ThemeGridControllerItemNode()
-        node.setup(account: self.account, wallpaper: self.wallpaper, interaction: self.interaction)
+        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
         return node
     }
     
@@ -29,7 +31,7 @@ final class ThemeGridControllerItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, wallpaper: self.wallpaper, interaction: self.interaction)
+        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
     }
 }
 
@@ -39,12 +41,11 @@ private let textFont = Font.regular(11.0)
 final class ThemeGridControllerItemNode: GridItemNode {
     private let wallpaperNode: SettingsThemeWallpaperNode
     
-    private var currentState: (Account, TelegramWallpaper)?
+    private var currentState: (Account, TelegramWallpaper, Bool)?
     private var interaction: ThemeGridControllerInteraction?
     
     override init() {
         self.wallpaperNode = SettingsThemeWallpaperNode()
-        
         super.init()
         
         self.addSubnode(self.wallpaperNode)
@@ -56,18 +57,18 @@ final class ThemeGridControllerItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func setup(account: Account, wallpaper: TelegramWallpaper, interaction: ThemeGridControllerInteraction) {
+    func setup(account: Account, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeGridControllerInteraction) {
         self.interaction = interaction
         
-        if self.currentState == nil || self.currentState!.0 !== account || wallpaper != self.currentState!.1 {
-            self.currentState = (account, wallpaper)
+        if self.currentState == nil || self.currentState!.0 !== account || wallpaper != self.currentState!.1 || selected != self.currentState!.2 {
+            self.currentState = (account, wallpaper, selected)
             self.setNeedsLayout()
         }
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let (_, wallpaper) = self.currentState {
+            if let (_, wallpaper, _) = self.currentState {
                 self.interaction?.openWallpaper(wallpaper)
             }
         }
@@ -77,8 +78,8 @@ final class ThemeGridControllerItemNode: GridItemNode {
         super.layout()
         
         let bounds = self.bounds
-        if let (account, wallpaper) = self.currentState {
-            self.wallpaperNode.setWallpaper(account: account, wallpaper: wallpaper, size: bounds.size)
+        if let (account, wallpaper, selected) = self.currentState {
+            self.wallpaperNode.setWallpaper(account: account, wallpaper: wallpaper, selected: selected, size: bounds.size)
         }
     }
 }
