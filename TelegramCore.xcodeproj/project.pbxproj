@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0900555621E4A96E0030924C /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900555521E4A96D0030924C /* Wallpaper.swift */; };
 		09028386218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */; };
 		0962E66721B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */; };
 		0962E66921B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */; };
@@ -786,6 +787,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0900555521E4A96D0030924C /* Wallpaper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Wallpaper.swift; sourceTree = "<group>"; };
 		09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedVoipConfigurationUpdates.swift; sourceTree = "<group>"; };
 		0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppConfigurationUpdates.swift; sourceTree = "<group>"; };
 		0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizeAppLogEventsOperation.swift; sourceTree = "<group>"; };
@@ -1247,6 +1249,7 @@
 		D01B27A01E394D7B0022A4C0 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				0900555521E4A96D0030924C /* Wallpaper.swift */,
 				D01B27A11E394D8B0022A4C0 /* PrivacySettings.swift */,
 				D08774FD1E3E3A3500A97350 /* GlobalNotificationSettings.swift */,
 				D05A32E61E6F0B5C002760B4 /* RecentAccountSession.swift */,
@@ -1260,7 +1263,6 @@
 				D0B167221F9F972E00976B40 /* LoggingSettings.swift */,
 				D0AF32301FACEDEC0097362B /* CoreSettings.swift */,
 				D0FA08BA2046B37900DD23FC /* ContentPrivacySettings.swift */,
-				D026099D20C695AF006C34AC /* Wallpapers.swift */,
 				D051DB13215EC5A300F30F92 /* AppChangelogState.swift */,
 				0962E66E21B6147600245FD9 /* AppConfiguration.swift */,
 				0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */,
@@ -1674,6 +1676,7 @@
 		D05A32DF1E6F096B002760B4 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				D026099D20C695AF006C34AC /* Wallpapers.swift */,
 				D05A32E01E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift */,
 				D05A32E31E6F0B2E002760B4 /* RecentAccountSessions.swift */,
 				D0FA0ABC1E76C908005BB9B7 /* TwoStepVerification.swift */,
@@ -2207,6 +2210,7 @@
 				D073CE601DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
 				D0AAD1A81E32602500D5B9DE /* AutoremoveTimeoutMessageAttribute.swift in Sources */,
 				C2366C831E4F3EAA0097CCFF /* GroupReturnAndLeft.swift in Sources */,
+				0900555621E4A96E0030924C /* Wallpaper.swift in Sources */,
 				C230BEB61EE9A3760029586C /* ChannelAdminEventLogs.swift in Sources */,
 				D0136309208F3B0900EB3653 /* SecureIdValueContentError.swift in Sources */,
 				D03B0D3D1D6319E200955575 /* Fetch.swift in Sources */,
