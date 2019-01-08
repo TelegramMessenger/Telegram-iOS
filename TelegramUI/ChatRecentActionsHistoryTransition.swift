@@ -785,7 +785,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls),
                     (.banAddMembers, self.presentationData.strings.Channel_AdminLog_AddMembers),
                     (.banPinMessages, self.presentationData.strings.Channel_AdminLog_PinMessages),
-                    (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls)
+                    (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls),
+                    (.banChangeInfo, self.presentationData.strings.Channel_AdminLog_ChangeInfo)
                 ]
         
                 for (flag, string) in order {

@@ -2,7 +2,10 @@ import Foundation
 import Postbox
 import TelegramCore
 
-func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool) -> [ChatHistoryEntry] {
+    if historyAppearsCleared {
+        return []
+    }
     var entries: [ChatHistoryEntry] = []
     var adminIds = Set<PeerId>()
     if case let .peer(peerId) = location, peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -128,7 +131,13 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                                     }
                                 }
                             }
-                            if isEmptyMedia, let peer = entry.0.peers[entry.0.id.peerId] as? TelegramGroup, case .creator = peer.role {
+                            var isCreator = false
+                            if let peer = entry.0.peers[entry.0.id.peerId] as? TelegramGroup, case .creator = peer.role {
+                                isCreator = true
+                            } else if let peer = entry.0.peers[entry.0.id.peerId] as? TelegramChannel, peer.flags.contains(.isCreator) {
+                                isCreator = true
+                            }
+                            if isEmptyMedia && isCreator {
                             } else {
                                 isEmpty = false
                                 break loop

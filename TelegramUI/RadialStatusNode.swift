@@ -10,7 +10,7 @@ public enum RadialStatusNodeState: Equatable {
     case cloudProgress(color: UIColor, strokeBackgroundColor: UIColor, lineWidth: CGFloat, value: CGFloat?)
     case check(UIColor)
     case customIcon(UIImage)
-    case secretTimeout(color: UIColor, icon: UIImage?, beginTime: Double, timeout: Double)
+    case secretTimeout(color: UIColor, icon: UIImage?, beginTime: Double, timeout: Double, sparks: Bool)
     
     public static func ==(lhs: RadialStatusNodeState, rhs: RadialStatusNodeState) -> Bool {
         switch lhs {
@@ -62,8 +62,8 @@ public enum RadialStatusNodeState: Equatable {
                 } else {
                     return false
                 }
-            case let .secretTimeout(lhsColor, lhsIcon, lhsBeginTime, lhsTimeout):
-                if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout) = rhs, lhsColor.isEqual(rhsColor), lhsIcon === rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout) {
+            case let .secretTimeout(lhsColor, lhsIcon, lhsBeginTime, lhsTimeout, lhsSparks):
+                if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout, rhsSparks) = rhs, lhsColor.isEqual(rhsColor), lhsIcon === rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout), lhsSparks == rhsSparks {
                     return true
                 } else {
                     return false
@@ -118,8 +118,8 @@ public enum RadialStatusNodeState: Equatable {
                     node.progress = value
                     return node
                 }
-            case let .secretTimeout(color, icon, beginTime, timeout):
-                return RadialStatusSecretTimeoutContentNode(color: color, beginTime: beginTime, timeout: timeout, icon: icon)
+            case let .secretTimeout(color, icon, beginTime, timeout, sparks):
+                return RadialStatusSecretTimeoutContentNode(color: color, beginTime: beginTime, timeout: timeout, icon: icon, sparks: sparks)
         }
     }
 }

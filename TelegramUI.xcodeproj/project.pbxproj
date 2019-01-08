@@ -113,6 +113,9 @@
 		D00580A021DCF0A200CB7CD3 /* WallpaperListPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */; };
 		D00580A221DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */; };
 		D00580B121E3DEF200CB7CD3 /* MergedItemListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B021E3DEF200CB7CD3 /* MergedItemListItem.swift */; };
+		D00580B321E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B221E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift */; };
+		D00580B621E4C02100CB7CD3 /* UndoOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */; };
+		D00580B821E4C03400CB7CD3 /* UndoOverlayControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B721E4C03400CB7CD3 /* UndoOverlayControllerNode.swift */; };
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
 		D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
@@ -1234,6 +1237,9 @@
 		D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperListPreviewController.swift; sourceTree = "<group>"; };
 		D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperListPreviewControllerNode.swift; sourceTree = "<group>"; };
 		D00580B021E3DEF200CB7CD3 /* MergedItemListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergedItemListItem.swift; sourceTree = "<group>"; };
+		D00580B221E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteChatPeerActionSheetItem.swift; sourceTree = "<group>"; };
+		D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoOverlayController.swift; sourceTree = "<group>"; };
+		D00580B721E4C03400CB7CD3 /* UndoOverlayControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoOverlayControllerNode.swift; sourceTree = "<group>"; };
 		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
 		D007019B2029E8F2006B9E34 /* LegqacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegqacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
@@ -2494,6 +2500,15 @@
 				09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */,
 			);
 			name = Alert;
+			sourceTree = "<group>";
+		};
+		D00580B421E4BFE800CB7CD3 /* Undo Overlay */ = {
+			isa = PBXGroup;
+			children = (
+				D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */,
+				D00580B721E4C03400CB7CD3 /* UndoOverlayControllerNode.swift */,
+			);
+			name = "Undo Overlay";
 			sourceTree = "<group>";
 		};
 		D00C7CDA1E3776CA0080C3D5 /* Secret Preview */ = {
@@ -4262,6 +4277,7 @@
 				D0FC4FBA1F751E8900B7443F /* SelectablePeerNode.swift */,
 				D01C06BB1FBBB0D8001561AB /* CheckNode.swift */,
 				D056CD6F1FF147B000880D28 /* IconButtonNode.swift */,
+				D00580B221E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -4286,6 +4302,7 @@
 				D0736F261DF4D2F300F2C02A /* Telegram Controller */,
 				D093D81E20699A6000BC3599 /* Form */,
 				D0E412D1206A7DA100BEE4A2 /* Date Selection */,
+				D00580B421E4BFE800CB7CD3 /* Undo Overlay */,
 			);
 			name = Controllers;
 			sourceTree = "<group>";
@@ -5579,6 +5596,7 @@
 				D0EC6DAB1EB9F58900EBF1C3 /* ChatInterfaceStateAccessoryPanels.swift in Sources */,
 				D0EC6DAC1EB9F58900EBF1C3 /* ChatInterfaceStateInputPanels.swift in Sources */,
 				D056CD761FF2A30900880D28 /* ChatSwipeToReplyRecognizer.swift in Sources */,
+				D00580B321E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift in Sources */,
 				D091C7A41F8EBB1E00D7DE13 /* ChatPresentationData.swift in Sources */,
 				D0383EE0207D1A1600C45548 /* TGEmojiSuggestions.mm in Sources */,
 				D013630C208FA62400EB3653 /* SecureIdDocumentGalleryFooterContentNode.swift in Sources */,
@@ -5615,6 +5633,7 @@
 				D0EC6DC01EB9F58900EBF1C3 /* ChatMediaInputRecentGifsItem.swift in Sources */,
 				D06F31E4213597FF001A0F12 /* ThemeAutoNightTimeSelectionActionSheet.swift in Sources */,
 				D0477D211F61A47600412B44 /* UniversalVideoContentManager.swift in Sources */,
+				D00580B821E4C03400CB7CD3 /* UndoOverlayControllerNode.swift in Sources */,
 				D0EC6DC11EB9F58900EBF1C3 /* ChatMediaInputTrendingItem.swift in Sources */,
 				D0BCC3D620404CD8008126C2 /* ChatMessageActionSheetControllerNode.swift in Sources */,
 				D0EC6DC21EB9F58900EBF1C3 /* ChatMediaInputStickerPackItem.swift in Sources */,
@@ -5679,6 +5698,7 @@
 				D0EB41F51F30D26A00838FE6 /* LegacySuggestionContext.swift in Sources */,
 				D0EC6DDD1EB9F58900EBF1C3 /* ChatTextInputMediaRecordingButton.swift in Sources */,
 				D0F0AAE61EC21B68005EE2A5 /* CallControllerButton.swift in Sources */,
+				D00580B621E4C02100CB7CD3 /* UndoOverlayController.swift in Sources */,
 				D0EC6DDE1EB9F58900EBF1C3 /* ChatTextInputAudioRecordingOverlayButton.swift in Sources */,
 				D0E9BAC91F05738600F079A4 /* STPAPIClient+ApplePay.m in Sources */,
 				09F79A0721C829BC00820234 /* GalleryNavigationCheckNode.swift in Sources */,

@@ -3669,7 +3669,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                                let _ = clearHistoryInteractively(postbox: strongSelf.account.postbox, peerId: peerId).start()
+                                strongSelf.chatDisplayNode.historyNode.historyAppearsCleared = true
+                                let account = strongSelf.account
+                                strongSelf.present(UndoOverlayController(account: strongSelf.account, text: strongSelf.presentationData.strings.Undo_MessagesDeleted, action: { shouldCommit in
+                                    if shouldCommit {
+                                        let _ = clearHistoryInteractively(postbox: account.postbox, peerId: peerId).start(completed: {
+                                            self?.chatDisplayNode.historyNode.historyAppearsCleared = false
+                                        })
+                                    } else {
+                                        self?.chatDisplayNode.historyNode.historyAppearsCleared = false
+                                    }
+                                }), in: .window(.root))
                             }
                         })
                     ]), ActionSheetItemGroup(items: [
