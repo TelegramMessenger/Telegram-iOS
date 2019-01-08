@@ -14,10 +14,13 @@ open class NavigationBarContentNode: ASDisplayNode {
     }
     
     open var nominalHeight: CGFloat {
-        return 0.0
+        return 44.0
     }
     
     open var mode: NavigationBarContentMode {
         return .replacement
+    }
+    
+    open func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
     }
 }

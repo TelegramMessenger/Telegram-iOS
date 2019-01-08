@@ -143,6 +143,14 @@ open class ViewControllerPresentationArguments {
     
     open var navigationHeight: CGFloat {
         if let navigationBar = self.navigationBar {
+            return navigationBar.frame.maxY
+        } else {
+            return 0.0
+        }
+    }
+    
+    open var navigationInsetHeight: CGFloat {
+        if let navigationBar = self.navigationBar {
             var height = navigationBar.frame.maxY
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode {
                 height += contentNode.nominalHeight - contentNode.height

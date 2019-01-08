@@ -729,12 +729,14 @@ open class NavigationBar: ASDisplayNode {
             let contentNodeFrame: CGRect
             switch contentNode.mode {
                 case .replacement:
-                    contentNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset, height: size.height))
+                    expansionHeight = contentNode.height - 44.0
+                    contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
                 case .expansion:
                     expansionHeight = contentNode.height
-                    contentNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: size.height - expansionHeight), size: CGSize(width: size.width - leftInset - rightInset, height: expansionHeight))
+                    contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - expansionHeight), size: CGSize(width: size.width, height: expansionHeight))
             }
             transition.updateFrame(node: contentNode, frame: contentNodeFrame)
+            contentNode.updateLayout(size: contentNodeFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
         }
         
         transition.updateFrame(node: self.stripeNode, frame: CGRect(x: 0.0, y: size.height, width: size.width, height: UIScreenPixel))
@@ -980,8 +982,13 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public var contentHeight: CGFloat {
-        if let contentNode = self.contentNode, case .expansion = contentNode.mode {
-            return 44.0 + contentNode.height
+        if let contentNode = self.contentNode {
+            switch contentNode.mode {
+                case .expansion:
+                    return 44.0 + contentNode.height
+                case .replacement:
+                    return contentNode.height
+            }
         } else {
             return 44.0
         }
@@ -1006,6 +1013,7 @@ open class NavigationBar: ASDisplayNode {
             self.contentNode?.requestContainerLayout = { [weak self] transition in
                 self?.requestContainerLayout(transition)
             }
+            //let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
             if let contentNode = contentNode {
                 contentNode.layer.removeAnimation(forKey: "opacity")
                 self.addSubnode(contentNode)

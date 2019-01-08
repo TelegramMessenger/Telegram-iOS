@@ -442,6 +442,31 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateCornerRadius(node: ASDisplayNode, cornerRadius: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        if node.cornerRadius.isEqual(to: cornerRadius) {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            node.cornerRadius = cornerRadius
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let previousCornerRadius = node.cornerRadius
+            node.cornerRadius = cornerRadius
+            node.layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+    
     func animateTransformScale(node: ASDisplayNode, from fromScale: CGFloat, completion: ((Bool) -> Void)? = nil) {
         let t = node.layer.transform
         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
