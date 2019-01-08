@@ -1861,13 +1861,13 @@ public final class Postbox {
     func fetchAroundChatEntries(groupId: PeerGroupId?, index: ChatListIndex, count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?) {
         let (intermediateEntries, intermediateLower, intermediateUpper) = self.chatListTable.entriesAround(groupId: groupId, index: index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
-            return MutableChatListEntry(entry, readStateTable: self.readStateTable)
+            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
         }
         let lower: MutableChatListEntry? = intermediateLower.flatMap { entry in
-            return MutableChatListEntry(entry, readStateTable: self.readStateTable)
+            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
         }
         let upper: MutableChatListEntry? = intermediateUpper.flatMap { entry in
-            return MutableChatListEntry(entry, readStateTable: self.readStateTable)
+            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
         }
         
         return (entries, lower, upper)
@@ -1876,7 +1876,7 @@ public final class Postbox {
     func fetchEarlierChatEntries(groupId: PeerGroupId?, index: ChatListIndex?, count: Int) -> [MutableChatListEntry] {
         let intermediateEntries = self.chatListTable.earlierEntries(groupId: groupId, index: index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
-            return MutableChatListEntry(entry, readStateTable: self.readStateTable)
+            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
         }
         return entries
     }
@@ -1884,7 +1884,7 @@ public final class Postbox {
     func fetchLaterChatEntries(groupId: PeerGroupId?, index: ChatListIndex?, count: Int) -> [MutableChatListEntry] {
         let intermediateEntries = self.chatListTable.laterEntries(groupId: groupId, index: index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count)
         let entries: [MutableChatListEntry] = intermediateEntries.map { entry in
-            return MutableChatListEntry(entry, readStateTable: self.readStateTable)
+            return MutableChatListEntry(entry, cachedDataTable: self.cachedPeerDataTable, readStateTable: self.readStateTable, messageHistoryTable: self.messageHistoryTable)
         }
         return entries
     }
