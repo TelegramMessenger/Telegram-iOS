@@ -49,7 +49,7 @@
         _wallpaperInfo = wallpaperInfo;
         _thumbnailImage = thumbnailImage;
         
-        [self setTitleText:TGLocalized(@"Wallpaper.Wallpaper")];
+        [self setTitleText:TGLocalized(@"BackgroundPreview.Title")];
         
         self.automaticallyManageScrollViewInsets = false;
     }
@@ -246,7 +246,7 @@
     
     _setButton.frame = CGRectMake(_cancelButton.frame.origin.x + _cancelButton.frame.size.width + separatorWidth, 0, CGFloor(_panelView.frame.size.width / 2), 49.0f);
     
-    _separatorView.frame = CGRectMake(CGFloor(_panelView.frame.size.width / 2) - separatorWidth, 0, separatorWidth, 49.0f);
+    _separatorView.frame = CGRectMake(CGFloor(_panelView.frame.size.width / 2) - separatorWidth, 0, separatorWidth, 49.0f + self.controllerSafeAreaInset.bottom);
 }
 
 - (void)controllerInsetUpdated:(UIEdgeInsets)previousInset
@@ -254,6 +254,9 @@
     [super controllerInsetUpdated:previousInset];
     
     _panelView.frame = CGRectMake(0, self.view.bounds.size.height - 49.0f - self.controllerSafeAreaInset.bottom, self.view.bounds.size.width, 49.0f + self.controllerSafeAreaInset.bottom);
+    
+    CGFloat separatorWidth = TGScreenPixel;
+    _separatorView.frame = CGRectMake(CGFloor(_panelView.frame.size.width / 2) - separatorWidth, 0, separatorWidth, 49.0f + self.controllerSafeAreaInset.bottom);
 }
 
 - (BOOL)shouldAutorotate
