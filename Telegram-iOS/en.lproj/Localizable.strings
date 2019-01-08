@@ -1535,7 +1535,7 @@
 "Channel.Info.Banned" = "Blacklist";
 "Channel.Info.Members" = "Members";
 
-"Channel.Members.AddMembers" = "Add Members";
+"Channel.Members.AddMembers" = "Add Subscribers";
 "Channel.Members.AddMembersHelp" = "Only channel admins can see this list.";
 "Channel.Members.Title" = "Members";
 "Channel.BlackList.Title" = "Blacklist";
@@ -1610,7 +1610,6 @@
 "Group.UpgradeConfirmation" = "Warning: this action is irreversible. It is not possible to downgrade a supergroup to a regular group.";
 
 "Notification.GroupActivated" = "Group deactivated";
-"Notification.ChannelMigratedFrom" = "This group was upgraded to a supergroup";
 
 "GroupInfo.DeactivatedStatus" = "Group Deactivated";
 
@@ -2529,6 +2528,10 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.BanSendGifs" = "Send GIFs";
 "Channel.AdminLog.MessageRestricted" = "%@ changed restrictions for %@ (%@)";
 "Channel.AdminLog.MessageAdmin" = "%@ changed privileges for %@ (%@)";
+"Channel.AdminLog.ChangeInfo" = "Change Info";
+"Channel.AdminLog.PinMessages" = "Pin Messages";
+"Channel.AdminLog.AddMembers" = "Add Members";
+"Channel.AdminLog.SendPolls" = "Send Polls";
 
 "Channel.AdminLog.CanChangeInfo" = "Change Info";
 "Channel.AdminLog.CanSendMessages" = "Post Messages";
@@ -3822,6 +3825,7 @@ Unused sets are archived when you add more.";
 "GroupPermission.ApplyAlertText" = "You have changed this user's rights in %@.\nApply Changes?";
 "GroupPermission.ApplyAlertAction" = "Apply";
 "GroupPermission.AddSuccess" = "Exception Added";
+"GroupPermission.NotAvailableInPublicGroups" = "This permission is not available in public groups.";
 
 "Channel.Management.RemovedBy" = "Removed by %@";
 

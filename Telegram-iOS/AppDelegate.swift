@@ -657,12 +657,6 @@ private enum QueuedWakeup: Int32 {
         })
         
         let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
-        
-        #if DEBUG
-        let testingEnvironment = true
-        #else
-        let testingEnvironment = false
-        #endif
             
         self.context.set(self.accountManagerPromise.get()
         |> deliverOnMainQueue
@@ -672,7 +666,7 @@ private enum QueuedWakeup: Int32 {
                 !$0.isEmpty
             }
             |> distinctUntilChanged
-            return applicationContext(networkArguments: networkArguments, applicationBindings: applicationBindings, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: self.hasActiveAudioSession.get() |> distinctUntilChanged, watchManagerArguments: watchManagerArgumentsPromise.get(), accountManager: accountManager, rootPath: rootPath, legacyBasePath: appGroupUrl.path, testingEnvironment: testingEnvironment, mainWindow: self.mainWindow, reinitializedNotificationSettings: {
+            return applicationContext(networkArguments: networkArguments, applicationBindings: applicationBindings, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: self.hasActiveAudioSession.get() |> distinctUntilChanged, watchManagerArguments: watchManagerArgumentsPromise.get(), accountManager: accountManager, rootPath: rootPath, legacyBasePath: appGroupUrl.path, mainWindow: self.mainWindow, reinitializedNotificationSettings: {
                 let _ = (self.context.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { value in

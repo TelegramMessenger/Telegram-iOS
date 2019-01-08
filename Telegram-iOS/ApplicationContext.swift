@@ -7,8 +7,8 @@ import TelegramCore
 import Display
 import LegacyComponents
 
-func applicationContext(networkArguments: NetworkInitializationArguments, applicationBindings: TelegramApplicationBindings, replyFromNotificationsActive: Signal<Bool, NoError>, backgroundAudioActive: Signal<Bool, NoError>, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, accountManager: AccountManager, rootPath: String, legacyBasePath: String, testingEnvironment: Bool, mainWindow: Window1, reinitializedNotificationSettings: @escaping () -> Void) -> Signal<ApplicationContext?, NoError> {
-    return currentAccount(allocateIfNotExists: true, networkArguments: networkArguments, supplementary: false, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: testingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+func applicationContext(networkArguments: NetworkInitializationArguments, applicationBindings: TelegramApplicationBindings, replyFromNotificationsActive: Signal<Bool, NoError>, backgroundAudioActive: Signal<Bool, NoError>, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, accountManager: AccountManager, rootPath: String, legacyBasePath: String, mainWindow: Window1, reinitializedNotificationSettings: @escaping () -> Void) -> Signal<ApplicationContext?, NoError> {
+    return currentAccount(allocateIfNotExists: true, networkArguments: networkArguments, supplementary: false, manager: accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
     |> filter { $0 != nil }
     |> deliverOnMainQueue
     |> mapToSignal { account -> Signal<ApplicationContext?, NoError> in

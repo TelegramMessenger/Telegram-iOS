@@ -83,7 +83,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
             account = accountManager(basePath: rootPath + "/accounts-metadata")
             |> take(1)
             |> mapToSignal { accountManager -> Signal<Account, NoError> in
-                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
+                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods)
                 |> mapToSignal { account -> Signal<Account, NoError> in
                     if let account = account {
                         switch account {

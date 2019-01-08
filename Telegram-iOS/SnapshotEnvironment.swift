@@ -32,7 +32,7 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
     
     var result: Account?
     while true {
-        let account = currentAccount(allocateIfNotExists: true, networkArguments: NetworkInitializationArguments(apiId: 0, languagesCategory: "ios", appVersion: "unknown", voipMaxLayer: 0), supplementary: false, manager: accountManagerValue!, rootPath: path, beginWithTestingEnvironment: true, auxiliaryMethods: AccountAuxiliaryMethods(updatePeerChatInputState: { _, _ in return nil }, fetchResource: { _, _, _, _ in
+        let account = currentAccount(allocateIfNotExists: true, networkArguments: NetworkInitializationArguments(apiId: 0, languagesCategory: "ios", appVersion: "unknown", voipMaxLayer: 0), supplementary: false, manager: accountManagerValue!, rootPath: path, auxiliaryMethods: AccountAuxiliaryMethods(updatePeerChatInputState: { _, _ in return nil }, fetchResource: { _, _, _, _ in
             return .never()
         }, fetchResourceMediaReferenceHash: { _ in
             return .never()
@@ -89,9 +89,9 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
     let _ = updatePresentationThemeSettingsInteractively(postbox: result!.postbox, { _ in
         switch theme {
             case .day:
-                return PresentationThemeSettings(chatWallpaper: .color(0xffffff), theme: .builtin(.day), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
+                return PresentationThemeSettings(chatWallpaper: .color(0xffffff), chatWallpaperMode: .still, theme: .builtin(.day), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
             case .night:
-                return PresentationThemeSettings(chatWallpaper: .color(0x000000), theme: .builtin(.nightAccent), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
+                return PresentationThemeSettings(chatWallpaper: .color(0x000000), chatWallpaperMode: .still, theme: .builtin(.nightAccent), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
         }
     }).start()
     
