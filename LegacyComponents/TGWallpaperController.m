@@ -201,7 +201,7 @@
     _bottomView =  [[UIView alloc] initWithFrame:CGRectMake(0.0f, 49.0f, _panelView.frame.size.width, separatorWidth)];
     _bottomView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _bottomView.backgroundColor = pallete.separatorColor;
-    [_panelView addSubview:_bottomView];
+    //[_panelView addSubview:_bottomView];
 }
 
 - (void)layoutControllerForSize:(CGSize)size duration:(NSTimeInterval)duration {
