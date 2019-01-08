@@ -116,7 +116,7 @@ public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Cha
                             resource = EmptyMediaResource()
                         }
                         
-                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, mimeType: content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, immediateThumbnailData: nil, mimeType: content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
                         return .message(text: caption, attributes: attributes, mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                     } else {
                         return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)

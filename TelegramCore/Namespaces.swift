@@ -255,12 +255,19 @@ public struct PreferencesKeys {
 
 private enum SharedDataKeyValues: Int32 {
     case loggingSettings = 0
+    case accountInitializationSettings = 1
 }
 
 public struct SharedDataKeys {
     public static let loggingSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.loggingSettings.rawValue)
+        return key
+    }()
+    
+    public static let accountInitializationSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.accountInitializationSettings.rawValue)
         return key
     }()
 }

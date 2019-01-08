@@ -11216,7 +11216,7 @@ extension Api {
     enum WallPaper: TypeConstructorDescription {
         case wallPaper(id: Int32, title: String, sizes: [Api.PhotoSize], color: Int32)
         case wallPaperSolid(id: Int32, title: String, bgColor: Int32, color: Int32)
-        case wallPaperDocument(flags: Int32, id: Int64, accessHash: Int64, title: String, slug: String?, document: Api.Document, color: Int32?)
+        case wallPaperDocument(flags: Int32, id: Int64, accessHash: Int64, title: String, slug: String, document: Api.Document, color: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11244,13 +11244,13 @@ extension Api {
                     break
                 case .wallPaperDocument(let flags, let id, let accessHash, let title, let slug, let document, let color):
                     if boxed {
-                        buffer.appendInt32(-821868985)
+                        buffer.appendInt32(-1338674530)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(slug!, buffer: buffer, boxed: false)}
+                    serializeString(slug, buffer: buffer, boxed: false)
                     document.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     break
@@ -11320,7 +11320,7 @@ extension Api {
             var _4: String?
             _4 = parseString(reader)
             var _5: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
+            _5 = parseString(reader)
             var _6: Api.Document?
             if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.Document
@@ -11331,11 +11331,11 @@ extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.WallPaper.wallPaperDocument(flags: _1!, id: _2!, accessHash: _3!, title: _4!, slug: _5, document: _6!, color: _7)
+                return Api.WallPaper.wallPaperDocument(flags: _1!, id: _2!, accessHash: _3!, title: _4!, slug: _5!, document: _6!, color: _7)
             }
             else {
                 return nil
@@ -17737,7 +17737,7 @@ extension Api {
     }
     enum Document: TypeConstructorDescription {
         case documentEmpty(id: Int64)
-        case document(id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int32, thumb: Api.PhotoSize, dcId: Int32, attributes: [Api.DocumentAttribute])
+        case document(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int32, thumbs: [Api.PhotoSize]?, dcId: Int32, attributes: [Api.DocumentAttribute])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -17747,17 +17747,22 @@ extension Api {
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     break
-                case .document(let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumb, let dcId, let attributes):
+                case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let dcId, let attributes):
                     if boxed {
-                        buffer.appendInt32(1498631756)
+                        buffer.appendInt32(-1683841855)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeBytes(fileReference, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeString(mimeType, buffer: buffer, boxed: false)
                     serializeInt32(size, buffer: buffer, boxed: false)
-                    thumb.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(thumbs!.count))
+                    for item in thumbs! {
+                        item.serialize(buffer, true)
+                    }}
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(attributes.count))
@@ -17772,8 +17777,8 @@ extension Api {
         switch self {
                 case .documentEmpty(let id):
                 return ("documentEmpty", [("id", id)])
-                case .document(let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumb, let dcId, let attributes):
-                return ("document", [("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("mimeType", mimeType), ("size", size), ("thumb", thumb), ("dcId", dcId), ("attributes", attributes)])
+                case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let dcId, let attributes):
+                return ("document", [("flags", flags), ("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("mimeType", mimeType), ("size", size), ("thumbs", thumbs), ("dcId", dcId), ("attributes", attributes)])
     }
     }
     
@@ -17789,27 +17794,29 @@ extension Api {
             }
         }
         static func parse_document(_ reader: BufferReader) -> Document? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: String?
-            _5 = parseString(reader)
-            var _6: Int32?
-            _6 = reader.readInt32()
-            var _7: Api.PhotoSize?
-            if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.PhotoSize
-            }
-            var _8: Int32?
-            _8 = reader.readInt32()
-            var _9: [Api.DocumentAttribute]?
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: [Api.PhotoSize]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
+            } }
+            var _9: Int32?
+            _9 = reader.readInt32()
+            var _10: [Api.DocumentAttribute]?
             if let _ = reader.readInt32() {
-                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
+                _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DocumentAttribute.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -17818,10 +17825,11 @@ extension Api {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            let _c8 = _8 != nil
+            let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
             let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.Document.document(id: _1!, accessHash: _2!, fileReference: _3!, date: _4!, mimeType: _5!, size: _6!, thumb: _7!, dcId: _8!, attributes: _9!)
+            let _c10 = _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.Document.document(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, mimeType: _6!, size: _7!, thumbs: _8, dcId: _9!, attributes: _10!)
             }
             else {
                 return nil

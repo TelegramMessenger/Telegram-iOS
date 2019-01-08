@@ -880,6 +880,16 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
             }
         }
     }
+    for media in message.media {
+        if let action = media as? TelegramMediaAction {
+            switch action.action {
+                case .groupMigratedToChannel, .channelMigratedFromGroup:
+                    notify = false
+                default:
+                    break
+            }
+        }
+    }
     
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
     

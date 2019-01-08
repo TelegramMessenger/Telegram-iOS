@@ -5037,11 +5037,12 @@ extension Api {
                     })
                 }
             
-                static func uploadWallPaper(file: Api.InputFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WallPaper>) {
+                static func uploadWallPaper(file: Api.InputFile, mimeType: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WallPaper>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-748655323)
+                    buffer.appendInt32(-944071859)
                     file.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.uploadWallPaper", parameters: [("file", file)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
+                    serializeString(mimeType, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.uploadWallPaper", parameters: [("file", file), ("mimeType", mimeType)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
                         let reader = BufferReader(buffer)
                         var result: Api.WallPaper?
                         if let signature = reader.readInt32() {
@@ -5056,21 +5057,6 @@ extension Api {
                     buffer.appendInt32(-57811990)
                     wallpaper.serialize(buffer, true)
                     return (FunctionDescription(name: "account.getWallPaper", parameters: [("wallpaper", wallpaper)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.WallPaper?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.WallPaper
-                        }
-                        return result
-                    })
-                }
-            
-                static func editWallPaper(wallpaper: Api.InputWallPaper, slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WallPaper>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-4512283)
-                    wallpaper.serialize(buffer, true)
-                    serializeString(slug, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.editWallPaper", parameters: [("wallpaper", wallpaper), ("slug", slug)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
                         let reader = BufferReader(buffer)
                         var result: Api.WallPaper?
                         if let signature = reader.readInt32() {

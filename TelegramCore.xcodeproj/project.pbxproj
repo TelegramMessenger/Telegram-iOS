@@ -92,6 +92,8 @@
 		D003702B1DA42586004308D3 /* PhoneNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003702A1DA42586004308D3 /* PhoneNumber.swift */; };
 		D00422D321677F4500719B67 /* ManagedAccountPresence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00422D221677F4500719B67 /* ManagedAccountPresence.swift */; };
 		D00422D421677F4500719B67 /* ManagedAccountPresence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00422D221677F4500719B67 /* ManagedAccountPresence.swift */; };
+		D00580AE21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580AD21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift */; };
+		D00580AF21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580AD21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift */; };
 		D00BDA191EE593D600C64C5E /* TelegramChannelAdminRights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00BDA181EE593D600C64C5E /* TelegramChannelAdminRights.swift */; };
 		D00BDA1A1EE593D600C64C5E /* TelegramChannelAdminRights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00BDA181EE593D600C64C5E /* TelegramChannelAdminRights.swift */; };
 		D00BDA1C1EE5952A00C64C5E /* TelegramChannelBannedRights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00BDA1B1EE5952A00C64C5E /* TelegramChannelBannedRights.swift */; };
@@ -824,6 +826,7 @@
 		C2FD33EA1E696C78008D13D4 /* GroupsInCommon.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupsInCommon.swift; sourceTree = "<group>"; };
 		D003702A1DA42586004308D3 /* PhoneNumber.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhoneNumber.swift; sourceTree = "<group>"; };
 		D00422D221677F4500719B67 /* ManagedAccountPresence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAccountPresence.swift; sourceTree = "<group>"; };
+		D00580AD21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountEnvironmentAttribute.swift; sourceTree = "<group>"; };
 		D00BDA181EE593D600C64C5E /* TelegramChannelAdminRights.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramChannelAdminRights.swift; sourceTree = "<group>"; };
 		D00BDA1B1EE5952A00C64C5E /* TelegramChannelBannedRights.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramChannelBannedRights.swift; sourceTree = "<group>"; };
 		D00C7CCB1E3620C30080C3D5 /* CachedChannelParticipants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedChannelParticipants.swift; sourceTree = "<group>"; };
@@ -1670,6 +1673,7 @@
 			isa = PBXGroup;
 			children = (
 				D03E5E0B1E55E02D0029569A /* LoggedOutAccountAttribute.swift */,
+				D00580AD21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift */,
 			);
 			name = Accounts;
 			sourceTree = "<group>";
@@ -2424,6 +2428,7 @@
 				D0613FCA1E60440600202CDB /* InvitationLinks.swift in Sources */,
 				D03B0D721D631ABA00955575 /* SearchMessages.swift in Sources */,
 				D0DC35501DE36900000195EB /* ChatContextResult.swift in Sources */,
+				D00580AE21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift in Sources */,
 				D00D34391E6EC9520057B307 /* TeleramMediaUnsupported.swift in Sources */,
 				D00D97CA1E32917C00E5C2B6 /* PeerInputActivityManager.swift in Sources */,
 				C2FD33E11E680E9E008D13D4 /* RequestUserPhotos.swift in Sources */,
@@ -2743,6 +2748,7 @@
 				D0AB262C21C3CE80008F6685 /* Polls.swift in Sources */,
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
 				D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */,
+				D00580AF21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift in Sources */,
 				D05452081E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */,
 				D0561DE41E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */,
 				D042C6841E8D9DF800C863B0 /* Unixtime.swift in Sources */,
