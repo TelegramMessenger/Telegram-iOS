@@ -39,9 +39,11 @@ public:
     uint          stride() const;
     uint          width() const;
     uint          height() const;
+    uint          depth() const;
     VBitmap::Format format() const;
     bool            valid() const;
     uchar *         data();
+    uchar *         data() const;
 
     void    fill(uint pixel);
 private:

@@ -28,6 +28,7 @@ struct VBitmap::Impl {
     uint                mHeight{0};
     uint                mStride{0};
     uint                mBytes{0};
+    uint                mDepth{0};
     VBitmap::Format     mFormat{VBitmap::Format::Invalid};
     bool                mOwnData;
     bool                mRoData;
@@ -38,8 +39,8 @@ struct VBitmap::Impl {
         mOwnData(true),
         mRoData(false)
     {
-        uint depth = Impl::depth(format);
-        uint stride = ((width * depth + 31) >> 5) << 2; // bytes per scanline (must be multiple of 4)
+        mDepth = depth(format);
+        uint stride = ((width * mDepth + 31) >> 5) << 2; // bytes per scanline (must be multiple of 4)
 
         mWidth = width;
         mHeight = height;
@@ -64,6 +65,7 @@ struct VBitmap::Impl {
         mStride = bytesPerLine;
         mBytes = mStride * mHeight;
         mData = data;
+        mDepth = depth(format);
     }
 
     ~Impl()
@@ -133,7 +135,17 @@ uint VBitmap::height() const
     return mImpl ? mImpl->height() : 0;
 }
 
+uint VBitmap::depth() const
+{
+    return mImpl ? mImpl->mDepth : 0;
+}
+
 uchar *VBitmap::data()
+{
+    return mImpl ? mImpl->data() : nullptr;
+}
+
+uchar *VBitmap::data() const
 {
     return mImpl ? mImpl->data() : nullptr;
 }
