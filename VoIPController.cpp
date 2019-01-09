@@ -2135,6 +2135,10 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 					preferredRelay=srcEndpoint.id;
 			}
 		}
+		if(!audioStarted && receivedInitAck){
+			StartAudio();
+			audioStarted=true;
+		}
 	}
 	if(type==PKT_INIT_ACK){
 		LOGD("Received init ack");
@@ -2177,7 +2181,8 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				}else{
 					stm->codec=(uint32_t) in.ReadInt32();
 				}
-				stm->frameDuration=(uint16_t) in.ReadInt16();
+				in.ReadInt16();
+				stm->frameDuration=60;
 				stm->enabled=in.ReadByte()==1;
 				if(stm->type==STREAM_TYPE_AUDIO){
 					stm->jitterBuffer=make_shared<JitterBuffer>(nullptr, stm->frameDuration);
@@ -2209,13 +2214,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				LOGD("MTProto2 wasn't initially enabled for whatever reason but peer supports it; upgrading");
 			}
 
-			/*{
-				MutexGuard m(audioIOMutex);
-				if(!audioInput){
-					StartAudio();
-				}
-			}*/
-			if(!audioStarted){
+			if(!audioStarted && receivedInit){
 				StartAudio();
 				audioStarted=true;
 			}
