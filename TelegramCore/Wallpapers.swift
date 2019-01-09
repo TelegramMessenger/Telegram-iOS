@@ -16,10 +16,11 @@ public func telegramWallpapers(postbox: Postbox, network: Network) -> Signal<[Te
             return items.map { $0.contents as! TelegramWallpaper }
         }
     } |> mapToSignal { list -> Signal<[TelegramWallpaper], NoError> in
-        let remote = network.request(Api.functions.account.getWallPapers())
+        let remote = network.request(Api.functions.account.getWallPapers(hash: 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<[TelegramWallpaper], NoError> in
-            var items: [TelegramWallpaper] = []
+            return .never()
+            /*var items: [TelegramWallpaper] = []
             for wallpaper in result {
                 items.append(TelegramWallpaper(apiWallpaper: wallpaper))
             }
@@ -40,7 +41,7 @@ public func telegramWallpapers(postbox: Postbox, network: Network) -> Signal<[Te
                     
                     return items
                 }
-            }
+            }*/
         }
         return .single(list)
         |> then(remote)

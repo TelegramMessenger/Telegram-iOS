@@ -146,7 +146,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
     case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?)
-    case passwordEntry(hint: String, number: String?, code: String?)
+    case passwordEntry(hint: String, number: String?, code: String?, suggestReset: Bool)
     case passwordRecovery(hint: String, number: String?, code: String?, emailPattern: String)
     case awaitingAccountReset(protectedUntil: Int32, number: String?)
     case signUp(number: String, codeHash: String, code: String, firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?)
@@ -168,7 +168,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 }
                 self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType, termsOfService: termsOfService)
             case UnauthorizedAccountStateContentsValue.passwordEntry.rawValue:
-                self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: decoder.decodeOptionalStringForKey("c"))
+                self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: decoder.decodeOptionalStringForKey("c"), suggestReset: decoder.decodeInt32ForKey("suggestReset", orElse: 0) != 0)
             case UnauthorizedAccountStateContentsValue.passwordRecovery.rawValue:
                 self = .passwordRecovery(hint: decoder.decodeStringForKey("hint", orElse: ""), number: decoder.decodeOptionalStringForKey("number"), code: decoder.decodeOptionalStringForKey("code"), emailPattern: decoder.decodeStringForKey("emailPattern", orElse: ""))
             case UnauthorizedAccountStateContentsValue.awaitingAccountReset.rawValue:
@@ -210,7 +210,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "tos")
                 }
-            case let .passwordEntry(hint, number, code):
+            case let .passwordEntry(hint, number, code, suggestReset):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.passwordEntry.rawValue, forKey: "v")
                 encoder.encodeString(hint, forKey: "h")
                 if let number = number {
@@ -223,6 +223,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "c")
                 }
+                encoder.encodeInt32(suggestReset ? 1 : 0, forKey: "suggestReset")
             case let .passwordRecovery(hint, number, code, emailPattern):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.passwordRecovery.rawValue, forKey: "v")
                 encoder.encodeString(hint, forKey: "hint")
@@ -301,9 +302,9 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
-            case let .passwordEntry(lhsHint, lhsNumber, lhsCode):
-                if case let .passwordEntry(rhsHint, rhsNumber, rhsCode) = rhs {
-                    return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode
+            case let .passwordEntry(lhsHint, lhsNumber, lhsCode, lhsSuggestReset):
+                if case let .passwordEntry(rhsHint, rhsNumber, rhsCode, rhsSuggestReset) = rhs {
+                    return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode && lhsSuggestReset == rhsSuggestReset
                 } else {
                     return false
                 }

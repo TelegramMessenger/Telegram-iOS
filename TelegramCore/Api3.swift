@@ -416,6 +416,62 @@ struct account {
         }
     
     }
+    enum WallPapers: TypeConstructorDescription {
+        case wallPapersNotModified
+        case wallPapers(hash: Int32, wallpapers: [Api.WallPaper])
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .wallPapersNotModified:
+                    if boxed {
+                        buffer.appendInt32(471437699)
+                    }
+                    
+                    break
+                case .wallPapers(let hash, let wallpapers):
+                    if boxed {
+                        buffer.appendInt32(1881892265)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(wallpapers.count))
+                    for item in wallpapers {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .wallPapersNotModified:
+                return ("wallPapersNotModified", [])
+                case .wallPapers(let hash, let wallpapers):
+                return ("wallPapers", [("hash", hash), ("wallpapers", wallpapers)])
+    }
+    }
+    
+        static func parse_wallPapersNotModified(_ reader: BufferReader) -> WallPapers? {
+            return Api.account.WallPapers.wallPapersNotModified
+        }
+        static func parse_wallPapers(_ reader: BufferReader) -> WallPapers? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.WallPaper]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.WallPaper.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.WallPapers.wallPapers(hash: _1!, wallpapers: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum PasswordInputSettings: TypeConstructorDescription {
         case passwordInputSettings(flags: Int32, newAlgo: Api.PasswordKdfAlgo?, newPasswordHash: Buffer?, hint: String?, email: String?, newSecureSettings: Api.SecureSecretSettings?)
     
@@ -4409,20 +4465,6 @@ extension Api {
                     })
                 }
             
-                static func getWallPapers() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.WallPaper]>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1068696894)
-                    
-                    return (FunctionDescription(name: "account.getWallPapers", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.WallPaper]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Api.WallPaper]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.WallPaper.self)
-                        }
-                        return result
-                    })
-                }
-            
                 static func reportPeer(peer: Api.InputPeer, reason: Api.ReportReason) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1374118561)
@@ -5061,6 +5103,35 @@ extension Api {
                         var result: Api.WallPaper?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.WallPaper
+                        }
+                        return result
+                    })
+                }
+            
+                static func saveWallPaper(wallpaper: Api.InputWallPaper, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(412451251)
+                    wallpaper.serialize(buffer, true)
+                    unsave.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.saveWallPaper", parameters: [("wallpaper", wallpaper), ("unsave", unsave)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                static func getWallPapers(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.WallPapers>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1430579357)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getWallPapers", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.WallPapers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.WallPapers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.WallPapers
                         }
                         return result
                     })

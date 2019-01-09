@@ -218,7 +218,7 @@ public func authorizeWithCode(account: UnauthorizedAccount, code: String, termsO
                                 case .signUp:
                                     return .signUp(AuthorizationSignUpData(number: number, codeHash: hash, code: code, termsOfService: termsOfService))
                                 case let .password(hint):
-                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
+                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: false)))
                                     return .loggedIn
                                 case let .authorization(authorization):
                                     switch authorization {
@@ -386,7 +386,7 @@ public func performAccountReset(account: UnauthorizedAccount) -> Signal<Void, Ac
                 return
             }
             var number: String?
-            if case let .passwordEntry(_, numberValue, _) = state.contents {
+            if case let .passwordEntry(_, numberValue, _, _) = state.contents {
                 number = numberValue
             } else if case let .awaitingAccountReset(_, numberValue) = state.contents {
                 number = numberValue

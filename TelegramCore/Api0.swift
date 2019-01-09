@@ -248,6 +248,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1008755359] = { return Api.InlineBotSwitchPM.parse_inlineBotSwitchPM($0) }
     dict[223655517] = { return Api.messages.FoundStickerSets.parse_foundStickerSetsNotModified($0) }
     dict[1359533640] = { return Api.messages.FoundStickerSets.parse_foundStickerSets($0) }
+    dict[471437699] = { return Api.account.WallPapers.parse_wallPapersNotModified($0) }
+    dict[1881892265] = { return Api.account.WallPapers.parse_wallPapers($0) }
     dict[1158290442] = { return Api.messages.FoundGifs.parse_foundGifs($0) }
     dict[2086234950] = { return Api.FileLocation.parse_fileLocationUnavailable($0) }
     dict[152900075] = { return Api.FileLocation.parse_fileLocation($0) }
@@ -264,6 +266,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[338142689] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsBanned($0) }
     dict[106343499] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsSearch($0) }
     dict[-1548400251] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsKicked($0) }
+    dict[-1150621555] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsContacts($0) }
     dict[-350980120] = { return Api.WebPage.parse_webPageEmpty($0) }
     dict[-981018084] = { return Api.WebPage.parse_webPagePending($0) }
     dict[1594340540] = { return Api.WebPage.parse_webPage($0) }
@@ -882,6 +885,8 @@ struct Api {
             case let _1 as Api.InlineBotSwitchPM:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FoundStickerSets:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.WallPapers:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FoundGifs:
                 _1.serialize(buffer, boxed)

@@ -6490,6 +6490,7 @@ extension Api {
         case channelParticipantsBanned(q: String)
         case channelParticipantsSearch(q: String)
         case channelParticipantsKicked(q: String)
+        case channelParticipantsContacts(q: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6529,6 +6530,12 @@ extension Api {
                     }
                     serializeString(q, buffer: buffer, boxed: false)
                     break
+                case .channelParticipantsContacts(let q):
+                    if boxed {
+                        buffer.appendInt32(-1150621555)
+                    }
+                    serializeString(q, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -6546,6 +6553,8 @@ extension Api {
                 return ("channelParticipantsSearch", [("q", q)])
                 case .channelParticipantsKicked(let q):
                 return ("channelParticipantsKicked", [("q", q)])
+                case .channelParticipantsContacts(let q):
+                return ("channelParticipantsContacts", [("q", q)])
     }
     }
     
@@ -6586,6 +6595,17 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelParticipantsFilter.channelParticipantsKicked(q: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_channelParticipantsContacts(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelParticipantsFilter.channelParticipantsContacts(q: _1!)
             }
             else {
                 return nil
