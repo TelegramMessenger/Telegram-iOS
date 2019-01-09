@@ -74,8 +74,6 @@ struct Operator {
 
 class VRasterBuffer {
 public:
-    VRasterBuffer() { init(); }
-    void            init();
     VBitmap::Format prepare(VBitmap *image);
     void            clear();
 
@@ -94,8 +92,6 @@ public:
     int bytesPerPixel() const { return mBytesPerPixel; }
 
     VBitmap::Format           mFormat{VBitmap::Format::ARGB32_Premultiplied};
-    VPainter::CompositionMode mCompositionMode{VPainter::CompositionMode::CompModeSrc};
-
 private:
     int    mWidth{0};
     int    mHeight{0};
@@ -118,12 +114,35 @@ struct VGradientData {
     bool            mColorTableAlpha;
 };
 
+struct VBitmapData
+{
+    const uchar *imageData;
+    const uchar *scanLine(int y) const { return imageData + y*bytesPerLine; }
+
+    int width;
+    int height;
+    // clip rect
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+    uint bytesPerLine;
+    VBitmap::Format format;
+    bool hasAlpha;
+    enum Type {
+        Plain,
+        Tiled
+    };
+    Type type;
+    int const_alpha;
+};
+
 struct VSpanData {
     class Pinnable {
     protected:
         ~Pinnable() = default;
     };
-    enum class Type { None, Solid, LinearGradient, RadialGradient };
+    enum class Type { None, Solid, LinearGradient, RadialGradient, Texture };
 
     void  updateSpanFunc();
     void  init(VRasterBuffer *image);
@@ -141,7 +160,9 @@ struct VSpanData {
     {
         return (uint *)(mRasterBuffer->scanLine(y + mPos.y())) + x + mPos.x();
     }
+    void initTexture(const VBitmap *image, int alpha, VBitmapData::Type type, const VRect &sourceRect);
 
+    VPainter::CompositionMode            mCompositionMode{VPainter::CompositionMode::CompModeSrcOver};
     VRasterBuffer *                      mRasterBuffer;
     ProcessRleSpan                       mBlendFunc;
     ProcessRleSpan                       mUnclippedBlendFunc;
@@ -152,6 +173,7 @@ struct VSpanData {
     union {
         uint32_t      mSolid;
         VGradientData mGradient;
+        VBitmapData   mBitmap;
     };
     float m11, m12, m13, m21, m22, m23, m33, dx, dy;  // inverse xform matrix
 };

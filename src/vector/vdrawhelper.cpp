@@ -55,6 +55,7 @@
 #include <cstring>
 #include <mutex>
 #include <unordered_map>
+#include <algorithm>
 
 class VGradientCache {
 public:
@@ -185,14 +186,6 @@ bool VGradientCache::generateGradientColorTable(const VGradientStops &stops, flo
 }
 
 static VGradientCache VGradientCacheInstance;
-
-void VRasterBuffer::init()
-{
-    mBuffer = nullptr;
-    mWidth = 0;
-    mHeight = 0;
-    mCompositionMode = VPainter::CompModeSrcOver;
-}
 
 void VRasterBuffer::clear()
 {
@@ -529,7 +522,7 @@ static inline Operator getOperator(const VSpanData * data,
         break;
     }
 
-    op.mode = data->mRasterBuffer->mCompositionMode;
+    op.mode = data->mCompositionMode;
     if (op.mode == VPainter::CompModeSrcOver && solidSource)
         op.mode = VPainter::CompModeSrc;
 
@@ -589,6 +582,47 @@ static void blendGradientARGB(int count, const VRle::Span *spans,
             op.func(target, buffer, l, spans->coverage);
             target += l;
             length -= l;
+        }
+        ++spans;
+    }
+}
+
+static void blend_untransformed_argb(int count, const VRle::Span *spans, void *userData)
+{
+    VSpanData *data = reinterpret_cast<VSpanData *>(userData);
+    if (data->mBitmap.format != VBitmap::Format::ARGB32_Premultiplied
+        && data->mBitmap.format != VBitmap::Format::ARGB32) {
+        //@TODO other formats not yet handled.
+        return;
+    }
+
+    Operator op = getOperator(data, spans, count);
+
+    const int image_width = data->mBitmap.width;
+    const int image_height = data->mBitmap.height;
+
+    int xoff = data->dx;
+    int yoff = data->dy;
+
+    while (count--) {
+        int x = spans->x;
+        int length = spans->len;
+        int sx = xoff + x;
+        int sy = yoff + spans->y;
+        if (sy >= 0 && sy < image_height && sx < image_width) {
+            if (sx < 0) {
+                x -= sx;
+                length += sx;
+                sx = 0;
+            }
+            if (sx + length > image_width)
+                length = image_width - sx;
+            if (length > 0) {
+                const int coverage = (spans->coverage * data->mBitmap.const_alpha) >> 8;
+                const uint *src = (const uint *)data->mBitmap.scanLine(sy) + sx;
+                uint *dest = data->buffer(x, spans->y);
+                op.func(dest, src, length, coverage);
+            }
         }
         ++spans;
     }
@@ -660,6 +694,26 @@ void VSpanData::setupMatrix(const VMatrix &matrix)
     //        && fabs(dy) < 1e4;
 }
 
+void VSpanData::initTexture(const VBitmap *bitmap, int alpha, VBitmapData::Type type, const VRect &sourceRect)
+{
+    mType = VSpanData::Type::Texture;
+
+    mBitmap.imageData = bitmap->data();
+    mBitmap.width = bitmap->width();
+    mBitmap.height = bitmap->height();
+    mBitmap.bytesPerLine = bitmap->stride();
+    mBitmap.format = bitmap->format();
+    mBitmap.x1 = sourceRect.x();
+    mBitmap.y1 = sourceRect.y();
+    mBitmap.x2 = std::min(mBitmap.x1 + sourceRect.width(), mBitmap.width);
+    mBitmap.y2 = std::min(mBitmap.y1 + sourceRect.height(), mBitmap.height);
+
+    mBitmap.const_alpha = alpha;
+    mBitmap.type = type;
+
+    updateSpanFunc();
+}
+
 void VSpanData::updateSpanFunc()
 {
     switch (mType) {
@@ -674,8 +728,11 @@ void VSpanData::updateSpanFunc()
         mUnclippedBlendFunc = &blendGradientARGB;
         break;
     }
-    default:
+    case VSpanData::Type::Texture: {
+        //@TODO update proper image function.
+        mUnclippedBlendFunc = &blend_untransformed_argb;
         break;
+    }
     }
 }
 
