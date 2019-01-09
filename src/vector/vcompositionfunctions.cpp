@@ -55,6 +55,37 @@ void comp_func_solid_SourceOver(uint32_t *dest, int length, uint32_t color,
     for (i = 0; i < length; ++i) dest[i] = color + BYTE_MUL(dest[i], ialpha);
 }
 
+/*
+  result = d * sa
+  dest = d * sa * ca + d * cia
+       = d * (sa * ca + cia)
+*/
+static void comp_func_solid_DestinationIn(uint *dest, int length, uint color, uint const_alpha)
+{
+    uint a = vAlpha(color);
+    if (const_alpha != 255) {
+        a = BYTE_MUL(a, const_alpha) + 255 - const_alpha;
+    }
+    for (int i = 0; i < length; ++i) {
+        dest[i] = BYTE_MUL(dest[i], a);
+    }
+}
+
+/*
+  result = d * sia
+  dest = d * sia * ca + d * cia
+       = d * (sia * ca + cia)
+*/
+static void comp_func_solid_DestinationOut(uint *dest, int length, uint color, uint const_alpha)
+{
+    uint a = vAlpha(~color);
+    if (const_alpha != 255)
+        a = BYTE_MUL(a, const_alpha) + 255 - const_alpha;
+    for (int i = 0; i < length; ++i) {
+        dest[i] = BYTE_MUL(dest[i], a);
+    }
+}
+
 void comp_func_Source(uint32_t *dest, const uint32_t *src, int length,
                       uint32_t const_alpha)
 {
@@ -99,10 +130,47 @@ void comp_func_SourceOver(uint32_t *dest, const uint32_t *src, int length,
     }
 }
 
+void comp_func_DestinationIn(uint *dest, const uint *src, int length, uint const_alpha)
+{
+    if (const_alpha == 255) {
+        for (int i = 0; i < length; ++i) {
+            dest[i] = BYTE_MUL(dest[i], vAlpha(src[i]));
+        }
+    } else {
+        uint cia = 255 - const_alpha;
+        for (int i = 0; i < length; ++i) {
+            uint a = BYTE_MUL(vAlpha(src[i]), const_alpha) + cia;
+            dest[i] = BYTE_MUL(dest[i], a);
+        }
+    }
+}
+
+void comp_func_DestinationOut(uint *dest, const uint *src, int length, uint const_alpha)
+{
+    if (const_alpha == 255) {
+        for (int i = 0; i < length; ++i) {
+            dest[i] = BYTE_MUL(dest[i], vAlpha(~src[i]));
+        }
+    } else {
+        uint cia = 255 - const_alpha;
+        for (int i = 0; i < length; ++i) {
+            uint sia = BYTE_MUL(vAlpha(~src[i]), const_alpha) + cia;
+            dest[i] = BYTE_MUL(dest[i], sia);
+        }
+    }
+}
+
 CompositionFunctionSolid COMP_functionForModeSolid_C[] = {
-    comp_func_solid_Source, comp_func_solid_SourceOver};
+                                                            comp_func_solid_Source,
+                                                            comp_func_solid_SourceOver,
+                                                            comp_func_solid_DestinationIn,
+                                                            comp_func_solid_DestinationOut
+                                                        };
 
 CompositionFunction COMP_functionForMode_C[] = {comp_func_Source,
-                                                comp_func_SourceOver};
+                                                comp_func_SourceOver,
+                                                comp_func_DestinationIn,
+                                                comp_func_DestinationOut
+                                               };
 
 void vInitBlendFunctions() {}
