@@ -139,7 +139,7 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     }
                 }
                 return .peerName(peerName, nil)
-            } else if pathComponents.count == 2 {
+            } else if pathComponents.count == 2 || pathComponents.count == 3 {
                 if pathComponents[0] == "addstickers" {
                     return .stickerPack(pathComponents[1])
                 } else if pathComponents[0] == "joinchat" || pathComponents[0] == "joinchannel" {

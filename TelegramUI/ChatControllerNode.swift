@@ -68,7 +68,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    let backgroundNode: ASDisplayNode
+    let backgroundNode: ChatBackgroundNode
     let historyNode: ChatHistoryListNode
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
@@ -180,11 +180,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar = navigationBar
         self.controller = controller
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.contentMode = .scaleAspectFill
+        self.backgroundNode = ChatBackgroundNode()
+        //self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.clipsToBounds = true
+        //self.backgroundNode.clipsToBounds = true
         
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
@@ -241,9 +240,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.backgroundNode.contents = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)?.cgImage
+        self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)
+        if case .perspective = chatPresentationInterfaceState.chatWallpaperMode {
+            self.backgroundNode.parallaxEnabled = true
+        }
         self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
-        
+    
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNodeContainer)
         self.addSubnode(self.titleAccessoryPanelContainer)
@@ -1315,7 +1317,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
             
             if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
-                self.backgroundNode.contents = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)?.cgImage
+                self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)
+            }
+            
+            if self.chatPresentationInterfaceState.chatWallpaperMode != chatPresentationInterfaceState.chatWallpaperMode {
+                if case .perspective = chatPresentationInterfaceState.chatWallpaperMode {
+                    self.backgroundNode.parallaxEnabled = true
+                } else {
+                    self.backgroundNode.parallaxEnabled = false
+                }
             }
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)

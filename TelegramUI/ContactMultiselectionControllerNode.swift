@@ -29,7 +29,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     
     private let account: Account
     
-    private var containerLayout: (ContainerViewLayout, CGFloat)?
+    private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeerId) -> Void)?
@@ -107,11 +107,15 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         strongSelf.searchResultsNode = searchResultsNode
                         searchResultsNode.enableUpdates = true
                         searchResultsNode.backgroundColor = strongSelf.presentationData.theme.chatList.backgroundColor
-                        if let (layout, navigationBarHeight) = strongSelf.containerLayout {
+                        if let (layout, navigationBarHeight, actualNavigationBarHeight) = strongSelf.containerLayout {
                             var insets = layout.insets(options: [.input])
                             insets.top += navigationBarHeight
                             insets.top += strongSelf.tokenListNode.bounds.size.height
-                            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), transition: .immediate)
+                            
+                            var headerInsets = layout.insets(options: [.input])
+                            headerInsets.top += actualNavigationBarHeight
+                            headerInsets.top += strongSelf.tokenListNode.bounds.size.height
+                            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), headerInsets: headerInsets, transition: .immediate)
                             searchResultsNode.frame = CGRect(origin: CGPoint(), size: layout.size)
                         }
                         
@@ -148,11 +152,14 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.containerLayout = (layout, navigationBarHeight)
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.containerLayout = (layout, navigationBarHeight, actualNavigationBarHeight)
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
+        
+        var headerInsets = layout.insets(options: [.input])
+        headerInsets.top += actualNavigationBarHeight
         
         let tokenListHeight = self.tokenListNode.updateLayout(tokens: self.editableTokens, width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
         
@@ -160,11 +167,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         insets.top += tokenListHeight
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), transition: transition)
+        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), headerInsets: headerInsets, transition: transition)
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         if let searchResultsNode = self.searchResultsNode {
-            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), transition: transition)
+            searchResultsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), headerInsets: headerInsets, transition: transition)
             searchResultsNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         }
     }

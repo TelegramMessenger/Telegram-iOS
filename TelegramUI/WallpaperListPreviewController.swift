@@ -4,10 +4,12 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import Photos
 
 enum WallpaperListPreviewSource {
-    case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper)
+    case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper, mode: PresentationWallpaperMode?)
     case wallpaper(TelegramWallpaper)
+    case asset(PHAsset, UIImage?)
 }
 
 final class WallpaperListPreviewController: ViewController {
@@ -26,10 +28,12 @@ final class WallpaperListPreviewController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    private var wallpaper: TelegramWallpaper?
+    private var wallpaper: WallpaperEntry?
     private var wallpaperDisposable: Disposable?
     
     private var didPlayPresentationAnimation = false
+    
+    var apply: ((WallpaperEntry, PresentationWallpaperMode) -> Void)?
     
     init(account: Account, source: WallpaperListPreviewSource) {
         self.account = account
@@ -104,24 +108,35 @@ final class WallpaperListPreviewController: ViewController {
                 return
             }
             
-            let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
-                return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
-            })
-            |> deliverOnMainQueue).start(completed: {
-                self?.dismiss()
-            })
+            switch wallpaper {
+                case let .wallpaper(wallpaper):
+                    let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
+                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                    })
+                    |> deliverOnMainQueue).start(completed: {
+                        self?.dismiss()
+                    })
+                    
+                    if case .wallpaper = strongSelf.source, case .file(_, _, _, _, _, _, _) = wallpaper {
+                        let _ = saveWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                    }
+                case let .asset(asset):
+                    break
+            }
+            
+            strongSelf.apply?(wallpaper, mode)
         })
         self._ready.set(self.controllerNode.ready.get())
         self.displayNodeDidLoad()
         
         self.wallpaperDisposable = (self.controllerNode.currentWallpaper
-        |> deliverOnMainQueue).start(next: { [weak self] wallpaper in
+        |> deliverOnMainQueue).start(next: { [weak self] entry in
             guard let strongSelf = self else {
                 return
             }
             
-            if case let .file(_, _, _, _, slug, _, _) = wallpaper, let wallpaperSlug = slug, !wallpaperSlug.isEmpty {
-                strongSelf.wallpaper = wallpaper
+            if case let .wallpaper(wallpaper) = entry, case let .file(_, _, _, _, slug, _, _) = wallpaper, let wallpaperSlug = slug, !wallpaperSlug.isEmpty {
+                strongSelf.wallpaper = entry
                 strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: strongSelf.presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(strongSelf.sharePressed))
             } else {
                 strongSelf.navigationItem.rightBarButtonItem = nil
@@ -136,8 +151,8 @@ final class WallpaperListPreviewController: ViewController {
     }
     
     @objc func sharePressed() {
-        if let wallpaper = self.wallpaper, case let .file(_, _, _, _, slug, _, _) = wallpaper, let wallpaperSlug = slug, !wallpaperSlug.isEmpty {
-            let shareController = ShareController(account: account, subject: .url("https://t.me/bg/\(wallpaperSlug)"))
+        if let entry = self.wallpaper, case let .wallpaper(wallpaper) = entry, case let .file(_, _, _, _, wallpaperSlug, _, _) = wallpaper, let slug = wallpaperSlug, !slug.isEmpty {
+            let shareController = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)"))
             self.present(shareController, in: .window(.root), blockInteraction: true)
         }
     }

@@ -1,5 +1,6 @@
 import Foundation
 import Display
+import SwiftSignalKit
 import LegacyComponents
 
 private final class LegacyWallpaperEditorController: LegacyController, TGWallpaperControllerDelegate {
@@ -45,4 +46,43 @@ func legacyWallpaperEditor(theme: PresentationTheme, image: UIImage, completion:
     }
     legacyController.bind(controller: navigationController)
     return legacyController
+}
+
+func legacyWallpaperPicker(applicationContext: TelegramApplicationContext, presentationData: PresentationData) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+    return Signal { subscriber in
+        let intent = TGMediaAssetsControllerSetCustomWallpaperIntent
+        
+        DeviceAccess.authorizeAccess(to: .mediaLibrary(.wallpaper), presentationData: presentationData, present: applicationContext.presentGlobalController, openSettings: applicationContext.applicationBindings.openSettings, { value in
+            if !value {
+                subscriber.putError(Void())
+                return
+            }
+            
+            if TGMediaAssetsLibrary.authorizationStatus() == TGMediaLibraryAuthorizationStatusNotDetermined {
+                TGMediaAssetsLibrary.requestAuthorization(for: TGMediaAssetAnyType, completion: { (status, group) in
+                    if !LegacyComponentsGlobals.provider().accessChecker().checkPhotoAuthorizationStatus(for: TGPhotoAccessIntentRead, alertDismissCompletion: nil) {
+                        subscriber.putError(Void())
+                    } else {
+                        Queue.mainQueue().async {
+                            subscriber.putNext({ context in
+                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: nil, saveEditedPhotos: false, allowGrouping: false)
+                                return controller!
+                            })
+                            subscriber.putCompletion()
+                        }
+                    }
+                })
+            } else {
+                subscriber.putNext({ context in
+                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: nil, saveEditedPhotos: false, allowGrouping: false)
+                    return controller!
+                })
+                subscriber.putCompletion()
+            }
+        })
+        
+        return ActionDisposable {
+            
+        }
+    }
 }

@@ -111,7 +111,6 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     strongSelf.backgroundNode.isUserInteractionEnabled = expansionProgress > 1.0 - CGFloat.ulpOfOne
                     
                     if let updatedColor = updatedColor {
-                        //strongSelf.labelNode.backgroundColor = updatedColor
                         strongSelf.backgroundNode.backgroundColor = updatedColor
                     }
                     if let updatedIconImage = updatedIconImage {
@@ -137,9 +136,16 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     let labelFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - totalWidth) / 2.0) + iconSize.width + spacing, y: floorToScreenPixels((height - labelLayoutResult.size.height) / 2.0) + textOffset), size: labelLayoutResult.size)
                     transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)
                
-                    let innerAlpha = max(0.0, expansionProgress - 0.77) / 0.23
-                    transition.updateAlpha(node: strongSelf.labelNode, alpha: innerAlpha)
-                    transition.updateAlpha(node: strongSelf.iconNode, alpha: innerAlpha)
+                    var innerAlpha = max(0.0, expansionProgress - 0.77) / 0.23
+                    if innerAlpha > 0.9999 {
+                        innerAlpha = 1.0
+                    } else if innerAlpha < 0.0001 {
+                        innerAlpha = 0.0
+                    }
+                    if strongSelf.labelNode.alpha != innerAlpha {
+                        transition.updateAlpha(node: strongSelf.labelNode, alpha: innerAlpha)
+                        transition.updateAlpha(node: strongSelf.iconNode, alpha: innerAlpha)
+                    }
                     
                     let outerAlpha = min(0.3, expansionProgress) / 0.3
                     let cornerRadius = min(strongSelf.fieldStyle.cornerDiameter / 2.0, height / 2.0)

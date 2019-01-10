@@ -4,6 +4,57 @@ import Display
 import SwiftSignalKit
 import Postbox
 
+final class ChatBackgroundNode: ASDisplayNode {
+    let contentNode: ASDisplayNode
+    
+    var parallaxEnabled: Bool = false {
+        didSet {
+            if oldValue != self.parallaxEnabled {
+                if self.parallaxEnabled {
+                    let amount = 16.0
+                    
+                    let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
+                    horizontal.minimumRelativeValue = -amount
+                    horizontal.maximumRelativeValue = amount
+                    
+                    let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
+                    vertical.minimumRelativeValue = -amount
+                    vertical.maximumRelativeValue = amount
+                    
+                    let group = UIMotionEffectGroup()
+                    group.motionEffects = [horizontal, vertical]
+                    
+                    self.contentNode.view.addMotionEffect(group)
+                } else {
+                    
+                }
+            }
+        }
+    }
+    
+    var image: UIImage? {
+        didSet {
+            self.contentNode.contents = self.image?.cgImage
+        }
+    }
+    
+    override init() {
+        self.contentNode = ASDisplayNode()
+        self.contentNode.contentMode = .scaleAspectFill
+        
+        super.init()
+        
+        self.clipsToBounds = true
+        self.contentNode.frame = self.bounds
+        self.addSubnode(self.contentNode)
+    }
+    
+    override func layout() {
+        super.layout()
+        self.contentNode.frame = self.bounds
+    }
+}
+
 private var backgroundImageForWallpaper: (TelegramWallpaper, UIImage)?
 private var serviceBackgroundColorForWallpaper: (TelegramWallpaper, UIColor)?
 

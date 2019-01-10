@@ -5,11 +5,41 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+struct ThemeGridControllerNodeState: Equatable {
+    let editing: Bool
+    var selectedIndices: Set<Int>
+    
+    func withUpdatedEditing(_ editing: Bool) -> ThemeGridControllerNodeState {
+        return ThemeGridControllerNodeState(editing: editing, selectedIndices: self.selectedIndices)
+    }
+    
+    func withUpdatedSelectedIndices(_ selectedIndices: Set<Int>) -> ThemeGridControllerNodeState {
+        return ThemeGridControllerNodeState(editing: self.editing, selectedIndices: selectedIndices)
+    }
+    
+    static func ==(lhs: ThemeGridControllerNodeState, rhs: ThemeGridControllerNodeState) -> Bool {
+        if lhs.editing != rhs.editing {
+            return false
+        }
+        if lhs.selectedIndices != rhs.selectedIndices {
+            return false
+        }
+        return true
+    }
+}
+
 final class ThemeGridControllerInteraction {
     let openWallpaper: (TelegramWallpaper) -> Void
+    let toggleWallpaperSelection: (Int, Bool) -> Void
+    let deleteSelectedWallpapers: () -> Void
+    let shareSelectedWallpapers: () -> Void
+    var selectionState: (Bool, Set<Int>) = (false, Set())
     
-    init(openWallpaper: @escaping (TelegramWallpaper) -> Void) {
+    init(openWallpaper: @escaping (TelegramWallpaper) -> Void, toggleWallpaperSelection: @escaping (Int, Bool) -> Void, deleteSelectedWallpapers: @escaping () -> Void, shareSelectedWallpapers: @escaping () -> Void) {
         self.openWallpaper = openWallpaper
+        self.toggleWallpaperSelection = toggleWallpaperSelection
+        self.deleteSelectedWallpapers = deleteSelectedWallpapers
+        self.shareSelectedWallpapers = shareSelectedWallpapers
     }
 }
 
@@ -31,7 +61,7 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
-        return ThemeGridControllerItem(account: account, wallpaper: self.wallpaper, selected: self.selected, interaction: interaction)
+        return ThemeGridControllerItem(account: account, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: interaction)
     }
 }
 
@@ -39,6 +69,7 @@ private struct ThemeGridEntryTransition {
     let deletions: [Int]
     let insertions: [GridNodeInsertItem]
     let updates: [GridNodeUpdateItem]
+    let isEmpty: Bool
     let updateFirstIndexInSectionOffset: Int?
     let stationaryItems: GridNodeStationaryItems
     let scrollToItem: GridNodeScrollToItem?
@@ -54,15 +85,45 @@ private func preparedThemeGridEntryTransition(account: Account, from fromEntries
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
     let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
     
-    return ThemeGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
+    var hasEditableItems = false
+    for entry in toEntries {
+        if case .file = entry.wallpaper {
+            hasEditableItems = true
+            break
+        }
+    }
+    
+    return ThemeGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, isEmpty: !hasEditableItems, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
+}
+
+private func selectedWallpapers(entries: [ThemeGridControllerEntry]?, state: ThemeGridControllerNodeState) -> [TelegramWallpaper] {
+    guard let entries = entries, state.editing else {
+        return []
+    }
+
+    var i = 0
+    if let entry = entries.first {
+        i = entry.index
+    }
+    
+    var wallpapers: [TelegramWallpaper] = []
+    for entry in entries {
+        if state.selectedIndices.contains(i) {
+            wallpapers.append(entry.wallpaper)
+        }
+        i += 1
+    }
+    return wallpapers
 }
 
 final class ThemeGridControllerNode: ASDisplayNode {
     private let account: Account
     private var presentationData: PresentationData
+    private var controllerInteraction: ThemeGridControllerInteraction?
     
     private let present: (ViewController, Any?) -> Void
     private let selectCustomWallpaper: () -> Void
+    private let emptyStateUpdated: (Bool) -> Void
     var requestDeactivateSearch: (() -> Void)?
     
     let ready = ValuePromise<Bool>()
@@ -76,21 +137,32 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private var customWallpaperButtonBottomSeparator: ASDisplayNode
     private var customWallpaperLabel: ASTextNode
     
+    private var selectionPanel: ThemeGridSelectionPanelNode?
+    private var selectionPanelSeparatorNode: ASDisplayNode?
+    private var selectionPanelBackgroundNode: ASDisplayNode?
+    
     let gridNode: GridNode
     var navigationBar: NavigationBar?
     
     private var queuedTransitions: [ThemeGridEntryTransition] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
+    private(set) var currentState: ThemeGridControllerNodeState
+    private let statePromise: ValuePromise<ThemeGridControllerNodeState>
+    var state: Signal<ThemeGridControllerNodeState, NoError> {
+        return self.statePromise.get()
+    }
+    
     private(set) var searchDisplayController: SearchDisplayController?
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, mode: ThemeGridControllerMode, present: @escaping (ViewController, Any?) -> Void, selectCustomWallpaper: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, mode: ThemeGridControllerMode, present: @escaping (ViewController, Any?) -> Void, selectCustomWallpaper: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper]) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.present = present
         self.selectCustomWallpaper = selectCustomWallpaper
+        self.emptyStateUpdated = emptyStateUpdated
         
         self.gridNode = GridNode()
         self.gridNode.showVerticalScrollIndicator = true
@@ -114,6 +186,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.customWallpaperButtonBottomSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         self.customWallpaperLabel = ASTextNode()
+        
+        self.currentState = ThemeGridControllerNodeState(editing: false, selectedIndices: Set())
+        self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         super.init()
         
@@ -148,6 +223,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.gridNode.addSubnode(self.customWallpaperLabel)
         self.addSubnode(self.gridNode)
         
+        
+        let wallpapersPromise: Promise<[TelegramWallpaper]> = Promise()
+        wallpapersPromise.set(telegramWallpapers(postbox: account.postbox, network: account.network))
         let previousEntries = Atomic<[ThemeGridControllerEntry]?>(value: nil)
         
         let interaction = ThemeGridControllerInteraction(openWallpaper: { [weak self] wallpaper in
@@ -155,17 +233,50 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
-                    let controller = WallpaperListPreviewController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper))
+                    
+                    var mode: PresentationWallpaperMode?
+                    if wallpaper == strongSelf.presentationData.chatWallpaper {
+                        mode = strongSelf.presentationData.chatWallpaperMode
+                    }
+                    
+                    let controller = WallpaperListPreviewController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper, mode: mode))
                     strongSelf.present(controller, nil)
-                    //let controller = ThemeGalleryController(account: account, wallpapers: wallpapers, at: wallpaper)
-                    //strongSelf.present(controller, ThemePreviewControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
-                    //    return nil
-                    //}))
                 }
             }
+        }, toggleWallpaperSelection: { [weak self] index, value in
+            if let strongSelf = self {
+                strongSelf.updateState { current in
+                    var updated = current.selectedIndices
+                    if value {
+                        updated.insert(index)
+                    } else {
+                        updated.remove(index)
+                    }
+                    return current.withUpdatedSelectedIndices(updated)
+                }
+            }
+        }, deleteSelectedWallpapers: { [weak self] in
+            let entries = previousEntries.with { $0 }
+            if let strongSelf = self, let entries = entries {
+                deleteWallpapers(selectedWallpapers(entries: entries, state: strongSelf.currentState))
+                
+                var updatedWallpapers: [TelegramWallpaper] = []
+                for entry in entries {
+                    if !strongSelf.currentState.selectedIndices.contains(entry.index) {
+                        updatedWallpapers.append(entry.wallpaper)
+                    }
+                }
+                wallpapersPromise.set(.single(updatedWallpapers))
+            }
+        }, shareSelectedWallpapers: { [weak self] in
+            let entries = previousEntries.with { $0 }
+            if let strongSelf = self, let entries = entries {
+                shareWallpapers(selectedWallpapers(entries: entries, state: strongSelf.currentState))
+            }
         })
+        self.controllerInteraction = interaction
         
-        let transition = combineLatest(telegramWallpapers(postbox: account.postbox, network: account.network), account.telegramApplicationContext.presentationData)
+        let transition = combineLatest(wallpapersPromise.get(), account.telegramApplicationContext.presentationData)
         |> map { wallpapers, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
             var index = 1
@@ -183,13 +294,13 @@ final class ThemeGridControllerNode: ASDisplayNode {
                             hasCurrent = hasCurrent || selected
                             index += 1
                         case .nightGrayscale:
-                            let wallpaper = TelegramWallpaper.color(0xffffff)
+                            let wallpaper = TelegramWallpaper.color(0x000000)
                             let selected = presentationData.chatWallpaper == wallpaper
                             entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
                             hasCurrent = hasCurrent || selected
                             index += 1
                         case .nightAccent:
-                            let wallpaper = TelegramWallpaper.color(0xffffff)
+                            let wallpaper = TelegramWallpaper.color(0x18222d)
                             let selected = presentationData.chatWallpaper == wallpaper
                             entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
                             hasCurrent = hasCurrent || selected
@@ -233,6 +344,30 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.searchDisplayController?.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
     }
     
+    func updateState(_ f: (ThemeGridControllerNodeState) -> ThemeGridControllerNodeState) {
+        let state = f(self.currentState)
+        if state != self.currentState {
+            self.currentState = state
+            self.statePromise.set(state)
+        }
+        
+        let selectionState = (self.currentState.editing, self.currentState.selectedIndices)
+        if let interaction = self.controllerInteraction, interaction.selectionState != selectionState {
+            var requestLayout = interaction.selectionState.0 != self.currentState.editing
+            self.controllerInteraction?.selectionState = selectionState
+            
+            self.gridNode.forEachItemNode { itemNode in
+                if let node = itemNode as? ThemeGridControllerItemNode {
+                    node.updateSelectionState(animated: true)
+                }
+            }
+            
+            if requestLayout, let (containerLayout, navigationBarHeight) = self.validLayout {
+                self.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
+            }
+        }
+    }
+    
     private func enqueueTransition(_ transition: ThemeGridEntryTransition) {
         self.queuedTransitions.append(transition)
         if self.validLayout != nil {
@@ -248,6 +383,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     strongSelf.ready.set(true)
                 }
             })
+            
+            self.emptyStateUpdated(transition.isEmpty)
         }
     }
 
@@ -287,6 +424,63 @@ final class ThemeGridControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.customWallpaperLabel, frame: CGRect(origin: CGPoint(x: textInset + layout.safeInsets.left, y: -buttonOffset + buttonTopInset + buttonHeight + 6.0), size: textSize))
         
         insets.top += spacing + buttonInset
+        
+        if self.currentState.editing {
+            if let selectionPanel = self.selectionPanel {
+                selectionPanel.selectedIndices = self.currentState.selectedIndices
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: transition, metrics: layout.metrics)
+                transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
+                if let selectionPanelSeparatorNode = self.selectionPanelSeparatorNode {
+                    transition.updateFrame(node: selectionPanelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+                }
+                if let selectionPanelBackgroundNode = self.selectionPanelBackgroundNode {
+                    transition.updateFrame(node: selectionPanelBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: insets.bottom + panelHeight)))
+                }
+            } else {
+                let selectionPanelBackgroundNode = ASDisplayNode()
+                selectionPanelBackgroundNode.isLayerBacked = true
+                selectionPanelBackgroundNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
+                self.addSubnode(selectionPanelBackgroundNode)
+                self.selectionPanelBackgroundNode = selectionPanelBackgroundNode
+                
+                let selectionPanel = ThemeGridSelectionPanelNode(theme: self.presentationData.theme)
+                selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
+                selectionPanel.controllerInteraction = self.controllerInteraction
+                selectionPanel.selectedIndices = self.currentState.selectedIndices
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: .immediate, metrics: layout.metrics)
+                self.selectionPanel = selectionPanel
+                self.addSubnode(selectionPanel)
+                
+                let selectionPanelSeparatorNode = ASDisplayNode()
+                selectionPanelSeparatorNode.isLayerBacked = true
+                selectionPanelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelStrokeColor
+                self.addSubnode(selectionPanelSeparatorNode)
+                self.selectionPanelSeparatorNode = selectionPanelSeparatorNode
+                
+                selectionPanel.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: panelHeight))
+                selectionPanelBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: 0.0))
+                selectionPanelSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: UIScreenPixel))
+                transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
+                transition.updateFrame(node: selectionPanelBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: insets.bottom + panelHeight)))
+                transition.updateFrame(node: selectionPanelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+            }
+        } else if let selectionPanel = self.selectionPanel {
+            self.selectionPanel = nil
+            transition.updateFrame(node: selectionPanel, frame: selectionPanel.frame.offsetBy(dx: 0.0, dy: selectionPanel.bounds.size.height + insets.bottom), completion: { [weak selectionPanel] _ in
+                selectionPanel?.removeFromSupernode()
+            })
+            if let selectionPanelSeparatorNode = self.selectionPanelSeparatorNode {
+                transition.updateFrame(node: selectionPanelSeparatorNode, frame: selectionPanelSeparatorNode.frame.offsetBy(dx: 0.0, dy: selectionPanel.bounds.size.height + insets.bottom), completion: { [weak selectionPanelSeparatorNode] _ in
+                    selectionPanelSeparatorNode?.removeFromSupernode()
+                })
+            }
+            if let selectionPanelBackgroundNode = self.selectionPanelBackgroundNode {
+                transition.updateFrame(node: selectionPanelBackgroundNode, frame: selectionPanelBackgroundNode.frame.offsetBy(dx: 0.0, dy: selectionPanel.bounds.size.height + insets.bottom), completion: { [weak selectionPanelSeparatorNode] _ in
+                    selectionPanelSeparatorNode?.removeFromSupernode()
+                })
+            }
+        }
+        
         
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, fillWidth: nil, lineSpacing: spacing, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         

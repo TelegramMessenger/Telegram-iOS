@@ -22,6 +22,7 @@ public enum DeviceAccessMicrophoneSubject {
 public enum DeviceAccessMediaLibrarySubject {
     case send
     case save
+    case wallpaper
 }
 
 public enum DeviceAccessLocationSubject {
@@ -291,6 +292,8 @@ public final class DeviceAccess {
                                         text = presentationData.strings.AccessDenied_PhotosAndVideos
                                     case .save:
                                         text = presentationData.strings.AccessDenied_SaveMedia
+                                    case .wallpaper:
+                                        text = presentationData.strings.AccessDenied_Wallpapers
                                 }
                                 present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                                     openSettings()

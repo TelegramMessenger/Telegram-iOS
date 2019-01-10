@@ -446,7 +446,7 @@ public final class AuthorizationSequenceController: NavigationController {
                         switch option {
                             case let .email(pattern):
                                 let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                                    if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code) = state.contents {
+                                    if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code, _) = state.contents {
                                         transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern)))
                                     }
                                 }).start()
@@ -548,7 +548,7 @@ public final class AuthorizationSequenceController: NavigationController {
                     let account = strongSelf.account
                     let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                         if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _) = state.contents {
-                            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code)))
+                            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: false)))
                         }
                     }).start()
                 }
@@ -690,7 +690,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
             case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
                 self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: defaultCountryCode(), number: ""), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
-            case let .passwordEntry(hint, _, _):
+            case let .passwordEntry(hint, _, _, _):
                 self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint)], animated: !self.viewControllers.isEmpty)
             case let .passwordRecovery(_, _, _, emailPattern):
                 self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)

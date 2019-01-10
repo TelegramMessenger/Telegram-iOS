@@ -4,31 +4,42 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import Photos
 
-private enum WallpaperSegmentedControlStyle {
-    case dark
-    case light
+enum WallpaperEntry: Equatable {
+    case wallpaper(TelegramWallpaper)
+    case asset(PHAsset, UIImage?)
     
-    var color: UIColor {
-        switch self {
-            case .dark:
-                return UIColor(rgb: 0x484848)
-            case .light:
-                return .white
+    public static func ==(lhs: WallpaperEntry, rhs: WallpaperEntry) -> Bool {
+        switch lhs {
+            case let .wallpaper(wallpaper):
+                if case .wallpaper(wallpaper) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .asset(lhsAsset, _):
+                if case let .asset(rhsAsset, _) = rhs, lhsAsset.localIdentifier == rhsAsset.localIdentifier {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
 
 private final class WallpaperBackgroundNode: ASDisplayNode {
-    let wallpaper: TelegramWallpaper
+    let wallpaper: WallpaperEntry
     private var fetchDisposable: Disposable?
     private var statusDisposable: Disposable?
     let imageNode: TransformImageNode
     private let statusNode: RadialStatusNode
     
+    let blurView: DynamicBlurView
+    
     let segmentedControlColor = Promise<UIColor>(.white)
     
-    init(account: Account, wallpaper: TelegramWallpaper) {
+    init(account: Account, wallpaper: WallpaperEntry) {
         self.wallpaper = wallpaper
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
@@ -37,6 +48,8 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
+        
+        self.blurView = DynamicBlurView()
         
         super.init()
         
@@ -50,50 +63,57 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
         let statusSignal: Signal<MediaResourceStatus, NoError>
         let displaySize: CGSize
         switch wallpaper {
-            case .builtin:
-                displaySize = CGSize(width: 640.0, height: 1136.0)
-                signal = settingsBuiltinWallpaperImage(account: account)
-                fetchSignal = .complete()
-                statusSignal = .single(.Local)
-            case let .color(color):
-                displaySize = CGSize(width: 1.0, height: 1.0)
-                signal = .never()
-                fetchSignal = .complete()
-                statusSignal = .single(.Local)
-                self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
-            case let .file(file):
-                let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                displaySize = dimensions.dividedByScreenScale().integralFloor
-                self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                
-                var convertedRepresentations: [ImageRepresentationWithReference] = []
-                for representation in file.file.previewRepresentations {
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
-                }
-                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
-                signal = chatMessageImageFile(account: account, fileReference: .standalone(media: file.file), thumbnail: false)
-                fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
-                statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
-            case let .image(representations):
-                if let largestSize = largestImageRepresentation(representations) {
-                    displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
-                    self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                    
-                    let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
-                    signal = chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations)
-                    
-                    if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
-                        fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[largestIndex].reference)
-                    } else {
+            case let .wallpaper(wallpaper):
+                switch wallpaper {
+                    case .builtin:
+                        displaySize = CGSize(width: 640.0, height: 1136.0)
+                        signal = settingsBuiltinWallpaperImage(account: account)
                         fetchSignal = .complete()
-                    }
-                    statusSignal = account.postbox.mediaBox.resourceStatus(largestSize.resource)
-                } else {
-                    displaySize = CGSize(width: 100.0, height: 100.0)
-                    signal = .never()
-                    fetchSignal = .complete()
-                    statusSignal = .single(.Local)
+                        statusSignal = .single(.Local)
+                    case let .color(color):
+                        displaySize = CGSize(width: 1.0, height: 1.0)
+                        signal = .never()
+                        fetchSignal = .complete()
+                        statusSignal = .single(.Local)
+                        self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                    case let .file(file):
+                        let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
+                        displaySize = dimensions.dividedByScreenScale().integralFloor
+                        
+                        var convertedRepresentations: [ImageRepresentationWithReference] = []
+                        for representation in file.file.previewRepresentations {
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
+                        }
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
+                        signal = chatMessageImageFile(account: account, fileReference: .standalone(media: file.file), thumbnail: false)
+                        fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
+                        statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
+                    case let .image(representations):
+                        if let largestSize = largestImageRepresentation(representations) {
+                            displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
+                            
+                            let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
+                            signal = chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations)
+                            
+                            if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
+                                fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[largestIndex].reference)
+                            } else {
+                                fetchSignal = .complete()
+                            }
+                            statusSignal = account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                        } else {
+                            displaySize = CGSize(width: 100.0, height: 100.0)
+                            signal = .never()
+                            fetchSignal = .complete()
+                            statusSignal = .single(.Local)
+                        }
                 }
+            case let .asset(asset, thumbnailImage):
+                let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
+                displaySize = dimensions.dividedByScreenScale().integralFloor
+                signal = photoWallpaper(postbox: account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
+                fetchSignal = .complete()
+                statusSignal = .single(.Local)
         }
         self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
         self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
@@ -118,7 +138,13 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
         })
         self.imageNode.contentMode = .scaleAspectFill
         
-        self.segmentedControlColor.set(.single(.white) |> then(chatBackgroundContrastColor(wallpaper: wallpaper, postbox: account.postbox)))
+        let segmentedControlColorSignal: Signal<UIColor, NoError>
+        if case let .wallpaper(wallpaper) = wallpaper {
+            segmentedControlColorSignal = chatBackgroundContrastColor(wallpaper: wallpaper, postbox: account.postbox)
+        } else {
+            segmentedControlColorSignal = .complete()
+        }
+        self.segmentedControlColor.set(.single(.white) |> then(segmentedControlColorSignal))
     }
     
     deinit {
@@ -126,8 +152,64 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
         self.statusDisposable?.dispose()
     }
     
+    func setParallaxEnabled(_ enabled: Bool) {
+        if enabled {
+            let amount = 16.0
+            
+            let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
+            horizontal.minimumRelativeValue = -amount
+            horizontal.maximumRelativeValue = amount
+            
+            let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
+            vertical.minimumRelativeValue = -amount
+            vertical.maximumRelativeValue = amount
+            
+            let group = UIMotionEffectGroup()
+            group.motionEffects = [horizontal, vertical]
+            self.imageNode.view.addMotionEffect(group)
+        } else {
+            for effect in self.imageNode.view.motionEffects {
+                self.imageNode.view.removeMotionEffect(effect)
+            }
+        }
+    }
+    
+    func setBlurEnabled(_ enabled: Bool, animated: Bool) {
+        if enabled {
+            self.blurView.frame = self.imageNode.frame
+            self.blurView.drawsAsynchronously = true
+            if self.blurView.superview == nil {
+                self.view.addSubview(self.blurView)
+            }
+            
+            if animated {
+                self.blurView.blurRadius = 0.0
+                UIView.animate(withDuration: 0.3) {
+                    self.blurView.blurRadius = 15.0
+                }
+            } else {
+                self.blurView.blurRadius = 15.0
+            }
+        } else {
+            if self.blurView.superview != nil {
+                if animated {
+                    UIView.animate(withDuration: 0.3, animations: {
+                        self.blurView.blurRadius = 0.0
+                    }) { finished in
+                        if finished {
+                            self.blurView.removeFromSuperview()
+                        }
+                    }
+                } else {
+                    self.blurView.removeFromSuperview()
+                }
+            }
+        }
+    }
+    
     func updateLayout(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.imageNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.blurView.frame = self.imageNode.frame
         
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
@@ -138,7 +220,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private let account: Account
     private var presentationData: PresentationData
     private let dismiss: () -> Void
-    private let apply: (TelegramWallpaper, PresentationWallpaperMode) -> Void
+    private let apply: (WallpaperEntry, PresentationWallpaperMode) -> Void
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
@@ -155,21 +237,21 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private var segmentedControlColorDisposable: Disposable?
     
     private var wallpapersDisposable: Disposable?
-    private var wallpapers: [TelegramWallpaper]?
+    private var wallpapers: [WallpaperEntry]?
     let ready = ValuePromise<Bool>(false)
     
     private var messageNodes: [ListViewItemNode]?
     
     private var visibleBackgroundNodes: [WallpaperBackgroundNode] = []
-    private var centralWallpaper: TelegramWallpaper?
+    private var centralWallpaper: WallpaperEntry?
     
-    private let currentWallpaperPromise = Promise<TelegramWallpaper>()
-    var currentWallpaper: Signal<TelegramWallpaper, NoError> {
+    private let currentWallpaperPromise = Promise<WallpaperEntry>()
+    var currentWallpaper: Signal<WallpaperEntry, NoError> {
         return self.currentWallpaperPromise.get()
     }
     private var visibleBackgroundNodesOffset: CGFloat = 0.0
     
-    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void, apply: @escaping (TelegramWallpaper, PresentationWallpaperMode) -> Void) {
+    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void, apply: @escaping (WallpaperEntry, PresentationWallpaperMode) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.dismiss = dismiss
@@ -257,20 +339,27 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         })
         
         switch source {
-            case let .list(wallpapers, central):
-                self.wallpapers = wallpapers
-                self.centralWallpaper = central
-                if let (layout, navigationHeight) = self.validLayout {
-                    self.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
-                }
+            case let .list(wallpapers, central, mode):
+                self.wallpapers = wallpapers.map { .wallpaper($0) }
+                self.centralWallpaper = WallpaperEntry.wallpaper(central)
                 self.ready.set(true)
+            
+                if let mode = mode {
+                    self.segmentedControl.selectedSegmentIndex = Int(clamping: mode.rawValue)
+                }
             case let .wallpaper(wallpaper):
-                self.wallpapers = [wallpaper]
-                self.centralWallpaper = wallpaper
-                if let (layout, navigationHeight) = self.validLayout {
-                    self.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
-                }
+                let entry = WallpaperEntry.wallpaper(wallpaper)
+                self.wallpapers = [entry]
+                self.centralWallpaper = entry
                 self.ready.set(true)
+            case let .asset(asset, thumbnailImage):
+                let entry = WallpaperEntry.asset(asset, thumbnailImage)
+                self.wallpapers = [entry]
+                self.centralWallpaper = entry
+                self.ready.set(true)
+        }
+        if let (layout, navigationHeight) = self.validLayout {
+            self.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
         }
         if let wallpaper = self.centralWallpaper {
             self.currentWallpaperPromise.set(.single(wallpaper))
@@ -350,9 +439,9 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings,
            pollActionState: ChatInterfacePollActionState())
         
-        let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: false)
+        let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false)
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: "Lorem ipsum dolor sit amet", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: presentationData.strings.BackgroundPreview_MessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
         items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: presentationData.strings.BackgroundPreview_SwipeInfo, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
@@ -492,46 +581,27 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         return super.hitTest(point, with: event)
     }
     
-    private func addParallaxToView(_ view: UIView) {
-        let amount = 16.0
-        
-        let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
-        horizontal.minimumRelativeValue = -amount
-        horizontal.maximumRelativeValue = amount
-        
-        let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
-        vertical.minimumRelativeValue = -amount
-        vertical.maximumRelativeValue = amount
-        
-        let group = UIMotionEffectGroup()
-        group.motionEffects = [horizontal, vertical]
-        view.addMotionEffect(group)
-    }
-    
-    private func removeParallaxFromView(_ view: UIView) {
-        for effect in view.motionEffects {
-            view.removeMotionEffect(effect)
-        }
-    }
-    
     @objc private func indexChanged() {
         guard let mode = PresentationWallpaperMode(rawValue: Int32(self.segmentedControl.selectedSegmentIndex)) else {
             return
         }
         
-        if mode == .perspective {
-            for node in self.visibleBackgroundNodes {
-                if node.wallpaper == self.centralWallpaper {
-                    self.addParallaxToView(node.imageNode.view)
+        for node in self.visibleBackgroundNodes {
+            if node.wallpaper == self.centralWallpaper {
+                if mode == .perspective {
+                    node.setParallaxEnabled(true)
+                    node.setBlurEnabled(false, animated: true)
+                } else if mode == .blurred {
+                    node.setParallaxEnabled(false)
+                    node.setBlurEnabled(true, animated: true)
+                } else {
+                    node.setParallaxEnabled(false)
+                    node.setBlurEnabled(false, animated: true)
                 }
-            }
-        } else {
-            for node in self.visibleBackgroundNodes {
-                if node.wallpaper == self.centralWallpaper {
-                    self.removeParallaxFromView(node.imageNode.view)
-                }
+                break
             }
         }
+        
     }
     
     @objc private func cancelPressed() {

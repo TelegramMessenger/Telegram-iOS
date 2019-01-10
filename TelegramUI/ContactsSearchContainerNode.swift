@@ -159,7 +159,12 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
         let searchItems = searchQuery.get()
         |> mapToSignal { query -> Signal<[ContactListSearchEntry]?, NoError> in
             if let query = query, !query.isEmpty {
-                let foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
+                let foundLocalContacts: Signal<([Peer], [PeerId: PeerPresence]), NoError>
+                if categories.contains(.cloudContacts) {
+                    foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
+                } else {
+                    foundLocalContacts = .single(([], [:]))
+                }
                 let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer])?, NoError>
                 if categories.contains(.global) {
                     foundRemoteContacts = .single(nil)

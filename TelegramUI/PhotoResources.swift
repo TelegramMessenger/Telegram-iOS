@@ -2793,6 +2793,71 @@ func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumA
     }
 }
 
+func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return fetchPhotoLibraryImage(localIdentifier: photoLibraryResource.localIdentifier)
+    |> map { result in
+        var sourceImage = result?.0
+        let isThumbnail = result?.1 ?? false
+        
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, scale: 1.0, clear: true)
+            
+            if let thumbnailImage = sourceImage?.cgImage, isThumbnail {
+                var fittedSize = arguments.imageSize
+                if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                    fittedSize.width = arguments.boundingSize.width
+                }
+                if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                    fittedSize.height = arguments.boundingSize.height
+                }
+                
+                let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
+                
+                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 100.0, height: 100.0))
+                
+                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                thumbnailContext.withFlippedContext { c in
+                    c.interpolationQuality = .none
+                    c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                }
+                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                
+                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
+                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
+                }
+                
+                if thumbnailContextFittingSize.width > thumbnailContextSize.width {
+                    let additionalContextSize = thumbnailContextFittingSize
+                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
+                    additionalBlurContext.withFlippedContext { c in
+                        c.interpolationQuality = .default
+                        if let image = thumbnailContext.generateImage()?.cgImage {
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
+                        }
+                    }
+                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                    sourceImage = additionalBlurContext.generateImage()
+                } else {
+                    sourceImage = thumbnailContext.generateImage()
+                }
+            }
+            
+            context.withFlippedContext { c in
+                c.setBlendMode(.copy)
+                if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
+                    let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
+                    let fittedRect = CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize)
+                    c.draw(cgImage, in: fittedRect)
+                }
+            }
+            
+            return context
+        }
+    }
+}
+
 func securePhoto(account: Account, resource: TelegramMediaResource, accessContext: SecureIdAccessContext) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return securePhotoInternal(account: account, resource: resource, accessContext: accessContext) |> map { $0.1 }
 }
