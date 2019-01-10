@@ -15,3 +15,4 @@ FOUNDATION_EXPORT const unsigned char FFMpegVersionString[];
 #import <FFMpeg/FFMpegAVFrame.h>
 #import <FFMpeg/FFMpegPacket.h>
 #import <FFMpeg/FFMpegAVCodec.h>
+#import <FFMpeg/FFMpegRemuxer.h>

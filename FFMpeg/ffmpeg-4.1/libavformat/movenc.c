@@ -6715,7 +6715,7 @@ static int mov_write_trailer(AVFormatContext *s)
             mov_write_sidx_tags(pb, mov, -1, 0);
             avio_seek(pb, end, SEEK_SET);
             avio_write_marker(s->pb, AV_NOPTS_VALUE, AVIO_DATA_MARKER_TRAILER);
-            mov_write_mfra_tag(pb, mov);
+            //mov_write_mfra_tag(pb, mov);
         } else if (!(mov->flags & FF_MOV_FLAG_SKIP_TRAILER)) {
             avio_write_marker(s->pb, AV_NOPTS_VALUE, AVIO_DATA_MARKER_TRAILER);
             mov_write_mfra_tag(pb, mov);

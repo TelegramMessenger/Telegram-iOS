@@ -37,14 +37,15 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
                  --enable-swresample \
                  --enable-avformat \
                  --disable-xlib \
-                 --enable-audiotoolbox \
                  --enable-libopus \
+                 --enable-audiotoolbox \
                  --enable-bsf=aac_adtstoasc \
                  --enable-decoder=h264,libopus,mp3_at,aac_at,flac,alac_at,pcm_s16le,pcm_s24le,gsm_ms_at \
                  --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav \
                  --enable-parser=aac,h264,mp3,libopus \
+                 --enable-protocol=file \
+                 --enable-muxer=mp4 \
                  "
-
 
 if [ "$1" = "debug" ];
 then

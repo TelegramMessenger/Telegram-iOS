@@ -5001,8 +5001,39 @@ static int mov_read_sidx(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     st->duration = sc->track_end = pts;
 
     sc->has_sidx = 1;
+    
+    unsigned is_implicitely_complete = 0;
+    /*if (c->found_moov && offset != avio_size(pb)) {
+        unsigned all_streams_found = 1;
+        
+        for (int k = 0; k < c->fc->nb_streams; k++) {
+            unsigned found = 0;
+            for (i = 0; i < c->frag_index.nb_items; i++) {
+                MOVFragmentIndexItem * item = &c->frag_index.item[i];
+                for (j = 0; ref_st == NULL && j < item->nb_stream_info; j++) {
+                    MOVFragmentStreamInfo * si;
+                    si = &item->stream_info[j];
+                    if (si->id == c->fc->streams[k]->id) {
+                        found = 1;
+                        break;
+                    }
+                }
+                if (found) {
+                    break;
+                }
+            }
+            if (!found) {
+                all_streams_found = 0;
+                break;
+            }
+        }
+        
+        if (all_streams_found) {
+            is_implicitely_complete = 1;
+        }
+    }*/
 
-    if (offset == avio_size(pb)) {
+    if (offset == avio_size(pb) || is_implicitely_complete) {
         // Find first entry in fragment index that came from an sidx.
         // This will pretty much always be the first entry.
         for (i = 0; i < c->frag_index.nb_items; i++) {

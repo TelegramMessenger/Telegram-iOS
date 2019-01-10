@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D000CAB721E672600011B15D /* FFMpegRemuxer.h in Headers */ = {isa = PBXBuildFile; fileRef = D000CAB521E672600011B15D /* FFMpegRemuxer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D000CAB821E672600011B15D /* FFMpegRemuxer.m in Sources */ = {isa = PBXBuildFile; fileRef = D000CAB621E672600011B15D /* FFMpegRemuxer.m */; };
 		D0320A8D21BFC95800D153AA /* FFMpegAVCodecContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0320A8B21BFC95800D153AA /* FFMpegAVCodecContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0320A8E21BFC95800D153AA /* FFMpegAVCodecContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0320A8C21BFC95800D153AA /* FFMpegAVCodecContext.m */; };
 		D0320BC021BFD48E00D153AA /* FFMpegAVIOContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0320BBE21BFD48E00D153AA /* FFMpegAVIOContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -36,6 +38,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D000CAB521E672600011B15D /* FFMpegRemuxer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FFMpegRemuxer.h; sourceTree = "<group>"; };
+		D000CAB621E672600011B15D /* FFMpegRemuxer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FFMpegRemuxer.m; sourceTree = "<group>"; };
 		D0320A8B21BFC95800D153AA /* FFMpegAVCodecContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FFMpegAVCodecContext.h; sourceTree = "<group>"; };
 		D0320A8C21BFC95800D153AA /* FFMpegAVCodecContext.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FFMpegAVCodecContext.m; sourceTree = "<group>"; };
 		D0320BBE21BFD48E00D153AA /* FFMpegAVIOContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FFMpegAVIOContext.h; sourceTree = "<group>"; };
@@ -126,6 +130,8 @@
 				D0320BCE21BFDBB700D153AA /* FFMpegAVSampleFormat.h */,
 				D0320BD221BFDF6900D153AA /* FFMpegPacket.h */,
 				D0320BD321BFDF6900D153AA /* FFMpegPacket.m */,
+				D000CAB521E672600011B15D /* FFMpegRemuxer.h */,
+				D000CAB621E672600011B15D /* FFMpegRemuxer.m */,
 			);
 			path = FFMpeg;
 			sourceTree = "<group>";
@@ -157,6 +163,7 @@
 				D0320A8D21BFC95800D153AA /* FFMpegAVCodecContext.h in Headers */,
 				D0320BD421BFDF6900D153AA /* FFMpegPacket.h in Headers */,
 				D0320BD021BFDBB700D153AA /* FFMpegAVSampleFormat.h in Headers */,
+				D000CAB721E672600011B15D /* FFMpegRemuxer.h in Headers */,
 				D0320BC821BFDB6100D153AA /* FFMpegAVFrame.h in Headers */,
 				D0320BC021BFD48E00D153AA /* FFMpegAVIOContext.h in Headers */,
 				D04555A521BF115E007A6DD9 /* FFMpegGlobals.h in Headers */,
@@ -255,6 +262,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0320BC521BFD50400D153AA /* FFMpegAVFormatContext.m in Sources */,
+				D000CAB821E672600011B15D /* FFMpegRemuxer.m in Sources */,
 				D0320BC921BFDB6100D153AA /* FFMpegAVFrame.m in Sources */,
 				D04555A621BF115E007A6DD9 /* FFMpegGlobals.m in Sources */,
 				D0320BD521BFDF6900D153AA /* FFMpegPacket.m in Sources */,
