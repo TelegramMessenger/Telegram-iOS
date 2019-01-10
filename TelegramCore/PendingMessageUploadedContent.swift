@@ -189,7 +189,9 @@ private func maybePredownloadedImageResource(postbox: Postbox, peerId: PeerId, r
                 }
             }
         })
-        let fetched = postbox.mediaBox.fetchedResource(resource, parameters: nil).start()
+        let fetched = postbox.mediaBox.fetchedResource(resource, parameters: nil).start(error: { _ in
+            subscriber.putError(.generic)
+        })
         
         return ActionDisposable {
             data.dispose()
@@ -609,7 +611,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         
                         var thumbnailFile: Api.InputFile?
                         if case let .file(file) = thumbnail {
-                            //thumbnailFile = file
+                            thumbnailFile = file
                         }
                         
                         if let _ = thumbnailFile {

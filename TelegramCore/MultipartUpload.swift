@@ -391,7 +391,7 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
             
             let dataSignal: Signal<MultipartUploadData, NoError>
             let headerSize: Int32
-            let fetchedResource: Signal<Void, NoError>
+            let fetchedResource: Signal<Void, FetchResourceError>
             switch source {
                 case let .resource(resource):
                     dataSignal = postbox.mediaBox.resourceData(resource.resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
@@ -454,7 +454,9 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
 
             manager.start()
             
-            let fetchedResourceDisposable = fetchedResource.start()
+            let fetchedResourceDisposable = fetchedResource.start(error: { _ in
+                subscriber.putError(.generic)
+            })
             
             return ActionDisposable {
                 manager.cancel()
