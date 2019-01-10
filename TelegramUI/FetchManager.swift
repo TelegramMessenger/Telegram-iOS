@@ -185,10 +185,11 @@ private final class FetchManagerCategoryContext {
                     let entryCompleted = self.entryCompleted
                     let storeManager = self.storeManager
                     activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
-                    |> mapToSignal { type -> Signal<FetchResourceSourceType, NoError> in
+                    |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                         if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
                             return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
-                            |> mapToSignal { _ -> Signal<FetchResourceSourceType, NoError> in
+                            |> introduceError(FetchResourceError.self)
+                            |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
                                 return .complete()
                             }
                             |> then(.single(type))
@@ -266,10 +267,11 @@ private final class FetchManagerCategoryContext {
                 let entryCompleted = self.entryCompleted
                 let storeManager = self.storeManager
                 activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
-                |> mapToSignal { type -> Signal<FetchResourceSourceType, NoError> in
+                |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                     if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
                         return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
-                        |> mapToSignal { _ -> Signal<FetchResourceSourceType, NoError> in
+                        |> introduceError(FetchResourceError.self)
+                        |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
                             return .complete()
                         }
                         |> then(.single(type))

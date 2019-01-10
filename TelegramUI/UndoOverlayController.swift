@@ -32,6 +32,11 @@ final class UndoOverlayController: ViewController {
         self.displayNodeDidLoad()
     }
     
+    func dismissWithCommitAction() {
+        self.action(true)
+        self.dismiss()
+    }
+    
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         

@@ -55,6 +55,8 @@ struct FFMpegMediaFrameSourceContextInfo {
     let videoStream: FFMpegMediaFrameSourceStreamContextInfo?
 }
 
+private var maxOffset: Int = 0
+
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<FFMpegMediaFrameSourceContext>.fromOpaque(userData!).takeUnretainedValue()
     guard let postbox = context.postbox, let resourceReference = context.resourceReference, let streamable = context.streamable else {
@@ -64,6 +66,11 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     var fetchedCount: Int32 = 0
     
     var fetchedData: Data?
+    
+    #if DEBUG
+    maxOffset = max(maxOffset, context.readingOffset + Int(bufferSize))
+    print("maxOffset \(maxOffset)")
+    #endif
     
     if streamable {
         let data: Signal<Data, NoError>
@@ -217,7 +224,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     fileprivate var streamable: Bool?
     fileprivate var statsCategory: MediaResourceStatsCategory?
     
-    private let ioBufferSize = 64 * 1024
+    private let ioBufferSize = 1 * 1024
     fileprivate var readingOffset = 0
     
     fileprivate var requestedDataOffset: Int?

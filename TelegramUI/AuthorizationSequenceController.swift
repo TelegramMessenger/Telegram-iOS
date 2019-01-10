@@ -8,6 +8,11 @@ import MtProtoKitDynamic
 import MessageUI
 import CoreTelephony
 
+private enum InnerState: Equatable {
+    case state(UnauthorizedAccountStateContents)
+    case authorized
+}
+
 public final class AuthorizationSequenceController: NavigationController {
     static func navigationBarTheme(_ theme: AuthorizationTheme) -> NavigationBarTheme {
         return NavigationBarTheme(buttonColor: theme.accentColor, disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
@@ -34,11 +39,13 @@ public final class AuthorizationSequenceController: NavigationController {
         super.init(mode: .single, theme: NavigationControllerTheme(navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black, emptyDetailIcon: nil))
         
         self.stateDisposable = (account.postbox.stateView()
-        |> map { view -> UnauthorizedAccountStateContents in
-            if let state = view.state as? UnauthorizedAccountState {
-                return state.contents
+        |> map { view -> InnerState in
+            if let _ = view.state as? AuthorizedAccountState {
+                return .authorized
+            } else if let state = view.state as? UnauthorizedAccountState {
+                return .state(state.contents)
             } else {
-                return .empty
+                return .state(.empty)
             }
         }
         |> distinctUntilChanged
@@ -387,7 +394,7 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func passwordEntryController(hint: String) -> AuthorizationSequencePasswordEntryController {
+    private func passwordEntryController(hint: String, suggestReset: Bool) -> AuthorizationSequencePasswordEntryController {
         var currentController: AuthorizationSequencePasswordEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequencePasswordEntryController {
@@ -464,7 +471,7 @@ public final class AuthorizationSequenceController: NavigationController {
         }
         controller.reset = { [weak self, weak controller] in
             if let strongSelf = self, let strongController = controller {
-                strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [
+                strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: suggestReset ? strongSelf.strings.TwoStepAuth_RecoveryFailed : strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [
                     TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {}),
                     TextAlertAction(type: .destructiveAction, title: strongSelf.strings.Login_ResetAccountProtected_Reset, action: {
                         if let strongSelf = self, let strongController = controller {
@@ -491,7 +498,7 @@ public final class AuthorizationSequenceController: NavigationController {
                     })]), in: .window(.root))
             }
         }
-        controller.updateData(hint: hint)
+        controller.updateData(hint: hint, suggestReset: suggestReset)
         return controller
     }
     
@@ -548,7 +555,7 @@ public final class AuthorizationSequenceController: NavigationController {
                     let account = strongSelf.account
                     let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                         if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _) = state.contents {
-                            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: false)))
+                            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true)))
                         }
                     }).start()
                 }
@@ -679,25 +686,30 @@ public final class AuthorizationSequenceController: NavigationController {
         return controller
     }
     
-    private func updateState(state: UnauthorizedAccountStateContents) {
+    private func updateState(state: InnerState) {
         switch state {
-            case .empty:
-                if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
-                } else {
-                    self.setViewControllers([self.splashController()], animated: !self.viewControllers.isEmpty)
+            case .authorized:
+                break
+            case let .state(state):
+                switch state {
+                    case .empty:
+                        if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
+                        } else {
+                            self.setViewControllers([self.splashController()], animated: !self.viewControllers.isEmpty)
+                        }
+                    case let .phoneEntry(countryCode, number):
+                        self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
+                    case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
+                        self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: defaultCountryCode(), number: ""), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
+                    case let .passwordEntry(hint, _, _, suggestReset):
+                        self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint, suggestReset: suggestReset)], animated: !self.viewControllers.isEmpty)
+                    case let .passwordRecovery(_, _, _, emailPattern):
+                        self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)
+                    case let .awaitingAccountReset(protectedUntil, number):
+                        self.setViewControllers([self.splashController(), self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number)], animated: !self.viewControllers.isEmpty)
+                    case let .signUp(_, _, _, firstName, lastName, termsOfService):
+                        self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
                 }
-            case let .phoneEntry(countryCode, number):
-                self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
-            case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
-                self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: defaultCountryCode(), number: ""), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
-            case let .passwordEntry(hint, _, _, _):
-                self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint)], animated: !self.viewControllers.isEmpty)
-            case let .passwordRecovery(_, _, _, emailPattern):
-                self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)
-            case let .awaitingAccountReset(protectedUntil, number):
-                self.setViewControllers([self.splashController(), self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number)], animated: !self.viewControllers.isEmpty)
-            case let .signUp(_, _, _, firstName, lastName, termsOfService):
-                self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
         }
     }
     

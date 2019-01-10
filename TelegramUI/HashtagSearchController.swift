@@ -36,11 +36,11 @@ final class HashtagSearchController: TelegramController {
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         
         let location: SearchMessagesLocation = .general
-        let search = searchMessages(account: account, location: location, query: query)
+        let search = searchMessages(account: account, location: location, query: query, state: nil)
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = search
-            |> map { result in
-                return result.0.map({ .message($0, result.1[$0.id.peerId], chatListPresentationData) })
-            }
+        |> map { result, _ in
+            return result.messages.map({ .message($0, result.readStates[$0.id.peerId], chatListPresentationData) })
+        }
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { peer in
         }, togglePeerSelected: { _ in

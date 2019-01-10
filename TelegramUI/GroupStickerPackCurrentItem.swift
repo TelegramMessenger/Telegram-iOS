@@ -223,7 +223,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             }
             
             var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            var updatedFetchSignal: Signal<FetchResourceSourceType, NoError>?
+            var updatedFetchSignal: Signal<FetchResourceSourceType, FetchResourceError>?
             if fileUpdated {
                 if let file = file {
                     updatedImageSignal = chatMessageSticker(account: item.account, file: file, small: false)

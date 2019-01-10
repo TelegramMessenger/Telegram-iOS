@@ -357,7 +357,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                 |> afterCompleted {
                     contactsController?.dismiss()
                 }
-            }).start(error: { error in
+            }).start(error: { [weak contactsController] error in
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                 let text: String
                 switch error {
@@ -369,6 +369,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                         text = presentationData.strings.Channel_ErrorAddBlocked
                 }
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                contactsController?.dismiss()
             }))
             
             presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

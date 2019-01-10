@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import LegacyComponents
+import FFMpeg
 
 private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {
     private let url: URL
@@ -79,6 +80,8 @@ public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) 
                             if stat(asset.url.path, &value) == 0 {
                                 subscriber.putNext(.copyLocalItem(AVURLAssetCopyItem(url: asset.url)))
                                 subscriber.putCompletion()
+                            } else {
+                                subscriber.putError(.generic)
                             }
                             return
                         } else {
@@ -110,6 +113,14 @@ public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) 
                     if let result = next as? TGMediaVideoConversionResult {
                         var value = stat()
                         if stat(result.fileURL.path, &value) == 0 {
+                            let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
+                            if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
+                                let _ = try? FileManager.default.removeItem(atPath: result.fileURL.path)
+                                subscriber.putNext(.moveTempFile(file: tempFile))
+                            } else {
+                                TempBox.shared.dispose(tempFile)
+                                subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
+                            }
                             /*if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
                                 var range: Range<Int>?
                                 let _ = updatedSize.modify { updatedSize in
@@ -122,10 +133,13 @@ public func fetchVideoLibraryMediaResource(resource: VideoLibraryMediaResource) 
                                 subscriber.putNext(.dataPart(resourceOffset: data.count, data: Data(), range: 0 ..< 0, complete: true))
                             }*/
                             subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
+                        } else {
+                            subscriber.putError(.generic)
                         }
                         subscriber.putCompletion()
                     }
                 }, error: { _ in
+                    subscriber.putError(.generic)
                 }, completed: nil)
                 disposable.set(ActionDisposable {
                     signalDisposable?.dispose()

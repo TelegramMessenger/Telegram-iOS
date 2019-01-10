@@ -233,7 +233,11 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                 if state.pendingRemovalPeerIds.contains(index.messageIndex.id.peerId) {
                     continue loop
                 }
-                result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: message, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false))
+                var updatedMessage = message
+                if state.pendingClearHistoryPeerIds.contains(index.messageIndex.id.peerId) {
+                    updatedMessage = nil
+                }
+                result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: updatedMessage, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false))
             case let .HoleEntry(hole):
                 result.append(.HoleEntry(hole, theme: state.presentationData.theme))
             case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):

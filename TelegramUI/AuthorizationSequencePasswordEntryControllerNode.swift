@@ -25,6 +25,7 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     var reset: (() -> Void)?
     
     var didForgotWithNoRecovery = false
+    var suggestReset = false
     
     private var clearOnce: Bool = false
     
@@ -91,8 +92,9 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.resetNode.addTarget(self, action: #selector(self.resetPressed), forControlEvents: .touchUpInside)
     }
     
-    func updateData(hint: String, didForgotWithNoRecovery: Bool) {
+    func updateData(hint: String, didForgotWithNoRecovery: Bool, suggestReset: Bool) {
         self.didForgotWithNoRecovery = didForgotWithNoRecovery
+        self.suggestReset = suggestReset
         self.codeField.textField.attributedPlaceholder = NSAttributedString(string: hint, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
         if let (layout, navigationHeight) = self.layoutArguments {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
@@ -126,7 +128,7 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         
         items.append(AuthorizationLayoutItem(node: self.forgotNode, size: forgotSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 48.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
-        if self.didForgotWithNoRecovery {
+        if self.didForgotWithNoRecovery || self.suggestReset {
             self.resetNode.isHidden = false
             items.append(AuthorizationLayoutItem(node: self.resetNode, size: resetSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         } else {

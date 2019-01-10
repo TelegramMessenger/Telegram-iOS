@@ -729,6 +729,9 @@ final class SharedMediaPlayer {
                     case let .telegramFile(file):
                         fetchedNextSignal = fetchedMediaResource(postbox: self.postbox, reference: file.resourceReference(file.media.resource))
                         |> ignoreValues
+                        |> `catch` { _ -> Signal<Never, NoError> in
+                            return .complete()
+                        }
                 }
                 self.prefetchDisposable.set((fetchedCurrentSignal |> then(fetchedNextSignal)).start())
             } else {

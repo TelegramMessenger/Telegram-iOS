@@ -191,8 +191,9 @@ enum ChatTitlePanelContext: Equatable, Comparable {
 struct ChatSearchResultsState: Equatable {
     let messageIndices: [MessageIndex]
     let currentId: MessageId?
+    let state: SearchMessagesState
     let totalCount: Int32
-    let complete: Bool
+    let completed: Bool
 }
 
 enum ChatSearchDomain: Equatable {
