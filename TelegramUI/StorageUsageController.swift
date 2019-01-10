@@ -197,14 +197,24 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
         
         var peerSizes: Int64 = 0
         var statsByPeerId: [(PeerId, Int64)] = []
+        var peerIndices: [PeerId: Int] = [:]
         for (peerId, categories) in stats.media {
+            var updatedPeerId = peerId
+            if let group = stats.peers[peerId] as? TelegramGroup, let migrationReference = group.migrationReference, let channel = stats.peers[migrationReference.peerId] {
+                updatedPeerId = channel.id
+            }
             var combinedSize: Int64 = 0
             for (_, media) in categories {
                 for (_, size) in media {
                     combinedSize += size
                 }
             }
-            statsByPeerId.append((peerId, combinedSize))
+            if let index = peerIndices[updatedPeerId] {
+                statsByPeerId[index].1 += combinedSize
+            } else {
+                peerIndices[updatedPeerId] = statsByPeerId.count
+                statsByPeerId.append((updatedPeerId, combinedSize))
+            }
             peerSizes += combinedSize
         }
         
@@ -527,7 +537,23 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
     }, openPeerMedia: { peerId in
         let _ = (statsPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
-                if let categories = stats.media[peerId] {
+                var additionalPeerId: PeerId?
+                if var categories = stats.media[peerId] {
+                    if let channel = stats.peers[peerId] as? TelegramChannel, case .group = channel.info {
+                        for (_, peer) in stats.peers {
+                            if let group = peer as? TelegramGroup, let migrationReference = group.migrationReference, migrationReference.peerId == peerId {
+                                if let additionalCategories = stats.media[group.id] {
+                                    additionalPeerId = group.id
+                                    categories.merge(additionalCategories, uniquingKeysWith: { lhs, rhs in
+                                        return lhs.merging(rhs, uniquingKeysWith: { lhs, rhs in
+                                            return lhs + rhs
+                                        })
+                                    })
+                                }
+                            }
+                        }
+                    }
+                    
                     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
                     let controller = ActionSheetController(presentationTheme: presentationData.theme)
                     let dismissAction: () -> Void = { [weak controller] in
@@ -610,6 +636,20 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
                                     }
                                     
                                     media[peerId] = categories
+                                }
+                                if let additionalPeerId = additionalPeerId {
+                                    if var categories = media[additionalPeerId] {
+                                        for category in clearCategories {
+                                            if let contents = categories[category] {
+                                                for (mediaId, _) in contents {
+                                                    clearMediaIds.insert(mediaId)
+                                                }
+                                            }
+                                            categories.removeValue(forKey: category)
+                                        }
+                                        
+                                        media[additionalPeerId] = categories
+                                    }
                                 }
                                 
                                 var clearResourceIds = Set<WrappedMediaResourceId>()

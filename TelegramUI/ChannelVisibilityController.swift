@@ -871,7 +871,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
             if let link = link {
                 UIPasteboard.general.string = link
                 let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Username_LinkCopied, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Username_LinkCopied)), nil)
             }
         })
     }, revokePrivateLink: {

@@ -1779,10 +1779,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     override func updateHiddenMedia() {
         var hasHiddenMosaicStatus = false
+        var hasHiddenBackground = false
         if let item = self.item {
             for contentNode in self.contentNodes {
                 if let contentItem = contentNode.item {
                     if contentNode.updateHiddenMedia(item.controllerInteraction.hiddenMedia[contentItem.message.id]) {
+                        if self.contentNodes.count == 1 && self.nameNode == nil && self.adminBadgeNode == nil && self.forwardInfoNode == nil && self.replyInfoNode == nil {
+                            hasHiddenBackground = true
+                        }
                         if let mosaicStatusNode = self.mosaicStatusNode, mosaicStatusNode.frame.intersects(contentNode.frame) {
                             hasHiddenMosaicStatus = true
                         }
@@ -1801,6 +1805,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
         }
+        
+        //self.backgroundNode.isHidden = hasHiddenBackground
     }
     
     override func updateAutomaticMediaDownloadSettings() {

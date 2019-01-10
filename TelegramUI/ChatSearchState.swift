@@ -5,5 +5,5 @@ import TelegramCore
 struct ChatSearchState: Equatable {
     let query: String
     let location: SearchMessagesLocation
-    let loadMoreIndex: MessageIndex?
+    let loadMoreState: SearchMessagesState?
 }

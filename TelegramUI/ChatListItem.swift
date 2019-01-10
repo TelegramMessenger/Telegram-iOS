@@ -328,12 +328,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         var peer: Peer?
         switch item.content {
-            case let .peer(message, peerValue, _, _, _, _, _, _, _):
-                if let message = message {
-                    peer = messageMainPeer(message)
-                } else {
-                    peer = peerValue.chatMainPeer
-                }
+            case let .peer(_, peerValue, _, _, _, _, _, _, _):
+                peer = peerValue.chatMainPeer
             case .groupReference:
                 break
         }

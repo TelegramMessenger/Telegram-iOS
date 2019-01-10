@@ -527,19 +527,7 @@ private struct ChatListSearchMessagesResult {
     let messages: [Message]
     let readStates: [PeerId: CombinedPeerReadState]
     let hasMore: Bool
-    
-    func appending(_ other: ChatListSearchMessagesResult) -> ChatListSearchMessagesResult {
-        var messages: [Message] = self.messages
-        var ids = Set(self.messages.map { $0.id })
-        for message in other.messages {
-            if !ids.contains(message.id) {
-                ids.insert(message.id)
-                messages.append(message)
-            }
-        }
-        messages.sort(by: { MessageIndex($0) > MessageIndex($1) })
-        return ChatListSearchMessagesResult(query: query, messages: messages, readStates: self.readStates.merging(other.readStates, uniquingKeysWith: { left, _ in left }), hasMore: other.hasMore)
-    }
+    let state: SearchMessagesState
 }
 
 private struct ChatListSearchMessagesContext {
@@ -700,22 +688,22 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             if filter.contains(.doNotSearchMessages) {
                 foundRemoteMessages = .single((([], [:], 0), false))
             } else {
-                let searchSignal = searchMessages(account: account, location: location, query: query, limit: 50)
-                |> map { result -> ChatListSearchMessagesResult in
-                    return ChatListSearchMessagesResult(query: query, messages: result.0.sorted(by: { MessageIndex($0) > MessageIndex($1) }), readStates: result.1, hasMore: result.2 != 0)
+                let searchSignal = searchMessages(account: account, location: location, query: query, state: nil, limit: 50)
+                |> map { result, updatedState -> ChatListSearchMessagesResult in
+                    return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { MessageIndex($0) > MessageIndex($1) }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
                 }
                 
                 let loadMore = searchContext.get()
                 |> mapToSignal { searchContext -> Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError> in
                     if let searchContext = searchContext {
-                        if let loadMoreIndex = searchContext.loadMoreIndex {
-                            return searchMessages(account: account, location: location, query: query, lowerBound: loadMoreIndex, limit: 80)
-                            |> map { result -> ChatListSearchMessagesResult in
-                                return ChatListSearchMessagesResult(query: query, messages: result.0.sorted(by: { MessageIndex($0) > MessageIndex($1) }), readStates: result.1, hasMore: result.2 != 0)
+                        if let _ = searchContext.loadMoreIndex {
+                            return searchMessages(account: account, location: location, query: query, state: searchContext.result.state, limit: 80)
+                            |> map { result, updatedState -> ChatListSearchMessagesResult in
+                                return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { MessageIndex($0) > MessageIndex($1) }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
                             }
                             |> mapToSignal { foundMessages -> Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError> in
                                 updateSearchContext { previous in
-                                    let updated = ChatListSearchMessagesContext(result: previous?.result.appending(foundMessages) ?? foundMessages, loadMoreIndex: nil)
+                                    let updated = ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil)
                                     return (updated, true)
                                 }
                                 return .complete()

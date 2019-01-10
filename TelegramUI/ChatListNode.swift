@@ -103,6 +103,7 @@ struct ChatListNodeState: Equatable {
     var selectedPeerIds: Set<PeerId>
     var peerInputActivities: ChatListNodePeerInputActivities?
     var pendingRemovalPeerIds: Set<PeerId>
+    var pendingClearHistoryPeerIds: Set<PeerId>
     
     static func ==(lhs: ChatListNodeState, rhs: ChatListNodeState) -> Bool {
         if lhs.presentationData !== rhs.presentationData {
@@ -121,6 +122,9 @@ struct ChatListNodeState: Equatable {
             return false
         }
         if lhs.pendingRemovalPeerIds != rhs.pendingRemovalPeerIds {
+            return false
+        }
+        if lhs.pendingClearHistoryPeerIds != rhs.pendingClearHistoryPeerIds {
             return false
         }
         return true
@@ -363,7 +367,7 @@ final class ChatListNode: ListView {
         self.controlsHistoryPreload = controlsHistoryPreload
         self.mode = mode
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: false, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), peerInputActivities: nil, pendingRemovalPeerIds: Set())
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: false, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), peerInputActivities: nil, pendingRemovalPeerIds: Set(), pendingClearHistoryPeerIds: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme

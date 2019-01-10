@@ -85,6 +85,13 @@ func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureIdLocalIm
                         }
                         let _ = try? FileManager.default.removeItem(atPath: path)
                     }
+                case let .moveTempFile(file):
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: file.path)) {
+                        let _ = buffer.with { buffer in
+                            buffer.data = data
+                        }
+                    }
+                    TempBox.shared.dispose(file)
                 case .copyLocalItem:
                     assertionFailure()
                     break

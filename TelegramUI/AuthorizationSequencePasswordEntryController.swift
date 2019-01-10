@@ -19,11 +19,13 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         didSet {
             if self.didForgotWithNoRecovery != oldValue {
                 if self.isNodeLoaded, let hint = self.hint {
-                    self.controllerNode.updateData(hint: hint, didForgotWithNoRecovery: didForgotWithNoRecovery)
+                    self.controllerNode.updateData(hint: hint, didForgotWithNoRecovery: didForgotWithNoRecovery, suggestReset: self.suggestReset)
                 }
             }
         }
     }
+    
+    var suggestReset: Bool = false
     
     private let hapticFeedback = HapticFeedback()
     
@@ -82,7 +84,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         }
         
         if let hint = self.hint {
-            self.controllerNode.updateData(hint: hint, didForgotWithNoRecovery: self.didForgotWithNoRecovery)
+            self.controllerNode.updateData(hint: hint, didForgotWithNoRecovery: self.didForgotWithNoRecovery, suggestReset: self.suggestReset)
         }
     }
     
@@ -92,11 +94,12 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         self.controllerNode.activateInput()
     }
     
-    func updateData(hint: String) {
-        if self.hint != hint {
+    func updateData(hint: String, suggestReset: Bool) {
+        if self.hint != hint || self.suggestReset != suggestReset {
             self.hint = hint
+            self.suggestReset = suggestReset
             if self.isNodeLoaded {
-                self.controllerNode.updateData(hint: hint, didForgotWithNoRecovery: self.didForgotWithNoRecovery)
+                self.controllerNode.updateData(hint: hint, didForgotWithNoRecovery: self.didForgotWithNoRecovery, suggestReset: self.suggestReset)
             }
         }
     }
@@ -123,7 +126,9 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     }
     
     func forgotPressed() {
-        if self.didForgotWithNoRecovery {
+        if self.suggestReset {
+            self.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+        } else if self.didForgotWithNoRecovery {
             self.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
         } else {
             self.forgot?()

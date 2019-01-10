@@ -28,7 +28,7 @@ func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference
                 return .single((nil, loadedData, true))
             } else {
                 let decodedThumbnailData = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
-                let fetchedThumbnail: Signal<FetchResourceSourceType, NoError>
+                let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
                 if let _ = decodedThumbnailData {
                     fetchedThumbnail = .complete()
                 } else {
@@ -138,7 +138,7 @@ private func chatMessageFileDatas(account: Account, fileReference: FileMediaRefe
         if maybeData.complete {
             return .single((nil, maybeData.path, true))
         } else {
-            let fetchedThumbnail: Signal<FetchResourceSourceType, NoError>
+            let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
             if !fetched, let _ = decodedThumbnailData {
                 fetchedThumbnail = .single(.local)
             } else if let thumbnailResource = thumbnailResource {
@@ -201,7 +201,7 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
         if let decodedThumbnailData = decodedThumbnailData {
             return .single((decodedThumbnailData, nil, false))
         } else if let thumbnailResource = thumbnailResource {
-            let fetchedThumbnail: Signal<FetchResourceSourceType, NoError> = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource))
+            let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError> = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource))
             return Signal { subscriber in
                 let fetchedDisposable = fetchedThumbnail.start()
                 let thumbnailDisposable = account.postbox.mediaBox.resourceData(thumbnailResource, pathExtension: pathExtension).start(next: { next in
@@ -233,7 +233,7 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
         if maybeData.complete {
             return .single((nil, maybeData.path, true))
         } else {
-            let fetchedThumbnail: Signal<FetchResourceSourceType, NoError>
+            let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
             if let _ = fileReference.media.immediateThumbnailData {
                 fetchedThumbnail = .complete()
             } else if let thumbnailResource = thumbnailResource {
@@ -1690,13 +1690,14 @@ func chatMessagePhotoStatus(account: Account, messageId: MessageId, photoReferen
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<FetchResourceSourceType, NoError> {
+public func chatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return fetchedMediaResource(postbox: account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
-        |> mapToSignal { type -> Signal<FetchResourceSourceType, NoError> in
+        |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             if case .remote = type, let peerType = storeToDownloadsPeerType {
                 return storeDownloadedMedia(storeManager: account.telegramApplicationContext.mediaManager?.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
-                |> mapToSignal { _ -> Signal<FetchResourceSourceType, NoError> in
+                |> introduceError(FetchResourceError.self)
+                |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
                     return .complete()
                 }
                 |> then(.single(type))
@@ -1714,7 +1715,7 @@ func chatMessagePhotoCancelInteractiveFetch(account: Account, photoReference: Im
     }
 }
 
-func chatMessageWebFileInteractiveFetched(account: Account, image: TelegramMediaWebFile) -> Signal<FetchResourceSourceType, NoError> {
+func chatMessageWebFileInteractiveFetched(account: Account, image: TelegramMediaWebFile) -> Signal<FetchResourceSourceType, FetchResourceError> {
     return fetchedMediaResource(postbox: account.postbox, reference: .standalone(resource: image.resource), statsCategory: .image)
 }
 
@@ -2208,7 +2209,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                 return .single((nil, loadedData, true))
             } else {
-                let fetchedThumbnail: Signal<FetchResourceSourceType, NoError>
+                let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
                 if let _ = decodedThumbnailData {
                     fetchedThumbnail = .complete()
                 } else {

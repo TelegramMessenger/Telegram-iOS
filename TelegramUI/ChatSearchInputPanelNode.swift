@@ -121,7 +121,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         var resultsText: NSAttributedString?
         if let results = interfaceState.search?.resultsState {
             resultCount = results.messageIndices.count
-            let displayTotalCount = results.complete ? results.messageIndices.count : Int(results.totalCount)
+            let displayTotalCount = results.completed ? results.messageIndices.count : Int(results.totalCount)
             if let currentId = results.currentId, let index = results.messageIndices.index(where: { $0.id == currentId }) {
                 let adjustedIndex = results.messageIndices.count - 1 - index
                 resultIndex = index

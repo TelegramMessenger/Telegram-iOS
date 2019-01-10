@@ -89,6 +89,8 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             localStorage["FFMpegMediaFrameSourceContext"] = context
 
             taskQueue.loop()
+            
+            Thread.current.threadDictionary.removeObject(forKey: "FFMpegMediaFrameSourceContext")
         }
     }
    

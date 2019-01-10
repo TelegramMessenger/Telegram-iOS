@@ -46,7 +46,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
         self.addSubnode(self.statusNode)
         
         let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
-        let fetchSignal: Signal<FetchResourceSourceType, NoError>
+        let fetchSignal: Signal<FetchResourceSourceType, FetchResourceError>
         let statusSignal: Signal<MediaResourceStatus, NoError>
         let displaySize: CGSize
         switch wallpaper {
