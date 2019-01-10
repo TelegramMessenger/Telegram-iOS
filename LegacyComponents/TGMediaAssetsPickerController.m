@@ -375,6 +375,11 @@
             thumbnailImage = next;
         }];
     }
+    
+    if (((TGMediaAssetsController *)self.navigationController).selectionBlock != nil) {
+        ((TGMediaAssetsController *)self.navigationController).selectionBlock(asset, thumbnailImage);
+        return;
+    }
 
     __weak TGMediaAssetsPickerController *weakSelf = self;
     if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent)
