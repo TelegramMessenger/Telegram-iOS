@@ -247,11 +247,14 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func animateOut(completion: @escaping () -> Void) {
-        let position = self.gridNode.layer.position
-        let offset = self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top + self.gridNode.bounds.height - self.gridNode.scrollView.contentInset.top
-        self.gridNode.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + (self.gridNode.bounds.height - offset)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             completion()
         })
+//        let position = self.gridNode.layer.position
+//        let offset = self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top + self.gridNode.bounds.height - self.gridNode.scrollView.contentInset.top
+//        self.gridNode.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + (self.gridNode.bounds.height - offset)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+//            completion()
+//        })
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
