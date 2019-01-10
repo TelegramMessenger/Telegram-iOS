@@ -51,7 +51,8 @@ audio/Resampler.h \
 os/posix/NetworkSocketPosix.h \
 video/VideoSource.h \
 video/VideoRenderer.h \
-json11.hpp
+json11.hpp \
+utils.h
 
 if TARGET_OS_OSX
 

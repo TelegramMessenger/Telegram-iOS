@@ -1413,7 +1413,7 @@ am__libtgvoip_la_SOURCES_DIST = VoIPController.cpp Buffers.cpp \
 	OpusEncoder.h PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
-	video/VideoSource.h video/VideoRenderer.h json11.hpp \
+	video/VideoSource.h video/VideoRenderer.h json11.hpp utils.h \
 	os/darwin/AudioInputAudioUnit.h \
 	os/darwin/AudioOutputAudioUnit.h os/darwin/AudioUnitIO.h \
 	os/darwin/AudioInputAudioUnitOSX.h \
@@ -2131,7 +2131,7 @@ am__nobase_tgvoipinclude_HEADERS_DIST = VoIPController.h Buffers.h \
 	OpusEncoder.h PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
-	video/VideoSource.h video/VideoRenderer.h json11.hpp \
+	video/VideoSource.h video/VideoRenderer.h json11.hpp utils.h \
 	os/darwin/AudioInputAudioUnit.h \
 	os/darwin/AudioOutputAudioUnit.h os/darwin/AudioUnitIO.h \
 	os/darwin/AudioInputAudioUnitOSX.h \
@@ -2332,7 +2332,7 @@ TGVOIP_HDRS = VoIPController.h Buffers.h BlockingQueue.h \
 	PacketReassembler.h VoIPServerConfig.h audio/AudioIO.h \
 	audio/AudioInput.h audio/AudioOutput.h audio/Resampler.h \
 	os/posix/NetworkSocketPosix.h video/VideoSource.h \
-	video/VideoRenderer.h json11.hpp $(am__append_2) \
+	video/VideoRenderer.h json11.hpp utils.h $(am__append_2) \
 	$(am__append_5) $(am__append_7) $(am__append_17)
 libtgvoip_la_SOURCES = $(SRC) $(TGVOIP_HDRS)
 tgvoipincludedir = $(includedir)/tgvoip
