@@ -116,6 +116,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
+    public private(set) final var headerInsets = UIEdgeInsets()
     public private(set) final var scrollIndicatorInsets = UIEdgeInsets()
     private final var ensureTopInsetForOverlayHighlightedItems: CGFloat?
     private final var lastContentOffset: CGPoint = CGPoint()
@@ -1262,6 +1263,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             if let updateSizeAndInsets = updateSizeAndInsets , (self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets)) {
                 self.visibleSize = updateSizeAndInsets.size
                 self.insets = updateSizeAndInsets.insets
+                self.headerInsets = updateSizeAndInsets.headerInsets ?? self.insets
                 self.scrollIndicatorInsets = updateSizeAndInsets.scrollIndicatorInsets ?? self.insets
                 self.ensureTopInsetForOverlayHighlightedItems = updateSizeAndInsets.ensureTopInsetForOverlayHighlightedItems
                 
@@ -2796,7 +2798,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     }
     
     private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false) {
-        let upperDisplayBound = self.insets.top
+        let upperDisplayBound = self.headerInsets.top
         let lowerDisplayBound = self.visibleSize.height - self.insets.bottom
         var visibleHeaderNodes = Set<Int64>()
         
