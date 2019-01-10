@@ -208,6 +208,12 @@ open class TabBarController: ViewController {
         }
     }
     
+    override open func viewWillDisappear(_ animated: Bool) {
+        if let currentController = self.currentController {
+            currentController.viewWillDisappear(animated)
+        }
+    }
+    
     override open func viewWillAppear(_ animated: Bool) {
         if let currentController = self.currentController {
             currentController.viewWillAppear(animated)
