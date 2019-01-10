@@ -7,41 +7,68 @@ import Postbox
 import SwiftSignalKit
 #endif
 
+final class CachedWallpapersConfiguration: PostboxCoding {
+    let hash: Int32
+    
+    init(hash: Int32) {
+        self.hash = hash
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.hash = decoder.decodeInt32ForKey("hash", orElse: 0)
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.hash, forKey: "hash")
+    }
+}
+
 public func telegramWallpapers(postbox: Postbox, network: Network) -> Signal<[TelegramWallpaper], NoError> {
-    return postbox.transaction { transaction -> [TelegramWallpaper] in
+    return postbox.transaction { transaction -> ([TelegramWallpaper], Int32?) in
+        let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0))) as? CachedWallpapersConfiguration
         let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
         if items.count == 0 {
-            return [.builtin]
+            return ([.builtin], 0)
         } else {
-            return items.map { $0.contents as! TelegramWallpaper }
+            return (items.map { $0.contents as! TelegramWallpaper }, configuration?.hash)
         }
-    } |> mapToSignal { list -> Signal<[TelegramWallpaper], NoError> in
-        let remote = network.request(Api.functions.account.getWallPapers(hash: 0))
+    }
+    |> mapToSignal { list, hash -> Signal<[TelegramWallpaper], NoError> in
+        let remote = network.request(Api.functions.account.getWallPapers(hash: hash ?? 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<[TelegramWallpaper], NoError> in
-            return .never()
-            /*var items: [TelegramWallpaper] = []
-            for wallpaper in result {
-                items.append(TelegramWallpaper(apiWallpaper: wallpaper))
-            }
-            items.removeFirst()
-            items.insert(.builtin, at: 0)
-            
-            if items == list {
-                return .complete()
-            } else {
-                return postbox.transaction { transaction -> [TelegramWallpaper] in
-                    var entries: [OrderedItemListEntry] = []
-                    for item in items {
-                        var intValue = Int32(entries.count)
-                        let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                        entries.append(OrderedItemListEntry(id: id, contents: item))
+            switch result {
+                case let .wallPapers(hash, wallpapers):
+                    var items: [TelegramWallpaper] = []
+                    var addedBuiltin = false
+                    for apiWallpaper in wallpapers {
+                        let wallpaper = TelegramWallpaper(apiWallpaper: apiWallpaper)
+                        if case .file = wallpaper {
+                        } else if !addedBuiltin {
+                            addedBuiltin = true
+                            items.append(.builtin)
+                        }
+                        items.append(wallpaper)
                     }
-                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
                     
-                    return items
-                }
-            }*/
+                    if items == list {
+                        return .complete()
+                    } else {
+                        return postbox.transaction { transaction -> [TelegramWallpaper] in
+                            var entries: [OrderedItemListEntry] = []
+                            for item in items {
+                                var intValue = Int32(entries.count)
+                                let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
+                                entries.append(OrderedItemListEntry(id: id, contents: item))
+                            }
+                            transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
+                            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)), entry: CachedWallpapersConfiguration(hash: hash), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                            return items
+                        }
+                    }
+                case .wallPapersNotModified:
+                    return .complete()
+            }
         }
         return .single(list)
         |> then(remote)
@@ -121,5 +148,26 @@ public func getWallpaper(account: Account, slug: String) -> Signal<TelegramWallp
     |> mapError { _ -> GetWallpaperError in return .generic }
     |> map { wallpaper -> TelegramWallpaper in
         return TelegramWallpaper(apiWallpaper: wallpaper)
+    }
+}
+
+public func saveWallpaper(account: Account, wallpaper: TelegramWallpaper) -> Signal<Void, NoError> {
+    return saveUnsaveWallpaper(account: account, wallpaper: wallpaper, unsave: false)
+}
+
+public func deleteWallpaper(account: Account, wallpaper: TelegramWallpaper) -> Signal<Void, NoError> {
+    return saveUnsaveWallpaper(account: account, wallpaper: wallpaper, unsave: true)
+}
+
+private func saveUnsaveWallpaper(account: Account, wallpaper: TelegramWallpaper, unsave: Bool) -> Signal<Void, NoError> {
+    guard case let .file(_, _, _, _, wallpaperSlug, _, _) = wallpaper, let slug = wallpaperSlug else {
+        return .complete()
+    }
+    return account.network.request(Api.functions.account.saveWallPaper(wallpaper: Api.InputWallPaper.inputWallPaperSlug(slug: slug), unsave: unsave ? Api.Bool.boolTrue : Api.Bool.boolFalse))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .complete()
+    }
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
     }
 }
