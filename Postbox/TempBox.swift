@@ -21,7 +21,7 @@ private final class TempBoxFileContext {
 }
 
 private struct TempBoxKey: Equatable, Hashable {
-    let path: String
+    let path: String?
     let fileName: String
 }
 
@@ -60,6 +60,31 @@ private final class TempBoxContexts {
             self.contexts[key] = context
             let _ = try? FileManager.default.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
             let _ = try? FileManager.default.linkItem(atPath: path, toPath: context.path)
+        }
+        let id = self.nextId
+        self.nextId += 1
+        context.subscribers.insert(id)
+        return TempBoxFile(key: key, id: id, path: context.path)
+    }
+    
+    func tempFile(basePath: String, fileName: String) -> TempBoxFile {
+        let key = TempBoxKey(path: nil, fileName: fileName)
+        let context: TempBoxFileContext
+        if let current = self.contexts[key] {
+            context = current
+        } else {
+            let id = self.nextId
+            self.nextId += 1
+            let dirName = "\(id)"
+            let dirPath = basePath + "/" + dirName
+            var cleanName = fileName
+            if cleanName.hasPrefix("..") {
+                cleanName = "__" + String(cleanName[cleanName.index(cleanName.startIndex, offsetBy: 2)])
+            }
+            cleanName = cleanName.replacingOccurrences(of: "/", with: "_")
+            context = TempBoxFileContext(directory: dirPath, fileName: cleanName)
+            self.contexts[key] = context
+            let _ = try? FileManager.default.createDirectory(atPath: dirPath, withIntermediateDirectories: true, attributes: nil)
         }
         let id = self.nextId
         self.nextId += 1
@@ -122,6 +147,12 @@ public final class TempBox {
     public func file(path: String, fileName: String) -> TempBoxFile {
         return self.contexts.with { contexts in
             return contexts.file(basePath: self.currentBasePath, path: path, fileName: fileName)
+        }
+    }
+    
+    public func tempFile(fileName: String) -> TempBoxFile {
+        return self.contexts.with { contexts in
+            return contexts.tempFile(basePath: self.currentBasePath, fileName: fileName)
         }
     }
     

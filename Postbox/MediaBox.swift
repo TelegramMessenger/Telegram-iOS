@@ -40,6 +40,10 @@ public enum FetchResourceSourceType {
     case remote
 }
 
+public enum FetchResourceError {
+    case generic
+}
+
 private struct ResourceStorePaths {
     let partial: String
     let complete: String
@@ -73,6 +77,7 @@ public enum MediaResourceDataFetchResult {
     case resourceSizeUpdated(Int)
     case replaceHeader(data: Data, range: Range<Int>)
     case moveLocalFile(path: String)
+    case moveTempFile(file: TempBoxFile)
     case copyLocalItem(MediaResourceDataFetchCopyLocalItem)
     case reset
 }
@@ -476,7 +481,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResourceData(_ resource: MediaResource, in range: Range<Int>, priority: MediaBoxFetchPriority = .default, parameters: MediaResourceFetchParameters?) -> Signal<Void, NoError> {
+    public func fetchedResourceData(_ resource: MediaResource, in range: Range<Int>, priority: MediaBoxFetchPriority = .default, parameters: MediaResourceFetchParameters?) -> Signal<Void, FetchResourceError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -582,7 +587,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResource(_ resource: MediaResource, parameters: MediaResourceFetchParameters?, implNext: Bool = false) -> Signal<FetchResourceSourceType, NoError> {
+    public func fetchedResource(_ resource: MediaResource, parameters: MediaResourceFetchParameters?, implNext: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -604,7 +609,7 @@ public final class MediaBox {
                                 return fetch(resource, ranges, parameters)
                             }
                         }, error: { _ in
-                            subscriber.putCompletion()
+                            subscriber.putError(.generic)
                         }, completed: {
                             if implNext {
                                 subscriber.putNext(.remote)

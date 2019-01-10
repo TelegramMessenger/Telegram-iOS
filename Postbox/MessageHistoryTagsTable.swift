@@ -131,6 +131,153 @@ class MessageHistoryTagsTable: Table {
         return (indices: entries, lower: lower, upper: upper)
     }
     
+    func indicesInRange(_ tagMask: MessageTags, peerIds: [PeerId], fromBoundary: EntriesInRangeBoundary, toBoundary: EntriesInRangeBoundary, count: Int) -> [MessageIndex] {
+        if peerIds.count == 1 {
+            let fromKey: ValueBoxKey
+            switch fromBoundary {
+                case let .index(index):
+                    fromKey = self.key(tagMask, index: index.withPeerId(peerIds[0]))
+                case .lowerBound:
+                    fromKey = self.lowerBound(tagMask, peerId: peerIds[0])
+                case .upperBound:
+                    fromKey = self.upperBound(tagMask, peerId: peerIds[0])
+            }
+            
+            let toKey: ValueBoxKey
+            switch toBoundary {
+                case let .index(index):
+                    toKey = self.key(tagMask, index: index.withPeerId(peerIds[0]))
+                case .lowerBound:
+                    toKey = self.lowerBound(tagMask, peerId: peerIds[0])
+                case .upperBound:
+                    toKey = self.upperBound(tagMask, peerId: peerIds[0])
+            }
+            
+            var indices: [MessageIndex] = []
+            self.valueBox.range(self.table, start: fromKey, end: toKey, keys: { key in
+                let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4))
+                indices.append(index)
+                return true
+            }, limit: count)
+            return indices
+        } else if fromBoundary != toBoundary {
+            var hasNoIndicesLeft = Set<PeerId>()
+            var indices: [MessageIndex] = []
+            for peerId in peerIds {
+                if let index = self.nextIndices(tagMask: tagMask, peerId: peerId, fromBoundary: fromBoundary, toBoundary: toBoundary, count: 1).first {
+                    indices.append(index)
+                } else {
+                    hasNoIndicesLeft.insert(peerId)
+                }
+            }
+            
+            indices.sort()
+            if fromBoundary > toBoundary {
+                indices.reverse()
+            }
+            
+            var i = 0
+            while i < indices.count {
+                var initialBoundary: EntriesInRangeBoundary = .index(indices[i])
+                let nextBoundary: EntriesInRangeBoundary
+                if i == indices.count - 1 {
+                    nextBoundary = toBoundary
+                } else {
+                    nextBoundary = .index(indices[i + 1].withPeerId(indices[i].id.peerId))
+                }
+                var addIndices: [MessageIndex] = []
+                inner: while true {
+                    let result = self.nextIndices(tagMask: tagMask, peerId: indices[i].id.peerId, fromBoundary: initialBoundary, toBoundary: nextBoundary, count: 16)
+                    if result.isEmpty {
+                        break inner
+                    } else {
+                        addIndices.append(contentsOf: result)
+                        initialBoundary = .index(result[result.count - 1])
+                    }
+                    if i + addIndices.count > count {
+                        break inner
+                    }
+                }
+                if fromBoundary < toBoundary {
+                    for index in addIndices {
+                        assert(index > indices[i])
+                        assert(EntriesInRangeBoundary.index(index) < nextBoundary)
+                    }
+                } else {
+                    for index in addIndices {
+                        assert(index < indices[i])
+                        assert(EntriesInRangeBoundary.index(index) > nextBoundary)
+                    }
+                }
+                indices.insert(contentsOf: addIndices, at: i + 1)
+                
+                if !hasNoIndicesLeft.contains(indices[i].id.peerId) {
+                    let futureBoundary: MessageIndex = addIndices.last ?? indices[i]
+                    if let index = self.nextIndices(tagMask: tagMask, peerId: indices[i].id.peerId, fromBoundary: .index(futureBoundary), toBoundary: toBoundary, count: 1).first {
+                        if fromBoundary < toBoundary {
+                            let insertionIndex = binaryInsertionIndex(indices, searchItem: index)
+                            indices.insert(index, at: insertionIndex)
+                        } else {
+                            let insertionIndex = binaryInsertionIndexReverse(indices, searchItem: index)
+                            indices.insert(index, at: insertionIndex)
+                        }
+                    } else {
+                        hasNoIndicesLeft.insert(indices[i].id.peerId)
+                    }
+                }
+                
+                i += 1 + addIndices.count
+                if i >= count {
+                    break
+                }
+            }
+            if indices.count > count {
+                indices.removeLast(indices.count - count)
+            }
+            if fromBoundary < toBoundary {
+                assert(indices == indices.sorted())
+            } else {
+                assert(indices == indices.sorted().reversed())
+            }
+            
+            return indices
+        } else {
+            return []
+        }
+    }
+    
+    private func nextIndices(tagMask: MessageTags, peerId: PeerId, fromBoundary: EntriesInRangeBoundary, toBoundary: EntriesInRangeBoundary, count: Int) -> [MessageIndex] {
+        var result: [MessageIndex] = []
+        
+        let fromKey: ValueBoxKey
+        switch fromBoundary {
+            case let .index(index):
+                fromKey = self.key(tagMask, index: index.withPeerId(peerId))
+            case .lowerBound:
+                fromKey = self.lowerBound(tagMask, peerId: peerId)
+            case .upperBound:
+                fromKey = self.upperBound(tagMask, peerId: peerId)
+        }
+        
+        let toKey: ValueBoxKey
+        switch toBoundary {
+            case let .index(index):
+                toKey = self.key(tagMask, index: index.withPeerId(peerId))
+            case .lowerBound:
+                toKey = self.lowerBound(tagMask, peerId: peerId)
+            case .upperBound:
+                toKey = self.upperBound(tagMask, peerId: peerId)
+        }
+        
+        self.valueBox.range(self.table, start: fromKey, end: toKey, keys: { key in
+            let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4))
+            result.append(index)
+            return true
+        }, limit: count)
+        
+        return result
+    }
+    
     func earlierIndices(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [MessageIndex] {
         var indices: [MessageIndex] = []
         let key: ValueBoxKey
