@@ -19,6 +19,7 @@
 #include "vbitmap.h"
 #include <string.h>
 #include "vglobal.h"
+#include "vdrawhelper.h"
 
 V_BEGIN_NAMESPACE
 
@@ -99,6 +100,35 @@ struct VBitmap::Impl {
     {
         //@TODO
     }
+
+    void updateLuma() {
+        if (mFormat != VBitmap::Format::ARGB32_Premultiplied) return;
+
+        for (uint col = 0 ; col < mHeight ; col++) {
+            uint *pixel = (uint *) (mData + mStride * col);
+            for (uint row = 0 ; row < mWidth; row++) {
+                int alpha = vAlpha(*pixel);
+                if (alpha == 0) {
+                    pixel++;
+                    continue;
+                }
+
+                int red = vRed(*pixel);
+                int green = vGreen(*pixel);
+                int blue = vBlue(*pixel);
+
+                if (alpha != 255) {
+                    //un multiply
+                    red = (red * 255) / alpha;
+                    green = (green * 255) / alpha;
+                    blue = (blue * 255) / alpha;
+                }
+                int luminosity = (0.299*red + 0.587*green + 0.114*blue);
+                *pixel = luminosity << 24;
+                pixel++;
+            }
+        }
+    }
 };
 
 VBitmap::VBitmap(uint width, uint height, VBitmap::Format format)
@@ -163,6 +193,22 @@ VBitmap::Format VBitmap::format() const
 void VBitmap::fill(uint pixel)
 {
     if (mImpl) mImpl->fill(pixel);
+}
+
+/*
+ * This is special function which converts
+ * RGB value to Luminosity and stores it in
+ * the Alpha component of the pixel.
+ * After this conversion the bitmap data is no more
+ * in RGB space. but the Alpha component contains the
+ *  Luminosity value of the pixel in HSL color space.
+ * NOTE: this api has its own special usecase
+ * make sure you know what you are doing before using
+ * this api.
+ */
+void VBitmap::updateLuma()
+{
+    if (mImpl) mImpl->updateLuma();
 }
 
 V_END_NAMESPACE

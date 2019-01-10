@@ -46,6 +46,7 @@ public:
     uchar *         data() const;
 
     void    fill(uint pixel);
+    void    updateLuma();
 private:
     struct Impl;
     std::shared_ptr<Impl> mImpl;
