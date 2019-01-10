@@ -104,8 +104,8 @@
 		09F79A0921C829C700820234 /* GalleryNavigationRecipientNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */; };
 		09F79A0B21C832F400820234 /* WebSearchGalleryFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0A21C832F400820234 /* WebSearchGalleryFooterContentNode.swift */; };
 		09F79A0D21C88E8900820234 /* LegacyWebSearchEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0C21C88E8900820234 /* LegacyWebSearchEditor.swift */; };
-		09F85B9F21E76ADB00D73170 /* BlurView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F85B9721E76AD900D73170 /* BlurView.swift */; };
 		09F85BA521E7821500D73170 /* ThemeGridSelectionPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F85BA421E7821500D73170 /* ThemeGridSelectionPanelNode.swift */; };
+		09F85BA721E7DA5F00D73170 /* BlurredImageNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
@@ -1217,8 +1217,8 @@
 		09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryNavigationRecipientNode.swift; sourceTree = "<group>"; };
 		09F79A0A21C832F400820234 /* WebSearchGalleryFooterContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchGalleryFooterContentNode.swift; sourceTree = "<group>"; };
 		09F79A0C21C88E8900820234 /* LegacyWebSearchEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWebSearchEditor.swift; sourceTree = "<group>"; };
-		09F85B9721E76AD900D73170 /* BlurView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlurView.swift; sourceTree = "<group>"; };
 		09F85BA421E7821500D73170 /* ThemeGridSelectionPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeGridSelectionPanelNode.swift; sourceTree = "<group>"; };
+		09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredImageNode.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
 		9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExcetionSettingsController.swift; sourceTree = "<group>"; };
@@ -3109,7 +3109,7 @@
 				D06F31E52135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift */,
 				D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */,
 				D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */,
-				09F85B9721E76AD900D73170 /* BlurView.swift */,
+				09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";
@@ -5454,6 +5454,7 @@
 				D0EC6D6E1EB9F58800EBF1C3 /* AuthorizationSequencePhoneEntryControllerNode.swift in Sources */,
 				D0B85C211FF70BEC00E795B4 /* AuthorizationSequenceAwaitingAccountResetControllerNode.swift in Sources */,
 				D0EC6D6F1EB9F58800EBF1C3 /* AuthorizationSequenceCodeEntryController.swift in Sources */,
+				09F85BA721E7DA5F00D73170 /* BlurredImageNode.swift in Sources */,
 				D0C26D5E1FDF49E7004ABF18 /* DateFormat.swift in Sources */,
 				D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */,
 				D0EC6D701EB9F58800EBF1C3 /* AuthorizationSequenceCodeEntryControllerNode.swift in Sources */,
@@ -5680,7 +5681,6 @@
 				D0EC6DD71EB9F58900EBF1C3 /* VerticalListContextResultsChatInputPanelItem.swift in Sources */,
 				D0EC6DD81EB9F58900EBF1C3 /* VerticalListContextResultsChatInputPanelButtonItem.swift in Sources */,
 				D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */,
-				09F85B9F21E76ADB00D73170 /* BlurView.swift in Sources */,
 				D0B2F76220506E2A00D3BFB9 /* MediaInputSettings.swift in Sources */,
 				09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */,
 				D0BFAE4E20AB1D7B00793CF2 /* DisabledContextResultsChatInputContextPanelNode.swift in Sources */,

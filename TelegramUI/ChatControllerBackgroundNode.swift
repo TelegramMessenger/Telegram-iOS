@@ -26,7 +26,9 @@ final class ChatBackgroundNode: ASDisplayNode {
                     
                     self.contentNode.view.addMotionEffect(group)
                 } else {
-                    
+                    for effect in self.contentNode.view.motionEffects {
+                        self.contentNode.view.removeMotionEffect(effect)
+                    }
                 }
             }
         }

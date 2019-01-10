@@ -35,7 +35,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
     let imageNode: TransformImageNode
     private let statusNode: RadialStatusNode
     
-    let blurView: DynamicBlurView
+    //let blurView: DynamicBlurView
     
     let segmentedControlColor = Promise<UIColor>(.white)
     
@@ -49,7 +49,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
         
-        self.blurView = DynamicBlurView()
+        //self.blurView = DynamicBlurView()
         
         super.init()
         
@@ -175,41 +175,41 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
     }
     
     func setBlurEnabled(_ enabled: Bool, animated: Bool) {
-        if enabled {
-            self.blurView.frame = self.imageNode.frame
-            self.blurView.drawsAsynchronously = true
-            if self.blurView.superview == nil {
-                self.view.addSubview(self.blurView)
-            }
-            
-            if animated {
-                self.blurView.blurRadius = 0.0
-                UIView.animate(withDuration: 0.3) {
-                    self.blurView.blurRadius = 15.0
-                }
-            } else {
-                self.blurView.blurRadius = 15.0
-            }
-        } else {
-            if self.blurView.superview != nil {
-                if animated {
-                    UIView.animate(withDuration: 0.3, animations: {
-                        self.blurView.blurRadius = 0.0
-                    }) { finished in
-                        if finished {
-                            self.blurView.removeFromSuperview()
-                        }
-                    }
-                } else {
-                    self.blurView.removeFromSuperview()
-                }
-            }
-        }
+//        if enabled {
+//            //self.blurView.frame = self.imageNode.frame
+//            self.blurView.drawsAsynchronously = true
+//            if self.blurView.superview == nil {
+//                self.view.addSubview(self.blurView)
+//            }
+//
+//            if animated {
+//                self.blurView.blurRadius = 0.0
+//                UIView.animate(withDuration: 0.3) {
+//                    self.blurView.blurRadius = 15.0
+//                }
+//            } else {
+//                self.blurView.blurRadius = 15.0
+//            }
+//        } else {
+//            if self.blurView.superview != nil {
+//                if animated {
+//                    UIView.animate(withDuration: 0.3, animations: {
+//                        self.blurView.blurRadius = 0.0
+//                    }) { finished in
+//                        if finished {
+//                            self.blurView.removeFromSuperview()
+//                        }
+//                    }
+//                } else {
+//                    self.blurView.removeFromSuperview()
+//                }
+//            }
+//        }
     }
     
     func updateLayout(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.imageNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.blurView.frame = self.imageNode.frame
+        //self.blurView.frame = self.imageNode.frame
         
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)

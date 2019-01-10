@@ -117,10 +117,11 @@ final class WallpaperListPreviewController: ViewController {
                         self?.dismiss()
                     })
                     
-                    if case .wallpaper = strongSelf.source, case .file(_, _, _, _, _, _, _) = wallpaper {
+                    if case .wallpaper = strongSelf.source {
                         let _ = saveWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
                     }
-                case let .asset(asset):
+                    let _ = installWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                default:
                     break
             }
             
@@ -135,7 +136,7 @@ final class WallpaperListPreviewController: ViewController {
                 return
             }
             
-            if case let .wallpaper(wallpaper) = entry, case let .file(_, _, _, _, slug, _, _) = wallpaper, let wallpaperSlug = slug, !wallpaperSlug.isEmpty {
+            if case let .wallpaper(wallpaper) = entry, case .file = wallpaper {
                 strongSelf.wallpaper = entry
                 strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: strongSelf.presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(strongSelf.sharePressed))
             } else {
@@ -151,7 +152,7 @@ final class WallpaperListPreviewController: ViewController {
     }
     
     @objc func sharePressed() {
-        if let entry = self.wallpaper, case let .wallpaper(wallpaper) = entry, case let .file(_, _, _, _, wallpaperSlug, _, _) = wallpaper, let slug = wallpaperSlug, !slug.isEmpty {
+        if let entry = self.wallpaper, case let .wallpaper(wallpaper) = entry, case let .file(_, _, _, slug, _, _) = wallpaper {
             let shareController = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)"))
             self.present(shareController, in: .window(.root), blockInteraction: true)
         }

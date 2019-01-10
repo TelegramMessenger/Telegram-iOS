@@ -68,10 +68,10 @@ final class ThemeGridController: ViewController {
             }
         })
         
-//        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
-//            //self?.activateSearch()
-//        })
-//        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
+            //self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -249,7 +249,7 @@ final class ThemeGridController: ViewController {
     private func shareWallpapers(_ wallpapers: [TelegramWallpaper]) {
         var string: String = ""
         for wallpaper in wallpapers {
-            if  case let .file(_, _, _, _, wallpaperSlug, _, _) = wallpaper, let slug = wallpaperSlug, !slug.isEmpty {
+            if case let .file(_, _, _, slug, _, _) = wallpaper {
                 if !string.isEmpty {
                     string.append("\n")
                 }
