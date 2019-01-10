@@ -64,6 +64,7 @@ public struct Namespaces {
         public static let cachedSentMediaReferences: Int8 = 4
         public static let cachedStickerQueryResults: Int8 = 5
         public static let cachedSecureIdConfiguration: Int8 = 6
+        public static let cachedWallpapersConfiguration: Int8 = 7
     }
     
     struct UnorderedItemList {

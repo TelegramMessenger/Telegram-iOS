@@ -67,6 +67,35 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 }
         }
     }
+    
+    public static func ==(lhs: TelegramWallpaper, rhs: TelegramWallpaper) -> Bool {
+        switch lhs {
+            case .builtin:
+                if case .builtin = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .color(color):
+                if case .color(color) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .image(representations):
+                if case .image(representations) = rhs {
+                    return true
+                } else {
+                    return false
+            }
+            case let .file(lhsId, _, lhsIsCreator, lhsTitle, lhsSlug, _, lhsColor):
+                if case let .file(rhsId, _, rhsIsCreator, rhsTitle, rhsSlug, _, rhsColor) = rhs, lhsId == rhsId, lhsIsCreator == rhsIsCreator, lhsTitle == rhsTitle, lhsSlug == rhsSlug, lhsColor == rhsColor {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 extension TelegramWallpaper {
