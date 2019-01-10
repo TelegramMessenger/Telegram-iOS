@@ -3847,6 +3847,7 @@ Unused sets are archived when you add more.";
 
 "BackgroundPreview.Title" = "Background Preview";
 "BackgroundPreview.SwipeInfo" = "Swipe left or right to preview more backgrounds";
+"BackgroundPreview.MessageText" = "Lorem ipsum dolor sit amet";
 "BackgroundPreview.Still" = "Still";
 "BackgroundPreview.Perspective" = "Perspective";
 "BackgroundPreview.Blurred" = "Blurred";
@@ -3865,3 +3866,5 @@ Unused sets are archived when you add more.";
 "Undo.Undo" = "Undo";
 "Undo.MessagesDeleted" = "Messages deleted";
 "Undo.ChatDeleted" = "Chat deleted";
+
+"AccessDenied.Wallpapers" = "Telegram needs access to your photo library to set a custom wallpaper.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
