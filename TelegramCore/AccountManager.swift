@@ -112,6 +112,7 @@ private var declaredEncodables: Void = {
     declareEncodable(LoggingSettings.self, f: { LoggingSettings(decoder: $0) })
     declareEncodable(CachedLocalizationInfos.self, f: { CachedLocalizationInfos(decoder: $0) })
     declareEncodable(CachedSecureIdConfiguration.self, f: { CachedSecureIdConfiguration(decoder: $0) })
+    declareEncodable(CachedWallpapersConfiguration.self, f: { CachedWallpapersConfiguration(decoder: $0) })
     declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
     declareEncodable(ContentPrivacySettings.self, f: { ContentPrivacySettings(decoder: $0) })
     declareEncodable(TelegramDeviceContactImportedData.self, f: { TelegramDeviceContactImportedData(decoder: $0) })

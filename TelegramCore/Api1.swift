@@ -5489,8 +5489,8 @@ extension Api {
         case channelParticipant(userId: Int32, date: Int32)
         case channelParticipantSelf(userId: Int32, inviterId: Int32, date: Int32)
         case channelParticipantCreator(userId: Int32)
-        case channelParticipantAdmin(flags: Int32, userId: Int32, inviterId: Int32, promotedBy: Int32, date: Int32, adminRights: Api.ChatAdminRights)
         case channelParticipantBanned(flags: Int32, userId: Int32, kickedBy: Int32, date: Int32, bannedRights: Api.ChatBannedRights)
+        case channelParticipantAdmin(flags: Int32, userId: Int32, inviterId: Int32?, promotedBy: Int32, date: Int32, adminRights: Api.ChatAdminRights)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5515,17 +5515,6 @@ extension Api {
                     }
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     break
-                case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
-                    if boxed {
-                        buffer.appendInt32(1674301556)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeInt32(inviterId, buffer: buffer, boxed: false)
-                    serializeInt32(promotedBy, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    adminRights.serialize(buffer, true)
-                    break
                 case .channelParticipantBanned(let flags, let userId, let kickedBy, let date, let bannedRights):
                     if boxed {
                         buffer.appendInt32(470789295)
@@ -5535,6 +5524,17 @@ extension Api {
                     serializeInt32(kickedBy, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     bannedRights.serialize(buffer, true)
+                    break
+                case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
+                    if boxed {
+                        buffer.appendInt32(1571450403)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(inviterId!, buffer: buffer, boxed: false)}
+                    serializeInt32(promotedBy, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    adminRights.serialize(buffer, true)
                     break
     }
     }
@@ -5547,10 +5547,10 @@ extension Api {
                 return ("channelParticipantSelf", [("userId", userId), ("inviterId", inviterId), ("date", date)])
                 case .channelParticipantCreator(let userId):
                 return ("channelParticipantCreator", [("userId", userId)])
-                case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
-                return ("channelParticipantAdmin", [("flags", flags), ("userId", userId), ("inviterId", inviterId), ("promotedBy", promotedBy), ("date", date), ("adminRights", adminRights)])
                 case .channelParticipantBanned(let flags, let userId, let kickedBy, let date, let bannedRights):
                 return ("channelParticipantBanned", [("flags", flags), ("userId", userId), ("kickedBy", kickedBy), ("date", date), ("bannedRights", bannedRights)])
+                case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights):
+                return ("channelParticipantAdmin", [("flags", flags), ("userId", userId), ("inviterId", inviterId), ("promotedBy", promotedBy), ("date", date), ("adminRights", adminRights)])
     }
     }
     
@@ -5596,34 +5596,6 @@ extension Api {
                 return nil
             }
         }
-        static func parse_channelParticipantAdmin(_ reader: BufferReader) -> ChannelParticipant? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: Api.ChatAdminRights?
-            if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.ChannelParticipant.channelParticipantAdmin(flags: _1!, userId: _2!, inviterId: _3!, promotedBy: _4!, date: _5!, adminRights: _6!)
-            }
-            else {
-                return nil
-            }
-        }
         static func parse_channelParticipantBanned(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -5644,6 +5616,34 @@ extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.ChannelParticipant.channelParticipantBanned(flags: _1!, userId: _2!, kickedBy: _3!, date: _4!, bannedRights: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_channelParticipantAdmin(_ reader: BufferReader) -> ChannelParticipant? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Api.ChatAdminRights?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.ChannelParticipant.channelParticipantAdmin(flags: _1!, userId: _2!, inviterId: _3, promotedBy: _4!, date: _5!, adminRights: _6!)
             }
             else {
                 return nil
@@ -6490,6 +6490,7 @@ extension Api {
         case channelParticipantsBanned(q: String)
         case channelParticipantsSearch(q: String)
         case channelParticipantsKicked(q: String)
+        case channelParticipantsContacts(q: String)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6529,6 +6530,12 @@ extension Api {
                     }
                     serializeString(q, buffer: buffer, boxed: false)
                     break
+                case .channelParticipantsContacts(let q):
+                    if boxed {
+                        buffer.appendInt32(-1150621555)
+                    }
+                    serializeString(q, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -6546,6 +6553,8 @@ extension Api {
                 return ("channelParticipantsSearch", [("q", q)])
                 case .channelParticipantsKicked(let q):
                 return ("channelParticipantsKicked", [("q", q)])
+                case .channelParticipantsContacts(let q):
+                return ("channelParticipantsContacts", [("q", q)])
     }
     }
     
@@ -6586,6 +6595,17 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelParticipantsFilter.channelParticipantsKicked(q: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_channelParticipantsContacts(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelParticipantsFilter.channelParticipantsContacts(q: _1!)
             }
             else {
                 return nil
@@ -11214,42 +11234,17 @@ extension Api {
     
     }
     enum WallPaper: TypeConstructorDescription {
-        case wallPaper(id: Int32, title: String, sizes: [Api.PhotoSize], color: Int32)
-        case wallPaperSolid(id: Int32, title: String, bgColor: Int32, color: Int32)
-        case wallPaperDocument(flags: Int32, id: Int64, accessHash: Int64, title: String, slug: String, document: Api.Document, color: Int32?)
+        case wallPaper(id: Int64, flags: Int32, accessHash: Int64, slug: String, document: Api.Document, color: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .wallPaper(let id, let title, let sizes, let color):
+                case .wallPaper(let id, let flags, let accessHash, let slug, let document, let color):
                     if boxed {
-                        buffer.appendInt32(-860866985)
+                        buffer.appendInt32(-1695098544)
                     }
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sizes.count))
-                    for item in sizes {
-                        item.serialize(buffer, true)
-                    }
-                    serializeInt32(color, buffer: buffer, boxed: false)
-                    break
-                case .wallPaperSolid(let id, let title, let bgColor, let color):
-                    if boxed {
-                        buffer.appendInt32(1662091044)
-                    }
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    serializeInt32(bgColor, buffer: buffer, boxed: false)
-                    serializeInt32(color, buffer: buffer, boxed: false)
-                    break
-                case .wallPaperDocument(let flags, let id, let accessHash, let title, let slug, let document, let color):
-                    if boxed {
-                        buffer.appendInt32(-1338674530)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
                     serializeString(slug, buffer: buffer, boxed: false)
                     document.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
@@ -11259,83 +11254,34 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .wallPaper(let id, let title, let sizes, let color):
-                return ("wallPaper", [("id", id), ("title", title), ("sizes", sizes), ("color", color)])
-                case .wallPaperSolid(let id, let title, let bgColor, let color):
-                return ("wallPaperSolid", [("id", id), ("title", title), ("bgColor", bgColor), ("color", color)])
-                case .wallPaperDocument(let flags, let id, let accessHash, let title, let slug, let document, let color):
-                return ("wallPaperDocument", [("flags", flags), ("id", id), ("accessHash", accessHash), ("title", title), ("slug", slug), ("document", document), ("color", color)])
+                case .wallPaper(let id, let flags, let accessHash, let slug, let document, let color):
+                return ("wallPaper", [("id", id), ("flags", flags), ("accessHash", accessHash), ("slug", slug), ("document", document), ("color", color)])
     }
     }
     
         static func parse_wallPaper(_ reader: BufferReader) -> WallPaper? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: [Api.PhotoSize]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
-            }
-            var _4: Int32?
-            _4 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.WallPaper.wallPaper(id: _1!, title: _2!, sizes: _3!, color: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_wallPaperSolid(_ reader: BufferReader) -> WallPaper? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.WallPaper.wallPaperSolid(id: _1!, title: _2!, bgColor: _3!, color: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        static func parse_wallPaperDocument(_ reader: BufferReader) -> WallPaper? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
             var _3: Int64?
             _3 = reader.readInt64()
             var _4: String?
             _4 = parseString(reader)
-            var _5: String?
-            _5 = parseString(reader)
-            var _6: Api.Document?
+            var _5: Api.Document?
             if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.Document
+                _5 = Api.parse(reader, signature: signature) as? Api.Document
             }
-            var _7: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_7 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_2!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.WallPaper.wallPaperDocument(flags: _1!, id: _2!, accessHash: _3!, title: _4!, slug: _5!, document: _6!, color: _7)
+            let _c6 = (Int(_2!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.WallPaper.wallPaper(id: _1!, flags: _2!, accessHash: _3!, slug: _4!, document: _5!, color: _6)
             }
             else {
                 return nil
