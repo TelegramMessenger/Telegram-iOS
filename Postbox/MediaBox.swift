@@ -871,7 +871,28 @@ public final class MediaBox {
     public func clearFileContexts() -> Signal<Void, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
+                for (id, _) in self.fileContexts {
+                    let paths = self.storePathsForId(id.id)
+                    unlink(paths.complete)
+                    unlink(paths.partial)
+                    unlink(paths.partial + ".meta")
+                }
                 self.fileContexts.removeAll()
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
+    public func fileConxtets() -> Signal<[(partial: String, complete: String)], NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                var result: [(partial: String, complete: String)] = []
+                for (id, _) in self.fileContexts {
+                    let paths = self.storePathsForId(id.id)
+                    result.append((partial: paths.partial, complete: paths.complete))
+                }
+                subscriber.putNext(result)
                 subscriber.putCompletion()
             }
             return EmptyDisposable
