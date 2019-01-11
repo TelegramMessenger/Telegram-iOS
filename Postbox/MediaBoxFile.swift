@@ -639,6 +639,9 @@ final class MediaBoxPartialFile {
                                 strongSelf.write(offset: 0, data: data, dataRange: range)
                             case let .moveLocalFile(path):
                                 strongSelf.moveLocalFile(tempPath: path)
+                            case let .moveTempFile(file):
+                                strongSelf.moveLocalFile(tempPath: file.path)
+                                TempBox.shared.dispose(file)
                             case let .copyLocalItem(item):
                                 strongSelf.copyLocalItem(item)
                         }
