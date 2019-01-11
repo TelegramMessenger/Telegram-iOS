@@ -132,7 +132,7 @@ bool LOTCompItem::render(const lottie::Surface &surface)
     }
 
     VPainter painter(&bitmap);
-    mRootLayer->render(&painter, {}, {}, nullptr);
+    mRootLayer->render(&painter, {}, {});
 
     return true;
 }
@@ -250,20 +250,8 @@ void LOTLayerItem::buildLayerNode()
     }
 }
 
-void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &inheritMatte, LOTLayerItem *matteSource)
+void LOTLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &matteRle)
 {
-    VRle matteRle;
-    if (matteSource) {
-        mDrawableList.clear();
-        matteSource->renderList(mDrawableList);
-        for (auto &i : mDrawableList) {
-            matteRle = matteRle + i->rle();
-        }
-        if (!inheritMatte.empty())
-            matteRle = matteRle & inheritMatte;
-    } else {
-        matteRle = inheritMatte;
-    }
     mDrawableList.clear();
     renderList(mDrawableList);
 
@@ -505,26 +493,8 @@ void LOTCompLayerItem::buildLayerNode()
     }
 }
 
-void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &inheritMatte, LOTLayerItem *matteSource)
+void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const VRle &matteRle)
 {
-    VRle matteRle;
-    if (matteSource) {
-        mDrawableList.clear();
-        matteSource->renderList(mDrawableList);
-        for (auto &i : mDrawableList) {
-            matteRle = matteRle + i->rle();
-        }
-
-        if (matteType() == MatteType::AlphaInv ) {
-            matteRle = VRle::toRle(painter->clipBoundingRect()) - matteRle;
-        }
-
-        if (!inheritMatte.empty())
-            matteRle = matteRle & inheritMatte;
-    } else {
-        matteRle = inheritMatte;
-    }
-
     VRle mask;
     if (mLayerMask) {
         mask = mLayerMask->maskRle(painter->clipBoundingRect());
@@ -547,20 +517,75 @@ void LOTCompLayerItem::render(VPainter *painter, const VRle &inheritMask, const 
 
     LOTLayerItem *matteLayer = nullptr;
     for (const auto &layer : mLayers) {
-        if (!matteLayer && layer->hasMatte()) {
+        if (layer->hasMatte()) {
+            if (matteLayer) {
+                vWarning << "two consecutive layer has matter : not supported";
+            }
             matteLayer = layer.get();
             continue;
         }
 
-        if (matteLayer) {
-            if (matteLayer->visible() && layer->visible())
-                matteLayer->render(painter, mask, matteRle, layer.get());
-            matteLayer = nullptr;
-        } else {
-            if (layer->visible())
-                layer->render(painter, mask, matteRle, nullptr);
+        if (layer->visible()) {
+            if (matteLayer) {
+                if (matteLayer->visible())
+                    renderMatteLayer(painter, mask, matteRle, matteLayer, layer.get());
+            } else {
+                layer->render(painter, mask, matteRle);
+            }
         }
+
+        matteLayer = nullptr;
     }
+}
+
+void LOTCompLayerItem::renderMatteLayer(VPainter *painter,
+                                        const VRle &mask,
+                                        const VRle &matteRle,
+                                        LOTLayerItem *layer,
+                                        LOTLayerItem *src)
+{
+    VSize size = painter->clipBoundingRect().size();
+    // Decide if we can use fast matte.
+    // 1. draw src layer to matte buffer
+    VPainter srcPainter;
+    VBitmap srcBitmap(size.width(), size.height(), VBitmap::Format::ARGB32_Premultiplied);
+    srcPainter.begin(&srcBitmap);
+    src->render(&srcPainter, mask, matteRle);
+    srcPainter.end();
+
+    // 2. draw layer to layer buffer
+    VPainter layerPainter;
+    VBitmap layerBitmap(size.width(), size.height(), VBitmap::Format::ARGB32_Premultiplied);
+    layerPainter.begin(&layerBitmap);
+    layer->render(&layerPainter, mask, matteRle);
+
+    // 2.1update composition mode
+    switch (layer->matteType()) {
+    case MatteType::Alpha:
+    case MatteType::Luma: {
+        layerPainter.setCompositionMode(VPainter::CompositionMode::CompModeDestIn);
+        break;
+    }
+    case MatteType::AlphaInv:
+    case MatteType::LumaInv: {
+        layerPainter.setCompositionMode(VPainter::CompositionMode::CompModeDestOut);
+        break;
+    }
+    default:
+        break;
+    }
+
+    //2.2 update srcBuffer if the matte is luma type
+    if (layer->matteType() == MatteType::Luma ||
+        layer->matteType() == MatteType::LumaInv) {
+        srcBitmap.updateLuma();
+    }
+
+    // 2.3 draw src buffer as mask
+    layerPainter.drawBitmap(VPoint(), srcBitmap);
+    layerPainter.end();
+    // 3. draw the result buffer into painter
+    painter->drawBitmap(VPoint(), layerBitmap);
 }
 
 void LOTClipperItem::update(const VMatrix &matrix)

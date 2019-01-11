@@ -98,7 +98,7 @@ public:
    VMatrix matrix(int frameNo) const;
    virtual void renderList(std::vector<VDrawable *> &){}
    virtual void updateStaticProperty();
-   virtual void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource);
+   virtual void render(VPainter *painter, const VRle &mask, const VRle &matteRle);
    bool hasMatte() { if (mLayerData->mMatteType == MatteType::None) return false; return true; }
    MatteType matteType() const { return mLayerData->mMatteType;}
    bool visible() const;
@@ -133,10 +133,13 @@ public:
    LOTCompLayerItem(LOTLayerData *layerData);
    void renderList(std::vector<VDrawable *> &list)final;
    void updateStaticProperty() final;
-   void render(VPainter *painter, const VRle &mask, const VRle &inheritMatte, LOTLayerItem *matteSource) final;
+   void render(VPainter *painter, const VRle &mask, const VRle &matteRle) final;
    void buildLayerNode() final;
 protected:
    void updateContent() final;
+private:
+    void renderMatteLayer(VPainter *painter, const VRle &inheritMask, const VRle &matteRle,
+                          LOTLayerItem *layer, LOTLayerItem *src);
 private:
    std::vector<LOTLayerNode *>                  mLayersCNode;
    std::vector<std::unique_ptr<LOTLayerItem>>   mLayers;
