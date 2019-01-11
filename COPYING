@@ -12,4 +12,4 @@ Dependencies and licenses:
 src/vector/                    licenses/COPYING.LGPL
 src/vector/freetype            licenses/COPYING.FTL
 src/vector/pixman              licenses/COPYING.PIX
-src/vector/lottie/rapidjson    licenses/COPYING.RPD
+src/lottie/rapidjson           licenses/COPYING.RPD
