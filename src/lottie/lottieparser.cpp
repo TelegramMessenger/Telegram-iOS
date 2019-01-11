@@ -677,8 +677,13 @@ void LottieParserImpl::parseLayers(LOTCompositionData *comp)
 LottieColor LottieParserImpl::toColor(const char *str)
 {
     LottieColor color;
+    int len = strlen(str);
 
-    RAPIDJSON_ASSERT(strlen(str) == 7);
+    // some resource has empty color string
+    // return a default color for those cases.
+    if (!len) return  color;
+
+    RAPIDJSON_ASSERT(len == 7);
     RAPIDJSON_ASSERT(str[0] == '#');
 
     char tmp[3] = {'\0', '\0', '\0'};
