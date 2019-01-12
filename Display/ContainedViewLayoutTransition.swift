@@ -14,10 +14,10 @@ public enum ContainedViewLayoutTransitionCurve {
 public extension ContainedViewLayoutTransitionCurve {
     var timingFunction: String {
         switch self {
-        case .easeInOut:
-            return kCAMediaTimingFunctionEaseInEaseOut
-        case .spring:
-            return kCAMediaTimingFunctionSpring
+            case .easeInOut:
+                return kCAMediaTimingFunctionEaseInEaseOut
+            case .spring:
+                return kCAMediaTimingFunctionSpring
         }
     }
     

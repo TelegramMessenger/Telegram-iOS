@@ -58,9 +58,11 @@ public final class CollectionIndexNode: ASDisplayNode {
         
         var validTitles = Set<String>()
         
-        var index = 0
+        var currentIndex = 0
         var displayIndex = 0
-        while index < sections.count {
+        var addedLastTitle = false
+        
+        let addTitle: (Int) -> Void = { index in
             let title = sections[index]
             let nodeAndSize: (node: ImmediateTextNode, size: CGSize)
             var animate = false
@@ -81,9 +83,20 @@ public final class CollectionIndexNode: ASDisplayNode {
             if animate {
                 transition.animatePosition(node: nodeAndSize.node, from: previousPosition)
             }
-        
-            index += skipCount
+            
+            currentIndex += skipCount
             displayIndex += 1
+        }
+        
+        while currentIndex < sections.count {
+            if currentIndex == sections.count - 1 {
+                addedLastTitle = true
+            }
+            addTitle(currentIndex)
+        }
+        
+        if !addedLastTitle && sections.count > 0 {
+            addTitle(sections.count - 1)
         }
         
         var removeTitles: [String] = []

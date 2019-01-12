@@ -354,7 +354,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             generatedScrollToItem = nil
         }
         
-        self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: updateLayoutTransition, customScrollToItem: transaction.scrollToItem != nil, itemTransition: transaction.itemTransition, synchronousLoads: transaction.synchronousLoads, updatingLayout: transaction.updateLayout != nil, completion: completion)
+        self.applyPresentationLayoutTransition(self.generatePresentationLayoutTransition(stationaryItems: transaction.stationaryItems, layoutTransactionOffset: layoutTransactionOffset, scrollToItem: generatedScrollToItem), removedNodes: removedNodes, updateLayoutTransition: updateLayoutTransition, customScrollToItem: transaction.scrollToItem != nil, itemTransition: transaction.itemTransition, synchronousLoads: transaction.synchronousLoads, updatingLayout: transaction.updateLayout != nil, completion: completion)
     }
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -376,7 +376,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.applyingContentOffset {
-            self.applyPresentaionLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, customScrollToItem: false, itemTransition: .immediate, synchronousLoads: false, updatingLayout: false, completion: { _ in })
+            self.applyPresentationLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, customScrollToItem: false, itemTransition: .immediate, synchronousLoads: false, updatingLayout: false, completion: { _ in })
         }
     }
     
@@ -759,7 +759,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         return lowestHeaderNode
     }
     
-    private func applyPresentaionLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, customScrollToItem: Bool, itemTransition: ContainedViewLayoutTransition, synchronousLoads: Bool, updatingLayout: Bool, completion: (GridNodeDisplayedItemRange) -> Void) {
+    private func applyPresentationLayoutTransition(_ presentationLayoutTransition: GridNodePresentationLayoutTransition, removedNodes: [GridItemNode], updateLayoutTransition: ContainedViewLayoutTransition?, customScrollToItem: Bool, itemTransition: ContainedViewLayoutTransition, synchronousLoads: Bool, updatingLayout: Bool, completion: (GridNodeDisplayedItemRange) -> Void) {
         let boundsTransition: ContainedViewLayoutTransition = updateLayoutTransition ?? .immediate
         
         var addedNodes = false
@@ -921,13 +921,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             }
             
             if let offset = offset {
-                let timingFunction: String
-                switch curve {
-                    case .easeInOut:
-                        timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-                    case .spring:
-                        timingFunction = kCAMediaTimingFunctionSpring
-                }
+                let timingFunction = curve.timingFunction
                 
                 for (index, itemNode) in self.itemNodes where existingItemIndices.contains(index) {
                     itemNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
@@ -994,14 +988,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 }
             }
         } else if let previousItemFrames = previousItemFrames, case let .animated(duration, curve) = itemTransition {
-            let timingFunction: String
-            switch curve {
-                case .easeInOut:
-                    timingFunction = kCAMediaTimingFunctionEaseInEaseOut
-                case .spring:
-                    timingFunction = kCAMediaTimingFunctionSpring
-            }
-            
+            let timingFunction = curve.timingFunction
             let contentOffset = self.scrollView.contentOffset
             
             for index in self.itemNodes.keys {
