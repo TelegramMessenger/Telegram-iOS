@@ -3845,16 +3845,23 @@ Unused sets are archived when you add more.";
 "EmptyGroupInfo.Line3" = "Public links such as t.me/title";
 "EmptyGroupInfo.Line4" = "Admins with different rights";
 
-"BackgroundPreview.Title" = "Background Preview";
-"BackgroundPreview.SwipeInfo" = "Swipe left or right to preview more backgrounds";
-"BackgroundPreview.MessageText" = "Lorem ipsum dolor sit amet";
-"BackgroundPreview.Still" = "Still";
-"BackgroundPreview.Perspective" = "Perspective";
-"BackgroundPreview.Blurred" = "Blurred";
+"WallpaperPreview.Title" = "Background Preview";
+"WallpaperPreview.SwipeInfo" = "Swipe left or right to preview more backgrounds";
+"WallpaperPreview.MessageText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.Still" = "Still";
+"WallpaperPreview.Perspective" = "Perspective";
+"WallpaperPreview.Blurred" = "Blurred";
 
 "Wallpaper.Search" = "Search Backgrounds";
-"Wallpaper.SetCustomBackground" = "Set Custom Background";
+"Wallpaper.SetColor" = "Set a Color";
+"Wallpaper.SetCustomBackground" = "Choose from Gallery";
 "Wallpaper.SetCustomBackgroundInfo" = "You can set a custom background image and share it with your friends.";
+
+"WallpaperColors.Title" = "Set a Color";
+"WallpaperColors.SetCustomColor" = "Set Custom Color";
+
+"WallpaperSearch.ColorTitle" = "SEARCH BY COLOR";
+"WallpaperSearch.Recent" = "RECENT";
 
 "Channel.AdminLog.DefaultRestrictionsUpdated" = "changed default permissions";
 "Channel.AdminLog.PollStopped" = "%@ stopped poll";
@@ -3868,3 +3875,6 @@ Unused sets are archived when you add more.";
 "Undo.ChatDeleted" = "Chat deleted";
 
 "AccessDenied.Wallpapers" = "Telegram needs access to your photo library to set a custom wallpaper.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
+
+"Conversation.ChatBackground" = "Chat Background";
+"Conversation.ViewBackground" = "VIEW BACKGROUND";
