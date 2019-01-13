@@ -51,6 +51,19 @@ public extension UIColor {
         self.init(red: CGFloat((argb >> 16) & 0xff) / 255.0, green: CGFloat((argb >> 8) & 0xff) / 255.0, blue: CGFloat(argb & 0xff) / 255.0, alpha: CGFloat((argb >> 24) & 0xff) / 255.0)
     }
     
+    convenience init?(hexString: String) {
+        let scanner = Scanner(string: hexString)
+        if hexString.hasPrefix("#") {
+            scanner.scanLocation = 1
+        }
+        var num: UInt32 = 0
+        if scanner.scanHexInt32(&num) {
+            self.init(rgb: num)
+        } else {
+            return nil
+        }
+    }
+    
     var alpha: CGFloat {
         var alpha: CGFloat = 0.0
         if self.getRed(nil, green: nil, blue: nil, alpha: &alpha) {
@@ -60,6 +73,15 @@ public extension UIColor {
         } else {
             return 0.0
         }
+    }
+    
+    var rgb: UInt32 {
+        var red: CGFloat = 0.0
+        var green: CGFloat = 0.0
+        var blue: CGFloat = 0.0
+        self.getRed(&red, green: &green, blue: &blue, alpha: nil)
+        
+        return (UInt32(red * 255.0) << 16) | (UInt32(green * 255.0) << 8) | (UInt32(blue * 255.0))
     }
     
     var argb: UInt32 {

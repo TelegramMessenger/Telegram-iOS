@@ -2349,7 +2349,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         var headerNodesTransition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0)
         
         if let updateSizeAndInsets = updateSizeAndInsets {
-            if self.insets != updateSizeAndInsets.insets || !self.visibleSize.height.isEqual(to: updateSizeAndInsets.size.height) {
+            if self.insets != updateSizeAndInsets.insets || self.headerInsets != updateSizeAndInsets.headerInsets || !self.visibleSize.height.isEqual(to: updateSizeAndInsets.size.height) {
                 let previousVisibleSize = self.visibleSize
                 self.visibleSize = updateSizeAndInsets.size
                 
