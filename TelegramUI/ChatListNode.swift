@@ -990,11 +990,11 @@ final class ChatListNode: ListView {
                         strongSelf.didSetReady = true
                         strongSelf._ready.set(true)
                     }
-                    
+                
                     let isEmpty = transition.chatListView.filteredEntries.isEmpty
                     if strongSelf.wasEmpty != isEmpty {
                         strongSelf.wasEmpty = isEmpty
-                    strongSelf.isEmptyUpdated?(isEmpty)
+                        strongSelf.isEmptyUpdated?(isEmpty)
                     }
                     
                     completion()

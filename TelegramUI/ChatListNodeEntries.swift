@@ -214,10 +214,12 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                     continue loop
                 }
                 var updatedMessage = message
+                var updatedCombinedReadState = combinedReadState
                 if state.pendingClearHistoryPeerIds.contains(index.messageIndex.id.peerId) {
                     updatedMessage = nil
+                    updatedCombinedReadState = nil
                 }
-                result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: updatedMessage, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false))
+                result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: updatedMessage, readState: updatedCombinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false))
             case let .HoleEntry(hole):
                 result.append(.HoleEntry(hole, theme: state.presentationData.theme))
             case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):
@@ -246,10 +248,12 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
             }
         }
     }
-//    if result.count >= 2, case .SearchEntry = result[result.count - 1], case .HoleEntry = result[result.count - 2] {
-//        return []
-//    } else
-    if result.count == 1, case .HoleEntry = result[0] {
+
+//    if result.count == 1, case .HoleEntry = result[0] {
+
+    if result.count >= 1, case .HoleEntry = result[result.count - 1] {
+        return []
+    } else if result.count == 1, case .HoleEntry = result[0] {
         return []
     }
     return result

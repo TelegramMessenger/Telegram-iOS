@@ -3263,22 +3263,36 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
             
             if self.chatDisplayNode.frameForInputActionButton() != nil, self.presentationInterfaceState.interfaceState.mediaRecordingMode == .audio {
-                let _ = (ApplicationSpecificNotice.getChatMediaMediaRecordingTips(postbox: self.account.postbox)
-                |> deliverOnMainQueue).start(next: { [weak self] counter in
-                    guard let strongSelf = self else {
-                        return
+                var canSendMedia = false
+                if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                    if channel.hasBannedPermission(.banSendMedia) == nil {
+                        canSendMedia = true
                     }
-                    var displayTip = false
-                    if counter == 0 {
-                        displayTip = true
-                    } else if counter < 3 && arc4random_uniform(4) == 1 {
-                        displayTip = true
+                } else if let group = self.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                    if !group.hasBannedPermission(.banSendMedia) {
+                        canSendMedia = true
                     }
-                    if displayTip {
-                        let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(postbox: strongSelf.account.postbox).start()
-                        strongSelf.displayMediaRecordingTip()
-                    }
-                })
+                } else {
+                    canSendMedia = true
+                }
+                if canSendMedia {
+                    let _ = (ApplicationSpecificNotice.getChatMediaMediaRecordingTips(postbox: self.account.postbox)
+                    |> deliverOnMainQueue).start(next: { [weak self] counter in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        var displayTip = false
+                        if counter == 0 {
+                            displayTip = true
+                        } else if counter < 3 && arc4random_uniform(4) == 1 {
+                            displayTip = true
+                        }
+                        if displayTip {
+                            let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(postbox: strongSelf.account.postbox).start()
+                            strongSelf.displayMediaRecordingTip()
+                        }
+                    })
+                }
             }
         }
     }
