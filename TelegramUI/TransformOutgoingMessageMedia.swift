@@ -149,7 +149,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                 |> mapToSignal { data -> Signal<AnyMediaReference?, NoError> in
                     if data.complete {
                         if let smallest = smallestImageRepresentation(image.representations), smallest.dimensions.width > 100.0 || smallest.dimensions.height > 100.0 {
-                            let smallestSize = smallest.dimensions.fitted(CGSize(width: 90.0, height: 90.0))
+                            let smallestSize = smallest.dimensions.fitted(CGSize(width: 320.0, height: 320.0))
                             if let fullImage = UIImage(contentsOfFile: data.path), let smallestImage = generateScaledImage(image: fullImage, size: smallestSize, scale: 1.0), let smallestData = compressImageToJPEG(smallestImage, quality: 0.7) {
                                 var representations = image.representations
                                 

@@ -1220,6 +1220,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             if strongSelf.peerView === peerView {
                                 return
                             }
+                            var upgradedToPeerId: PeerId?
+                            if let previous = strongSelf.peerView, let group = previous.peers[previous.peerId] as? TelegramGroup, group.migrationReference == nil, let updatedGroup = peerView.peers[peerView.peerId] as? TelegramGroup, let migrationReference = updatedGroup.migrationReference {
+                                upgradedToPeerId = migrationReference.peerId
+                            }
                             var wasGroupChannel: Bool?
                             if let previousPeerView = strongSelf.peerView, let info = (previousPeerView.peers[previousPeerView.peerId] as? TelegramChannel)?.info {
                                 if case .group = info {
@@ -1306,6 +1310,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             if !strongSelf.didSetChatLocationInfoReady {
                                 strongSelf.didSetChatLocationInfoReady = true
                                 strongSelf._chatLocationInfoReady.set(.single(true))
+                            }
+                            if let upgradedToPeerId = upgradedToPeerId {
+                                if let navigationController = strongSelf.navigationController as? NavigationController {
+                                    var viewControllers = navigationController.viewControllers
+                                    if let index = viewControllers.index(where: { $0 === strongSelf }) {
+                                        viewControllers[index] = ChatController(account: strongSelf.account, chatLocation: .peer(upgradedToPeerId))
+                                        navigationController.setViewControllers(viewControllers, animated: false)
+                                    }
+                                }
                             }
                         }
                     }))
@@ -4000,17 +4013,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     legacyController.bind(controller: controller)
                     legacyController.deferScreenEdgeGestures = [.top]
                     
-                    configureLegacyAssetPicker(controller, account: strongSelf.account, peer: peer, presentWebSearch: { [weak self] in
+                    configureLegacyAssetPicker(controller, account: strongSelf.account, peer: peer, presentWebSearch: { [weak self, weak legacyController] in
                         if let strongSelf = self {
-                            let controller = WebSearchController(account: strongSelf.account, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { [weak self, weak legacyController] results, selectionState, editingState in
+                            let controller = WebSearchController(account: strongSelf.account, peer: peer, configuration: searchBotsConfiguration, mode: .media(completion: { results, selectionState, editingState in
                                 if let legacyController = legacyController {
                                     legacyController.dismiss()
                                 }
-                                legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
+                                legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { result in
                                     if let strongSelf = self {
                                         strongSelf.enqueueChatContextResult(results, result, hideVia: true)
                                     }
-                                }, enqueueMediaMessages: { [weak self] signals in
+                                }, enqueueMediaMessages: { signals in
                                     if let strongSelf = self {
                                         strongSelf.enqueueMediaMessages(signals: signals)
                                     }

@@ -362,9 +362,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     canStop = true
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 } else if let _ = chatPeer as? TelegramSecretChat {
-                    deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteSecretChat
+                    deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 }
-                items.append(DeleteChatPeerActionSheetItem(account: strongSelf.account, peer: mainPeer, strings: strongSelf.presentationData.strings))
+                items.append(DeleteChatPeerActionSheetItem(account: strongSelf.account, peer: mainPeer, chatPeer: chatPeer, strings: strongSelf.presentationData.strings))
                 if canClear {
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
@@ -1063,13 +1063,25 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
         let statusText: String
         if let channel = chatPeer as? TelegramChannel {
-            if case .broadcast = channel.info {
-                statusText = self.presentationData.strings.Undo_LeftChannel
+            if deleteGloballyIfPossible {
+                if case .broadcast = channel.info {
+                    statusText = self.presentationData.strings.Undo_DeletedChannel
+                } else {
+                    statusText = self.presentationData.strings.Undo_DeletedGroup
+                }
+            } else {
+                if case .broadcast = channel.info {
+                    statusText = self.presentationData.strings.Undo_LeftChannel
+                } else {
+                    statusText = self.presentationData.strings.Undo_LeftGroup
+                }
+            }
+        } else if let _ = chatPeer as? TelegramGroup {
+            if deleteGloballyIfPossible {
+                statusText = self.presentationData.strings.Undo_DeletedGroup
             } else {
                 statusText = self.presentationData.strings.Undo_LeftGroup
             }
-        } else if let _ = chatPeer as? TelegramGroup {
-            statusText = self.presentationData.strings.Undo_LeftGroup
         } else if let _ = chatPeer as? TelegramSecretChat {
             statusText = self.presentationData.strings.Undo_SecretChatDeleted
         } else {
