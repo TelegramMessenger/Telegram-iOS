@@ -101,7 +101,7 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
     switch rhs {
         case .chat, .chatEmpty, .chatForbidden, .channelForbidden:
             return parseTelegramGroupOrChannel(chat: rhs)
-        case let .channel(flags, _, accessHash, title, username, photo, date, version, restrictionReason, adminRights, bannedRights, defaultBannedRights, _/*feed*//*, feedId*/):
+        case let .channel(flags, _, accessHash, title, username, photo, _, _, _, _, _, defaultBannedRights, _/*feed*//*, feedId*/):
             if accessHash != nil && (flags & (1 << 12)) == 0 {
                 return parseTelegramGroupOrChannel(chat: rhs)
             } else if let lhs = lhs as? TelegramChannel {

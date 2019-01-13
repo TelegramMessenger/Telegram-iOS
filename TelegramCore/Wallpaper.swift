@@ -100,7 +100,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
 
 extension TelegramWallpaper {
     init(apiWallpaper: Api.WallPaper) {
-        switch apiWallpaper {
+        self = TelegramWallpaper.builtin
+        /*switch apiWallpaper {
             case let .wallPaper(wallPaper):
                 self = .image(telegramMediaImageRepresentationsFromApiSizes(wallPaper.sizes).1)
             case let .wallPaperSolid(_, _, bgColor, _):
@@ -112,6 +113,6 @@ extension TelegramWallpaper {
                     assertionFailure()
                     self = .color(0xffffff)
                 }
-        }
+        }*/
     }
 }

@@ -225,7 +225,7 @@ public class Buffer: CustomStringConvertible {
                     i += 1
                 }
                 if i < _size {
-                    string += "..."
+                    string += "...\(_size)b"
                 }
             } else {
                 string += "<null>"
