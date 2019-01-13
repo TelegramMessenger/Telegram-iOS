@@ -13,10 +13,11 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let fontSize: PresentationFontSize
     let wallpaper: TelegramWallpaper
+    let wallpaperMode: PresentationWallpaperMode
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    init(account: Account, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(account: Account, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, wallpaperMode: PresentationWallpaperMode, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
         self.account = account
         self.theme = theme
         self.componentTheme = componentTheme
@@ -24,6 +25,7 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.fontSize = fontSize
         self.wallpaper = wallpaper
+        self.wallpaperMode = wallpaperMode
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
     }
@@ -93,7 +95,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         self.containerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
         self.controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openWallpaper: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
@@ -124,8 +126,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             var updatedBackgroundImage: UIImage?
-            if currentItem?.wallpaper != item.wallpaper {
-                updatedBackgroundImage = UIImage()
+            if currentItem?.wallpaper != item.wallpaper || currentItem?.wallpaperMode != item.wallpaperMode {
                 switch item.wallpaper {
                     case .builtin:
                         if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
@@ -138,12 +139,30 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         })
                     case let .image(representations):
                         if let largest = largestImageRepresentation(representations) {
-                            if let path = item.account.postbox.mediaBox.completedResourcePath(largest.resource) {
+                            if case .blurred = item.wallpaperMode {
+                                var image: UIImage?
+                                let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                                    if data.complete {
+                                        image = UIImage(contentsOfFile: data.path)?.precomposed()
+                                    }
+                                })
+                                updatedBackgroundImage = image
+                            }
+                            if updatedBackgroundImage == nil, let path = item.account.postbox.mediaBox.completedResourcePath(largest.resource) {
                                 updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                             }
                         }
                     case let .file(file):
-                        if let path = item.account.postbox.mediaBox.completedResourcePath(file.file.resource) {
+                        if case .blurred = item.wallpaperMode {
+                            var image: UIImage?
+                            let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                                if data.complete {
+                                    image = UIImage(contentsOfFile: data.path)?.precomposed()
+                                }
+                            })
+                            updatedBackgroundImage = image
+                        }
+                        if updatedBackgroundImage == nil, let path = item.account.postbox.mediaBox.completedResourcePath(file.file.resource) {
                             updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                         }
                 }

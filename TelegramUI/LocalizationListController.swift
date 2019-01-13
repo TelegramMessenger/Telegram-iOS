@@ -119,9 +119,6 @@ public class LocalizationListController: ViewController {
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         })
-        self._ready.set(self.controllerNode._ready.get())
-        
-        self.displayNodeDidLoad()
         
         self.controllerNode.listNode.visibleContentOffsetChanged = { [weak self] offset in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
@@ -134,6 +131,10 @@ public class LocalizationListController: ViewController {
                 let _ = fixNavigationSearchableListNodeScrolling(strongSelf.controllerNode.listNode, searchNode: searchContentNode)
             }
         }
+        
+        self._ready.set(self.controllerNode._ready.get())
+        
+        self.displayNodeDidLoad()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

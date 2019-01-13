@@ -60,7 +60,7 @@ final class ChatBackgroundNode: ASDisplayNode {
 private var backgroundImageForWallpaper: (TelegramWallpaper, UIImage)?
 private var serviceBackgroundColorForWallpaper: (TelegramWallpaper, UIColor)?
 
-func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, postbox: Postbox) -> UIImage? {
+func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: PresentationWallpaperMode = .still, postbox: Postbox) -> UIImage? {
     var backgroundImage: UIImage?
     if wallpaper == backgroundImageForWallpaper?.0 {
         backgroundImage = backgroundImageForWallpaper?.1
@@ -77,12 +77,30 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, postbox: Postbo
                 })
             case let .image(representations):
                 if let largest = largestImageRepresentation(representations) {
-                    if let path = postbox.mediaBox.completedResourcePath(largest.resource) {
+                    if case .blurred = mode {
+                        var image: UIImage?
+                        let _ = postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                            if data.complete {
+                                image = UIImage(contentsOfFile: data.path)?.precomposed()
+                            }
+                        })
+                        backgroundImage = image
+                    }
+                    if backgroundImage == nil, let path = postbox.mediaBox.completedResourcePath(largest.resource) {
                         backgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                     }
                 }
             case let .file(file):
-                if let path = postbox.mediaBox.completedResourcePath(file.file.resource) {
+                if case .blurred = mode {
+                    var image: UIImage?
+                    let _ = postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                        if data.complete {
+                            image = UIImage(contentsOfFile: data.path)?.precomposed()
+                        }
+                    })
+                    backgroundImage = image
+                }
+                if backgroundImage == nil, let path = postbox.mediaBox.completedResourcePath(file.file.resource) {
                     backgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                 }
         }

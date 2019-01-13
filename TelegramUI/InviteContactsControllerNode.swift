@@ -6,14 +6,11 @@ import TelegramCore
 import SwiftSignalKit
 
 private enum InviteContactsEntryId: Hashable {
-    case search
     case option(index: Int)
     case contactId(String)
     
     var hashValue: Int {
         switch self {
-            case .search:
-                return 0
             case let .option(index):
                 return (index + 2).hashValue
             case let .contactId(contactId):
@@ -27,51 +24,39 @@ private enum InviteContactsEntryId: Hashable {
     
     static func ==(lhs: InviteContactsEntryId, rhs: InviteContactsEntryId) -> Bool {
         switch lhs {
-        case .search:
-            switch rhs {
-                case .search:
+            case let .option(index):
+                if case .option(index) = rhs {
                     return true
-                default:
+                } else {
                     return false
-            }
-        case let .option(index):
-            if case .option(index) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .contactId(lhsId):
-            switch rhs {
-                case let .contactId(rhsId):
-                    return lhsId == rhsId
-                default:
-                    return false
-            }
+                }
+            case let .contactId(lhsId):
+                switch rhs {
+                    case let .contactId(rhsId):
+                        return lhsId == rhsId
+                    default:
+                        return false
+                }
         }
     }
 }
 
 private final class InviteContactsInteraction {
-    let activateSearch: () -> Void
     let toggleContact: (String) -> Void
     let shareTelegram: () -> Void
     
-    init(activateSearch: @escaping () -> Void, toggleContact: @escaping (String) -> Void, shareTelegram: @escaping () -> Void) {
-        self.activateSearch = activateSearch
+    init(toggleContact: @escaping (String) -> Void, shareTelegram: @escaping () -> Void) {
         self.toggleContact = toggleContact
         self.shareTelegram = shareTelegram
     }
 }
 
 private enum InviteContactsEntry: Comparable, Identifiable {
-    case search(PresentationTheme, PresentationStrings)
     case option(Int, ContactListAdditionalOption, PresentationTheme, PresentationStrings)
     case peer(Int, DeviceContactStableId, DeviceContactBasicData, Int32, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
     
     var stableId: InviteContactsEntryId {
         switch self {
-            case .search:
-                return .search
             case let .option(index, _, _, _):
                 return .option(index: index)
             case let .peer(_, id, _, _, _, _, _, _, _):
@@ -81,34 +66,24 @@ private enum InviteContactsEntry: Comparable, Identifiable {
     
     func item(account: Account, interaction: InviteContactsInteraction) -> ListViewItem {
         switch self {
-        case let .search(theme, strings):
-            return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
-                interaction.activateSearch()
-            })
-        case let .option(_, option, theme, _):
-            return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, header: nil, action: option.action)
-        case let .peer(_, id, contact, count, selection, theme, strings, nameSortOrder, nameDisplayOrder):
-            let status: ContactsPeerItemStatus
-            if count != 0 {
-                status = .custom(strings.Contacts_ImportersCount(count))
-            } else {
-                status = .none
-            }
-            let peer = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-            return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
-                interaction.toggleContact(id)
-            })
+            case let .option(_, option, theme, _):
+                return ContactListActionItem(theme: theme, title: option.title, icon: option.icon, header: nil, action: option.action)
+            case let .peer(_, id, contact, count, selection, theme, strings, nameSortOrder, nameDisplayOrder):
+                let status: ContactsPeerItemStatus
+                if count != 0 {
+                    status = .custom(strings.Contacts_ImportersCount(count))
+                } else {
+                    status = .none
+                }
+                let peer = TelegramUser(id: PeerId(namespace: -1, id: 0), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                    interaction.toggleContact(id)
+                })
         }
     }
     
     static func ==(lhs: InviteContactsEntry, rhs: InviteContactsEntry) -> Bool {
         switch lhs {
-            case let .search(lhsTheme, lhsStrings):
-                if case let .search(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
-                    return true
-                } else {
-                    return false
-                }
             case let .option(lhsIndex, lhsOption, lhsTheme, lhsStrings):
                 if case let .option(rhsIndex, rhsOption, rhsTheme, rhsStrings) = rhs, lhsIndex == rhsIndex, lhsOption == rhsOption, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
                     return true
@@ -117,61 +92,57 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 }
             case let .peer(lhsIndex, lhsId, lhsContact, lhsCount, lhsSelection, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder):
                 switch rhs {
-                case let .peer(rhsIndex, rhsId, rhsContact, rhsCount, rhsSelection, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder):
-                    if lhsIndex != rhsIndex {
+                    case let .peer(rhsIndex, rhsId, rhsContact, rhsCount, rhsSelection, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder):
+                        if lhsIndex != rhsIndex {
+                            return false
+                        }
+                        if lhsId != rhsId {
+                            return false
+                        }
+                        if lhsContact != rhsContact {
+                            return false
+                        }
+                        if lhsCount != rhsCount {
+                            return false
+                        }
+                        if lhsSelection != rhsSelection {
+                            return false
+                        }
+                        if lhsTheme !== rhsTheme {
+                            return false
+                        }
+                        if lhsStrings !== rhsStrings {
+                            return false
+                        }
+                        if lhsSortOrder != rhsSortOrder {
+                            return false
+                        }
+                        if lhsDisplayOrder != rhsDisplayOrder {
+                            return false
+                        }
+                        return true
+                    default:
                         return false
-                    }
-                    if lhsId != rhsId {
-                        return false
-                    }
-                    if lhsContact != rhsContact {
-                        return false
-                    }
-                    if lhsCount != rhsCount {
-                        return false
-                    }
-                    if lhsSelection != rhsSelection {
-                        return false
-                    }
-                    if lhsTheme !== rhsTheme {
-                        return false
-                    }
-                    if lhsStrings !== rhsStrings {
-                        return false
-                    }
-                    if lhsSortOrder != rhsSortOrder {
-                        return false
-                    }
-                    if lhsDisplayOrder != rhsDisplayOrder {
-                        return false
-                    }
-                    return true
-                default:
-                    return false
             }
         }
     }
     
     static func <(lhs: InviteContactsEntry, rhs: InviteContactsEntry) -> Bool {
         switch lhs {
-        case .search:
-            return true
-        case let .option(lhsIndex, _, _, _):
-            switch rhs {
-            case .search:
-                return false
-            case let .option(rhsIndex, _, _, _):
-                return lhsIndex < rhsIndex
-            case .peer:
-                return true
-            }
-        case let .peer(lhsIndex, _, _, _, _, _, _, _, _):
-            switch rhs {
-            case .search, .option:
-                return false
-            case let .peer(rhsIndex, _, _, _, _, _, _, _, _):
-                return lhsIndex < rhsIndex
-            }
+            case let .option(lhsIndex, _, _, _):
+                switch rhs {
+                    case let .option(rhsIndex, _, _, _):
+                        return lhsIndex < rhsIndex
+                    case .peer:
+                        return true
+                }
+            case let .peer(lhsIndex, _, _, _, _, _, _, _, _):
+                switch rhs {
+                    case .option:
+                        return false
+                    case let .peer(rhsIndex, _, _, _, _, _, _, _, _):
+                        return lhsIndex < rhsIndex
+                }
         }
     }
 }
@@ -261,7 +232,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
     private let account: Account
     private var searchDisplayController: SearchDisplayController?
     
-    private var validLayout: (ContainerViewLayout, CGFloat)?
+    private var validLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
     var navigationBar: NavigationBar?
     
@@ -280,8 +251,8 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 self.selectionStatePromise.set(.single(self.selectionState))
                 self.countPanelNode.badge = "\(self.selectionState.selectedContactIndices.count)"
                 if oldValue.selectedContactIndices.isEmpty != self.selectionState.selectedContactIndices.isEmpty {
-                    if let (layout, navigationHeight) = self.validLayout {
-                        self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
+                    if let (layout, navigationHeight, actualNavigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
                 }
             }
@@ -359,9 +330,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         let themeAndStringsPromise = self.themeAndStringsPromise
         let previousEntries = Atomic<[InviteContactsEntry]?>(value: nil)
         
-        let interaction = InviteContactsInteraction(activateSearch: { [weak self] in
-            self?.requestActivateSearch?()
-        }, toggleContact: { [weak self] id in
+        let interaction = InviteContactsInteraction(toggleContact: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.selectionState = strongSelf.selectionState.withToggledContactId(id)
             }
@@ -479,17 +448,16 @@ final class InviteContactsControllerNode: ASDisplayNode {
     
     private func updateThemeAndStrings() {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        
-        self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.searchDisplayController?.updatePresentationData(self.presentationData)
     }
     
     func scrollToTop() {
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = (layout, navigationBarHeight)
+        self.validLayout = (layout, navigationBarHeight, actualNavigationBarHeight)
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
@@ -500,6 +468,9 @@ final class InviteContactsControllerNode: ASDisplayNode {
         
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
+        
+        var headerInsets = layout.insets(options: [.input])
+        headerInsets.top += actualNavigationBarHeight
         
         let countPanelHeight = self.countPanelNode.updateLayout(width: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
         if self.selectionState.selectedContactIndices.isEmpty {
@@ -534,7 +505,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
             listViewCurve = .Default(duration: nil)
         }
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: listViewCurve)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
@@ -544,11 +515,11 @@ final class InviteContactsControllerNode: ASDisplayNode {
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
-        guard let (containerLayout, navigationBarHeight) = self.validLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
+        guard let (containerLayout, navigationBarHeight, _) = self.validLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.deviceContacts], openPeer: { _ in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.deviceContacts], openPeer: { _ in
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()

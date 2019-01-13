@@ -41,6 +41,9 @@ public class ComposeController: ViewController {
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateExpansionProgress(1.0, animated: true)
+                }
                 strongSelf.contactsNode.contactListNode.scrollToTop()
             }
         }

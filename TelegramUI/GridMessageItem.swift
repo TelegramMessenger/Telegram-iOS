@@ -7,19 +7,30 @@ import SwiftSignalKit
 
 private let videoAccessoryFont: UIFont = Font.regular(11)
 
-private final class GridMessageVideoAccessoryNode : ASDisplayNode {
-    
+private let videoAccessoryBackgorund: UIImage? = {
+    let diameter: CGFloat = 8.0
+    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
+        context.setBlendMode(.copy)
+        context.setFillColor(UIColor.clear.cgColor)
+        context.fill(CGRect(origin: CGPoint(), size: size))
+        context.setBlendMode(.normal)
+        context.setFillColor(UIColor(white: 0.0, alpha: 0.6).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    }, opaque: false)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
+}()
+
+private final class GridMessageVideoAccessoryNode : ASImageNode {
     private let textNode: ImmediateTextNode = ImmediateTextNode()
 
     override init() {
         super.init()
+        self.image = videoAccessoryBackgorund
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 1
         self.textNode.isUserInteractionEnabled = false
         self.textNode.textAlignment = .left
         self.textNode.lineSpacing = 0.1
         self.addSubnode(self.textNode)
-        self.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
     }
     
     var contentSize: CGSize {
@@ -356,8 +367,21 @@ final class GridMessageItemNode: GridItemNode {
     func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if self.messageId == id {
             let imageNode = self.imageNode
-            return (self.imageNode, { [weak imageNode] in
-                return imageNode?.view.snapshotContentTree(unhide: true)
+            return (self.imageNode, { [weak self, weak imageNode] in
+                var statusNodeHidden = false
+                var accessoryHidden = false
+                if let strongSelf = self {
+                    statusNodeHidden = strongSelf.statusNode.isHidden
+                    accessoryHidden = strongSelf.videoAccessoryNode.isHidden
+                    strongSelf.statusNode.isHidden = true
+                    strongSelf.videoAccessoryNode.isHidden = true
+                }
+                let view = imageNode?.view.snapshotContentTree(unhide: true)
+                if let strongSelf = self {
+                    strongSelf.statusNode.isHidden = statusNodeHidden
+                    strongSelf.videoAccessoryNode.isHidden = accessoryHidden
+                }
+                return view
             })
         } else {
             return nil
@@ -367,8 +391,18 @@ final class GridMessageItemNode: GridItemNode {
     func updateHiddenMedia() {
         if let controllerInteraction = self.controllerInteraction, let messageId = self.messageId, controllerInteraction.hiddenMedia[messageId] != nil {
             self.imageNode.isHidden = true
+            self.videoAccessoryNode.alpha = 0.0
+            self.statusNode.alpha = 0.0
         } else {
             self.imageNode.isHidden = false
+            if self.statusNode.alpha < 1.0 {
+                self.statusNode.alpha = 1.0
+                self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+            if self.videoAccessoryNode.alpha < 1.0 {
+                self.videoAccessoryNode.alpha = 1.0
+                self.videoAccessoryNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
     }
     

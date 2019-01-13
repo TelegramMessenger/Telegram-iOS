@@ -5,10 +5,12 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import Photos
+import LegacyComponents
 
 enum WallpaperEntry: Equatable {
     case wallpaper(TelegramWallpaper)
     case asset(PHAsset, UIImage?)
+    case contextResult(ChatContextResult)
     
     public static func ==(lhs: WallpaperEntry, rhs: WallpaperEntry) -> Bool {
         switch lhs {
@@ -24,6 +26,12 @@ enum WallpaperEntry: Equatable {
                 } else {
                     return false
                 }
+            case let .contextResult(lhsResult):
+                if case let .contextResult(rhsResult) = rhs, lhsResult.id == rhsResult.id {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -32,52 +40,60 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
     let wallpaper: WallpaperEntry
     private var fetchDisposable: Disposable?
     private var statusDisposable: Disposable?
+    let wrapperNode: ASDisplayNode
     let imageNode: TransformImageNode
-    private let statusNode: RadialStatusNode
+    let cropNode: WallpaperCropNode
+    private var contentSize: CGSize?
     
-    //let blurView: DynamicBlurView
+    private let statusNode: RadialStatusNode
+    private let blurredNode: BlurredImageNode
     
     let segmentedControlColor = Promise<UIColor>(.white)
     
     init(account: Account, wallpaper: WallpaperEntry) {
         self.wallpaper = wallpaper
+        self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
+        
+        self.cropNode = WallpaperCropNode()
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
         
-        //self.blurView = DynamicBlurView()
+        self.blurredNode = BlurredImageNode()
         
         super.init()
         
         self.clipsToBounds = true
         self.backgroundColor = .black
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.statusNode)
         
         let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
         let fetchSignal: Signal<FetchResourceSourceType, FetchResourceError>
         let statusSignal: Signal<MediaResourceStatus, NoError>
         let displaySize: CGSize
+        let contentSize: CGSize
         switch wallpaper {
             case let .wallpaper(wallpaper):
                 switch wallpaper {
                     case .builtin:
                         displaySize = CGSize(width: 640.0, height: 1136.0)
+                        contentSize = displaySize
                         signal = settingsBuiltinWallpaperImage(account: account)
                         fetchSignal = .complete()
                         statusSignal = .single(.Local)
                     case let .color(color):
                         displaySize = CGSize(width: 1.0, height: 1.0)
+                        contentSize = displaySize
                         signal = .never()
                         fetchSignal = .complete()
                         statusSignal = .single(.Local)
                         self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
                     case let .file(file):
                         let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
+                        contentSize = dimensions
                         displaySize = dimensions.dividedByScreenScale().integralFloor
                         
                         var convertedRepresentations: [ImageRepresentationWithReference] = []
@@ -90,6 +106,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                         statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
                     case let .image(representations):
                         if let largestSize = largestImageRepresentation(representations) {
+                            contentSize = largestSize.dimensions
                             displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
                             
                             let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
@@ -102,21 +119,97 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                             }
                             statusSignal = account.postbox.mediaBox.resourceStatus(largestSize.resource)
                         } else {
-                            displaySize = CGSize(width: 100.0, height: 100.0)
+                            displaySize = CGSize(width: 1.0, height: 1.0)
+                            contentSize = displaySize
                             signal = .never()
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                         }
                 }
-            case let .asset(asset, thumbnailImage):
+            case let .asset(asset, _):
                 let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
+                contentSize = dimensions
                 displaySize = dimensions.dividedByScreenScale().integralFloor
                 signal = photoWallpaper(postbox: account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
                 fetchSignal = .complete()
                 statusSignal = .single(.Local)
+            
+                self.wrapperNode.addSubnode(self.cropNode)
+            case let .contextResult(result):
+                var imageDimensions: CGSize?
+                var imageResource: TelegramMediaResource?
+                var thumbnailDimensions: CGSize?
+                var thumbnailResource: TelegramMediaResource?
+                switch result {
+                    case let .externalReference(_, _, _, _, _, _, content, thumbnail, _):
+                        if let content = content {
+                            imageResource = content.resource
+                        }
+                        if let thumbnail = thumbnail {
+                            thumbnailResource = thumbnail.resource
+                            thumbnailDimensions = thumbnail.dimensions
+                        }
+                        if let dimensions = content?.dimensions {
+                            imageDimensions = dimensions
+                        }
+                    case let .internalReference(_, _, _, _, _, image, _, _):
+                        if let image = image {
+                            if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 1000.0, height: 800.0)) {
+                                imageDimensions = imageRepresentation.dimensions
+                                imageResource = imageRepresentation.resource
+                            }
+                            if let thumbnailRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0)) {
+                                thumbnailDimensions = thumbnailRepresentation.dimensions
+                                thumbnailResource = thumbnailRepresentation.resource
+                            }
+                        }
+                }
+                
+                if let imageResource = imageResource, let imageDimensions = imageDimensions {
+                    contentSize = imageDimensions
+                    displaySize = imageDimensions.dividedByScreenScale().integralFloor
+                    
+                    var representations: [TelegramMediaImageRepresentation] = []
+                    if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
+                        representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource))
+                    }
+                    representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
+                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
+                    
+                    signal = chatMessagePhoto(postbox: account.postbox, photoReference: .standalone(media: tmpImage))
+                    fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
+                    statusSignal = account.postbox.mediaBox.resourceStatus(imageResource)
+                } else {
+                    displaySize = CGSize(width: 1.0, height: 1.0)
+                    contentSize = displaySize
+                    signal = .never()
+                    fetchSignal = .complete()
+                    statusSignal = .single(.Local)
+                }
+                self.wrapperNode.addSubnode(self.cropNode)
         }
+        self.contentSize = contentSize
+        
+        self.addSubnode(self.wrapperNode)
+        if self.cropNode.supernode == nil {
+            self.imageNode.contentMode = .scaleAspectFill
+            self.wrapperNode.addSubnode(self.imageNode)
+        }
+        self.wrapperNode.addSubnode(self.statusNode)
+        
         self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
         self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
+        self.imageNode.imageUpdated = { [weak self] image in
+            if let strongSelf = self {
+                var image = image
+                if let scaledImage = image {
+                    if scaledImage.size.width > 2048.0 || scaledImage.size.height > 2048.0 {
+                        image = TGScaleImageToPixelSize(image, scaledImage.size.fitted(CGSize(width: 2048.0, height: 2048.0)))
+                    }
+                }
+                strongSelf.blurredNode.image = image
+            }
+        }
         self.fetchDisposable = fetchSignal.start()
         
         let statusForegroundColor = UIColor.white
@@ -136,7 +229,6 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                 strongSelf.statusNode.transitionToState(state, completion: {})
             }
         })
-        self.imageNode.contentMode = .scaleAspectFill
         
         let segmentedControlColorSignal: Signal<UIColor, NoError>
         if case let .wallpaper(wallpaper) = wallpaper {
@@ -150,6 +242,15 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
     deinit {
         self.fetchDisposable?.dispose()
         self.statusDisposable?.dispose()
+    }
+    
+    var cropRect: CGRect? {
+        switch self.wallpaper {
+            case .asset, .contextResult:
+                return self.cropNode.cropRect
+            default:
+                return nil
+        }
     }
     
     func setParallaxEnabled(_ enabled: Bool) {
@@ -166,50 +267,70 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
             
             let group = UIMotionEffectGroup()
             group.motionEffects = [horizontal, vertical]
-            self.imageNode.view.addMotionEffect(group)
+            self.wrapperNode.view.addMotionEffect(group)
         } else {
             for effect in self.imageNode.view.motionEffects {
-                self.imageNode.view.removeMotionEffect(effect)
+                self.wrapperNode.view.removeMotionEffect(effect)
             }
         }
     }
     
     func setBlurEnabled(_ enabled: Bool, animated: Bool) {
-//        if enabled {
-//            //self.blurView.frame = self.imageNode.frame
-//            self.blurView.drawsAsynchronously = true
-//            if self.blurView.superview == nil {
-//                self.view.addSubview(self.blurView)
-//            }
-//
-//            if animated {
-//                self.blurView.blurRadius = 0.0
-//                UIView.animate(withDuration: 0.3) {
-//                    self.blurView.blurRadius = 15.0
-//                }
-//            } else {
-//                self.blurView.blurRadius = 15.0
-//            }
-//        } else {
-//            if self.blurView.superview != nil {
-//                if animated {
-//                    UIView.animate(withDuration: 0.3, animations: {
-//                        self.blurView.blurRadius = 0.0
-//                    }) { finished in
-//                        if finished {
-//                            self.blurView.removeFromSuperview()
-//                        }
-//                    }
-//                } else {
-//                    self.blurView.removeFromSuperview()
-//                }
-//            }
-//        }
+        let blurRadius: CGFloat = 45.0
+        
+        if enabled {
+            if self.blurredNode.supernode == nil {
+                if self.cropNode.supernode != nil {
+                    self.blurredNode.frame = self.imageNode.bounds
+                    self.imageNode.addSubnode(self.blurredNode)
+                } else {
+                    self.blurredNode.frame = self.imageNode.frame
+                    self.addSubnode(self.blurredNode)
+                }
+            }
+
+            if animated {
+                self.blurredNode.blurView.blurRadius = 0.0
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                    self.blurredNode.blurView.blurRadius = blurRadius
+                }, completion: nil)
+            } else {
+                self.blurredNode.blurView.blurRadius = blurRadius
+            }
+        } else {
+            if self.blurredNode.supernode != nil {
+                if animated {
+                    UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                        self.blurredNode.blurView.blurRadius = 0.0
+                    }, completion: { finished in
+                        if finished {
+                            self.blurredNode.removeFromSupernode()
+                        }
+                    })
+                } else {
+                    self.blurredNode.removeFromSupernode()
+                }
+            }
+        }
     }
     
     func updateLayout(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        //self.blurView.frame = self.imageNode.frame
+        self.wrapperNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        if self.cropNode.supernode == nil {
+            self.imageNode.frame = self.wrapperNode.bounds
+            self.blurredNode.frame = self.imageNode.frame
+        } else {
+            self.cropNode.frame = self.wrapperNode.bounds
+            self.cropNode.containerLayoutUpdated(layout, transition: transition)
+            
+            if self.cropNode.supernode != nil, let contentSize = self.contentSize, self.cropNode.zoomableContent == nil {
+                let fittedSize = TGScaleToFit(self.cropNode.bounds.size, contentSize)
+                
+                self.cropNode.zoomableContent = (contentSize, self.imageNode)
+                self.cropNode.scrollNode.view.zoom(to: CGRect(x: (contentSize.width - fittedSize.width) / 2.0, y: (contentSize.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height), animated: false)
+            }
+            self.blurredNode.frame = self.imageNode.bounds
+        }
         
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
@@ -220,7 +341,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private let account: Account
     private var presentationData: PresentationData
     private let dismiss: () -> Void
-    private let apply: (WallpaperEntry, PresentationWallpaperMode) -> Void
+    private let apply: (WallpaperEntry, PresentationWallpaperMode, CGRect?) -> Void
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
@@ -251,7 +372,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     }
     private var visibleBackgroundNodesOffset: CGFloat = 0.0
     
-    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void, apply: @escaping (WallpaperEntry, PresentationWallpaperMode) -> Void) {
+    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void, apply: @escaping (WallpaperEntry, PresentationWallpaperMode, CGRect?) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.dismiss = dismiss
@@ -281,7 +402,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         self.toolbarButtonApply = HighlightTrackingButtonNode()
         self.toolbarButtonApply.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Wallpaper_Set, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
         
-        self.segmentedControl = UISegmentedControl(items: [self.presentationData.strings.BackgroundPreview_Still, self.presentationData.strings.BackgroundPreview_Perspective, self.presentationData.strings.BackgroundPreview_Blurred])
+        self.segmentedControl = UISegmentedControl(items: [self.presentationData.strings.WallpaperPreview_Still, self.presentationData.strings.WallpaperPreview_Perspective, self.presentationData.strings.WallpaperPreview_Blurred])
         self.segmentedControl.selectedSegmentIndex = 0
         self.segmentedControl.tintColor = .white
         
@@ -347,6 +468,13 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                 if let mode = mode {
                     self.segmentedControl.selectedSegmentIndex = Int(clamping: mode.rawValue)
                 }
+            case let .slug(slug, file):
+                if let file = file {
+                    let entry = WallpaperEntry.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, slug: slug, file: file, color: nil))
+                    self.wallpapers = [entry]
+                    self.centralWallpaper = entry
+                }
+                self.ready.set(true)
             case let .wallpaper(wallpaper):
                 let entry = WallpaperEntry.wallpaper(wallpaper)
                 self.wallpapers = [entry]
@@ -356,6 +484,10 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                 let entry = WallpaperEntry.asset(asset, thumbnailImage)
                 self.wallpapers = [entry]
                 self.centralWallpaper = entry
+                self.ready.set(true)
+            case let .contextResults(results, central):
+                self.wallpapers = results.map { .contextResult($0) }
+                self.centralWallpaper = WallpaperEntry.contextResult(central)
                 self.ready.set(true)
         }
         if let (layout, navigationHeight) = self.validLayout {
@@ -404,7 +536,11 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     }
     
     func animateIn() {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
+            if let strongSelf = self, strongSelf.segmentedControl.selectedSegmentIndex == 2 {
+                strongSelf.centralNode()?.setBlurEnabled(true, animated: true)
+            }
+        })
     }
     
     func animateOut(completion: @escaping () -> Void) {
@@ -422,7 +558,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         let controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openWallpaper: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
@@ -441,9 +577,9 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         
         let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false)
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: presentationData.strings.BackgroundPreview_MessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: presentationData.strings.WallpaperPreview_MessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: presentationData.strings.BackgroundPreview_SwipeInfo, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: presentationData.strings.WallpaperPreview_SwipeInfo, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {
@@ -489,14 +625,33 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.toolbarButtonApply, frame: applyFrame)
         transition.updateFrame(node: self.toolbarButtonApplyBackground, frame: applyFrame)
         
+        var optionsAvailable = true
+        if let centralWallpaper = centralWallpaper {
+            switch centralWallpaper {
+                case let .wallpaper(wallpaper):
+                    switch wallpaper {
+                        case .color:
+                            optionsAvailable = false
+                        default:
+                            break
+                    }
+                default:
+                    break
+            }
+        }
+        
         var segmentedControlSize = self.segmentedControl.sizeThatFits(layout.size)
         segmentedControlSize.width = max(270.0, segmentedControlSize.width)
         
+        self.segmentedControl.isUserInteractionEnabled = optionsAvailable
+        transition.updateAlpha(layer: self.segmentedControl.layer, alpha: optionsAvailable ? 1.0 : 0.0)
         transition.updateFrame(view: self.segmentedControl, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - segmentedControlSize.width) / 2.0), y: layout.size.height - bottomInset - segmentedControlSize.height - 24.0), size: segmentedControlSize))
         
-        
         if let messageNodes = self.messageNodes {
-            var bottomOffset: CGFloat = layout.size.height - bottomInset - segmentedControlSize.height - 24.0 - 22.0
+            var bottomOffset: CGFloat = layout.size.height - bottomInset - 9.0
+            if optionsAvailable {
+                bottomOffset -= segmentedControlSize.height + 37.0
+            }
             for itemNode in messageNodes {
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset - itemNode.frame.height), size: itemNode.frame.size))
                 bottomOffset -= itemNode.frame.height
@@ -581,27 +736,32 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         return super.hitTest(point, with: event)
     }
     
+    private func centralNode() -> WallpaperBackgroundNode? {
+        for node in self.visibleBackgroundNodes {
+            if node.wallpaper == self.centralWallpaper {
+                return node
+            }
+        }
+        return nil
+    }
+    
     @objc private func indexChanged() {
         guard let mode = PresentationWallpaperMode(rawValue: Int32(self.segmentedControl.selectedSegmentIndex)) else {
             return
         }
         
-        for node in self.visibleBackgroundNodes {
-            if node.wallpaper == self.centralWallpaper {
-                if mode == .perspective {
-                    node.setParallaxEnabled(true)
-                    node.setBlurEnabled(false, animated: true)
-                } else if mode == .blurred {
-                    node.setParallaxEnabled(false)
-                    node.setBlurEnabled(true, animated: true)
-                } else {
-                    node.setParallaxEnabled(false)
-                    node.setBlurEnabled(false, animated: true)
-                }
-                break
+        if let node = self.centralNode() {
+            if mode == .perspective {
+                node.setParallaxEnabled(true)
+                node.setBlurEnabled(false, animated: true)
+            } else if mode == .blurred {
+                node.setParallaxEnabled(false)
+                node.setBlurEnabled(true, animated: true)
+            } else {
+                node.setParallaxEnabled(false)
+                node.setBlurEnabled(false, animated: true)
             }
         }
-        
     }
     
     @objc private func cancelPressed() {
@@ -619,7 +779,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                 default:
                     mode = .still
             }
-            self.apply(wallpaper, mode)
+            self.apply(wallpaper, mode, self.centralNode()?.cropRect)
         }
     }
 }

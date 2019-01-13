@@ -129,7 +129,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     private func updateThemeAndStrings() {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.searchDisplayController?.updatePresentationData(self.presentationData)
         self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         
         self.toolbarBackgroundNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
@@ -215,7 +215,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if self.chatListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peer)
                 }
@@ -242,7 +242,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }, placeholder: placeholderNode)
             
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
                 if let strongSelf = self {
                     switch peer {
                         case let .peer(peer, _):

@@ -193,28 +193,41 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
                     (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 }
             }
-        case let .wallpaper(slug):
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
-            present(controller, nil)
-            let _ = (getWallpaper(account: account, slug: slug)
-            |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
-                controller?.dismiss()
-                let wallpaperController = WallpaperListPreviewController(account: account, source: .wallpaper(wallpaper))
-                present(wallpaperController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-            }, error: { [weak controller] error in
-                controller?.dismiss()
-                
-//                let text: String
-//                switch error {
-//                case .limitExceeded:
-//                    text = presentationData.strings.Login_CodeFloodError
-//                case .generic:
-//                    text = presentationData.strings.Login_UnknownError
-//                }
-//                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-//                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-            })
+        case let .wallpaper(parameter):
+//            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+//            var controller: OverlayStatusController?
+//            
+//            let wallpaperController = WallpaperListPreviewController(account: account, source: .wallpaper(wallpaper))
+//            
+//            
+//            let signal: Signal<TelegramWallpaper, GetWallpaperError>
+//            switch parameter {
+//                case let .slug(slug):
+//                    signal = getWallpaper(account: account, slug: slug)
+//                    controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+//                    present(controller!, nil)
+//                case let .color(color):
+//                    signal = .single(.color(Int32(color.rgb)))
+//            }
+//            
+//            let _ = (signal
+//            |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
+//                controller?.dismiss()
+//                let wallpaperController = WallpaperListPreviewController(account: account, source: .wallpaper(wallpaper))
+//                present(wallpaperController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+//            }, error: { [weak controller] error in
+//                controller?.dismiss()
+//                
+////                let text: String
+////                switch error {
+////                case .limitExceeded:
+////                    text = presentationData.strings.Login_CodeFloodError
+////                case .generic:
+////                    text = presentationData.strings.Login_UnknownError
+////                }
+////                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+////                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+//            })
             dismissInput()
     }
 }

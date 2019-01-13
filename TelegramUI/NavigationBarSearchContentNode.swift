@@ -10,6 +10,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
     var placeholder: String
     
     let placeholderNode: SearchBarPlaceholderNode
+    var placeholderHeight: CGFloat?
     private var disabledOverlay: ASDisplayNode?
     
     private(set) var expansionProgress: CGFloat = 1.0
@@ -43,6 +44,8 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         switch offset {
             case let .known(offset):
                 progress = max(0.0, (self.nominalHeight - offset)) / self.nominalHeight
+            case .none:
+                progress = 1.0
             default:
                 break
         }
@@ -54,7 +57,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         if newProgress != self.expansionProgress {
             self.expansionProgress = newProgress
         
-            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
             if let validLayout = self.validLayout, animated {
                 self.updatePlaceholder(self.expansionProgress, size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: transition)
             }
@@ -74,7 +77,12 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
             }
             if let disabledOverlay = self.disabledOverlay {
                 disabledOverlay.backgroundColor = self.theme?.rootController.navigationBar.backgroundColor.withAlphaComponent(0.4)
-                disabledOverlay.frame = placeholderNode.frame
+                
+                var disabledOverlayFrame = self.placeholderNode.frame
+                if let searchBarHeight = self.placeholderHeight {
+                    disabledOverlayFrame.size.height = searchBarHeight
+                }
+                disabledOverlay.frame = disabledOverlayFrame
             }
         } else if let disabledOverlay = self.disabledOverlay {
             self.disabledOverlay = nil
@@ -96,12 +104,19 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         let fraction = fieldHeight / self.nominalHeight
         let visibleProgress = max(0.0, self.expansionProgress - 1.0 + fraction) / fraction
         
-        let makeLayout = self.placeholderNode.asyncLayout()
-        let applyLayout = makeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.activeNavigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.backgroundColor ?? .clear, transition)
-        applyLayout()
+        let searchBarNodeLayout = self.placeholderNode.asyncLayout()
+        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.activeNavigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.activeNavigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.backgroundColor ?? .clear, transition)
+        searchBarApply()
         
         let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0), size: CGSize(width: baseWidth, height: fieldHeight))
         transition.updateFrame(node: self.placeholderNode, frame: searchBarFrame)
+        
+        self.placeholderHeight = searchBarHeight
+        if let disabledOverlay = self.disabledOverlay {
+            var disabledOverlayFrame = self.placeholderNode.frame
+            disabledOverlayFrame.size.height = searchBarHeight
+            transition.updateFrame(node: disabledOverlay, frame: disabledOverlayFrame)
+        }
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {

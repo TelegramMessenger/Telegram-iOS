@@ -6,7 +6,7 @@ import AsyncDisplayKit
 import TelegramCore
 import LegacyComponents
 
-private func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
+func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
     return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
     |> mapToSignal { results -> Signal<ChatContextResultCollection?, NoError> in
         var collection = existingResults

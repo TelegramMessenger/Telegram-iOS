@@ -297,7 +297,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
         if self.isNodeLoaded {
-            self.chatListDisplayNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
+            self.chatListDisplayNode.updatePresentationData(self.presentationData)
         }
     }
     
@@ -885,9 +885,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         if let searchController = self.chatListDisplayNode.searchDisplayController {
-            if let (view, action) = searchController.previewViewAndActionAtLocation(location) {
+            if let (view, bounds, action) = searchController.previewViewAndActionAtLocation(location) {
                 if let peerId = action as? PeerId, peerId.namespace != Namespaces.Peer.SecretChat {
                     var sourceRect = view.superview!.convert(view.frame, to: sourceView)
+                    sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
                     let chatController = ChatController(account: self.account, chatLocation: .peer(peerId), mode: .standard(previewing: true))
@@ -896,6 +897,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     return (chatController, sourceRect)
                 } else if let messageId = action as? MessageId, messageId.peerId.namespace != Namespaces.Peer.SecretChat {
                     var sourceRect = view.superview!.convert(view.frame, to: sourceView)
+                    sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
                     let chatController = ChatController(account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId, mode: .standard(previewing: true))

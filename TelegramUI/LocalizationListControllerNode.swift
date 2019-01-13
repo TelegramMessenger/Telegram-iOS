@@ -21,13 +21,10 @@ private enum LanguageListEntryType {
 }
 
 private enum LanguageListEntry: Comparable, Identifiable {
-    case search(Int)
     case localization(index: Int, info: LocalizationInfo, type: LanguageListEntryType, selected: Bool, activity: Bool, revealed: Bool, editing: Bool)
     
     var stableId: LanguageListEntryId {
         switch self {
-            case .search:
-                return .search
             case let .localization(_, info, _, _, _, _, _):
                 return .localization(info.languageCode)
         }
@@ -35,8 +32,6 @@ private enum LanguageListEntry: Comparable, Identifiable {
     
     private func index() -> Int {
         switch self {
-            case let .search(index):
-                return index
             case let .localization(index, _, _, _, _, _, _):
                 return index
         }
@@ -48,10 +43,6 @@ private enum LanguageListEntry: Comparable, Identifiable {
     
     func item(theme: PresentationTheme, strings: PresentationStrings, searchMode: Bool, openSearch: @escaping () -> Void, selectLocalization: @escaping (LocalizationInfo) -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void) -> ListViewItem {
         switch self {
-            case .search:
-                return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
-                    openSearch()
-                })
             case let .localization(_, info, type, selected, activity, revealed, editing):
                 return LocalizationListItem(theme: theme, strings: strings, id: info.languageCode, title: info.title, subtitle: info.localizedTitle, checked: selected, activity: activity, editing: LocalizationListItemEditing(editable: !selected && !searchMode && !info.isOfficial, editing: editing, revealed: !selected && revealed, reorderable: false), sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
                     selectLocalization(info)
@@ -178,7 +169,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
     }
     
-    private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.listNode.backgroundColor = theme.chatList.backgroundColor
     }
     
@@ -380,7 +371,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             var existingIds = Set<String>()
             if let localizationListState = (view.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState] as? LocalizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
-                //entries.append(.search(entries.count))
+                
                 let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
                 if availableSavedLocalizations.isEmpty {
                     updateCanStartEditing(nil)
@@ -422,7 +413,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.presentationDataValue.set(.single((presentationData.theme, presentationData.strings)))
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
-        self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: presentationData.strings)
+        self.searchDisplayController?.updatePresentationData(presentationData)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -555,7 +546,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: LocalizationListSearchContainerNode(account: self.account, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: LocalizationListSearchContainerNode(account: self.account, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
             self?.requestDeactivateSearch()
         })
         
@@ -565,7 +556,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 if isSearchBar {
                     strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
                 } else {
-                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
+                    strongSelf.insertSubnode(subnode, belowSubnode: strongSelf.navigationBar)
                 }
             }
         }, placeholder: placeholderNode)
@@ -579,6 +570,6 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
     }
     
     func scrollToTop() {
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 }

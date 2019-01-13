@@ -180,10 +180,16 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
         }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
             self?.openUrl(url)
-            }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message in
-                if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                    openChatInstantPage(account: strongSelf.account, message: message, navigationController: navigationController)
-                }
+        }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message in
+            if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
+                openChatInstantPage(account: strongSelf.account, message: message, navigationController: navigationController)
+            }
+        }, openWallpaper: { [weak self] message in
+            if let strongSelf = self{
+                openChatWallpaper(account: strongSelf.account, message: message, present: { [weak self] c, a in
+                    self?.presentController(c, a)
+                })
+            }
         }, openHashtag: { [weak self] peerName, hashtag in
             guard let strongSelf = self else {
                 return

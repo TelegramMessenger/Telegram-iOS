@@ -134,10 +134,6 @@ struct ChatListNodeState: Equatable {
 private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId?, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
-            case let .SearchEntry(theme, text, isEnabled):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, isEnabled: isEnabled, placeholder: text, activate: {
-                    nodeInteraction.activateSearch()
-                }), directionHint: entry.directionHint)
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd):
                 switch mode {
                     case .chatList:
@@ -217,10 +213,6 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
 private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNodeInteraction, peerGroupId: PeerGroupId?, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
-            case let .SearchEntry(theme, text, isEnabled):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, isEnabled: isEnabled, placeholder: text, activate: {
-                    nodeInteraction.activateSearch()
-                }), directionHint: entry.directionHint)
             case let .PeerEntry(index, presentationData, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo, editing, hasActiveRevealControls, selected, inputActivities, isAd):
                 switch mode {
                     case .chatList:
@@ -808,8 +800,6 @@ final class ChatListNode: ListView {
                             }
                         case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
                             referenceId = .group(groupId)
-                        case .SearchEntry:
-                            beforeAll = true
                         default:
                             break
                     }
@@ -1001,10 +991,7 @@ final class ChatListNode: ListView {
                         strongSelf._ready.set(true)
                     }
                     
-                    var isEmpty = false
-                    if transition.chatListView.filteredEntries.count == 1, case .SearchEntry = transition.chatListView.filteredEntries[0] {
-                        isEmpty = true
-                    }
+                    let isEmpty = transition.chatListView.filteredEntries.isEmpty
                     if strongSelf.wasEmpty != isEmpty {
                         strongSelf.wasEmpty = isEmpty
                     strongSelf.isEmptyUpdated?(isEmpty)

@@ -76,7 +76,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     private func updateTheme() {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        self.searchDisplayController?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.searchDisplayController?.updatePresentationData(presentationData)
         self.dimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
     }
     
@@ -115,7 +115,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         } else {
             categories.insert(.global)
         }
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: categories, openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: categories, openPeer: { [weak self] peer in
             self?.requestOpenPeerFromSearch?(peer)
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {

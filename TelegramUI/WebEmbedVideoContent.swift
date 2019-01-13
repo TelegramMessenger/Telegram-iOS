@@ -81,7 +81,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         
         if let image = webpageContent.image {
             self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image)))
-            self.imageNode.imageUpdated = { [weak self] in
+            self.imageNode.imageUpdated = { [weak self] _ in
                 self?._ready.set(.single(Void()))
             }
         } else {

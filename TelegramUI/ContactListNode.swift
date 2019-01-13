@@ -488,7 +488,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                 entries.append(.option(i, options[i], commonHeader, theme, strings))
             }
         case let .natural(options):
-            orderedPeers = peers.sorted(by: { lhs, rhs in
+            let sortedPeers = peers.sorted(by: { lhs, rhs in
                 let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: sortOrder)
                 if result == .orderedSame {
                     if case let .peer(lhsPeer, _) = lhs, case let .peer(rhsPeer, _) = rhs {
@@ -505,7 +505,11 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                 }
             })
             var headerCache: [unichar: ContactListNameIndexHeader] = [:]
-            for peer in orderedPeers {
+            var startsWithLetter: [ContactListPeer] = []
+            var startsWithOther: [ContactListPeer] = []
+            let hashHeader = "#".utf16.first!
+            
+            for peer in sortedPeers {
                 var indexHeader: unichar = 35
                 switch peer.indexName {
                     case let .title(title, _):
@@ -528,10 +532,16 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
                                 }
                         }
                 }
-                if let scalar = UnicodeScalar(indexHeader), !NSCharacterSet.uppercaseLetters.contains(scalar) {
-                    if let c = "#".utf16.first {
-                        indexHeader = c
+                if let scalar = UnicodeScalar(indexHeader) {
+                    if !NSCharacterSet.uppercaseLetters.contains(scalar) {
+                        indexHeader = hashHeader
+                        startsWithOther.append(peer)
+                    } else {
+                        startsWithLetter.append(peer)
                     }
+                } else {
+                    indexHeader = hashHeader
+                    startsWithOther.append(peer)
                 }
                 let header: ContactListNameIndexHeader
                 if let cached = headerCache[indexHeader] {
@@ -545,6 +555,7 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
             for i in 0 ..< options.count {
                 entries.append(.option(i, options[i], nil, theme, strings))
             }
+            orderedPeers = startsWithLetter + startsWithOther
         case .search:
             orderedPeers = peers
     }
@@ -634,7 +645,7 @@ private func preparedContactListNodeTransition(account: Account, from fromEntrie
     
     var scrollToItem: ListViewScrollToItem?
     if firstTime && shouldFixScroll && toEntries.count >= 1 {
-        scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight - 50.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
+        scrollToItem = ListViewScrollToItem(index: 0, position: .top(-50.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
     }
     
     return ContactsListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, indexSections: indexSections, firstTime: firstTime, isEmpty: isEmpty, scrollToItem: scrollToItem, animation: animation)
@@ -825,7 +836,7 @@ final class ContactListNode: ASDisplayNode {
         super.init()
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
-        //self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         
         self.selectionStateValue = selectionState
         self.selectionStatePromise.set(.single(selectionState))
@@ -850,16 +861,28 @@ final class ContactListNode: ASDisplayNode {
         })
         
         self.indexNode.indexSelected = { [weak self] section in
-            guard let strongSelf = self, let entries = previousEntries.with({ $0 }) else {
+            guard let strongSelf = self, let layout = strongSelf.validLayout, let entries = previousEntries.with({ $0 }) else {
                 return
             }
+            
+            var insets = layout.0.insets(options: [.input])
+            insets.left += layout.0.safeInsets.left
+            insets.right += layout.0.safeInsets.right
+            
+            var headerInsets = layout.1
+            if headerInsets.top == insets.top {
+                headerInsets.top -= navigationBarSearchContentHeight
+            }
+            
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.0.size, insets: insets, headerInsets: headerInsets, duration: 0.0, curve: .Default(duration: nil))
+            
             var index = 0
             var peerIndex = 0
             loop: for entry in entries {
                 switch entry {
                     case .search:
                         if section == CollectionIndexNode.searchIndex {
-                            strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                            strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: index, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                             break loop
                         }
                     case let .peer(_, _, _, header, _, _, _, _, _, _, _):
@@ -867,7 +890,7 @@ final class ContactListNode: ASDisplayNode {
                             if let scalar = UnicodeScalar(header.letter) {
                                 let title = "\(Character(scalar))"
                                 if title == section {
-                                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: peerIndex == 0 ? 0 : index, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: peerIndex == 0 ? 0 : index, position: .top(peerIndex == 0 ? 0.0 : -navigationBarSearchContentHeight), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                                     break loop
                                 }
                             }
@@ -1141,13 +1164,6 @@ final class ContactListNode: ASDisplayNode {
         
         self.listNode.visibleContentOffsetChanged = { [weak self] offset in
             if let strongSelf = self {
-                let atTop: Bool
-                switch offset {
-                    case .none, .unknown:
-                        atTop = false
-                    case let .known(value):
-                        atTop = value <= 0.0
-                }
                 strongSelf.contentOffsetChanged?(offset)
             }
         }
@@ -1193,6 +1209,11 @@ final class ContactListNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
+        
+        var headerInsets = headerInsets
+        if !hadValidLayout {
+            headerInsets.top -= navigationBarSearchContentHeight
+        }
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
@@ -1283,6 +1304,7 @@ final class ContactListNode: ASDisplayNode {
 
                     self.indexNode.update(size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom), color: self.presentationData.theme.list.itemAccentColor, sections: transition.indexSections, transition: .animated(duration: 0.2, curve: .easeInOut))
                 }
+                
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: transition.scrollToItem, updateOpaqueState: nil, completion: { [weak self] _ in
                     if let strongSelf = self {
                         if !strongSelf.didSetReady {

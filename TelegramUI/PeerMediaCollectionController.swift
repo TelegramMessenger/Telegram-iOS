@@ -193,6 +193,12 @@ public class PeerMediaCollectionController: TelegramController {
                 if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.navigationController as? NavigationController, let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
                     openChatInstantPage(account: strongSelf.account, message: message, navigationController: navigationController)
                 }
+            }, openWallpaper: { [weak self] message in
+                if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
+                    openChatWallpaper(account: strongSelf.account, message: message, present: { [weak self] c, a in
+                        self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                    })
+                }
             }, openHashtag: { _, _ in
             }, updateInputState: { _ in
             }, updateInputMode: { _ in

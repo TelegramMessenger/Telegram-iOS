@@ -236,7 +236,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .call, .openMessage:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage:
                             return .waitForSingleTap
                     }
                 }
@@ -1623,6 +1623,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             item.controllerInteraction.openInstantPage(item.message)
                                         }
                                         break loop
+                                    case .wallpaper:
+                                        foundTapAction = true
+                                        if let item = self.item {
+                                            item.controllerInteraction.openWallpaper(item.message)
+                                        }
+                                        break loop
                                     case let .call(peerId):
                                         foundTapAction = true
                                         self.item?.controllerInteraction.callPeer(peerId)
@@ -1675,6 +1681,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             item.controllerInteraction.longTap(.hashtag(hashtag))
                                             break loop
                                         case .instantPage:
+                                            break
+                                        case .wallpaper:
                                             break
                                         case .call:
                                             break

@@ -10,10 +10,10 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
         let scrollToItem: ListViewScrollToItem
         let targetProgress: CGFloat
         if searchNode.expansionProgress < 0.6 {
-            scrollToItem = ListViewScrollToItem(index: 1, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: 0.25), directionHint: .Up)
+            scrollToItem = ListViewScrollToItem(index: 1, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
             targetProgress = 0.0
         } else {
-            scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: true, curve: .Default(duration: 0.25), directionHint: .Up)
+            scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
             targetProgress = 1.0
         }
         searchNode.updateExpansionProgress(targetProgress, animated: true)
@@ -239,6 +239,8 @@ public class ContactsController: ViewController {
                 switch offset {
                     case let .known(offset):
                         progress = max(0.0, (searchContentNode.nominalHeight - max(0.0, offset - 50.0))) / searchContentNode.nominalHeight
+                    case .none:
+                        progress = 1.0
                     default:
                         break
                 }
@@ -277,9 +279,6 @@ public class ContactsController: ViewController {
     
     private func activateSearch() {
         if self.displayNavigationBar {
-            if let scrollToTop = self.scrollToTop {
-                scrollToTop()
-            }
             if let searchContentNode = self.searchContentNode {
                 self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
             }

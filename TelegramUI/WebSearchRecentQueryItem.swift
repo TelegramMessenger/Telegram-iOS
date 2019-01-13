@@ -15,16 +15,18 @@ class WebSearchRecentQueryItem: ListViewItem {
     let strings: PresentationStrings
     let account: Account
     let query: String
-    let controllerInteraction: WebSearchControllerInteraction
+    let tapped: (String) -> Void
+    let deleted: (String) -> Void
     
     let header: ListViewItemHeader?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, query: String, controllerInteraction: WebSearchControllerInteraction, header: ListViewItemHeader) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, query: String, tapped: @escaping (String) -> Void, deleted: @escaping (String) -> Void, header: ListViewItemHeader) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.query = query
-        self.controllerInteraction = controllerInteraction
+        self.tapped = tapped
+        self.deleted = deleted
         self.header = header
     }
     
@@ -62,11 +64,9 @@ class WebSearchRecentQueryItem: ListViewItem {
     
     func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
-        self.controllerInteraction.setSearchQuery(self.query)
+        self.tapped(self.query)
     }
 }
-
-private let separatorHeight = 1.0 / UIScreen.main.scale
 
 class WebSearchRecentQueryItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
@@ -220,7 +220,7 @@ class WebSearchRecentQueryItemNode: ItemListRevealOptionsItemNode {
         if let item = self.item {
             switch option.key {
                 case RevealOptionKey.delete.rawValue:
-                    item.controllerInteraction.deleteRecentQuery(item.query)
+                    item.deleted(item.query)
                 default:
                     break
             }

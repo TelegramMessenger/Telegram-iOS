@@ -837,14 +837,47 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     }
     
     func updateIsHidden(_ isHidden: Bool) {
-        guard let badgeNode = self.badgeNode, badgeNode.isHidden != isHidden else {
-            return
+        if let badgeNode = self.badgeNode, badgeNode.isHidden != isHidden {
+            if isHidden {
+                badgeNode.isHidden = true
+            } else {
+                badgeNode.isHidden = false
+                badgeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
-        if isHidden {
-            badgeNode.isHidden = true
-        } else {
-            badgeNode.isHidden = false
-            badgeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    
+        if let statusNode = self.statusNode, statusNode.isHidden != isHidden {
+            if isHidden {
+                statusNode.isHidden = true
+            } else {
+                statusNode.isHidden = false
+                statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
+    }
+    
+    func transitionNode() -> (ASDisplayNode, () -> UIView?)? {
+        return (self, { [weak self] in
+            var badgeNodeHidden: Bool?
+            if let badgeNode = self?.badgeNode {
+                badgeNodeHidden = badgeNode.isHidden
+                badgeNode.isHidden = true
+            }
+            var statusNodeHidden: Bool?
+            if let statusNode = self?.statusNode {
+                statusNodeHidden = statusNode.isHidden
+                statusNode.isHidden = true
+            }
+            
+            let view = self?.view.snapshotContentTree(unhide: true)
+            
+            if let badgeNode = self?.badgeNode, let badgeNodeHidden = badgeNodeHidden {
+                badgeNode.isHidden = badgeNodeHidden
+            }
+            if let statusNode = self?.statusNode, let statusNodeHidden = statusNodeHidden {
+                statusNode.isHidden = statusNodeHidden
+            }
+            return view
+        })
     }
 }

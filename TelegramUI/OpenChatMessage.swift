@@ -403,3 +403,25 @@ func openChatInstantPage(account: Account, message: Message, navigationControlle
         }
     }
 }
+
+func openChatWallpaper(account: Account, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+    for media in message.media {
+        if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+            let _ = (resolveUrl(account: account, url: content.url)
+            |> deliverOnMainQueue).start(next: { resolvedUrl in
+                if case let .wallpaper(parameter) = resolvedUrl {
+                    let source: WallpaperListPreviewSource
+                    switch parameter {
+                        case let .slug(slug):
+                            source = .slug(slug, content.file)
+                        case let .color(color):
+                            source = .wallpaper(.color(Int32(color.rgb)))
+                    }
+                    
+                    let controller = WallpaperListPreviewController(account: account, source: source)
+                    present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }
+            })
+        }
+    }
+}

@@ -237,10 +237,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
         if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isSemanticallyEqual(to: media) {
-            let interactiveImageNode = self.interactiveImageNode
-            return (self.interactiveImageNode, { [weak interactiveImageNode] in
-                return interactiveImageNode?.view.snapshotContentTree(unhide: true)
-            })
+            return self.interactiveImageNode.transitionNode()
         }
         return nil
     }

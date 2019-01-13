@@ -37,9 +37,6 @@ final class ThemeGridControllerItem: GridItem {
     }
 }
 
-private let avatarFont = Font.medium(18.0)
-private let textFont = Font.regular(11.0)
-
 final class ThemeGridControllerItemNode: GridItemNode {
     private let wallpaperNode: SettingsThemeWallpaperNode
     private var selectionNode: GridMessageSelectionNode?
@@ -127,7 +124,6 @@ final class ThemeGridControllerItemNode: GridItemNode {
             }
         }
     }
-    
     
     override func layout() {
         super.layout()

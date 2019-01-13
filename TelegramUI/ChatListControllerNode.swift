@@ -19,6 +19,7 @@ private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHo
 class ChatListControllerNode: ASDisplayNode {
     private let account: Account
     private let groupId: PeerGroupId?
+    private var presentationData: PresentationData
     
     private var chatListEmptyNode: ChatListEmptyNode?
     let chatListNode: ChatListNode
@@ -35,14 +36,12 @@ class ChatListControllerNode: ASDisplayNode {
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     var requestAddContact: ((String) -> Void)?
     
-    var themeAndStrings: (PresentationTheme, PresentationStrings, dateTimeFormat: PresentationDateTimeFormat)
-    
     init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
         self.account = account
         self.groupId = groupId
-        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+        self.presentationData = presentationData
         
-        self.themeAndStrings = (presentationData.theme, presentationData.strings, presentationData.dateTimeFormat)
+        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         self.controller = controller
         
@@ -61,7 +60,7 @@ class ChatListControllerNode: ASDisplayNode {
             }
             if isEmpty {
                 if strongSelf.chatListEmptyNode == nil {
-                    let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.themeAndStrings.0, strings: strongSelf.themeAndStrings.1)
+                    let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
                     strongSelf.chatListEmptyNode = chatListEmptyNode
                     strongSelf.insertSubnode(chatListEmptyNode, belowSubnode: strongSelf.chatListNode)
                     if let (layout, navigationHeight) = strongSelf.containerLayout {
@@ -83,14 +82,14 @@ class ChatListControllerNode: ASDisplayNode {
         (self.view as? ChatListControllerNodeView)?.controller = self.controller
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
-        self.themeAndStrings = (theme, strings, dateTimeFormat)
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
         
-        self.backgroundColor = theme.chatList.backgroundColor
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
-        self.chatListNode.updateThemeAndStrings(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations)
-        self.searchDisplayController?.updateThemeAndStrings(theme: theme, strings: strings)
-        self.chatListEmptyNode?.updateThemeAndStrings(theme: theme, strings: strings)
+        self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
+        self.searchDisplayController?.updatePresentationData(presentationData)
+        self.chatListEmptyNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -147,7 +146,7 @@ class ChatListControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChatListSearchContainerNode(account: self.account, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(account: self.account, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)
         }, openRecentPeerOptions: { [weak self] peer in
             self?.requestOpenRecentPeerOptions?(peer)

@@ -16,7 +16,7 @@ public struct TransformImageNodeContentAnimations: OptionSet {
 }
 
 public class TransformImageNode: ASDisplayNode {
-    public var imageUpdated: (() -> Void)?
+    public var imageUpdated: ((UIImage?) -> Void)?
     public var contentAnimations: TransformImageNodeContentAnimations = []
     private var disposable = MetaDisposable()
     
@@ -99,16 +99,18 @@ public class TransformImageNode: ASDisplayNode {
                         })
                     }
                     
+                    var imageUpdate: UIImage?
                     if let (transform, arguments, image) = next {
                         strongSelf.currentTransform = transform
                         strongSelf.currentArguments = arguments
                         strongSelf.contents = image?.cgImage
+                        imageUpdate = image
                     }
                     if let _ = strongSelf.overlayColor {
                         strongSelf.applyOverlayColor(animated: false)
                     }
                     if let imageUpdated = strongSelf.imageUpdated {
-                        imageUpdated()
+                        imageUpdated(imageUpdate)
                     }
                 }
             }

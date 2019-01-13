@@ -240,7 +240,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)
+        self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mode: chatPresentationInterfaceState.chatWallpaperMode, postbox: account.postbox)
         if case .perspective = chatPresentationInterfaceState.chatWallpaperMode {
             self.backgroundNode.parallaxEnabled = true
         }
@@ -1317,7 +1317,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
             
             if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
-                self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)
+                self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mode: chatPresentationInterfaceState.chatWallpaperMode, postbox: account.postbox)
             }
             
             if self.chatPresentationInterfaceState.chatWallpaperMode != chatPresentationInterfaceState.chatWallpaperMode {

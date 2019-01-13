@@ -52,8 +52,10 @@ public struct ApplicationSpecificItemCacheCollectionId {
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
     case webSearchRecentQueries = 0
+    case wallpaperSearchRecentQueries = 1
 }
 
 public struct ApplicationSpecificOrderedItemListCollectionId {
     public static let webSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.webSearchRecentQueries.rawValue)
+    public static let wallpaperSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.wallpaperSearchRecentQueries.rawValue)
 }
