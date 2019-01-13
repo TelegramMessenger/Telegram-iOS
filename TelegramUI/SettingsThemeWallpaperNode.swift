@@ -5,6 +5,24 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
+private func whiteColorImage(theme: PresentationTheme) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return .single({ arguments in
+        let context = DrawingContext(size: arguments.drawingSize, clear: true)
+        
+        context.withFlippedContext { c in
+            c.setFillColor(UIColor.white.cgColor)
+            c.fill(CGRect(origin: CGPoint(), size: arguments.drawingSize))
+            
+            let lineWidth: CGFloat = 1.0
+            c.setLineWidth(lineWidth)
+            c.setStrokeColor(theme.list.controlSecondaryColor.cgColor)
+            c.stroke(CGRect(origin: CGPoint(), size: arguments.drawingSize).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0))
+        }
+        
+        return context
+    })
+}
+
 final class SettingsThemeWallpaperNode: ASDisplayNode {
     private var wallpaper: TelegramWallpaper?
     
@@ -54,9 +72,17 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .color(color):
-                    self.imageNode.isHidden = true
-                    self.backgroundNode.isHidden = false
-                    self.backgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                    if color == 0x00ffffff {
+                        self.imageNode.isHidden = false
+                        self.backgroundNode.isHidden = true
+                        self.imageNode.setSignal(whiteColorImage(theme: account.telegramApplicationContext.currentPresentationData.with { $0 }.theme))
+                        let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                        apply()
+                    } else {
+                        self.imageNode.isHidden = true
+                        self.backgroundNode.isHidden = false
+                        self.backgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                    }
                 case let .image(representations):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true

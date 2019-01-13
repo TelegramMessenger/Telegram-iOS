@@ -91,7 +91,11 @@ private struct WebSearchRecentQueryEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, header: ListViewItemHeader) -> ListViewItem {
-        return WebSearchRecentQueryItem(account: account, theme: theme, strings: strings, query: self.query, controllerInteraction: controllerInteraction, header: header)
+        return WebSearchRecentQueryItem(account: account, theme: theme, strings: strings, query: self.query, tapped: { query in
+            controllerInteraction.setSearchQuery(query)
+        }, deleted: { query in
+            controllerInteraction.deleteRecentQuery(query)
+        }, header: header)
     }
 }
 

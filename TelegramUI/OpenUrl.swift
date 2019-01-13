@@ -546,18 +546,20 @@ public func openExternalUrl(account: Account, context: OpenURLContext = .generic
                 }
             } else if parsedUrl.host == "bg" {
                 if let components = URLComponents(string: "/?" + query) {
-                    var slug: String?
+                    var parameter: String?
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
                                 if queryItem.name == "slug" {
-                                    slug = value
+                                    parameter = value
+                                } else if queryItem.name == "color" {
+                                    parameter = value
                                 }
                             }
                         }
                     }
-                    if let slug = slug {
-                        convertedUrl = "https://t.me/bg/\(slug)"
+                    if let parameter = parameter {
+                        convertedUrl = "https://t.me/bg/\(parameter)"
                     }
                 }
             }

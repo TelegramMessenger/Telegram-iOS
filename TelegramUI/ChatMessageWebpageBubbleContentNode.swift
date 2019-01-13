@@ -120,19 +120,24 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.contentNode)
         self.contentNode.openMedia = { [weak self] stream in
             if let strongSelf = self, let item = strongSelf.item {
-                if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content, let image = content.image, let instantPage = content.instantPage {
-                    var isGallery = false
-                    switch instantPageType(of: content) {
-                        case .album:
-                            let count = instantPageGalleryMedia(webpageId: webPage.webpageId, page: instantPage, galleryMedia: image).count
-                            if count > 1 {
-                                isGallery = true
-                            }
-                        default:
-                            break
-                    }
-                    if !isGallery {
-                        item.controllerInteraction.openInstantPage(item.message)
+                if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                    if let image = content.image, let instantPage = content.instantPage {
+                        var isGallery = false
+                        switch instantPageType(of: content) {
+                            case .album:
+                                let count = instantPageGalleryMedia(webpageId: webPage.webpageId, page: instantPage, galleryMedia: image).count
+                                if count > 1 {
+                                    isGallery = true
+                                }
+                            default:
+                                break
+                        }
+                        if !isGallery {
+                            item.controllerInteraction.openInstantPage(item.message)
+                            return
+                        }
+                    } else if content.type == "telegram_background" {
+                        item.controllerInteraction.openWallpaper(item.message)
                         return
                     }
                 }
@@ -222,6 +227,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 if let file = mainMedia as? TelegramMediaFile {
                     if let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
                         mediaAndFlags = (webpage.image ?? file, [.preferMediaBeforeText])
+                    } else if webpage.type == "telegram_background" {
+                        var representations: [TelegramMediaImageRepresentation] = file.previewRepresentations
+                        if let dimensions = file.dimensions {
+                            representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.resource))
+                        }
+                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil)
+                        mediaAndFlags = (tmpImage, [])
                     } else {
                         mediaAndFlags = (file, [])
                     }
@@ -261,6 +273,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             actionTitle = item.presentationData.strings.Conversation_ViewGroup
                         case "telegram_message":
                             actionTitle = item.presentationData.strings.Conversation_ViewMessage
+                        case "telegram_background":
+                            title = item.presentationData.strings.Conversation_ChatBackground
+                            actionTitle = item.presentationData.strings.Conversation_ViewBackground
                         default:
                             break
                     }
@@ -349,12 +364,16 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     return result
             }
             
-            if let webPage = self.webPage, case let .Loaded(content) = webPage.content, content.instantPage != nil {
-                switch websiteType(of: content) {
-                    case .instagram, .twitter:
-                        return .none
-                    default:
-                        return .instantPage
+            if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
+                if content.instantPage != nil {
+                    switch websiteType(of: content) {
+                        case .instagram, .twitter:
+                            return .none
+                        default:
+                            return .instantPage
+                    }
+                } else if content.type == "telegram_background" {
+                    return .wallpaper
                 }
             }
             if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {

@@ -10,18 +10,13 @@ struct CounterContollerTitle: Equatable {
 final class CounterContollerTitleView: UIView {
     private var theme: PresentationTheme
     private let titleNode: ASTextNode
-    
-    func f() {
-        
-    }
+    private let subtitleNode: ASTextNode
     
     var title: CounterContollerTitle = CounterContollerTitle(title: "", counter: "") {
         didSet {
             if self.title != oldValue {
-                let string = NSMutableAttributedString()
-                string.append(NSAttributedString(string: title.title, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor))
-                string.append(NSAttributedString(string: "  " + title.counter, font: Font.regular(15.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                self.titleNode.attributedText = string
+                self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 
                 self.setNeedsLayout()
             }
@@ -37,9 +32,16 @@ final class CounterContollerTitleView: UIView {
         self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         
+        self.subtitleNode = ASTextNode()
+        self.subtitleNode.displaysAsynchronously = false
+        self.subtitleNode.maximumNumberOfLines = 1
+        self.subtitleNode.truncationMode = .byTruncatingTail
+        self.subtitleNode.isOpaque = false
+        
         super.init(frame: CGRect())
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.subtitleNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -50,11 +52,16 @@ final class CounterContollerTitleView: UIView {
         super.layoutSubviews()
         
         let size = self.bounds.size
+        let spacing: CGFloat = 0.0
         
         let titleSize = self.titleNode.measure(CGSize(width: max(1.0, size.width), height: size.height))
-        let combinedHeight = titleSize.height
+        let subtitleSize = self.subtitleNode.measure(CGSize(width: max(1.0, size.width), height: size.height))
+        let combinedHeight = titleSize.height + subtitleSize.height + spacing
         
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
         self.titleNode.frame = titleFrame
+        
+        let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + spacing), size: subtitleSize)
+        self.subtitleNode.frame = subtitleFrame
     }
 }

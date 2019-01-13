@@ -41,6 +41,9 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateExpansionProgress(1.0, animated: true)
+                }
                 strongSelf.contactsNode.scrollToTop()
             }
         }
@@ -162,7 +165,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
     }
     
     private func activateSearch() {

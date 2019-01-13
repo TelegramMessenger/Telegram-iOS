@@ -107,7 +107,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
             }
         })
         
-        self.imageNode.imageUpdated = { [weak self] in
+        self.imageNode.imageUpdated = { [weak self] _ in
             self?._ready.set(.single(Void()))
         }
         

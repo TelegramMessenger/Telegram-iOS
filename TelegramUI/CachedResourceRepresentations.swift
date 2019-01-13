@@ -86,3 +86,17 @@ final class CachedScaledVideoFirstFrameRepresentation: CachedMediaResourceRepres
         }
     }
 }
+
+final class CachedBlurredWallpaperRepresentation: CachedMediaResourceRepresentation {
+    var uniqueId: String {
+        return "blurred-wallpaper"
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if to is CachedBlurredWallpaperRepresentation {
+            return true
+        } else {
+            return false
+        }
+    }
+}

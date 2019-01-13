@@ -67,7 +67,6 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true

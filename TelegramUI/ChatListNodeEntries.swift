@@ -3,15 +3,12 @@ import Postbox
 import TelegramCore
 
 enum ChatListNodeEntryId: Hashable {
-    case Search
     case Hole(Int64)
     case PeerId(Int64)
     case GroupId(PeerGroupId)
     
     var hashValue: Int {
         switch self {
-            case .Search:
-                return 0
             case let .Hole(peerId):
                 return peerId.hashValue
             case let .PeerId(peerId):
@@ -23,12 +20,6 @@ enum ChatListNodeEntryId: Hashable {
     
     static func ==(lhs: ChatListNodeEntryId, rhs: ChatListNodeEntryId) -> Bool {
         switch lhs {
-            case .Search:
-                if case .Search = rhs {
-                    return true
-                } else {
-                    return false
-                }
             case let .Hole(id):
                 if case .Hole(id) = rhs {
                     return true
@@ -52,15 +43,12 @@ enum ChatListNodeEntryId: Hashable {
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {
-    case SearchEntry(theme: PresentationTheme, text: String, isEnabled: Bool)
     case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
     case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters, editing: Bool)
     
     var index: ChatListIndex {
         switch self {
-            case .SearchEntry:
-                return ChatListIndex.absoluteUpperBound
             case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole, _):
@@ -72,8 +60,6 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     
     var stableId: ChatListNodeEntryId {
         switch self {
-            case .SearchEntry:
-                return .Search
             case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _):
                 return .PeerId(index.messageIndex.id.peerId.toInt64())
             case let .HoleEntry(hole, _):
@@ -89,12 +75,6 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     
     static func ==(lhs: ChatListNodeEntry, rhs: ChatListNodeEntry) -> Bool {
         switch lhs {
-            case let .SearchEntry(lhsTheme, lhsText, lhsEnabled):
-                if case let .SearchEntry(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
-                    return true
-                } else {
-                    return false
-                }
             case let .PeerEntry(lhsIndex, lhsPresentationData, lhsMessage, lhsUnreadCount, lhsNotificationSettings, lhsEmbeddedState, lhsPeer, lhsSummaryInfo, lhsEditing, lhsHasRevealControls, lhsSelected, lhsInputActivities, lhsAd):
                 switch rhs {
                     case let .PeerEntry(rhsIndex, rhsPresentationData, rhsMessage, rhsUnreadCount, rhsNotificationSettings, rhsEmbeddedState, rhsPeer, rhsSummaryInfo, rhsEditing, rhsHasRevealControls, rhsSelected, rhsInputActivities, rhsAd):
@@ -268,6 +248,9 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
             }
         }
     }
+
+//    if result.count == 1, case .HoleEntry = result[0] {
+
     if result.count >= 1, case .HoleEntry = result[result.count - 1] {
         return []
     } else if result.count == 1, case .HoleEntry = result[0] {

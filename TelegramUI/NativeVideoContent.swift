@@ -198,7 +198,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             self._bufferingStatus.set(.single(nil))
         }
         
-        self.imageNode.imageUpdated = { [weak self] in
+        self.imageNode.imageUpdated = { [weak self] _ in
             self?._ready.set(.single(Void()))
         }
     }

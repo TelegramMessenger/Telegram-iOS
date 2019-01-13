@@ -70,6 +70,7 @@ enum ChatMessageBubbleContentTapAction {
     case botCommand(String)
     case hashtag(String?, String)
     case instantPage
+    case wallpaper
     case call(PeerId)
     case openMessage
     case ignore

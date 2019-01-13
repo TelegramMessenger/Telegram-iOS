@@ -75,7 +75,6 @@ public class TelegramController: ViewController {
     
     override public var navigationHeight: CGFloat {
         return super.navigationHeight + self.additionalHeight
-
     }
     
     override public var navigationInsetHeight: CGFloat {
@@ -251,7 +250,10 @@ public class TelegramController: ViewController {
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        let navigationHeight = super.navigationHeight
+        var navigationHeight = super.navigationHeight
+        if !self.displayNavigationBar {
+            navigationHeight = 0.0
+        }
         
         var additionalHeight: CGFloat = 0.0
         

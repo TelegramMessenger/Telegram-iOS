@@ -42,10 +42,8 @@ final class WebSearchItemNode: GridItemNode {
     private let imageNode: TransformImageNode
     private var checkNode: CheckNode?
     
-    private var currentImageResource: TelegramMediaResource?
-    private var currentDimensions: CGSize?
-    
     private(set) var item: WebSearchItem?
+    private var currentDimensions: CGSize?
     
     private let fetchStatusDisposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
@@ -192,7 +190,6 @@ final class WebSearchItemNode: GridItemNode {
                 self.imageNode.setSignal(imageSignal)
             }
             
-            self.currentImageResource = imageResource
             self.currentDimensions = imageDimensions
             if let _ = imageDimensions {
                 self.setNeedsLayout()

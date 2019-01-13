@@ -55,8 +55,6 @@ class ChatListRecentPeersListItem: ListViewItem {
     }
 }
 
-private let separatorHeight = 1.0 / UIScreen.main.scale
-
 class ChatListRecentPeersListItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
@@ -124,11 +122,10 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                             strongSelf.addSubnode(peersNode)
                         }
                         
-                        let separatorHeight = UIScreenPixel
-                        
                         peersNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                         peersNode.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                         
+                        let separatorHeight = UIScreenPixel
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                         strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
                         strongSelf.separatorNode.isHidden = true

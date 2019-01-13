@@ -19,8 +19,8 @@ final class SearchDisplayController {
     
     private var isSearchingDisposable: Disposable?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, mode: SearchDisplayControllerMode = .navigation, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern)
+    init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings, fieldStyle: .modern)
         self.mode = mode
         self.contentNode = contentNode
         
@@ -38,6 +38,9 @@ final class SearchDisplayController {
         self.contentNode.dismissInput = { [weak self] in
             self?.searchBar.deactivate(clear: false)
         }
+        self.contentNode.setQuery = { [weak self] query in
+            self?.searchBar.text = query
+        }
         
         self.isSearchingDisposable = (contentNode.isSearching
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -45,8 +48,9 @@ final class SearchDisplayController {
         })
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings)
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings)
+        self.contentNode.updatePresentationData(presentationData)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -68,7 +72,7 @@ final class SearchDisplayController {
         if case .navigation = self.mode {
             searchBarFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 54.0)
         } else {
-            searchBarFrame = CGRect(x: 0.0, y: navigationBarFrame.height - 54.0, width: layout.size.width, height: 54.0)
+            searchBarFrame = navigationBarFrame //CGRect(x: 0.0, y: navigationBarFrame.height - 54.0, width: layout.size.width, height: 54.0)
         }
         transition.updateFrame(node: self.searchBar, frame: searchBarFrame)
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
@@ -152,7 +156,7 @@ final class SearchDisplayController {
         }
     }
     
-    func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, Any)? {
+    func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, CGRect, Any)? {
         return self.contentNode.previewViewAndActionAtLocation(location)
     }
 }

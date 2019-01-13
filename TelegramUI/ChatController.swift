@@ -700,6 +700,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.navigationController as? NavigationController, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
                 openChatInstantPage(account: strongSelf.account, message: message, navigationController: navigationController)
             }
+        }, openWallpaper: { [weak self] message in
+            if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+                openChatWallpaper(account: strongSelf.account, message: message, present: { [weak self] c, a in
+                    self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                })
+            }
         }, openHashtag: { [weak self] peerName, hashtag in
             guard let strongSelf = self else {
                 return

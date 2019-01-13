@@ -12,13 +12,15 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
-private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor, diameter: CGFloat) -> UIImage? {
+private func generateBackground(foregroundColor: UIColor, diameter: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
-        context.setFillColor(backgroundColor.cgColor)
+        context.setBlendMode(.copy)
+        context.setFillColor(UIColor.clear.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
+        context.setBlendMode(.normal)
         context.setFillColor(foregroundColor.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-    }, opaque: true)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
+    }, opaque: false)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
 private class SearchBarTextField: UITextField {
@@ -113,7 +115,7 @@ private class SearchBarTextField: UITextField {
         
         let prefixSize = self.prefixLabel.measure(textRect.size)
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
-        self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: prefixBounds.minY + 1.0), size: prefixSize)
+        self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: prefixBounds.minY + textOffset), size: prefixSize)
     }
     
     override func deleteBackward() {
@@ -388,7 +390,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             if fieldStyle != .modern {
                 self.separatorNode.backgroundColor = theme.separator
             }
-            self.textBackgroundNode.image = generateBackground(backgroundColor: theme.background, foregroundColor: theme.inputFill, diameter: self.fieldStyle.cornerDiameter)
+            self.textBackgroundNode.image = generateBackground(foregroundColor: theme.inputFill, diameter: self.fieldStyle.cornerDiameter)
             self.textField.textColor = theme.primaryText
             self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
             self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
@@ -418,7 +420,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         let textBackgroundHeight = self.fieldStyle.height
         let cancelButtonSize = self.cancelButton.measure(CGSize(width: 100.0, height: CGFloat.infinity))
-        transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 8.0 - cancelButtonSize.width, y: verticalOffset + textBackgroundHeight + floorToScreenPixels((textBackgroundHeight - cancelButtonSize.height) / 2.0)), size: cancelButtonSize))
+        transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 10.0 - cancelButtonSize.width, y: verticalOffset + textBackgroundHeight + floorToScreenPixels((textBackgroundHeight - cancelButtonSize.height) / 2.0)), size: cancelButtonSize))
         
         let padding = self.fieldStyle.padding
         let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + padding, y: verticalOffset + textBackgroundHeight), size: CGSize(width: contentFrame.width - padding * 2.0 - (self.hasCancelButton ? cancelButtonSize.width + 11.0 : 0.0), height: textBackgroundHeight))

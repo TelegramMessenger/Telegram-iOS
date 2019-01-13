@@ -10,15 +10,6 @@ private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: templateLoupeIcon, color: color)
 }
 
-private func generateBackground(backgroundColor: UIColor, foregroundColor: UIColor, diameter: CGFloat) -> UIImage? {
-    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
-        context.setFillColor(backgroundColor.cgColor)
-        context.fill(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(foregroundColor.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-    }, opaque: true)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
-}
-
 private class SearchBarPlaceholderNodeLayer: CALayer {
 }
 
@@ -67,7 +58,6 @@ class SearchBarPlaceholderNode: ASDisplayNode {
         self.labelNode = TextNode()
         self.labelNode.isOpaque = false
         self.labelNode.isLayerBacked = true
-        //self.labelNode.backgroundColor = self.foregroundColor
         
         super.init()
         
@@ -84,7 +74,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
         self.backgroundNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(backgroundTap(_:))))
     }
     
-    func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (() -> Void) {
+    func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (CGFloat, () -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let currentForegroundColor = self.foregroundColor
         let currentIconColor = self.iconColor
@@ -101,7 +91,8 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                 updatedIconImage = generateLoupeIcon(color: iconColor)
             }
             
-            return { [weak self] in
+            let height = constrainedSize.height * expansionProgress
+            return (height, { [weak self] in
                 if let strongSelf = self {
                     let _ = labelApply()
                     
@@ -122,7 +113,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     var iconSize = CGSize()
                     var totalWidth = labelLayoutResult.size.width
                     let spacing: CGFloat = 7.0
-                    let height = constrainedSize.height * expansionProgress
+                    
                     
                     if let iconImage = strongSelf.iconNode.image {
                         iconSize = iconImage.size
@@ -153,7 +144,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     transition.updateAlpha(node: strongSelf.backgroundNode, alpha: outerAlpha)
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)))
                 }
-            }
+            })
         }
     }
     

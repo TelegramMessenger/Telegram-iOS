@@ -127,7 +127,7 @@ private final class AccessoryItemIconButton: HighlightTrackingButton {
     
     func updateLayout(size: CGSize) {
         if let image = self.imageNode.image {
-            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.width - image.size.width) / 2.0) - self.imageEdgeInsets.bottom), size: image.size)
+            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - self.imageEdgeInsets.bottom), size: image.size)
         }
     }
     

@@ -6,28 +6,22 @@ import TelegramCore
 import SwiftSignalKit
 
 private final class ChannelMembersSearchInteraction {
-    let activateSearch: () -> Void
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     
-    init(activateSearch: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
-        self.activateSearch = activateSearch
+    init(openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.openPeer = openPeer
     }
 }
 
 private enum ChannelMembersSearchEntryId: Hashable {
-    case search
     case peer(PeerId)
 }
 
 private enum ChannelMembersSearchEntry: Comparable, Identifiable {
-    case search
     case peer(Int, RenderedChannelParticipant, ContactsPeerItemEditing, String?, Bool)
     
     var stableId: ChannelMembersSearchEntryId {
         switch self {
-            case .search:
-                return .search
             case let .peer(peer):
                 return .peer(peer.1.peer.id)
         }
@@ -35,12 +29,6 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
     
     static func ==(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
         switch lhs {
-            case .search:
-                if case .search = rhs {
-                    return true
-                } else {
-                    return false
-                }
             case let .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled):
                 if case .peer(lhsIndex, lhsParticipant, lhsEditing, lhsLabel, lhsEnabled) = rhs {
                     return true
@@ -52,12 +40,6 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
     
     static func <(lhs: ChannelMembersSearchEntry, rhs: ChannelMembersSearchEntry) -> Bool {
         switch lhs {
-            case .search:
-                if case .search = rhs {
-                    return false
-                } else {
-                    return true
-                }
             case let .peer(lhsPeer):
                 if case let .peer(rhsPeer) = rhs {
                     return lhsPeer.0 < rhsPeer.0
@@ -69,10 +51,6 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchInteraction) -> ListViewItem {
         switch self {
-            case .search:
-                return ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
-                    interaction.activateSearch()
-                })
             case let .peer(_, participant, editing, label, enabled):
                 let status: ContactsPeerItemStatus
                 if let label = label {
@@ -123,18 +101,18 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((Peer, RenderedChannelParticipant?) -> Void)?
     var present: ((ViewController, Any?) -> Void)?
     
-    var themeAndStrings: (PresentationTheme, PresentationStrings)
+    var presentationData: PresentationData
 
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
+    init(account: Account, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
         self.account = account
         self.listNode = ListView()
         self.peerId = peerId
         self.mode = mode
         self.filters = filters
-        self.themeAndStrings = (theme, strings)
+        self.presentationData = presentationData
         
         super.init()
         
@@ -142,13 +120,11 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = theme.chatList.backgroundColor
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.listNode)
         
-        let interaction = ChannelMembersSearchInteraction(activateSearch: { [weak self] in
-            self?.requestActivateSearch?()
-        }, openPeer: { [weak self] peer, participant in
+        let interaction = ChannelMembersSearchInteraction(openPeer: { [weak self] peer, participant in
             self?.requestOpenPeerFromSearch?(peer, participant)
         })
         
@@ -180,7 +156,6 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     return
                 }
                 var entries: [ChannelMembersSearchEntry] = []
-                entries.append(.search)
                 
                 var index = 0
                 for participant in participants.participants {
@@ -219,7 +194,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 }
                             }
                             if case .creator = participant {
-                                label = strings.Channel_Management_LabelCreator
+                                label = strongSelf.presentationData.strings.Channel_Management_LabelCreator
                                 enabled = false
                             }
                     }
@@ -243,7 +218,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 let previous = previousEntries.swap(entries)
                 
-                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction))
+                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
             })
             disposableAndLoadMoreControl = (disposable, nil)
         } else {
@@ -252,7 +227,6 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     return
                 }
                 var entries: [ChannelMembersSearchEntry] = []
-                entries.append(.search)
                 
                 var index = 0
                 for participant in state.list {
@@ -288,7 +262,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 }
                             }
                             if case .creator = participant.participant {
-                                label = strings.Channel_Management_LabelCreator
+                                label = strongSelf.presentationData.strings.Channel_Management_LabelCreator
                                 enabled = false
                             }
                     }
@@ -298,7 +272,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 
                 let previous = previousEntries.swap(entries)
                 
-                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction))
+                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
             })
         }
         self.disposable = disposableAndLoadMoreControl.0
@@ -317,9 +291,9 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         self.disposable?.dispose()
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.themeAndStrings = (theme, strings)
-        self.searchDisplayController?.updateThemeAndStrings(theme: theme, strings: strings)
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        self.searchDisplayController?.updatePresentationData(presentationData)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -327,7 +301,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.input])
-        insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
+        insets.top += navigationBarHeight
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
@@ -369,52 +343,38 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch() {
-        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar else {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
+        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return
         }
         
-        var maybePlaceholderNode: SearchBarPlaceholderNode?
-        self.listNode.forEachItemNode { node in
-            if let node = node as? ChatListSearchItemNode {
-                maybePlaceholderNode = node.searchBarNode
-            }
-        }
-        
-        if let _ = self.searchDisplayController {
-            return
-        }
-        
-        if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.themeAndStrings.0, strings: self.themeAndStrings.1, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, openPeer: { [weak self] peer, participant in
-                self?.requestOpenPeerFromSearch?(peer, participant)
-            }, updateActivity: { value in
-                
-            }, present: { [weak self] c, a in
-                self?.present?(c, a)
-            }), cancel: { [weak self] in
-                if let requestDeactivateSearch = self?.requestDeactivateSearch {
-                    requestDeactivateSearch()
-                }
-            })
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, openPeer: { [weak self] peer, participant in
+            self?.requestOpenPeerFromSearch?(peer, participant)
+        }, updateActivity: { value in
             
-            self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            self.searchDisplayController?.activate(insertSubnode: { subnode, isSearchBar in
-                self.insertSubnode(subnode, belowSubnode: navigationBar)
-            }, placeholder: placeholderNode)
-        }
+        }, present: { [weak self] c, a in
+            self?.present?(c, a)
+        }), cancel: { [weak self] in
+            if let requestDeactivateSearch = self?.requestDeactivateSearch {
+                requestDeactivateSearch()
+            }
+        })
+        
+        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                if isSearchBar {
+                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                } else {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
+                }
+            }
+        }, placeholder: placeholderNode)
     }
     
-    func deactivateSearch(animated: Bool) {
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) {
         if let searchDisplayController = self.searchDisplayController {
-            var maybePlaceholderNode: SearchBarPlaceholderNode?
-            self.listNode.forEachItemNode { node in
-                if let node = node as? ChatListSearchItemNode {
-                    maybePlaceholderNode = node.searchBarNode
-                }
-            }
-            
-            searchDisplayController.deactivate(placeholder: maybePlaceholderNode, animated: animated)
+            searchDisplayController.deactivate(placeholder: placeholderNode)
             self.searchDisplayController = nil
         }
     }

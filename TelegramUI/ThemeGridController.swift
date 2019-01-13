@@ -6,11 +6,6 @@ import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
 
-enum ThemeGridControllerMode {
-    case wallpapers
-    case solidColors
-}
-
 final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {
         return self.displayNode as! ThemeGridControllerNode
@@ -22,13 +17,10 @@ final class ThemeGridController: ViewController {
     }
     
     private let account: Account
-    private let mode: ThemeGridControllerMode
     
     private var presentationData: PresentationData
     private let presentationDataPromise = Promise<PresentationData>()
     private var presentationDataDisposable: Disposable?
-    
-    private let stateDisposable = MetaDisposable()
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
@@ -37,20 +29,24 @@ final class ThemeGridController: ViewController {
     
     private var validLayout: ContainerViewLayout?
     
-    init(account: Account, mode: ThemeGridControllerMode) {
+    init(account: Account) {
         self.account = account
-        self.mode = mode
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(self.presentationData))
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.title = self.presentationData.strings.Wallpaper_Title
-        
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.scrollToTop = { [weak self] in
-            self?.controllerNode.scrollToTop()
+            if let strongSelf = self {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateExpansionProgress(1.0, animated: true)
+                }
+                strongSelf.controllerNode.scrollToTop()
+            }
         }
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
@@ -69,7 +65,7 @@ final class ThemeGridController: ViewController {
         })
         
         self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
-            //self?.activateSearch()
+            self?.activateSearch()
         })
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
@@ -80,11 +76,11 @@ final class ThemeGridController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
-        self.stateDisposable.dispose()
     }
     
     private func updateThemeAndStrings() {
         self.title = self.presentationData.strings.Wallpaper_Title
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         if let isEmpty = self.isEmpty, isEmpty {
         } else {
@@ -105,25 +101,38 @@ final class ThemeGridController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, mode: self.mode, present: { [weak self] controller, arguments in
-            self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
-        }, selectCustomWallpaper: { [weak self] in
+        self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
+            if let strongSelf = self {
+                let controller = WallpaperListPreviewController(account: strongSelf.account, source: source)
+                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
+                    if let strongSelf = self {
+                        strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect)
+                        if case .wallpaper = wallpaper {
+                        } else if let controller = controller {
+                            controller.dismiss()
+                        }
+                    }
+                }
+                self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
+            }
+        }, presentGallery: { [weak self] in
             if let strongSelf = self {
                 let _ = legacyWallpaperPicker(applicationContext: strongSelf.account.telegramApplicationContext, presentationData: strongSelf.presentationData).start(next: { generator in
                     if let strongSelf = self {
                         let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
                         legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBar.style.style
+                        
                         let controller = generator(legacyController.context)
                         legacyController.bind(controller: controller)
                         legacyController.deferScreenEdgeGestures = [.top]
-                        
                         controller.selectionBlock = { [weak self] asset, thumbnailImage in
                             if let strongSelf = self, let asset = asset {
                                 let controller = WallpaperListPreviewController(account: strongSelf.account, source: .asset(asset.backingAsset, thumbnailImage))
-                                controller.apply = { [weak self, weak legacyController, weak controller] wallpaper, mode in
+                                controller.apply = { [weak self, weak legacyController, weak controller] wallpaper, mode, cropRect in
                                     if let strongSelf = self, let legacyController = legacyController, let controller = controller {
-                                        strongSelf.applyCustomWallpaper(wallpaper, mode: mode)
+                                        strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect)
                                         
+                                        let _ = (strongSelf.navigationController as? NavigationController)?.popViewController(animated: true)
                                         legacyController.dismiss()
                                         controller.dismiss()
                                     }
@@ -139,6 +148,11 @@ final class ThemeGridController: ViewController {
                         strongSelf.present(legacyController, in: .window(.root), blockInteraction: true)
                     }
                 })
+            }
+        }, presentColors: { [weak self] in
+            if let strongSelf = self {
+                let controller = ThemeColorsGridController(account: strongSelf.account)
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
             }
         }, emptyStateUpdated: { [weak self] empty in
             if let strongSelf = self {
@@ -169,23 +183,19 @@ final class ThemeGridController: ViewController {
             if let strongSelf = self {
                 strongSelf.shareWallpapers(wallpapers)
             }
+        }, popViewController: { [weak self] in
+            if let strongSelf = self {
+                let _ = (strongSelf.navigationController as? NavigationController)?.popViewController(animated: true)
+            }
         })
         self.controllerNode.navigationBar = self.navigationBar
         self.controllerNode.requestDeactivateSearch = { [weak self] in
             self?.deactivateSearch(animated: true)
         }
         
-        self.stateDisposable.set(combineLatest(queue: .mainQueue(), self.presentationDataPromise.get(), self.controllerNode.state).start(next: { [weak self] presentationData, state in
-            var toolbar: Toolbar?
-            if state.editing {
-                let leftAction = ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: !state.selectedIndices.isEmpty)
-                toolbar = Toolbar(leftAction: leftAction, rightAction: nil)
-            }
-            self?.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
-        }))
-        
-        self._ready.set(self.controllerNode.ready.get())
-//        
+        self.controllerNode.gridNode.scrollingCompleted = {
+            
+        }
 //        self.controllerNode.gridNode.scroll = { [weak self] offset in
 //            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
 //                searchContentNode.updateListVisibleContentOffset(offset)
@@ -200,45 +210,107 @@ final class ThemeGridController: ViewController {
 //            }
 //        }
         
+        self._ready.set(self.controllerNode.ready.get())
+        
         self.displayNodeDidLoad()
     }
     
-    private func applyCustomWallpaper(_ wallpaper: WallpaperEntry, mode: PresentationWallpaperMode) {
-        guard case let .asset(asset, _) = wallpaper else {
-            return
+    private func uploadCustomWallpaper(_ wallpaper: WallpaperEntry, mode: PresentationWallpaperMode, cropRect: CGRect?) {
+        let imageSignal: Signal<UIImage, NoError>
+        switch wallpaper {
+            case .wallpaper:
+                imageSignal = .complete()
+            case let .asset(asset, _):
+                imageSignal = fetchPhotoLibraryImage(localIdentifier: asset.localIdentifier)
+                |> filter { value in
+                    return !(value?.1 ?? true)
+                }
+                |> mapToSignal { result -> Signal<UIImage, NoError> in
+                    if let result = result {
+                        return .single(result.0)
+                    } else {
+                        return .complete()
+                    }
+                }
+            case let .contextResult(result):
+                var imageResource: TelegramMediaResource?
+                switch result {
+                    case let .externalReference(_, _, _, _, _, _, content, _, _):
+                        if let content = content {
+                            imageResource = content.resource
+                        }
+                    case let .internalReference(_, _, _, _, _, image, _, _):
+                        if let image = image {
+                            if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 1000.0, height: 800.0)) {
+                                imageResource = imageRepresentation.resource
+                            }
+                        }
+                }
+                
+                if let imageResource = imageResource {
+                    imageSignal = .single(self.account.postbox.mediaBox.completedResourcePath(imageResource))
+                    |> mapToSignal { path -> Signal<UIImage, NoError> in
+                        if let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe]), let image = UIImage(data: data) {
+                            return .single(image)
+                        } else {
+                            return .complete()
+                        }
+                    }
+                } else {
+                    imageSignal = .complete()
+                }
         }
         
-        let _ = (fetchPhotoLibraryImage(localIdentifier: asset.localIdentifier)
-        |> filter { value in
-            return !(value?.1 ?? true)
-        }
-        |> map { result -> UIImage in
-            let image = result?.0
-            
+        let _ = (imageSignal
+        |> map { image -> UIImage in
             var croppedImage = UIImage()
-            if let image = image {
+            
+            let finalCropRect: CGRect
+            if let cropRect = cropRect {
+                finalCropRect = cropRect.insetBy(dx: -16.0, dy: 0.0)
+            } else {
                 var screenSize = TGScreenSize()
                 screenSize.width += 32.0
                 let fittedSize = TGScaleToFit(screenSize, image.size)
-                croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, CGRect(x: (image.size.width - fittedSize.width) / 2.0, y: (image.size.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height), false, CGSize(width: 2048.0, height: 2048.0), image.size, false)
+                finalCropRect = CGRect(x: (image.size.width - fittedSize.width) / 2.0, y: (image.size.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height)
+            }
+        
+            croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 2048.0, height: 2048.0), image.size, false)
+            
+            if let data = UIImageJPEGRepresentation(croppedImage, 0.85) {
+                let resource = LocalFileMediaResource(fileId: arc4random64())
+                self.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 
-                if let data = UIImageJPEGRepresentation(croppedImage, 0.85) {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
-                    self.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    
-                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)])
-                    let _ = (updatePresentationThemeSettingsInteractively(postbox: self.account.postbox, { current in
+                let account = self.account
+                let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
+                    let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
                         return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
-                    }) |> deliverOnMainQueue).start()
-                    
-                    let account = self.account
+                    })).start()
+                }
+                
+                let completion: () -> Void = {
+                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)])
+                    updateWallpaper(wallpaper)
+
                     let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
                         if case let .complete(wallpaper) = status {
-                            let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-                                return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
-                            })).start()
+                            if case .blurred = mode, case let .file(_, _, _, _, file, _) = wallpaper {
+                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                    updateWallpaper(wallpaper)
+                                })
+                            } else {
+                                updateWallpaper(wallpaper)
+                            }
                         }
                     })
+                }
+                
+                if case .blurred = mode {
+                    let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                        completion()
+                    })
+                } else {
+                    completion()
                 }
             }
             
@@ -249,11 +321,20 @@ final class ThemeGridController: ViewController {
     private func shareWallpapers(_ wallpapers: [TelegramWallpaper]) {
         var string: String = ""
         for wallpaper in wallpapers {
-            if case let .file(_, _, _, slug, _, _) = wallpaper {
+            var item: String?
+            switch wallpaper {
+                case let .file(_, _, _, slug, _, _):
+                    item = slug
+                case let .color(color):
+                    item = "\(String(UInt32(bitPattern: color), radix: 16, uppercase: false))"
+                default:
+                    break
+            }
+            if let item = item {
                 if !string.isEmpty {
                     string.append("\n")
                 }
-                string.append("https://t.me/bg/\(slug)")
+                string.append("https://t.me/bg/\(item)")
             }
         }
         let subject: ShareControllerSubject

@@ -27,7 +27,7 @@ public class NotificationExceptionsController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(account: Account, mode: NotificationExceptionMode, updatedMode: @escaping(NotificationExceptionMode)->Void) {
+    public init(account: Account, mode: NotificationExceptionMode, updatedMode: @escaping(NotificationExceptionMode) -> Void) {
         self.account = account
         self.mode = mode
         self.updatedMode = updatedMode
@@ -45,7 +45,12 @@ public class NotificationExceptionsController: ViewController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
-            self?.controllerNode.scrollToTop()
+            if let strongSelf = self {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateExpansionProgress(1.0, animated: true)
+                }
+                strongSelf.controllerNode.scrollToTop()
+            }
         }
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
@@ -84,7 +89,6 @@ public class NotificationExceptionsController: ViewController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.controllerNode.updatePresentationData(self.presentationData)
         
-        
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.editPressed))
         let doneItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         if self.navigationItem.rightBarButtonItem === self.editItem {
@@ -119,6 +123,19 @@ public class NotificationExceptionsController: ViewController {
             }, pushController: { [weak self] c in
                 (self?.navigationController as? NavigationController)?.pushViewController(c)
             })
+        
+        self.controllerNode.listNode.visibleContentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                searchContentNode.updateListVisibleContentOffset(offset)
+            }
+        }
+        
+        self.controllerNode.listNode.didEndScrolling = { [weak self] in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                let _ = fixNavigationSearchableListNodeScrolling(strongSelf.controllerNode.listNode, searchNode: searchContentNode)
+            }
+        }
+        
         self._ready.set(self.controllerNode._ready.get())
         
         self.displayNodeDidLoad()
@@ -127,7 +144,7 @@ public class NotificationExceptionsController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
     }
     
     @objc private func editPressed() {

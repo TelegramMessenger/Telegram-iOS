@@ -374,13 +374,15 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(theme: self.mediaCollectionInterfaceState.theme, strings: self.mediaCollectionInterfaceState.strings, mode: .list, contentNode: ChatHistorySearchContainerNode(account: self.account, peerId: self.peerId, tagMask: tagMaskForMode(self.mediaCollectionInterfaceState.mode), interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, contentNode: ChatHistorySearchContainerNode(account: self.account, peerId: self.peerId, tagMask: tagMaskForMode(self.mediaCollectionInterfaceState.mode), interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
                 self?.requestDeactivateSearch()
             })
             
             self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            self.searchDisplayController?.activate(insertSubnode: { subnode, isSearchBar in
-                self.insertSubnode(subnode, belowSubnode: navigationBar)
+            self.searchDisplayController?.activate(insertSubnode: { [weak self] subnode, isSearchBar in
+                if let strongSelf = self {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
+                }
             }, placeholder: placeholderNode)
         }
         

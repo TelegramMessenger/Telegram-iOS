@@ -59,8 +59,8 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     private let backgroundNode: ASDisplayNode
     
     private var validLayout: (CGSize, CGFloat, CGFloat, ChatPresentationInterfaceState)?
-    private var currentEntries: [StickerEntry] = []
-    private var queuedTransitions: [StickerEntryTransition] = []
+    private var currentEntries: [StickerEntry]?
+    private var queuedTransitions: [(StickerEntryTransition, Bool)] = []
     
     public var controllerInteraction: ChatControllerInteraction?
     private let stickersInteraction: HorizontalStickersChatContextPanelInteraction
@@ -72,6 +72,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         
         self.gridNode = GridNode()
         self.gridNode.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.gridNode.scrollView.alwaysBounceVertical = true
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor
@@ -172,7 +173,8 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     func updateResults(_ results: [TelegramMediaFile]) {
-        let previousEntries = self.currentEntries
+        let firstTime = self.currentEntries == nil
+        let previousEntries = self.currentEntries ?? []
         var entries: [StickerEntry] = []
         for i in 0 ..< results.count {
             entries.append(StickerEntry(index: i, file: results[i]))
@@ -184,11 +186,11 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         }
         
         let transition = preparedGridEntryTransition(account: self.account, from: previousEntries, to: entries, stickersInteraction: self.stickersInteraction, interfaceInteraction: self.interfaceInteraction!)
-        self.enqueueTransition(transition)
+        self.enqueueTransition(transition, firstTime: firstTime)
     }
     
-    private func enqueueTransition(_ transition: StickerEntryTransition) {
-        self.queuedTransitions.append(transition)
+    private func enqueueTransition(_ transition: StickerEntryTransition, firstTime: Bool) {
+        self.queuedTransitions.append((transition, firstTime))
         if self.validLayout != nil {
             self.dequeueTransitions()
         }
@@ -196,16 +198,18 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     
     private func dequeueTransitions() {
         while !self.queuedTransitions.isEmpty {
-            let transition = self.queuedTransitions.removeFirst()
+            let (transition, firstTime) = self.queuedTransitions.removeFirst()
             self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { [weak self] _ in
                 
                 if let strongSelf = self {
                     strongSelf.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: strongSelf.bounds.width, height: strongSelf.gridNode.scrollView.contentSize.height + 500.0)
+                    
+                    if firstTime {
+                        let position = strongSelf.gridNode.layer.position
+                        let offset = strongSelf.gridNode.frame.height + strongSelf.gridNode.scrollView.contentOffset.y
+                        strongSelf.gridNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + offset), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in })
+                    }
                 }
-//                if let topItemOffset = topItemOffset {
-//                    let position = strongSelf.listView.layer.position
-//                    strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-//                }
             })
         }
     }
@@ -217,7 +221,9 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
-
+        let hadValidLayout = self.validLayout != nil
+        self.validLayout = (size, leftInset, rightInset, interfaceState)
+        
         var insets = UIEdgeInsets()
         insets.top = self.topInsetForLayout(size: size)
         insets.left = leftInset
@@ -233,11 +239,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
             }
         })
         
-        let dequeue = self.validLayout == nil
-        self.validLayout = (size, leftInset, rightInset, interfaceState)
-        
-        if dequeue {
-            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        if !hadValidLayout {
             self.dequeueTransitions()
         }
         
@@ -247,14 +249,11 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func animateOut(completion: @escaping () -> Void) {
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+        let position = self.gridNode.layer.position
+        let offset = self.gridNode.frame.height + self.gridNode.scrollView.contentOffset.y
+        self.gridNode.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             completion()
         })
-//        let position = self.gridNode.layer.position
-//        let offset = self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top + self.gridNode.bounds.height - self.gridNode.scrollView.contentInset.top
-//        self.gridNode.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + (self.gridNode.bounds.height - offset)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-//            completion()
-//        })
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

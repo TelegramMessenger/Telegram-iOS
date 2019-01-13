@@ -1006,7 +1006,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     }
     
     private func updateTheme(theme: PresentationTheme) {
-        self.backgroundColor = theme.chatList.backgroundColor
+        self.backgroundColor = self.filter.contains(.excludeRecent) ? nil : theme.chatList.backgroundColor
+        self.dimNode.backgroundColor = self.filter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.listNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
     }
@@ -1054,7 +1055,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     }
     
     private func enqueueTransition(_ transition: ChatListSearchContainerTransition, firstTime: Bool) {
-        enqueuedTransitions.append((transition, firstTime))
+        self.enqueuedTransitions.append((transition, firstTime))
         
         if self.validLayout != nil {
             while !self.enqueuedTransitions.isEmpty {
@@ -1136,8 +1137,9 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    override func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, Any)? {
+    override func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, CGRect, Any)? {
         var selectedItemNode: ASDisplayNode?
+        var bounds: CGRect
         if !self.recentListNode.isHidden {
             let adjustedLocation = self.convert(location, to: self.recentListNode)
             self.recentListNode.forEachItemNode { itemNode in
@@ -1155,16 +1157,26 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
         if let selectedItemNode = selectedItemNode as? ChatListRecentPeersListItemNode {
             if let result = selectedItemNode.viewAndPeerAtPoint(self.convert(location, to: selectedItemNode)) {
-                return (result.0, result.1)
+                return (result.0, result.0.bounds, result.1)
             }
         } else if let selectedItemNode = selectedItemNode as? ContactsPeerItemNode, let peer = selectedItemNode.chatPeer {
-            return (selectedItemNode.view, peer.id)
+            if selectedItemNode.frame.height > 50.0 {
+                bounds = CGRect(x: 0.0, y: selectedItemNode.frame.height - 50.0, width: selectedItemNode.frame.width, height: 50.0)
+            } else {
+                bounds = selectedItemNode.bounds
+            }
+            return (selectedItemNode.view, bounds, peer.id)
         } else if let selectedItemNode = selectedItemNode as? ChatListItemNode, let item = selectedItemNode.item {
+            if selectedItemNode.frame.height > 76.0 {
+                bounds = CGRect(x: 0.0, y: selectedItemNode.frame.height - 76.0, width: selectedItemNode.frame.width, height: 76.0)
+            } else {
+                bounds = selectedItemNode.bounds
+            }
             switch item.content {
                 case let .peer(message, peer, _, _, _, _, _, _, _):
-                    return (selectedItemNode.view, message?.id ?? peer.peerId)
+                    return (selectedItemNode.view, bounds, message?.id ?? peer.peerId)
                 case let .groupReference(groupId, _, _, _):
-                    return (selectedItemNode.view, groupId)
+                    return (selectedItemNode.view, bounds, groupId)
             }
         }
         return nil

@@ -13,6 +13,8 @@ private enum ContactListSearchGroup {
 
 private struct ContactListSearchEntry: Identifiable, Comparable {
     let index: Int
+    let theme: PresentationTheme
+    let strings: PresentationStrings
     let peer: ContactListPeer
     let presence: PeerPresence?
     let group: ContactListSearchGroup
@@ -24,6 +26,12 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
     
     static func ==(lhs: ContactListSearchEntry, rhs: ContactListSearchEntry) -> Bool {
         if lhs.index != rhs.index {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.peer != rhs.peer {
@@ -49,26 +57,26 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, openPeer: @escaping (ContactListPeer) -> Void) -> ListViewItem {
+    func item(account: Account, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, openPeer: @escaping (ContactListPeer) -> Void) -> ListViewItem {
         let header: ListViewItemHeader
         let status: ContactsPeerItemStatus
         switch self.group {
             case .contacts:
-                header = ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                header = ChatListSearchItemHeader(type: .contacts, theme: self.theme, strings: self.strings, actionTitle: nil, action: nil)
                 if let presence = self.presence {
                     status = .presence(presence, timeFormat)
                 } else {
                     status = .none
                 }
             case .global:
-                header = ChatListSearchItemHeader(type: .globalPeers, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                header = ChatListSearchItemHeader(type: .globalPeers, theme: self.theme, strings: self.strings, actionTitle: nil, action: nil)
                 if case let .peer(peer, _) = self.peer, let _ = peer.addressName {
                     status = .addressName("")
                 } else {
                     status = .none
                 }
             case .deviceContacts:
-                header = ChatListSearchItemHeader(type: .deviceContacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
+                header = ChatListSearchItemHeader(type: .deviceContacts, theme: self.theme, strings: self.strings, actionTitle: nil, action: nil)
                 status = .none
         }
         let peer = self.peer
@@ -79,7 +87,7 @@ private struct ContactListSearchEntry: Identifiable, Comparable {
             case let .deviceContact(stableId, contact):
                 peerItem = .deviceContact(stableId: stableId, contact: contact)
         }
-        return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: peerItem, status: status, enabled: self.enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+        return ContactsPeerItem(theme: self.theme, strings: self.strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: peerItem, status: status, enabled: self.enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
             openPeer(peer)
         })
     }
@@ -92,12 +100,12 @@ struct ContactListSearchContainerTransition {
     let isSearching: Bool
 }
 
-private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, account: Account, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, openPeer: @escaping (ContactListPeer) -> Void) -> ContactListSearchContainerTransition {
+private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, account: Account, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, openPeer: @escaping (ContactListPeer) -> Void) -> ContactListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, openPeer: openPeer), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, openPeer: openPeer), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, openPeer: openPeer), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, openPeer: openPeer), directionHint: nil) }
     
     return ContactListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
@@ -156,7 +164,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
         
         let themeAndStringsPromise = self.themeAndStringsPromise
         
-        let searchItems = searchQuery.get()
+        let searchItems = self.searchQuery.get()
         |> mapToSignal { query -> Signal<[ContactListSearchEntry]?, NoError> in
             if let query = query, !query.isEmpty {
                 let foundLocalContacts: Signal<([Peer], [PeerId: PeerPresence]), NoError>
@@ -186,92 +194,92 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                 }
                 
                 return combineLatest(foundLocalContacts, foundRemoteContacts, foundDeviceContacts, themeAndStringsPromise.get())
-                    |> delay(0.1, queue: Queue.concurrentDefaultQueue())
-                    |> map { localPeersAndPresences, remotePeers, deviceContacts, themeAndStrings -> [ContactListSearchEntry] in
-                        var entries: [ContactListSearchEntry] = []
-                        var existingPeerIds = Set<PeerId>()
-                        var disabledPeerIds = Set<PeerId>()
-                        for filter in filters {
-                            switch filter {
-                                case .excludeSelf:
-                                    existingPeerIds.insert(account.peerId)
-                                case let .exclude(peerIds):
-                                    existingPeerIds = existingPeerIds.union(peerIds)
-                                case let .disable(peerIds):
-                                    disabledPeerIds = disabledPeerIds.union(peerIds)
-                            }
+                |> delay(0.1, queue: Queue.concurrentDefaultQueue())
+                |> map { localPeersAndPresences, remotePeers, deviceContacts, themeAndStrings -> [ContactListSearchEntry] in
+                    var entries: [ContactListSearchEntry] = []
+                    var existingPeerIds = Set<PeerId>()
+                    var disabledPeerIds = Set<PeerId>()
+                    for filter in filters {
+                        switch filter {
+                            case .excludeSelf:
+                                existingPeerIds.insert(account.peerId)
+                            case let .exclude(peerIds):
+                                existingPeerIds = existingPeerIds.union(peerIds)
+                            case let .disable(peerIds):
+                                disabledPeerIds = disabledPeerIds.union(peerIds)
                         }
-                        var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
-                        var index = 0
-                        for peer in localPeersAndPresences.0 {
-                            if existingPeerIds.contains(peer.id) {
+                    }
+                    var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
+                    var index = 0
+                    for peer in localPeersAndPresences.0 {
+                        if existingPeerIds.contains(peer.id) {
+                            continue
+                        }
+                        existingPeerIds.insert(peer.id)
+                        var enabled = true
+                        if onlyWriteable {
+                            enabled = canSendMessagesToPeer(peer)
+                        }
+                        entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer, isGlobal: false), presence: localPeersAndPresences.1[peer.id], group: .contacts, enabled: enabled))
+                        if searchDeviceContacts, let user = peer as? TelegramUser, let phone = user.phone {
+                            existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                        }
+                        index += 1
+                    }
+                    if let remotePeers = remotePeers {
+                        for peer in remotePeers.0 {
+                            if !(peer.peer is TelegramUser) {
                                 continue
                             }
-                            existingPeerIds.insert(peer.id)
-                            var enabled = true
-                            if onlyWriteable {
-                                enabled = canSendMessagesToPeer(peer)
-                            }
-                            entries.append(ContactListSearchEntry(index: index, peer: .peer(peer: peer, isGlobal: false), presence: localPeersAndPresences.1[peer.id], group: .contacts, enabled: enabled))
-                            if searchDeviceContacts, let user = peer as? TelegramUser, let phone = user.phone {
-                                existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                            }
-                            index += 1
-                        }
-                        if let remotePeers = remotePeers {
-                            for peer in remotePeers.0 {
-                                if !(peer.peer is TelegramUser) {
-                                    continue
+                            if !existingPeerIds.contains(peer.peer.id) {
+                                existingPeerIds.insert(peer.peer.id)
+                                
+                                var enabled = true
+                                if onlyWriteable {
+                                    enabled = canSendMessagesToPeer(peer.peer)
                                 }
-                                if !existingPeerIds.contains(peer.peer.id) {
-                                    existingPeerIds.insert(peer.peer.id)
-                                    
-                                    var enabled = true
-                                    if onlyWriteable {
-                                        enabled = canSendMessagesToPeer(peer.peer)
-                                    }
-                                    
-                                    entries.append(ContactListSearchEntry(index: index, peer: .peer(peer: peer.peer, isGlobal: true), presence: nil, group: .global, enabled: enabled))
-                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
-                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                                    }
-                                    index += 1
+                                
+                                entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer.peer, isGlobal: true), presence: nil, group: .global, enabled: enabled))
+                                if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                    existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                                 }
-                            }
-                            for peer in remotePeers.1 {
-                                if !(peer.peer is TelegramUser) {
-                                    continue
-                                }
-                                if !existingPeerIds.contains(peer.peer.id) {
-                                    existingPeerIds.insert(peer.peer.id)
-                                    
-                                    var enabled = true
-                                    if onlyWriteable {
-                                        enabled = canSendMessagesToPeer(peer.peer)
-                                    }
-                                    
-                                    entries.append(ContactListSearchEntry(index: index, peer: .peer(peer: peer.peer, isGlobal: true), presence: nil, group: .global, enabled: enabled))
-                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
-                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                                    }
-                                    index += 1
-                                }
-                            }
-                        }
-                        if let _ = remotePeers, let deviceContacts = deviceContacts {
-                            outer: for (stableId, contact) in deviceContacts {
-                                inner: for phoneNumber in contact.phoneNumbers {
-                                    let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
-                                    if existingNormalizedPhoneNumbers.contains(normalizedNumber) {
-                                        continue outer
-                                    }
-                                }
-                                entries.append(ContactListSearchEntry(index: index, peer: .deviceContact(stableId, contact), presence: nil, group: .deviceContacts, enabled: true))
                                 index += 1
                             }
                         }
-                        return entries
+                        for peer in remotePeers.1 {
+                            if !(peer.peer is TelegramUser) {
+                                continue
+                            }
+                            if !existingPeerIds.contains(peer.peer.id) {
+                                existingPeerIds.insert(peer.peer.id)
+                                
+                                var enabled = true
+                                if onlyWriteable {
+                                    enabled = canSendMessagesToPeer(peer.peer)
+                                }
+                                
+                                entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .peer(peer: peer.peer, isGlobal: true), presence: nil, group: .global, enabled: enabled))
+                                if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                    existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                }
+                                index += 1
+                            }
+                        }
                     }
+                    if let _ = remotePeers, let deviceContacts = deviceContacts {
+                        outer: for (stableId, contact) in deviceContacts {
+                            inner: for phoneNumber in contact.phoneNumbers {
+                                let normalizedNumber = DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
+                                if existingNormalizedPhoneNumbers.contains(normalizedNumber) {
+                                    continue outer
+                                }
+                            }
+                            entries.append(ContactListSearchEntry(index: index, theme: themeAndStrings.0, strings: themeAndStrings.1, peer: .deviceContact(stableId, contact), presence: nil, group: .deviceContacts, enabled: true))
+                            index += 1
+                        }
+                    }
+                    return entries
+                }
             } else {
                 return .single(nil)
             }
@@ -284,7 +292,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
             if let strongSelf = self {
                 let previousItems = previousSearchItems.swap(items ?? [])
                 
-                let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, timeFormat: strongSelf.presentationData.dateTimeFormat, openPeer: { peer in self?.listNode.clearHighlightAnimated(true)
+                let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, account: account, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, timeFormat: strongSelf.presentationData.dateTimeFormat, openPeer: { peer in self?.listNode.clearHighlightAnimated(true)
                     self?.openPeer(peer)
                 })
                 
@@ -305,6 +313,14 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
         super.didLoad()
         
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+    }
+    
+    override func updatePresentationData(_ presentationData: PresentationData) {
+        super.updatePresentationData(presentationData)
+        
+        self.presentationData = presentationData
+        self.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings)))
+        self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
     }
     
     override func searchTextUpdated(text: String) {

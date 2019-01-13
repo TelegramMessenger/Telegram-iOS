@@ -196,6 +196,7 @@ public final class RadialStatusNode: ASControlNode {
                         if let contentNode = strongSelf.contentNode {
                             strongSelf.addSubnode(contentNode)
                             contentNode.frame = strongSelf.bounds
+                            contentNode.prepareAnimateIn(from: fromState)
                             if strongSelf.isNodeLoaded {
                                 contentNode.layout()
                             }

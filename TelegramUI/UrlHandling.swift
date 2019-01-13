@@ -10,6 +10,11 @@ enum ParsedInternalPeerUrlParameter {
     case channelMessage(Int32)
 }
 
+enum WallpaperUrlParameter {
+    case slug(String)
+    case color(UIColor)
+}
+
 enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case stickerPack(String)
@@ -20,7 +25,7 @@ enum ParsedInternalUrl {
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
     case share(url: String?, text: String?, to: String?)
-    case wallpaper(String)
+    case wallpaper(WallpaperUrlParameter)
 }
 
 private enum ParsedUrl {
@@ -42,7 +47,7 @@ enum ResolvedUrl {
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
     case share(url: String?, text: String?, to: String?)
-    case wallpaper(String)
+    case wallpaper(WallpaperUrlParameter)
 }
 
 func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -170,7 +175,14 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     }
                     return nil
                 } else if pathComponents[0] == "bg" {
-                    return .wallpaper(pathComponents[1])
+                    let component = pathComponents[1]
+                    let parameter: WallpaperUrlParameter
+                    if component.count == 6, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
+                        parameter = .color(color)
+                    } else {
+                        parameter = .slug(component)
+                    }
+                    return .wallpaper(parameter)
                 } else if let value = Int(pathComponents[1]) {
                     return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
@@ -237,8 +249,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             return .single(.cancelAccountReset(phone: phone, hash: hash))
         case let .share(url, text, to):
             return .single(.share(url: url, text: text, to: to))
-        case let .wallpaper(slug):
-            return .single(.wallpaper(slug))
+        case let .wallpaper(parameter):
+            return .single(.wallpaper(parameter))
     }
 }
 

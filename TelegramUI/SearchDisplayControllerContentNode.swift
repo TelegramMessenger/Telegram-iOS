@@ -6,6 +6,7 @@ import SwiftSignalKit
 class SearchDisplayControllerContentNode: ASDisplayNode {
     final var dismissInput: (() -> Void)?
     final var cancel: (() -> Void)?
+    final var setQuery: ((String) -> Void)?
     
     var isSearching: Signal<Bool, NoError> {
         return .single(false)
@@ -13,6 +14,10 @@ class SearchDisplayControllerContentNode: ASDisplayNode {
     
     override init() {
         super.init()
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+    
     }
     
     func searchTextUpdated(text: String) {
@@ -27,7 +32,7 @@ class SearchDisplayControllerContentNode: ASDisplayNode {
         return .single(Void())
     }
     
-    func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, Any)? {
+    func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, CGRect, Any)? {
         return nil
     }
     

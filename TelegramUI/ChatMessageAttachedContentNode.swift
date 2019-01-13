@@ -350,7 +350,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
                 let updatedSubtitle = NSMutableAttributedString()
                 updatedSubtitle.append(subtitle)
-                updatedSubtitle.addAttribute(.foregroundColor, value: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, range: NSMakeRange(0, subtitle.string.count))
+                updatedSubtitle.addAttribute(.foregroundColor, value: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, range: NSMakeRange(0, subtitle.length))
                 string.append(updatedSubtitle)
                 notEmpty = true
             }
