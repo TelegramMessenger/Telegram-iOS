@@ -272,7 +272,7 @@ private struct ChannelAdminControllerState: Equatable {
     }
 }
 
-private func stringForRight(strings: PresentationStrings, right: TelegramChatAdminRightsFlags, isGroup: Bool) -> String {
+private func stringForRight(strings: PresentationStrings, right: TelegramChatAdminRightsFlags, isGroup: Bool, defaultBannedRights: TelegramChatBannedRights?) -> String {
     if right.contains(.canChangeInfo) {
         return isGroup ? strings.Group_EditAdmin_PermissionChangeInfo : strings.Channel_EditAdmin_PermissionChangeInfo
     } else if right.contains(.canPostMessages) {
@@ -284,7 +284,15 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
     } else if right.contains(.canBanUsers) {
         return strings.Channel_EditAdmin_PermissionBanUsers
     } else if right.contains(.canInviteUsers) {
-        return strings.Channel_EditAdmin_PermissionInviteUsers
+        if isGroup {
+            if let defaultBannedRights = defaultBannedRights, defaultBannedRights.flags.contains(.banAddMembers) {
+                return strings.Channel_EditAdmin_PermissionInviteMembers
+            } else {
+                return strings.Channel_EditAdmin_PermissionInviteViaLink
+            }
+        } else {
+            return strings.Channel_EditAdmin_PermissionInviteSubscribers
+        }
     } else if right.contains(.canChangeInviteLink) {
         return ""
     } else if right.contains(.canPinMessages) {
@@ -408,7 +416,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             var index = 0
             for right in rightsOrder {
                 if accountUserRightsFlags.contains(right) {
-                    entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating))
+                    entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: channel.defaultBannedRights), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating))
                     index += 1
                 }
             }
@@ -440,7 +448,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
         } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminInfo, _) = initialParticipant, let adminInfo = maybeAdminInfo {
             var index = 0
             for right in rightsOrder {
-                entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup), right, adminInfo.rights.flags, adminInfo.rights.flags.contains(right), false))
+                entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: channel.defaultBannedRights), right, adminInfo.rights.flags, adminInfo.rights.flags.contains(right), false))
                 index += 1
             }
         }
@@ -474,7 +482,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
         var index = 0
         for right in rightsOrder {
             if accountUserRightsFlags.contains(right) {
-                entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating))
+                entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: group.defaultBannedRights), right, currentRightsFlags, currentRightsFlags.contains(right), !state.updating))
                 index += 1
             }
         }

@@ -119,7 +119,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 var previewRepresentations: [TelegramMediaImageRepresentation] = []
                 if let previewImage = previewImage {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
-                    let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 90.0, height: 90.0))
+                    let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
                     let thumbnailImage = TGScaleImageToPixelSize(previewImage, thumbnailSize)!
                     if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
                         account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)

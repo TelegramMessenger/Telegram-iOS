@@ -1002,7 +1002,7 @@ final class ChatListNode: ListView {
                     }
                     
                     var isEmpty = false
-                    if transition.chatListView.filteredEntries.count == 1, case .SearchEntry = transition.chatListView.filteredEntries[0] {
+                    if transition.chatListView.filteredEntries.isEmpty {
                         isEmpty = true
                     }
                     if strongSelf.wasEmpty != isEmpty {

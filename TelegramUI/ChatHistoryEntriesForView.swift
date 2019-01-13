@@ -134,7 +134,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                             var isCreator = false
                             if let peer = entry.0.peers[entry.0.id.peerId] as? TelegramGroup, case .creator = peer.role {
                                 isCreator = true
-                            } else if let peer = entry.0.peers[entry.0.id.peerId] as? TelegramChannel, peer.flags.contains(.isCreator) {
+                            } else if let peer = entry.0.peers[entry.0.id.peerId] as? TelegramChannel, case .group = peer.info, peer.flags.contains(.isCreator) {
                                 isCreator = true
                             }
                             if isEmptyMedia && isCreator {

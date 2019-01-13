@@ -18,6 +18,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var swipeToReplyFeedback: HapticFeedback?
     
     private var selectionNode: ChatMessageSelectionNode?
+    private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var shareButtonNode: HighlightableButtonNode?
     
     var telegramFile: TelegramMediaFile?
@@ -154,7 +155,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var needShareButton = false
-            if item.message.id.peerId == item.account.peerId {
+            if item.message.flags.contains(.Failed) {
+                needShareButton = false
+            } else if item.message.id.peerId == item.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let _ = attribute as? SourceReferenceMessageAttribute {
                         needShareButton = true
@@ -197,11 +200,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
             }
             
+            var deliveryFailedInset: CGFloat = 0.0
+            if item.content.firstMessage.flags.contains(.Failed) {
+                deliveryFailedInset += 24.0
+            }
+            
             let displayLeftInset = params.leftInset + layoutConstants.bubble.edgeInset + avatarInset
             
             let innerImageInset: CGFloat = 10.0
             let innerImageSize = CGSize(width: imageSize.width + innerImageInset * 2.0, height: imageSize.height + innerImageInset * 2.0)
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - innerImageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: -innerImageInset), size: innerImageSize)
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - innerImageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: -innerImageInset), size: innerImageSize)
             
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(top: innerImageInset, left: innerImageInset, bottom: innerImageInset, right: innerImageInset))
             
@@ -330,10 +338,17 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    var transition: ContainedViewLayoutTransition = .immediate
+                    if case let .System(duration) = animation {
+                        transition = .animated(duration: duration, curve: .spring)
+                    }
+                    
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
                     
-                    strongSelf.imageNode.frame = updatedImageFrame
-                    strongSelf.progressNode?.position = strongSelf.imageNode.position
+                    transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
+                    if let progressNode = strongSelf.progressNode {
+                        transition.updatePosition(node: progressNode, position: strongSelf.imageNode.position)
+                    }
                     imageApply()
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
@@ -354,11 +369,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let shareButtonNode = strongSelf.shareButtonNode {
-                        shareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 30.0 - 10.0), size: CGSize(width: 29.0, height: 29.0))
+                        transition.updateFrame(node: shareButtonNode, frame: CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 30.0 - 10.0), size: CGSize(width: 29.0, height: 29.0)))
                     }
                     
                     dateAndStatusApply(false)
-                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 16.0), size: dateAndStatusSize)
+                    transition.updateFrame(node: strongSelf.dateAndStatusNode, frame: CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 16.0), size: dateAndStatusSize))
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {
@@ -408,6 +423,37 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
                         replyInfoNode.removeFromSupernode()
                         strongSelf.replyInfoNode = nil
+                    }
+                    
+                    if item.content.firstMessage.flags.contains(.Failed) {
+                        let deliveryFailedNode: ChatMessageDeliveryFailedNode
+                        var isAppearing = false
+                        if let current = strongSelf.deliveryFailedNode {
+                            deliveryFailedNode = current
+                        } else {
+                            isAppearing = true
+                            deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: {
+                                if let item = self?.item {
+                                    item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
+                                }
+                            })
+                            strongSelf.deliveryFailedNode = deliveryFailedNode
+                            strongSelf.addSubnode(deliveryFailedNode)
+                        }
+                        let deliveryFailedSize = deliveryFailedNode.updateLayout(theme: item.presentationData.theme.theme)
+                        let deliveryFailedFrame = CGRect(origin: CGPoint(x: imageFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: imageFrame.maxY - deliveryFailedSize.height - innerImageInset), size: deliveryFailedSize)
+                        if isAppearing {
+                            deliveryFailedNode.frame = deliveryFailedFrame
+                            transition.animatePositionAdditive(node: deliveryFailedNode, offset: CGPoint(x: deliveryFailedInset, y: 0.0))
+                        } else {
+                            transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedFrame)
+                        }
+                    } else if let deliveryFailedNode = strongSelf.deliveryFailedNode {
+                        strongSelf.deliveryFailedNode = nil
+                        transition.updateAlpha(node: deliveryFailedNode, alpha: 0.0)
+                        transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedNode.frame.offsetBy(dx: 24.0, dy: 0.0), completion: { [weak deliveryFailedNode] _ in
+                            deliveryFailedNode?.removeFromSupernode()
+                        })
                     }
                     
                     if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {

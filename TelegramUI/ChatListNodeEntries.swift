@@ -234,10 +234,12 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                     continue loop
                 }
                 var updatedMessage = message
+                var updatedCombinedReadState = combinedReadState
                 if state.pendingClearHistoryPeerIds.contains(index.messageIndex.id.peerId) {
                     updatedMessage = nil
+                    updatedCombinedReadState = nil
                 }
-                result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: updatedMessage, readState: combinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false))
+                result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: updatedMessage, readState: updatedCombinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false))
             case let .HoleEntry(hole):
                 result.append(.HoleEntry(hole, theme: state.presentationData.theme))
             case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):
@@ -265,16 +267,10 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                 }
             }
         }
-//        switch mode {
-//            case .chatList:
-//                result.append(.SearchEntry(theme: state.presentationData.theme, text: view.groupId == nil ? state.presentationData.strings.DialogList_SearchLabel : "Search this feed", isEnabled: !state.editing))
-//            case .peers:
-//                result.append(.SearchEntry(theme: state.presentationData.theme, text: state.presentationData.strings.Common_Search, isEnabled: !state.editing))
-//        }
     }
-    if result.count >= 2, case .SearchEntry = result[result.count - 1], case .HoleEntry = result[result.count - 2] {
+    if result.count >= 1, case .HoleEntry = result[result.count - 1] {
         return []
-    } else if result.count == 2, case .SearchEntry = result[1], case .HoleEntry = result[0] {
+    } else if result.count == 1, case .HoleEntry = result[0] {
         return []
     }
     return result

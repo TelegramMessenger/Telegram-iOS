@@ -212,7 +212,7 @@ func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<EnqueueMess
             let dimensions = previewImage.size
             var previewRepresentations: [TelegramMediaImageRepresentation] = []
             
-            let thumbnailSize = dimensions.aspectFitted(CGSize(width: 90.0, height: 90.0))
+            let thumbnailSize = dimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
             let thumbnailImage = TGScaleImageToPixelSize(previewImage, thumbnailSize)!
             if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
                 let resource = LocalFileMediaResource(fileId: arc4random64())
@@ -260,7 +260,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                             var representations: [TelegramMediaImageRepresentation] = []
                             if let thumbnail = thumbnail {
                                 let resource = LocalFileMediaResource(fileId: arc4random64())
-                                let thumbnailSize = thumbnail.size.aspectFitted(CGSize(width: 90.0, height: 90.0))
+                                let thumbnailSize = thumbnail.size.aspectFitted(CGSize(width: 320.0, height: 320.0))
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
@@ -366,7 +366,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if let thumbnail = thumbnail {
                                 let resource = LocalFileMediaResource(fileId: arc4random64())
-                                let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 90.0, height: 90.0))
+                                let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)

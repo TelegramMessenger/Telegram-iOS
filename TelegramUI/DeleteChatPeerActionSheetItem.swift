@@ -51,6 +51,8 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         let text: (String, [(Int, NSRange)])
         if peer is TelegramGroup || peer is TelegramChannel {
             text = strings.ChatList_LeaveGroupConfirmation(peer.displayTitle)
+        } else if peer is TelegramSecretChat {
+            text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle)
         } else {
             text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle)
         }

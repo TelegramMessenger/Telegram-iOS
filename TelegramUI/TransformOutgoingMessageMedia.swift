@@ -42,7 +42,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                     
                                     let image = UIImage(cgImage: cgImage, scale: 1.0, orientation: imageOrientation)
                             
-                                    if let scaledImage = generateImage(image.size.fitted(CGSize(width: 90.0, height: 90.0)), contextGenerator: { size, context in
+                                    if let scaledImage = generateImage(image.size.fitted(CGSize(width: 320.0, height: 320.0)), contextGenerator: { size, context in
                                         context.setBlendMode(.copy)
                                         drawImage(context: context, image: image.cgImage!, orientation: image.imageOrientation, in: CGRect(origin: CGPoint(), size: size))
                                     }, scale: 1.0), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
@@ -94,7 +94,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                         } |> runOn(opportunistic ? Queue.mainQueue() : Queue.concurrentDefaultQueue())
                     } else if file.mimeType.hasPrefix("video/") {
                         return Signal { subscriber in
-                            if let scaledImage = generateVideoFirstFrame(data.path, maxDimensions: CGSize(width: 90.0, height: 90.0)), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
+                            if let scaledImage = generateVideoFirstFrame(data.path, maxDimensions: CGSize(width: 320.0, height: 320.0)), let thumbnailData = UIImageJPEGRepresentation(scaledImage, 0.6) {
                                 let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
                                 postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
                             
