@@ -51,6 +51,11 @@ public func telegramWallpapers(postbox: Postbox, network: Network) -> Signal<[Te
                         items.append(wallpaper)
                     }
                     
+                    if !addedBuiltin {
+                        addedBuiltin = true
+                        items.append(.builtin)
+                    }
+                    
                     if items == list {
                         return .complete()
                     } else {
