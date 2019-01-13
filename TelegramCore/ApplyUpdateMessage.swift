@@ -11,7 +11,12 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)
         if let fromSmallestRepresentation = fromSmallestRepresentation, let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
-            postbox.mediaBox.moveResourceData(from: fromSmallestRepresentation.resource.id, to: toSmallestRepresentation.resource.id)
+            let leeway: CGFloat = 4.0
+            let widthDifference = fromSmallestRepresentation.dimensions.width - toSmallestRepresentation.dimensions.width
+            let heightDifference = fromSmallestRepresentation.dimensions.height - toSmallestRepresentation.dimensions.height
+            if abs(widthDifference) < leeway && abs(heightDifference) < leeway {
+                postbox.mediaBox.moveResourceData(from: fromSmallestRepresentation.resource.id, to: toSmallestRepresentation.resource.id)
+            }
         }
         if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
             postbox.mediaBox.moveResourceData(from: fromLargestRepresentation.resource.id, to: toLargestRepresentation.resource.id)
