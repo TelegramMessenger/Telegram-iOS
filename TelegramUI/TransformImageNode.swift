@@ -91,6 +91,7 @@ public class TransformImageNode: ASDisplayNode {
                     } else if strongSelf.contentAnimations.contains(.subsequentUpdates) {
                         let tempLayer = CALayer()
                         tempLayer.frame = strongSelf.bounds
+                        tempLayer.contentsGravity = strongSelf.layer.contentsGravity
                         tempLayer.contents = strongSelf.contents
                         strongSelf.layer.addSublayer(tempLayer)
                         tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in

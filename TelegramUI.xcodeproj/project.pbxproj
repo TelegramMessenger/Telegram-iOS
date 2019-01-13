@@ -104,6 +104,8 @@
 		09F79A0921C829C700820234 /* GalleryNavigationRecipientNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */; };
 		09F79A0B21C832F400820234 /* WebSearchGalleryFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0A21C832F400820234 /* WebSearchGalleryFooterContentNode.swift */; };
 		09F79A0D21C88E8900820234 /* LegacyWebSearchEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F79A0C21C88E8900820234 /* LegacyWebSearchEditor.swift */; };
+		09F85BA521E7821500D73170 /* ThemeGridSelectionPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F85BA421E7821500D73170 /* ThemeGridSelectionPanelNode.swift */; };
+		09F85BA721E7DA5F00D73170 /* BlurredImageNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */; };
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
@@ -219,7 +221,7 @@
 		D04281F1200E4084009DDE36 /* GroupInfoSearchNavigationContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F0200E4084009DDE36 /* GroupInfoSearchNavigationContentNode.swift */; };
 		D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */; };
 		D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */; };
-		D04281F8200E5C17009DDE36 /* ChatControllerBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F7200E5C17009DDE36 /* ChatControllerBackground.swift */; };
+		D04281F8200E5C17009DDE36 /* ChatControllerBackgroundNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F7200E5C17009DDE36 /* ChatControllerBackgroundNode.swift */; };
 		D04281FA200E5CDC009DDE36 /* ChatRecentActionsControllerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F9200E5CDC009DDE36 /* ChatRecentActionsControllerState.swift */; };
 		D04281FC200E61BC009DDE36 /* ChatRecentActionsInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FB200E61BC009DDE36 /* ChatRecentActionsInteraction.swift */; };
 		D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FD200E639A009DDE36 /* ChatRecentActionsTitleView.swift */; };
@@ -1215,6 +1217,8 @@
 		09F79A0821C829C700820234 /* GalleryNavigationRecipientNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryNavigationRecipientNode.swift; sourceTree = "<group>"; };
 		09F79A0A21C832F400820234 /* WebSearchGalleryFooterContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchGalleryFooterContentNode.swift; sourceTree = "<group>"; };
 		09F79A0C21C88E8900820234 /* LegacyWebSearchEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWebSearchEditor.swift; sourceTree = "<group>"; };
+		09F85BA421E7821500D73170 /* ThemeGridSelectionPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeGridSelectionPanelNode.swift; sourceTree = "<group>"; };
+		09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredImageNode.swift; sourceTree = "<group>"; };
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
 		9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExcetionSettingsController.swift; sourceTree = "<group>"; };
@@ -1443,7 +1447,7 @@
 		D04281F0200E4084009DDE36 /* GroupInfoSearchNavigationContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupInfoSearchNavigationContentNode.swift; sourceTree = "<group>"; };
 		D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsController.swift; sourceTree = "<group>"; };
 		D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsControllerNode.swift; sourceTree = "<group>"; };
-		D04281F7200E5C17009DDE36 /* ChatControllerBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatControllerBackground.swift; sourceTree = "<group>"; };
+		D04281F7200E5C17009DDE36 /* ChatControllerBackgroundNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatControllerBackgroundNode.swift; sourceTree = "<group>"; };
 		D04281F9200E5CDC009DDE36 /* ChatRecentActionsControllerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsControllerState.swift; sourceTree = "<group>"; };
 		D04281FB200E61BC009DDE36 /* ChatRecentActionsInteraction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsInteraction.swift; sourceTree = "<group>"; };
 		D04281FD200E639A009DDE36 /* ChatRecentActionsTitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsTitleView.swift; sourceTree = "<group>"; };
@@ -3094,6 +3098,7 @@
 				D0EC6B351EB88D0A00EBF1C3 /* ThemeGridController.swift */,
 				D0EC6B371EB88D1600EBF1C3 /* ThemeGridControllerNode.swift */,
 				D0C0B5B61EE1DEF1000F4D2C /* ThemeGridControllerItem.swift */,
+				09F85BA421E7821500D73170 /* ThemeGridSelectionPanelNode.swift */,
 				D0B37C5B1F8D22AE004252DF /* ThemeSettingsController.swift */,
 				D0B37C5D1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift */,
 				D091C7A51F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift */,
@@ -3104,6 +3109,7 @@
 				D06F31E52135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift */,
 				D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */,
 				D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */,
+				09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";
@@ -4391,7 +4397,7 @@
 				D0F69E0E1D6B8ACF0046BCD6 /* ChatController.swift */,
 				D0F69E0F1D6B8ACF0046BCD6 /* ChatControllerInteraction.swift */,
 				D0F69E101D6B8ACF0046BCD6 /* ChatControllerNode.swift */,
-				D04281F7200E5C17009DDE36 /* ChatControllerBackground.swift */,
+				D04281F7200E5C17009DDE36 /* ChatControllerBackgroundNode.swift */,
 				D0F69E111D6B8ACF0046BCD6 /* ChatHistoryEntry.swift */,
 				D0F69E121D6B8ACF0046BCD6 /* ChatHistoryLocation.swift */,
 				D0D268681D78865300C422DA /* ChatAvatarNavigationNode.swift */,
@@ -5132,6 +5138,7 @@
 				D0C27B3D1F4B454800A4E170 /* InstantPagePlayableVideoNode.swift in Sources */,
 				D0EC6CD11EB9F58800EBF1C3 /* UrlHandling.swift in Sources */,
 				09B4EE4D21A7B73800847FA6 /* PermissionController.swift in Sources */,
+				09F85BA521E7821500D73170 /* ThemeGridSelectionPanelNode.swift in Sources */,
 				D0FC4FBB1F751E8900B7443F /* SelectablePeerNode.swift in Sources */,
 				D0E9BAD21F0573C000F079A4 /* STPToken.m in Sources */,
 				D0EC6CD31EB9F58800EBF1C3 /* GenerateTextEntities.swift in Sources */,
@@ -5447,6 +5454,7 @@
 				D0EC6D6E1EB9F58800EBF1C3 /* AuthorizationSequencePhoneEntryControllerNode.swift in Sources */,
 				D0B85C211FF70BEC00E795B4 /* AuthorizationSequenceAwaitingAccountResetControllerNode.swift in Sources */,
 				D0EC6D6F1EB9F58800EBF1C3 /* AuthorizationSequenceCodeEntryController.swift in Sources */,
+				09F85BA721E7DA5F00D73170 /* BlurredImageNode.swift in Sources */,
 				D0C26D5E1FDF49E7004ABF18 /* DateFormat.swift in Sources */,
 				D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */,
 				D0EC6D701EB9F58800EBF1C3 /* AuthorizationSequenceCodeEntryControllerNode.swift in Sources */,
@@ -5923,7 +5931,7 @@
 				D0EC6E5C1EB9F58900EBF1C3 /* CallControllerNode.swift in Sources */,
 				D0F4B0222110972300912B92 /* ContactInfoStrings.swift in Sources */,
 				D0EC6E5D1EB9F58900EBF1C3 /* PrivacyAndSecurityController.swift in Sources */,
-				D04281F8200E5C17009DDE36 /* ChatControllerBackground.swift in Sources */,
+				D04281F8200E5C17009DDE36 /* ChatControllerBackgroundNode.swift in Sources */,
 				D0EC6E5E1EB9F58900EBF1C3 /* ItemListRecentSessionItem.swift in Sources */,
 				D00ADFDD1EBB73C200873D2E /* OverlayMediaManager.swift in Sources */,
 				D056CD7C1FF3E92C00880D28 /* DirectionalPanGestureRecognizer.swift in Sources */,

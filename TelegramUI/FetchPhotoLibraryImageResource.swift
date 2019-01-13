@@ -102,3 +102,64 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
         }
     }
 }
+
+func fetchPhotoLibraryImage(localIdentifier: String) -> Signal<(UIImage, Bool)?, NoError> {
+    return Signal { subscriber in
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+        let requestId = Atomic<RequestId>(value: RequestId())
+        if fetchResult.count != 0 {
+            let asset = fetchResult.object(at: 0)
+            let option = PHImageRequestOptions()
+            option.deliveryMode = .opportunistic
+            option.isNetworkAccessAllowed = true
+            option.isSynchronous = false
+            let size = CGSize(width: 1280.0, height: 1280.0)
+            
+            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFill, options: option, resultHandler: { (image, info) -> Void in
+                Queue.concurrentDefaultQueue().async {
+                    requestId.with { current -> Void in
+                        if !current.invalidated {
+                            current.id = nil
+                            current.invalidated = true
+                        }
+                    }
+                    if let image = image {
+                        var isThumbnail = true
+                        if let info = info, let degraded = info[PHImageResultIsDegradedKey] {
+                            isThumbnail = (degraded as AnyObject).boolValue!
+                        }
+                        subscriber.putNext((image, isThumbnail))
+                        if !isThumbnail {
+                            subscriber.putCompletion()
+                        }
+
+                    }
+                }
+            })
+            requestId.with { current -> Void in
+                if !current.invalidated {
+                    current.id = requestIdValue
+                }
+            }
+        } else {
+            subscriber.putNext(nil)
+            subscriber.putCompletion()
+        }
+        
+        return ActionDisposable {
+            let requestIdValue = requestId.with { current -> PHImageRequestID? in
+                if !current.invalidated {
+                    let value = current.id
+                    current.id = nil
+                    current.invalidated = true
+                    return value
+                } else {
+                    return nil
+                }
+            }
+            if let requestIdValue = requestIdValue {
+                PHImageManager.default().cancelImageRequest(requestIdValue)
+            }
+        }
+    }
+}

@@ -197,8 +197,11 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     private func dequeueTransitions() {
         while !self.queuedTransitions.isEmpty {
             let transition = self.queuedTransitions.removeFirst()
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { [weak self] _ in
                 
+                if let strongSelf = self {
+                    strongSelf.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: strongSelf.bounds.width, height: strongSelf.gridNode.scrollView.contentSize.height + 500.0)
+                }
 //                if let topItemOffset = topItemOffset {
 //                    let position = strongSelf.listView.layer.position
 //                    strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
@@ -224,9 +227,11 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         
         let updateSizeAndInsets = GridNodeUpdateLayout(layout: GridNodeLayout(size: size, insets: insets, preloadSize: 100.0, type: .fixed(itemSize: CGSize(width: 66.0, height: 66.0), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition)
     
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: updateSizeAndInsets, itemTransition: .immediate, stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { _ in })
-
-        self.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: 1000.0)
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: updateSizeAndInsets, itemTransition: .immediate, stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: strongSelf.gridNode.scrollView.contentSize.height + 500.0)
+            }
+        })
         
         let dequeue = self.validLayout == nil
         self.validLayout = (size, leftInset, rightInset, interfaceState)
@@ -245,11 +250,20 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             completion()
         })
+//        let position = self.gridNode.layer.position
+//        let offset = self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top + self.gridNode.bounds.height - self.gridNode.scrollView.contentInset.top
+//        self.gridNode.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + (self.gridNode.bounds.height - offset)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+//            completion()
+//        })
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let listViewFrame = self.gridNode.frame
-        return self.gridNode.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
+        let convertedPoint = self.convert(point, to: self.gridNode)
+        if convertedPoint.y > 0.0 {
+            return super.hitTest(point, with: event)
+        } else {
+            return nil
+        }
     }
     
     private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {

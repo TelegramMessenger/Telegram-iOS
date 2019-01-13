@@ -80,7 +80,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.dimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
@@ -88,11 +88,14 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
+        var headerInsets = layout.insets(options: [.input])
+        headerInsets.top += actualNavigationBarHeight
+        
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), transition: transition)
+        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), headerInsets: headerInsets, transition: transition)
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         

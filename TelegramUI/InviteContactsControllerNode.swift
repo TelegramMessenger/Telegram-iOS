@@ -548,7 +548,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.deviceContacts], openPeer: { [weak self] peerId in
+        self.searchDisplayController = SearchDisplayController(theme: self.presentationData.theme, strings: self.presentationData.strings, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.deviceContacts], openPeer: { _ in
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()

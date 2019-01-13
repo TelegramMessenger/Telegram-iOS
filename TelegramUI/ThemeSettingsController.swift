@@ -251,6 +251,8 @@ public func themeSettingsController(account: Account) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
+    let _ = telegramWallpapers(postbox: account.postbox, network: account.network).start()
+    
     let arguments = ThemeSettingsControllerArguments(account: account, selectTheme: { index in
         let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
             let wallpaper: TelegramWallpaper

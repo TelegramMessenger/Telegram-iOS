@@ -29,7 +29,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     private var searchDisplayController: SearchDisplayController?
     
-    private var containerLayout: (ContainerViewLayout, CGFloat)?
+    private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
     var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     var contentScrollingEnded: ((ListView) -> Bool)?
@@ -137,14 +137,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.segmentedControl?.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.containerLayout = (layout, navigationBarHeight)
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.containerLayout = (layout, navigationBarHeight, actualNavigationBarHeight)
         
         let cleanInsets = layout.insets(options: [])
         
         var toolbarHeight: CGFloat = cleanInsets.bottom
 
-        
         if let segmentedControl = segmentedControl, let toolbarBackgroundNode = toolbarBackgroundNode, let toolbarSeparatorNode = toolbarSeparatorNode {
             toolbarHeight += 44
             transition.updateFrame(node: toolbarBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
@@ -160,6 +159,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         insets.bottom = max(insets.bottom, cleanInsets.bottom)
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
+        
+        var headerInsets = layout.insets(options: [.input])
+        headerInsets.top += actualNavigationBarHeight
+        headerInsets.bottom = max(headerInsets.bottom, cleanInsets.bottom)
+        headerInsets.left += layout.safeInsets.left
+        headerInsets.right += layout.safeInsets.right
         
         self.chatListNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.chatListNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
@@ -186,7 +191,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             listViewCurve = .Default(duration: duration)
         }
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: listViewCurve)
         
         self.chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         
@@ -196,7 +201,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             
             let contactsInsets = insets
             
-            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: contactsInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), transition: transition)
+            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: contactsInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), headerInsets: headerInsets, transition: transition)
         }
         
         if let searchDisplayController = self.searchDisplayController {
@@ -205,7 +210,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
-        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar else {
+        guard let (containerLayout, navigationBarHeight, _) = self.containerLayout, let navigationBar = self.navigationBar else {
             return
         }
         
@@ -306,7 +311,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
     
     @objc func indexChanged() {
-        guard let (layout, navigationHeight) = self.containerLayout, let segmentedControl = self.segmentedControl else {
+        guard let (layout, navigationHeight, actualNavigationHeight) = self.containerLayout, let segmentedControl = self.segmentedControl else {
             return
         }
             
@@ -338,7 +343,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     contactListNode.contentScrollingEnded = { [weak self] listView in
                         return self?.contentScrollingEnded?(listView) ?? false
                     }
-                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .immediate)
                     
                     let _ = (contactListNode.ready |> deliverOnMainQueue).start(next: { [weak self] _ in
                         if let strongSelf = self {

@@ -605,11 +605,14 @@ private func preparedContactListNodeTransition(account: Account, from fromEntrie
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
     
+    var shouldFixScroll = false
     var indexSections: [String] = []
     if generateIndexSections {
         var existingSections = Set<unichar>()
         for entry in toEntries {
             switch entry {
+                case .sort:
+                    shouldFixScroll = true
                 case .search:
                     //indexSections.apend(CollectionIndexNode.searchIndex)
                     break
@@ -630,7 +633,7 @@ private func preparedContactListNodeTransition(account: Account, from fromEntrie
     }
     
     var scrollToItem: ListViewScrollToItem?
-    if firstTime && toEntries.count >= 1 {
+    if firstTime && shouldFixScroll && toEntries.count >= 1 {
         scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight - 50.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
     }
     
@@ -717,7 +720,7 @@ final class ContactListNode: ASDisplayNode {
     private var indexSections: [String]?
     
     private var queuedTransitions: [ContactsListNodeTransition] = []
-    private var validLayout: ContainerViewLayout?
+    private var validLayout: (ContainerViewLayout, UIEdgeInsets)?
     
     private var _ready = ValuePromise<Bool>()
     var ready: Signal<Bool, NoError> {
@@ -1123,8 +1126,8 @@ final class ContactListNode: ASDisplayNode {
                         }
                     })
                     
-                    if let validLayout = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(validLayout, transition: .immediate)
+                    if let (validLayout, headerInsets) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(validLayout, headerInsets: headerInsets, transition: .immediate)
                     }
                 }
             }
@@ -1183,9 +1186,9 @@ final class ContactListNode: ASDisplayNode {
         }
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, headerInsets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = layout
+        self.validLayout = (layout, headerInsets)
         
         var insets = layout.insets(options: [.input])
         insets.left += layout.safeInsets.left
@@ -1216,7 +1219,7 @@ final class ContactListNode: ASDisplayNode {
             listViewCurve = .Default(duration: duration)
         }
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: listViewCurve)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         if let indexSections = self.indexSections {
@@ -1264,7 +1267,7 @@ final class ContactListNode: ASDisplayNode {
                         options.insert(.AnimateCrossfade)
                     }
                 }
-                if let layout = self.validLayout {
+                if let (layout, _) = self.validLayout {
                     self.indexSections = transition.indexSections
                     
                     var insets = layout.insets(options: [.input])
