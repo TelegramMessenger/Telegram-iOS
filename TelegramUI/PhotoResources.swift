@@ -284,77 +284,76 @@ private func chatMessageImageFileThumbnailDatas(account: Account, fileReference:
 }
 
 private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaReference, thumbnailSize: Bool = false, onlyFullSize: Bool = false) -> Signal<(Data?, (Data, String)?, Bool), NoError> {
-    if let smallestRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-        let thumbnailResource = smallestRepresentation.resource
-        let fullSizeResource = fileReference.media.resource
-        
-        let maybeFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false, fetch: false)
-        let fetchedFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false, fetch: true)
-        
-        let signal = maybeFullSize
-        |> take(1)
-        |> mapToSignal { maybeData -> Signal<(Data?, (Data, String)?, Bool), NoError> in
-            if maybeData.complete {
-                let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-                
-                return .single((nil, loadedData == nil ? nil : (loadedData!, maybeData.path), true))
-            } else {
-                let fetchedThumbnail = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(thumbnailResource), statsCategory: .video)
-                
-                let thumbnail: Signal<Data?, NoError>
-                if onlyFullSize {
-                    thumbnail = .single(nil)
-                } else {
-                    thumbnail = Signal { subscriber in
-                        let fetchedDisposable = fetchedThumbnail.start()
-                        let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailResource).start(next: { next in
-                            subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
-                        }, error: subscriber.putError, completed: subscriber.putCompletion)
-                        
-                        return ActionDisposable {
-                            fetchedDisposable.dispose()
-                            thumbnailDisposable.dispose()
-                        }
-                    }
-                }
-                
-                let fullSizeDataAndPath = Signal<MediaResourceData, NoError> { subscriber in
-                    let dataDisposable = fetchedFullSize.start(next: { next in
-                        subscriber.putNext(next)
-                    }, completed: {
-                        subscriber.putCompletion()
-                    })
-                    //let fetchedDisposable = fetchedPartialVideoThumbnailData(postbox: postbox, fileReference: fileReference).start()
-                    return ActionDisposable {
-                        dataDisposable.dispose()
-                        //fetchedDisposable.dispose()
-                    }
-                }
-                |> map { next -> ((Data, String)?, Bool) in
-                    let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe)
-                    return (data == nil ? nil : (data!, next.path), next.complete)
-                }
-                
-                return thumbnail
-                |> mapToSignal { thumbnailData in
-                    return fullSizeDataAndPath
-                    |> map { (dataAndPath, complete) in
-                        return (thumbnailData, dataAndPath, complete)
-                    }
-                }
-            }
-        } |> filter({
+    let fullSizeResource = fileReference.media.resource
+    
+    let thumbnailResource = smallestImageRepresentation(fileReference.media.previewRepresentations)?.resource
+    
+    let maybeFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false, fetch: false)
+    let fetchedFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false, fetch: true)
+    
+    let signal = maybeFullSize
+    |> take(1)
+    |> mapToSignal { maybeData -> Signal<(Data?, (Data, String)?, Bool), NoError> in
+        if maybeData.complete {
+            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+            
+            return .single((nil, loadedData == nil ? nil : (loadedData!, maybeData.path), true))
+        } else {
+            let thumbnail: Signal<Data?, NoError>
             if onlyFullSize {
-                return $0.1 != nil || $0.2
+                thumbnail = .single(nil)
+            } else if let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
+                thumbnail = .single(decodedThumbnailData)
+            } else if let thumbnailResource = thumbnailResource {
+                thumbnail = Signal { subscriber in
+                    let fetchedDisposable = fetchedMediaResource(postbox: postbox, reference: fileReference.resourceReference(thumbnailResource), statsCategory: .video).start()
+                    let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailResource).start(next: { next in
+                        subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                    }, error: subscriber.putError, completed: subscriber.putCompletion)
+                    
+                    return ActionDisposable {
+                        fetchedDisposable.dispose()
+                        thumbnailDisposable.dispose()
+                    }
+                }
             } else {
-                return true//$0.0 != nil || $0.1 != nil || $0.2
+                thumbnail = .single(nil)
             }
-        })
-        
-        return signal
-    } else {
-        return .single((nil, nil, true))
-    }
+            
+            let fullSizeDataAndPath = Signal<MediaResourceData, NoError> { subscriber in
+                let dataDisposable = fetchedFullSize.start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                })
+                //let fetchedDisposable = fetchedPartialVideoThumbnailData(postbox: postbox, fileReference: fileReference).start()
+                return ActionDisposable {
+                    dataDisposable.dispose()
+                    //fetchedDisposable.dispose()
+                }
+            }
+            |> map { next -> ((Data, String)?, Bool) in
+                let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe)
+                return (data == nil ? nil : (data!, next.path), next.complete)
+            }
+            
+            return thumbnail
+            |> mapToSignal { thumbnailData in
+                return fullSizeDataAndPath
+                |> map { (dataAndPath, complete) in
+                    return (thumbnailData, dataAndPath, complete)
+                }
+            }
+        }
+    } |> filter({
+        if onlyFullSize {
+            return $0.1 != nil || $0.2
+        } else {
+            return true//$0.0 != nil || $0.1 != nil || $0.2
+        }
+    })
+    
+    return signal
 }
 
 private enum Corner: Hashable {
