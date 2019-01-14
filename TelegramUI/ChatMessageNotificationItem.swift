@@ -118,7 +118,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         let messageText: String
         if item.messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
             titleIcon = PresentationResourcesRootController.inAppNotificationSecretChatIcon(presentationData.theme)
-            messageText = item.strings.ENCRYPTED_MESSAGE("").0
+            messageText = item.strings.PUSH_ENCRYPTED_MESSAGE("").0
         } else if item.messages.count == 1 {
             let message = item.messages[0]
             for media in message.media {
@@ -156,11 +156,23 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             
             if item.messages[0].forwardInfo != nil {
                 if let author = item.messages[0].author, displayAuthor {
-                    title = nil
-                    messageText = presentationData.strings.CHAT_MESSAGE_FWDS(author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
+                    let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_FWDS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), author.compactDisplayTitle, Int32(item.messages.count))
+                    if let index = rawText.firstIndex(of: "|") {
+                        title = String(rawText[rawText.startIndex ..< index])
+                        messageText = String(rawText[rawText.index(after: index)...])
+                    } else {
+                        title = nil
+                        messageText = rawText
+                    }
                 } else {
-                    title = nil
-                    messageText = presentationData.strings.MESSAGE_FWDS(peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
+                    let rawText = presentationData.strings.PUSH_MESSAGE_FWDS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                    if let index = rawText.firstIndex(of: "|") {
+                        title = String(rawText[rawText.startIndex ..< index])
+                        messageText = String(rawText[rawText.index(after: index)...])
+                    } else {
+                        title = nil
+                        messageText = rawText
+                    }
                 }
             } else if item.messages[0].groupingKey != nil {
                 var kind = messageContentKind(item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.account.peerId).key
@@ -182,27 +194,68 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 } else if item.messages[0].id.peerId.namespace == Namespaces.Peer.CloudGroup {
                     isGroup = true
                 }
-                title = nil
                 if isChannel {
                     switch kind {
                         case .image:
-                            messageText = presentationData.strings.CHANNEL_MESSAGE_PHOTOS(peer.compactDisplayTitle, "\(item.messages.count)").0
+                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_PHOTOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                         default:
-                            messageText = presentationData.strings.CHANNEL_MESSAGES(peer.compactDisplayTitle, "\(item.messages.count)").0
+                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                     }
                 } else if isGroup, let author = item.messages[0].author {
                     switch kind {
                         case .image:
-                            messageText = presentationData.strings.CHAT_MESSAGE_PHOTOS(author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
+                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_PHOTOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), author.compactDisplayTitle, Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                         default:
-                            messageText = presentationData.strings.CHAT_MESSAGES(author.compactDisplayTitle,  peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
+                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), author.compactDisplayTitle, Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                     }
                 } else {
                     switch kind {
                         case .image:
-                            messageText = presentationData.strings.MESSAGE_PHOTOS(peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
+                            let rawText = presentationData.strings.PUSH_MESSAGE_PHOTOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                         default:
-                            messageText = presentationData.strings.MESSAGES(peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), "\(item.messages.count)").0
+                            let rawText = presentationData.strings.PUSH_MESSAGES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                     }
                 }
             } else {
